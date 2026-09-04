@@ -1,0 +1,46 @@
+name: Judge & Sandbox
+
+# 사용자 코드를 실행하는 경계를 검증한다.
+#
+# 경로 필터를 건다. curriculum.yml 과 달리 이 잡은 Docker 이미지를 굽고 컨테이너를
+# 수십 번 띄우므로 몇 분이 든다. 문서만 고친 PR 에 그 시간을 태우지 않는다.
+# 대신 계약(contracts/)은 판정 결과의 형태를 정하므로 넓게 잡는다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'judge/**'
+      - 'contracts/**'
+      - 'requirements-dev.txt'
+      - '.github/workflows/judge.yml'
+
+concurrency:
+  group: judge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  judge:
+    name: 판정 + 격리 (Addendum 87)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: install deps
+        run: pip install -r requirements-dev.txt
+
+      - name: build judge image
+        run: docker build -t codesprint-judge:py312 -f judge/Dockerfile .
+
+      # 판정 8종과 격리 8종. 격리 쪽은 제한을 걷어낸 대조군까지 함께 돌려
+      # "테스트가 아무것도 검증하지 못하는 상태"를 실패로 처리한다.
+      #
+      # ⚠️ 러너가 Docker-in-Docker 가 아니라 호스트 Docker 를 쓰므로, 여기서 도는
+      #    컨테이너는 로컬과 같은 격리 옵션을 받는다. 러너 자체의 네트워크 정책에
+      #    기대지 않는다 - 기대면 로컬에서만 뚫려 있어도 CI 는 초록불이 된다.
+      - name: judge & sandbox tests
+        run: python judge/tests/test_judge.py
