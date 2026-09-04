@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -72,6 +74,17 @@ def run(solution: pathlib.Path, job: pathlib.Path) -> dict:
     try:
         shutil.copyfile(solution, workdir / "solution.py")
         shutil.copyfile(job, workdir / "job.json")
+
+        # 컨테이너는 uid 10001(runner)로 돈다. 호스트의 uid 와 다르므로 마운트한
+        # 파일을 읽으려면 other 에 읽기 권한이 있어야 한다.
+        # mkdtemp 는 0700 으로 만들고 그 안의 파일도 원본 권한을 따라가므로,
+        # 그대로 두면 컨테이너가 job.json 을 못 읽고 SYSTEM_ERROR 가 난다.
+        #
+        # Docker Desktop(Windows/macOS)은 마운트에서 unix 권한을 무시하기 때문에
+        # 이 문제가 로컬에서는 드러나지 않는다. Linux CI 에서만 터졌다.
+        os.chmod(workdir, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+        for name in ("solution.py", "job.json"):
+            os.chmod(workdir / name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
 
         cmd = [
             "docker", "run", "--rm",

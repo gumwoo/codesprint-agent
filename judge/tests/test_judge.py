@@ -207,6 +207,12 @@ def main() -> int:
     print("\n== 격리 (Addendum 87) ==")
     for name, code, why in ISOLATION:
         result = judge(code)
+        # SYSTEM_ERROR 는 우리 인프라가 고장난 것이지 격리가 뚫린 것이 아니다.
+        # 둘을 같은 메시지로 보고하면 원인을 엉뚱한 곳에서 찾게 된다.
+        if result["status"] == "SYSTEM_ERROR":
+            failed += 1
+            print(f"[X] {name}: 채점 자체가 실패했다 (격리와 무관) - {result.get('stderr')}")
+            continue
         # 격리가 동작하면 사용자 코드는 실행에 실패한다.
         if result["status"] != "RUNTIME_ERROR":
             failed += 1
