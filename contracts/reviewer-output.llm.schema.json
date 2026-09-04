@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/reviewer-output.llm.schema.json",
+  "title": "ReviewerLlmOutput",
+  "description": "Reviewer Agent 에게 요청하는 응답 스키마. 오답 원인 분석만 담당한다. mastery / score / nextAction 은 여기에 존재하지 않으며, 물어보지 않으므로 만들어낼 수 없다. 근거: docs/adr/0001-llm-analyzes-system-decides.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "algorithmSelection",
+    "primaryMistake",
+    "secondaryMistakes",
+    "confidence",
+    "affectedSkills",
+    "failedCaseRefs",
+    "conceptIssue",
+    "implementationIssue",
+    "explanation"
+  ],
+  "properties": {
+    "algorithmSelection": {
+      "enum": [
+        "CORRECT",
+        "PARTIALLY_CORRECT",
+        "WRONG",
+        "UNDETERMINED"
+      ],
+      "description": "알고리즘 선택 자체가 맞았는가. 구현 오류와 개념 오류를 가르는 첫 갈림길이다(PRD §124)."
+    },
+    "primaryMistake": {
+      "$ref": "#/$defs/mistakeCode",
+      "description": "가장 지배적인 실패 원인 하나. curriculum/mistakes.yaml 에 있는 code 만 허용한다. 확신이 없으면 IMPLEMENTATION_MISC 를 쓴다."
+    },
+    "secondaryMistakes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mistakeCode"
+      },
+      "description": "함께 관측된 부차적 원인. primaryMistake 를 여기 중복해 넣지 않는다."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "이 분석의 확신도. 0.60 미만이면 시스템이 Mistake 를 확정하지 않고 참고 로그로만 저장한다(Addendum §19). 확신이 없을 때 낮게 쓰는 것이 정상이며, 낮다고 불이익이 없다."
+    },
+    "affectedSkills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+      },
+      "description": "영향받은 Skill code. curriculum/skills.yaml 에 실재하는 code 만. 존재하지 않는 code 는 backend 가 거부한다."
+    },
+    "failedCaseRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "description": "이 분석의 근거가 된 실패 Test Case id. Judge 가 실제로 실패시킨 case 만 참조할 수 있다. minItems: 1 은 근거 없는 분석을 막는다(Addendum 20 Judge Evidence 우선 원칙). Reviewer 는 실패 case 가 존재하는 판정(WRONG_ANSWER / RUNTIME_ERROR / TIME_LIMIT / MEMORY_LIMIT / OUTPUT_LIMIT)에서만 호출되므로 이 배열은 항상 채울 수 있다. COMPILE_ERROR 는 case 를 하나도 실행하지 못하므로 Reviewer 를 호출하지 않는다 - 근거: docs/adr/0004-reviewer-invocation-requires-case-evidence.md. 부수 효과로, 나중에 평가 데이터셋으로 쓸 라벨이 지금부터 쌓인다."
+    },
+    "conceptIssue": {
+      "type": "boolean",
+      "description": "개념을 잘못 이해했는가."
+    },
+    "implementationIssue": {
+      "type": "boolean",
+      "description": "개념은 맞고 구현에서 틀렸는가. conceptIssue 와 동시에 true 일 수 있다."
+    },
+    "explanation": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "왜 이 판단인가. 사용자에게 그대로 보여주는 문장이 아니라 판단 근거다."
+    }
+  },
+  "$defs": {
+    "mistakeCode": {
+      "enum": [
+        "BOUNDARY_CHECK",
+        "VISITED_TIMING",
+        "NO_VISITED",
+        "INDEX_ERROR",
+        "INPUT_PARSE",
+        "OUTPUT_FORMAT",
+        "IMPLEMENTATION_MISC"
+      ],
+      "description": "Reviewer 가 부여할 수 있는 Mistake code. 정본은 curriculum/mistakes.yaml 의 assigned_by: REVIEWER 항목이며 CI 가 동기화를 검증한다. SYSTEM 이 부여하는 code(SYNTAX_ERROR 등)는 여기에 없다 - 물어보지 않으므로 만들어낼 수 없다. 근거: docs/adr/0004-reviewer-invocation-requires-case-evidence.md"
+    }
+  }
+}

@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/submit-response.schema.json",
+  "title": "SubmitResponse",
+  "description": "POST /api/problems/{id}/submit 의 최종 응답. Reviewer 출력에 시스템이 계산한 값(skillUpdates, nextAction)을 덧붙인 결과다. LLM 에게 이 스키마를 그대로 요청하지 않는다 — 요청용은 reviewer-output.llm.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "submissionId",
+    "judge",
+    "review",
+    "skillUpdates",
+    "nextAction",
+    "promptVersion"
+  ],
+  "properties": {
+    "submissionId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "passed",
+        "total",
+        "executionMs",
+        "memoryKb",
+        "failedCaseId",
+        "stderr"
+      ],
+      "description": "결정론적 판정 결과. AI 가 관여하지 않는다(Addendum 81). COMPILE_ERROR 처럼 Test Case 를 실행하지 못한 경우 executionMs / memoryKb / failedCaseId 는 null 이며, 필드를 생략하지 않는다.",
+      "properties": {
+        "status": {
+          "enum": [
+            "ACCEPTED",
+            "WRONG_ANSWER",
+            "TIME_LIMIT",
+            "MEMORY_LIMIT",
+            "RUNTIME_ERROR",
+            "COMPILE_ERROR",
+            "OUTPUT_LIMIT",
+            "SYSTEM_ERROR"
+          ]
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "executionMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "memoryKb": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "failedCaseId": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "stderr": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Host 경로를 제거한 sanitize 결과만(Addendum §63)."
+        }
+      }
+    },
+    "review": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "primaryMistake",
+        "secondaryMistakes",
+        "confidence",
+        "status",
+        "explanation"
+      ],
+      "description": "Reviewer 분석 결과에 시스템의 확정 판단(status)을 덧붙인 것. Reviewer 를 호출하지 않았으면(ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR) null 이다. 필드를 생략하지 않고 null 을 명시한다 - 생략은 '모른다', null 은 '확인했고 없었다'로 서로 다른 뜻이다(Addendum 4, contracts/README.md 규칙 5).",
+      "properties": {
+        "primaryMistake": {
+          "type": "string"
+        },
+        "secondaryMistakes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "status": {
+          "enum": [
+            "LOGGED_ONLY",
+            "POSSIBLE",
+            "PROBABLE",
+            "CONFIRMED"
+          ],
+          "description": "시스템이 부여한다. Addendum §19 의 confidence 구간과 §21 의 확정 조건으로 결정되며, LLM 이 스스로 CONFIRMED 를 선언할 수 없다."
+        },
+        "explanation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "skillUpdates": {
+      "type": "array",
+      "description": "MasteryService 가 계산한 결과. Reviewer 는 이 값을 만들 수 없다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "skillCode",
+          "before",
+          "after",
+          "confidence",
+          "status"
+        ],
+        "properties": {
+          "skillCode": {
+            "type": "string"
+          },
+          "before": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "null 은 UNASSESSED. 0.0(평가했고 못함)과 구분한다(Addendum §4)."
+          },
+          "after": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "status": {
+            "enum": [
+              "UNASSESSED",
+              "READY",
+              "LEARNING",
+              "PRACTICING",
+              "MASTERED",
+              "REVIEW_DUE",
+              "WEAKENED",
+              "LOCKED"
+            ]
+          }
+        }
+      }
+    },
+    "nextAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "targetSkill",
+        "reason"
+      ],
+      "description": "DecisionService 가 결정한다(Addendum §80). LLM 에게 물어보지 않는다 — 근거: docs/adr/0002-next-action-decided-by-rule-engine.md",
+      "properties": {
+        "type": {
+          "enum": [
+            "CONTINUE",
+            "HARDER",
+            "EASIER",
+            "MICRO_DRILL",
+            "REVIEW_CONCEPT",
+            "RETRY_VARIANT",
+            "CHANGE_SKILL",
+            "UNLOCK_NEXT",
+            "SCHEDULE_REVIEW",
+            "MOCK_TEST",
+            "END_SESSION"
+          ]
+        },
+        "targetSkill": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "MICRO_DRILL / CHANGE_SKILL 처럼 대상이 있는 액션에서만 채운다. 없으면 null 을 명시한다."
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "어떤 규칙이 이 액션을 골랐는지. 사용자 설명이 아니라 감사 로그다."
+        }
+      }
+    },
+    "promptVersion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "이 응답을 만든 Reviewer 프롬프트 버전(PRD 135). Reviewer 미호출 시 null 이며, 필드를 생략하지 않는다. required 인 이유는 '평가 하네스를 위해 지금부터 남긴다'가 강제되지 않으면 남지 않기 때문이다. 재현에 필요한 나머지 축(modelVersion / schemaVersion / taxonomyVersion / skillCatalogVersion)은 사용자 응답이 아니라 내부 ReviewerRun 로그 계약으로 분리한다 - 슬라이스 1 이후."
+    }
+  }
+}
