@@ -1,0 +1,288 @@
+# 커리큘럼 도메인 레지스트리
+#
+# PRD §5 의 45개 도메인 + §6 의 00 Programming Foundations = 46개.
+# 이 파일은 **골격만** 등록한다. 실제 Skill 은 skills.yaml 에 검증된 것만 넣는다.
+# PRD §167 원칙 1("전체 커리큘럼은 처음부터 설계한다")과
+# Addendum §31("첫 슬라이스 Skill 은 8개로 고정")을 동시에 만족시키기 위한 분리다.
+#
+# code    : Skill 의 domain 필드가 참조하는 값. 한번 쓰이면 변경 금지(§35).
+# order   : PRD 문서상의 도메인 번호. 학습 순서를 강제하지 않는다(§130).
+# tier    : 대표 등급. 도메인 안에서 Skill 마다 다를 수 있어 어디까지나 기본값이다.
+# active  : skills.yaml 에 Skill 이 하나라도 등록됐는지. 첫 슬라이스는 3개만 true.
+
+domains:
+  - code: FOUNDATIONS
+    order: 0
+    name: Programming Foundations
+    tier: CORE
+    active: true
+
+  - code: IMPLEMENTATION
+    order: 1
+    name: Implementation / Simulation
+    tier: CORE
+    active: true
+
+  - code: ARRAY_MATRIX
+    order: 2
+    name: Array / Matrix
+    tier: CORE
+    active: false
+
+  - code: STRING
+    order: 3
+    name: String
+    tier: CORE
+    active: false
+
+  - code: HASH
+    order: 4
+    name: Hash / Set / Map
+    tier: CORE
+    active: false
+
+  - code: SORTING
+    order: 5
+    name: Sorting
+    tier: CORE
+    active: false
+
+  - code: STACK_QUEUE
+    order: 6
+    name: Stack / Queue / Deque
+    tier: CORE
+    active: false
+
+  - code: HEAP
+    order: 7
+    name: Heap / Priority Queue
+    tier: CORE
+    active: false
+
+  - code: RECURSION
+    order: 8
+    name: Recursion
+    tier: CORE
+    active: false
+
+  - code: BRUTE_FORCE
+    order: 9
+    name: Brute Force / Enumeration
+    tier: CORE
+    active: false
+
+  - code: BACKTRACKING
+    order: 10
+    name: Backtracking
+    tier: CORE
+    active: false
+
+  - code: TWO_POINTER
+    order: 11
+    name: Two Pointer
+    tier: CORE
+    active: false
+
+  - code: SLIDING_WINDOW
+    order: 12
+    name: Sliding Window
+    tier: CORE
+    active: false
+
+  - code: PREFIX_SUM
+    order: 13
+    name: Prefix Sum / Difference Array
+    tier: CORE
+    active: false
+
+  - code: BINARY_SEARCH
+    order: 14
+    name: Binary Search / Parametric Search
+    tier: CORE
+    active: false
+
+  - code: GREEDY
+    order: 15
+    name: Greedy
+    tier: CORE
+    active: false
+
+  - code: MATH
+    order: 16
+    name: Mathematics
+    tier: CORE
+    active: false
+
+  - code: NUMBER_THEORY
+    order: 17
+    name: Number Theory
+    tier: INTERMEDIATE
+    active: false
+
+  - code: COMBINATORICS
+    order: 18
+    name: Combinatorics
+    tier: INTERMEDIATE
+    active: false
+
+  - code: BITMASK
+    order: 19
+    name: Bit Manipulation / Bitmask
+    tier: INTERMEDIATE
+    active: false
+
+  - code: DFS
+    order: 20
+    name: DFS
+    tier: CORE
+    active: false
+
+  - code: BFS
+    order: 21
+    name: BFS
+    tier: CORE
+    active: true
+
+  - code: GRAPH
+    order: 22
+    name: Graph Fundamentals
+    tier: CORE
+    active: false
+
+  - code: SHORTEST_PATH
+    order: 23
+    name: Shortest Path
+    tier: INTERMEDIATE
+    active: false
+
+  - code: UNION_FIND
+    order: 24
+    name: Union Find
+    tier: INTERMEDIATE
+    active: false
+
+  - code: MST
+    order: 25
+    name: Minimum Spanning Tree
+    tier: INTERMEDIATE
+    active: false
+
+  - code: TOPOLOGICAL_SORT
+    order: 26
+    name: Topological Sort / DAG
+    tier: INTERMEDIATE
+    active: false
+
+  - code: TREE
+    order: 27
+    name: Tree
+    tier: CORE
+    active: false
+
+  - code: DP
+    order: 28
+    name: Dynamic Programming
+    tier: CORE
+    active: false
+
+  - code: SEQUENCE_DP
+    order: 29
+    name: LIS / LCS / Sequence DP
+    tier: INTERMEDIATE
+    active: false
+
+  - code: KNAPSACK
+    order: 30
+    name: Knapsack / Subset DP
+    tier: INTERMEDIATE
+    active: false
+
+  - code: STATE_SPACE
+    order: 31
+    name: Grid / State Space Search
+    tier: CORE
+    active: false
+
+  - code: COORDINATE_COMPRESSION
+    order: 32
+    name: Coordinate Compression
+    tier: INTERMEDIATE
+    active: false
+
+  - code: MONOTONIC
+    order: 33
+    name: Monotonic Stack / Queue
+    tier: INTERMEDIATE
+    active: false
+
+  - code: TRIE
+    order: 34
+    name: Trie
+    tier: INTERMEDIATE
+    active: false
+
+  - code: STRING_MATCHING
+    order: 35
+    name: String Matching
+    tier: INTERMEDIATE
+    active: false
+
+  - code: SEGMENT_TREE
+    order: 36
+    name: Segment Tree
+    tier: ADVANCED
+    active: false
+
+  - code: FENWICK_TREE
+    order: 37
+    name: Fenwick Tree
+    tier: ADVANCED
+    active: false
+
+  - code: SWEEP_LINE
+    order: 38
+    name: Sweep Line / Interval
+    tier: INTERMEDIATE
+    active: false
+
+  - code: GEOMETRY
+    order: 39
+    name: Geometry
+    tier: INTERMEDIATE
+    active: false
+
+  - code: SCC
+    order: 40
+    name: SCC / Articulation / Bridge
+    tier: ADVANCED
+    active: false
+
+  - code: FLOW
+    order: 41
+    name: Network Flow / Matching
+    tier: ADVANCED
+    active: false
+
+  - code: ADVANCED_SHORTEST_PATH
+    order: 42
+    name: Advanced Shortest Path
+    tier: ADVANCED
+    active: false
+
+  - code: ADVANCED_DP
+    order: 43
+    name: Advanced DP
+    tier: ADVANCED
+    active: false
+
+  - code: ADVANCED_STRING
+    order: 44
+    name: Advanced String
+    tier: ADVANCED
+    active: false
+
+  - code: COMPOSITE
+    order: 45
+    name: Mixed / Composite Problems
+    tier: INTERMEDIATE
+    active: false

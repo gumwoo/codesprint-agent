@@ -1,0 +1,56 @@
+# Skill 선수 관계
+#
+# 정본: docs/_archive/CodeSprint_Agent_Implementation_Spec_Addendum.md §33~34
+#
+# skill 을 학습하려면 prerequisite 이 minimum_mastery 이상이어야 한다.
+# minimum_mastery 기본값 0.65 는 Addendum §76 skill_prerequisites 스키마의
+# DEFAULT 와 같다.
+#
+# ── CI 가 막는 것 (tools/check_curriculum.py) ─────────────────────────
+#   - skills.yaml 에 없는 code 참조
+#   - 자기 자신을 prerequisite 으로 지정
+#   - 순환 참조
+# 이 셋은 전부 "런타임에 학습 경로가 무한루프에 빠지거나 영원히 LOCKED 로
+# 남는" 형태로 나타난다. 데이터 단계에서 막는 편이 압도적으로 싸다.
+#
+# ⚠️ GRID_COORDINATE ← PYTHON_LIST_BASIC 은 Addendum §33 에 명시된 관계를
+#    그대로 옮긴 것이다. 다만 언어 독립 Skill 이 언어 종속 Skill 을 요구하는
+#    형태라 PRD §67(Skill Graph 는 특정 언어에 종속되지 않는다)과 긴장이 있다.
+#    Java/C++ 를 추가하는 시점에 재검토가 필요하다. 지금 바꾸지 않는 이유는
+#    첫 슬라이스가 Python 단일 언어이고, 정본 문서를 임의로 고치지 않기 위해서다.
+
+prerequisites:
+  # 격자 계열
+  - skill: GRID_COORDINATE
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: GRID_BOUNDARY_CHECK
+    requires: GRID_COORDINATE
+    minimum_mastery: 0.65
+
+  # BFS 계열
+  - skill: BFS_BASIC
+    requires: PYTHON_DEQUE_BASIC
+    minimum_mastery: 0.65
+
+  - skill: BFS_VISITED_MANAGEMENT
+    requires: BFS_BASIC
+    minimum_mastery: 0.65
+
+  # 두 갈래가 합류하는 지점
+  - skill: BFS_GRID_TRAVERSAL
+    requires: BFS_BASIC
+    minimum_mastery: 0.65
+
+  - skill: BFS_GRID_TRAVERSAL
+    requires: BFS_VISITED_MANAGEMENT
+    minimum_mastery: 0.65
+
+  - skill: BFS_GRID_TRAVERSAL
+    requires: GRID_BOUNDARY_CHECK
+    minimum_mastery: 0.65
+
+  - skill: BFS_SHORTEST_PATH
+    requires: BFS_GRID_TRAVERSAL
+    minimum_mastery: 0.70
