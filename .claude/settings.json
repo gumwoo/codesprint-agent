@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(python tools/check_curriculum.py)",
+      "Bash(python tools/meta_test_curriculum.py)"
+    ],
+    "deny": [
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/secrets/**)",
+      "Bash(cat:*.env*)",
+      "Bash(cat:*secrets*)",
+      "Bash(cat:*.pem)",
+      "Bash(cat:*.key)",
+      "Bash(printenv:*)",
+      "Bash(env)",
+
+      "Read(./judge/submissions/**)",
+      "Read(./**/submissions/**)",
+      "Bash(python judge/submissions/**)"
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+name: Curriculum & Contracts
+
+# Skill Graph 와 LLM 계약이 조용히 갈라지는 것을 막는다.
+#
+# 경로 필터를 걸지 않는다. 검사가 1초 미만이고, 계약은 코드가 안 바뀌어도
+# 깨질 수 있다(문서만 고친 PR 에서 정본이 갈라지는 경우가 정확히 그렇다).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  curriculum:
+    name: 커리큘럼/계약 검사 + 메타테스트
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: install deps
+        run: pip install pyyaml==6.0.2
+
+      - name: 커리큘럼/계약 검사
+        run: python tools/check_curriculum.py
+
+      # 계약이 통과하는 것만으로는 부족하다. 검사가 아무것도 안 해도 통과한다.
+      # 일부러 망가뜨렸을 때 실제로 막히는지 확인한다.
+      - name: 메타테스트 — 검사가 실제로 위반을 잡는가
+        run: python tools/meta_test_curriculum.py
+
+      # 메타테스트는 실제 파일을 수정한 뒤 되돌린다. 되돌리지 못했다면
+      # 이후 검사가 오염된 파일을 보게 되므로 여기서 끊는다.
+      - name: 메타테스트가 원본을 되돌렸는지 확인
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "메타테스트가 파일을 되돌리지 못했다:"
+            git status --porcelain
+            git diff
+            exit 1
+          fi
