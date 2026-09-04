@@ -17,6 +17,7 @@
 | [0001](adr/0001-llm-analyzes-system-decides.md) | LLM 은 분석하고, 시스템이 판정한다 |
 | [0002](adr/0002-next-action-decided-by-rule-engine.md) | 다음 학습 행동은 Rule Engine 이 결정한다 |
 | [0003](adr/0003-skill-id-canonical-uppercase.md) | Skill ID 는 UPPER_SNAKE_CASE 정본 하나 |
+| [0004](adr/0004-reviewer-invocation-requires-case-evidence.md) | Reviewer 는 실패 Test Case 가 있을 때만 호출한다 |
 
 ## 분해 계획 (미착수)
 

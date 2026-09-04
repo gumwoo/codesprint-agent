@@ -52,7 +52,7 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 아무것도 안 하는 검사도 통과한다. 그래서 계약을 일부러 망가뜨린 뒤 검사가 실제로
 실패하는지 확인한다. 여기서 "검사가 놓침"이 나오면 데이터가 아니라 **하네스가 깨진 것**이다.
 
-현재 17개 위반 케이스를 차단한다.
+현재 24개 위반 케이스를 차단한다.
 
 ## 현재 상태
 
@@ -61,12 +61,13 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 
 | | 상태 |
 | --- | --- |
-| Skill Catalog (8개) + 도메인 골격 (46개) | 완료 |
+| Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
 | LLM 계약 + 검사 하네스 | 완료 |
 | Judge / Sandbox | 미착수 |
 | Backend / Frontend | 미착수 |
 | Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이다.
-전체 45개 도메인은 `curriculum/domains.yaml`에 골격으로 등록돼 있으며, 검증된 Skill만
+도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개
+Registry Entry**다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
 `skills.yaml`로 승격한다.

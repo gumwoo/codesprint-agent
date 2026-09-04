@@ -91,6 +91,43 @@ def drop_mistake_code(doc):
     doc["mistakes"] = [m for m in doc["mistakes"] if m["code"] != "NO_VISITED"]
 
 
+def bad_assigned_by(doc):
+    doc["mistakes"][0]["assigned_by"] = "SOMEONE"
+
+
+def system_code_leaks_into_llm_enum(doc):
+    # SYNTAX_ERROR 를 REVIEWER 로 바꾸면 LLM enum 에 없는 REVIEWER code 가 되어
+    # mistake-sync 가 걸린다. 반대 방향(스키마에 SYSTEM code 유입)은 아래 케이스.
+    for m in doc["mistakes"]:
+        if m["code"] == "SYNTAX_ERROR":
+            m["assigned_by"] = "REVIEWER"
+
+
+def llm_enum_gains_system_code(schema):
+    schema["$defs"]["mistakeCode"]["enum"].append("SYNTAX_ERROR")
+
+
+def schema_breaks_spec(schema):
+    # 규격 위반: minItems 에 문자열. meta-schema 가 잡는다.
+    schema["properties"]["failedCaseRefs"]["minItems"] = "1"
+
+
+def schema_keyword_typo(schema):
+    # 오타: minItems -> minItmes. meta-schema 는 확장 키워드로 보고 통과시킨다.
+    # 제약이 조용히 사라지므로 allowlist 검사가 잡아야 한다.
+    props = schema["properties"]["failedCaseRefs"]
+    props.pop("minItems")
+    props["minItmes"] = 1
+
+
+def response_drops_review_from_required(schema):
+    schema["required"].remove("review")
+
+
+def response_drops_prompt_version_from_required(schema):
+    schema["required"].remove("promptVersion")
+
+
 def mistake_named_like_skill(doc):
     doc["mistakes"].append(
         {
@@ -145,6 +182,9 @@ CASES = [
     ("존재하지 않는 Skill 로 드릴을 보내면", "curriculum/mistakes.yaml", dangling_target_skill, "없는 target_skill"),
     ("Addendum 30 · Mistake 가 Skill 이름을 쓰면", "curriculum/mistakes.yaml", mistake_named_like_skill, "Skill code 와 이름이 겹친다"),
     ("taxonomy 와 스키마 enum 이 갈라지면", "curriculum/mistakes.yaml", drop_mistake_code, "스키마에만 있는 code"),
+    ("ADR-0004 · assigned_by 가 알 수 없는 값이면", "curriculum/mistakes.yaml", bad_assigned_by, "assigned_by 가"),
+    ("ADR-0004 · SYSTEM code 가 REVIEWER 로 바뀌면", "curriculum/mistakes.yaml", system_code_leaks_into_llm_enum, "REVIEWER code"),
+    ("ADR-0004 · LLM enum 에 SYSTEM code 가 유입되면", "contracts/reviewer-output.llm.schema.json", llm_enum_gains_system_code, "SYSTEM 이 부여하는 code 가 LLM enum 에 있다"),
 
     # -- 도메인 레지스트리 --
     ("active 인데 Skill 이 없으면", "curriculum/domains.yaml", domain_active_without_skill, "active 가 true 인데"),
@@ -154,6 +194,14 @@ CASES = [
     ("ADR-0001 · LLM 요청 스키마에 점수 필드가 생기면", "contracts/reviewer-output.llm.schema.json", llm_schema_gains_score, "LLM 요청 스키마에 있다"),
     ("계약 폐쇄 · 모델이 임의 필드를 덧붙일 수 있게 되면", "contracts/reviewer-output.llm.schema.json", llm_schema_opens_up, "additionalProperties 가 false 가 아니다"),
     ("계약 폐쇄 · 응답 스키마가 열리면", "contracts/submit-response.schema.json", response_schema_opens_up, "additionalProperties 가 false 가 아니다"),
+
+    # -- JSON Schema 자체의 유효성 (2단계) --
+    ("규격 위반 · minItems 에 문자열이 들어가면", "contracts/reviewer-output.llm.schema.json", schema_breaks_spec, "JSON Schema 규격 위반"),
+    ("오타 · minItems 를 minItmes 로 쓰면", "contracts/reviewer-output.llm.schema.json", schema_keyword_typo, "알 수 없는 키워드"),
+
+    # -- 생략 vs null (contracts/README.md 규칙 5) --
+    ("생략 vs null · review 가 required 에서 빠지면", "contracts/submit-response.schema.json", response_drops_review_from_required, "review 은 null 을 허용하는데 required 가 아니다"),
+    ("생략 vs null · promptVersion 이 required 에서 빠지면", "contracts/submit-response.schema.json", response_drops_prompt_version_from_required, "promptVersion 은 null 을 허용하는데 required 가 아니다"),
 ]
 
 

@@ -19,11 +19,24 @@
 # ── target_skill ──────────────────────────────────────────────────────
 # auto_drill: true 인 Mistake 는 반드시 존재하는 Skill 을 가리켜야 한다.
 # CI 가 검증한다.
+#
+# ── assigned_by ───────────────────────────────────────────────────────
+# 이 라벨을 누가 붙일 수 있는가. ADR-0004 가 근거다.
+#
+#   REVIEWER  LLM 이 실패한 Test Case 를 근거로 분류한다.
+#             reviewer-output.llm.schema.json 의 enum 에 포함된다.
+#   SYSTEM    Judge 결과만으로 결정론적으로 부여한다. Reviewer 를 호출하지 않는다.
+#             LLM enum 에 포함되지 않는다 - 물어보지 않으므로 만들어낼 수 없다.
+#
+# SYNTAX_ERROR 가 SYSTEM 인 이유: COMPILE_ERROR 는 Test Case 를 하나도 실행하지
+# 못한 상태다. Reviewer 출력은 failedCaseRefs 를 minItems: 1 로 요구하는데
+# 참조할 case 가 존재하지 않는다. 근거 요구를 낮추는 대신 호출하지 않는다.
 
 mistakes:
   - code: BOUNDARY_CHECK
     name: 경계 검사 누락
     auto_drill: true
+    assigned_by: REVIEWER
     target_skill: GRID_BOUNDARY_CHECK
     description: >-
       격자 이동 후 좌표가 범위를 벗어났는지 검사하지 않는다.
@@ -33,6 +46,7 @@ mistakes:
   - code: VISITED_TIMING
     name: 방문 처리 시점 오류
     auto_drill: true
+    assigned_by: REVIEWER
     target_skill: BFS_VISITED_MANAGEMENT
     description: >-
       방문 처리를 큐에 넣을 때가 아니라 꺼낼 때 수행한다.
@@ -42,6 +56,7 @@ mistakes:
   - code: NO_VISITED
     name: 방문 배열 부재
     auto_drill: false
+    assigned_by: REVIEWER
     target_skill: BFS_VISITED_MANAGEMENT
     description: >-
       방문 상태를 아예 기록하지 않아 무한 탐색에 빠진다.
@@ -49,6 +64,7 @@ mistakes:
   - code: INDEX_ERROR
     name: 인덱스 오류
     auto_drill: false
+    assigned_by: REVIEWER
     target_skill: null
     description: >-
       경계 검사와 무관한 인덱싱 실수. row/column 뒤바꿈 등.
@@ -56,6 +72,7 @@ mistakes:
   - code: INPUT_PARSE
     name: 입력 파싱 오류
     auto_drill: false
+    assigned_by: REVIEWER
     target_skill: null
     description: >-
       입력 형식을 잘못 읽는다. split / map 사용 오류 포함.
@@ -63,6 +80,7 @@ mistakes:
   - code: OUTPUT_FORMAT
     name: 출력 형식 오류
     auto_drill: false
+    assigned_by: REVIEWER
     target_skill: null
     description: >-
       알고리즘은 맞으나 출력 형식이 요구와 다르다.
@@ -70,6 +88,7 @@ mistakes:
   - code: SYNTAX_ERROR
     name: 문법 오류
     auto_drill: false
+    assigned_by: SYSTEM
     target_skill: null
     description: >-
       알고리즘 Skill 의 mastery 에 penalty 를 주지 않는다(§12).
@@ -78,6 +97,7 @@ mistakes:
   - code: IMPLEMENTATION_MISC
     name: 기타 구현 오류
     auto_drill: false
+    assigned_by: REVIEWER
     target_skill: null
     description: >-
       슬라이스 1 의 분류 체계로 확정할 수 없는 나머지.

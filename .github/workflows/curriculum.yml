@@ -21,7 +21,7 @@ jobs:
           python-version: '3.12'
 
       - name: install deps
-        run: pip install pyyaml==6.0.2
+        run: pip install pyyaml==6.0.2 jsonschema==4.23.0
 
       - name: 커리큘럼/계약 검사
         run: python tools/check_curriculum.py

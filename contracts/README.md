@@ -15,6 +15,10 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
     ↓
 Sandbox Judge            ← 결정론적 판정 (AI 없음)
     ↓
+ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR ──→ Reviewer 호출 안 함 (ADR-0004)
+    ↓                                        COMPILE_ERROR 는 SYNTAX_ERROR 를
+WA / RE / TLE / MLE / OLE                    시스템이 결정론적으로 부여
+    ↓
 Reviewer (LLM)
     ↓
 JSON Schema Validation   ← 여기서 막는다

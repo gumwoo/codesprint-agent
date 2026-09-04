@@ -39,6 +39,13 @@ Skill 이 없는데 `active: true` 이거나 그 반대이면 실패한다.
    엉뚱한 드릴에 쓰게 만든다. Reviewer 정확도가 측정된 뒤 하나씩 연다.
 5. **`mistakes.yaml` 을 고치면 `contracts/reviewer-output.llm.schema.json` 의
    `$defs.mistakeCode.enum` 도 함께 고친다.** CI 가 동기화를 검증한다.
+   단, 대조 대상은 `assigned_by: REVIEWER` 인 것만이다.
+
+6. **새 Mistake 를 넣을 때 `assigned_by` 를 먼저 정한다**(ADR-0004).
+   `SYSTEM` 이면 Judge 결과만으로 결정론적으로 부여되며 LLM enum 에 넣지 않는다.
+   `REVIEWER` 이면 실패 Test Case 를 근거로 분류되므로, 그 Mistake 가 나타나는
+   Judge 상태에 **실패 case 가 특정되는지** 확인해야 한다. 특정되지 않으면
+   `failedCaseRefs` 의 minItems: 1 을 만족시킬 수 없다.
 
 ## 검증
 

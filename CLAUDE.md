@@ -19,6 +19,10 @@ Skill을 독립 풀이 가능한 상태까지 가장 짧은 경로로 만드는 
 **점수와 액션을 LLM에게 묻지 않는다.** 이 경계는 프롬프트가 아니라 스키마로 강제한다.
 `contracts/*.llm.schema.json`에 `score` / `mastery` / `nextAction`이 들어가면 CI가 막는다.
 
+**Reviewer는 실패 Test Case가 있을 때만 호출한다**([ADR-0004](docs/adr/0004-reviewer-invocation-requires-case-evidence.md)).
+`ACCEPTED` / `COMPILE_ERROR` / `SYSTEM_ERROR`에서는 호출하지 않는다. 문법 오류는
+시스템이 `SYNTAX_ERROR`를 결정론적으로 부여한다 — 그 code는 LLM enum에 없다.
+
 대화 중에 이 저장소의 도메인을 다룰 때도 같은 규칙을 지킨다. mastery 값을 어림으로
 말하지 않고, 산식(Addendum PART I)을 적용해 계산한다.
 
@@ -30,7 +34,10 @@ Skill을 독립 풀이 가능한 상태까지 가장 짧은 경로로 만드는 
   PRD 본문의 소문자 표기(`bfs_basic`)는 **폐기됐다.** 발견하면 변환한다.
 - Skill / Mistake / Technique를 섞지 않는다.
   `GRID_BOUNDARY_CHECK`는 Skill, `BOUNDARY_CHECK`는 Mistake다.
-- `skills.yaml`에는 **검증된 Skill만** 넣는다. 45개 도메인 골격은 `domains.yaml`이 갖는다.
+- `skills.yaml`에는 **검증된 Skill만** 넣는다. 도메인 레지스트리(45개 알고리즘 도메인
+  + Programming Foundations = 46개 entry)는 `domains.yaml`이 갖는다.
+- `mistakes.yaml`의 `assigned_by`가 `REVIEWER`인 것만 LLM enum에 들어간다.
+- **null을 허용하는 필드는 required여야 한다.** 생략은 "모른다", null은 "확인했고 없었다"다.
 
 ## 검사를 고칠 때
 

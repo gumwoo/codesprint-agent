@@ -18,6 +18,7 @@ import re
 import sys
 
 import yaml
+from jsonschema import Draft202012Validator
 
 # 콘솔 코드페이지와 무관하게 출력한다 (Windows cp949 대응)
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -29,6 +30,30 @@ CONTRACTS = ROOT / "contracts"
 
 CODE_RE = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$")
 VALID_TIERS = {"FOUNDATION", "CORE", "INTERMEDIATE", "ADVANCED"}
+
+# Mistake 라벨을 누가 붙이는가 (ADR-0004).
+#   REVIEWER  LLM 이 실패 Test Case 를 근거로 분류 -> LLM enum 에 포함
+#   SYSTEM    Judge 결과만으로 결정론적 부여      -> LLM enum 에서 제외
+VALID_ASSIGNERS = {"REVIEWER", "SYSTEM"}
+
+# 우리 계약이 쓰는 JSON Schema 키워드. 이 밖의 키워드가 나오면 실패한다.
+#
+# meta-schema validation 만으로는 부족하다. JSON Schema 는 미지의 키워드를 확장
+# 지점으로 허용하도록 설계돼 있어서 meta-schema 가 additionalProperties: false 가
+# 아니다. 즉 "minItmes" 같은 오타는 규격 위반이 아니라 그냥 무시되는 어노테이션이
+# 되고, **제약이 조용히 사라진다.** 우리에게 가장 위험한 종류의 실수인데
+# check_schema() 로는 잡히지 않는다.
+#
+# 계약 파일이 소수이고 확장 키워드를 쓸 일이 없으므로, 저장소 안에서만 이 개방성을
+# 닫는다. 새 키워드가 필요해지면 여기에 추가한다 - 추가한다는 행위 자체가 리뷰 지점이다.
+ALLOWED_SCHEMA_KEYWORDS = {
+    "$schema", "$id", "$ref", "$defs",
+    "title", "description",
+    "type", "enum", "const",
+    "properties", "required", "additionalProperties",
+    "items", "minItems", "maxItems",
+    "minimum", "maximum", "pattern",
+}
 
 # LLM 요청 스키마에 절대 나타나면 안 되는 필드명.
 # 시스템이 계산해야 하는 값을 모델에게 물어보는 순간, 모델은 만들어낸다.
@@ -262,6 +287,14 @@ def check_mistakes(mistakes_doc, skills: dict[str, dict]) -> dict[str, dict]:
         # 대상이 없는데 드릴을 켜면 Decision Engine 이 갈 곳 없는 액션을 낸다.
         if m.get("auto_drill") and target is None:
             fail("mistakes", f"{code}: auto_drill 이 true 인데 target_skill 이 없다")
+
+        # 누가 이 라벨을 붙이는가가 명시돼야 LLM enum 과의 대조가 성립한다 (ADR-0004).
+        assigner = m.get("assigned_by")
+        if assigner not in VALID_ASSIGNERS:
+            fail(
+                "mistakes",
+                f"{code}: assigned_by 가 {sorted(VALID_ASSIGNERS)} 중 하나가 아니다 ({assigner!r})",
+            )
     return mistakes
 
 
@@ -308,6 +341,63 @@ def _is_object_node(node: dict) -> bool:
     return t == "object"
 
 
+def check_schemas_are_valid_json_schema() -> None:
+    """1단계 - 규격 위반을 잡는다.
+
+    우리 custom 검사는 우리가 아는 것만 본다. JSON Schema 규격 자체를 어긴 스키마
+    (type 오타, minItems 에 문자열, required 가 배열이 아님 등)는 런타임에
+    검증기가 터지거나 조용히 검증을 건너뛰게 만든다.
+    """
+    for path in sorted(CONTRACTS.glob("*.schema.json")):
+        schema = load_json(path)
+        if schema is None:
+            continue
+        try:
+            Draft202012Validator.check_schema(schema)
+        except Exception as e:
+            first = str(e).splitlines()[0]
+            fail("meta-schema", f"{path.name}: JSON Schema 규격 위반 - {first}")
+
+
+def _walk_schema_keywords(node, path_name: str, trail: str) -> None:
+    """2단계 - 알려지지 않은 키워드를 잡는다.
+
+    properties / $defs 의 자식은 **이름 -> 스키마** 맵이므로 키를 키워드로 보지 않는다.
+    """
+    if not isinstance(node, dict):
+        return
+    for key, value in node.items():
+        if key not in ALLOWED_SCHEMA_KEYWORDS:
+            fail(
+                "schema-keyword",
+                f"{path_name}{trail}: 알 수 없는 키워드 {key!r} "
+                f"(오타이거나 allowlist 에 추가가 필요하다)",
+            )
+        if key in ("properties", "$defs"):
+            if isinstance(value, dict):
+                for name, sub in value.items():
+                    _walk_schema_keywords(sub, path_name, f"{trail}/{key}/{name}")
+        elif key == "items":
+            _walk_schema_keywords(value, path_name, f"{trail}/items")
+        elif key not in ("enum", "required", "const"):
+            if isinstance(value, dict):
+                _walk_schema_keywords(value, path_name, f"{trail}/{key}")
+
+
+def check_schema_keywords_are_known() -> None:
+    """오타 난 키워드를 잡는다.
+
+    meta-schema validation 으로는 잡히지 않는다. JSON Schema 는 미지의 키워드를
+    확장 지점으로 허용하므로 "minItmes" 는 규격 위반이 아니라 무시되는 어노테이션이
+    된다. 즉 **제약이 사라졌는데 아무도 모르는** 상태가 된다.
+    """
+    for path in sorted(CONTRACTS.glob("*.schema.json")):
+        schema = load_json(path)
+        if schema is None:
+            continue
+        _walk_schema_keywords(schema, path.name, "")
+
+
 def check_schemas_are_closed() -> None:
     """additionalProperties 가 열려 있으면 모델이 임의 필드를 덧붙일 수 있다."""
     for path in sorted(CONTRACTS.glob("*.schema.json")):
@@ -340,11 +430,61 @@ def check_schemas_are_closed() -> None:
         walk(schema, "")
 
 
+def _nullable(node) -> bool:
+    t = node.get("type") if isinstance(node, dict) else None
+    return isinstance(t, list) and "null" in t
+
+
+def check_nullable_fields_are_required() -> None:
+    """null 을 허용하는 필드는 required 여야 한다.
+
+    이 저장소는 "생략 != null" 을 핵심 원칙으로 쓴다(Addendum 4, contracts/README.md 5).
+      생략 = 모른다 / 물어보지 않았다
+      null = 확인했고 없었다
+    그런데 nullable 인데 required 가 아니면 두 상태가 계약상 구분되지 않는다.
+    "Reviewer 를 호출하지 않아 review 가 null" 과 "직렬화에서 빠뜨림" 이 같아진다.
+
+    원칙을 문서에만 두면 필드가 늘 때마다 조용히 어긋나므로 규칙으로 만든다.
+    """
+    for path in sorted(CONTRACTS.glob("*.schema.json")):
+        schema = load_json(path)
+        if schema is None:
+            continue
+
+        def walk(node, trail: str) -> None:
+            if not isinstance(node, dict):
+                return
+            props = node.get("properties")
+            if isinstance(props, dict):
+                required = set(node.get("required") or ())
+                for name, sub in props.items():
+                    if _nullable(sub) and name not in required:
+                        fail(
+                            "nullable-required",
+                            f"{path.name}{trail}: {name} 은 null 을 허용하는데 required 가 아니다 "
+                            f"(생략과 null 이 구분되지 않는다)",
+                        )
+                    walk(sub, f"{trail}/{name}")
+            for key in ("items", "$defs"):
+                value = node.get(key)
+                if key == "$defs" and isinstance(value, dict):
+                    for name, sub in value.items():
+                        walk(sub, f"{trail}/$defs/{name}")
+                elif isinstance(value, dict):
+                    walk(value, f"{trail}/{key}")
+
+        walk(schema, "")
+
+
 def check_mistake_enum_matches_yaml(mistakes: dict[str, dict]) -> None:
     """Reviewer 스키마의 enum 과 mistakes.yaml 이 갈라지는 것을 막는다.
 
     갈라지면 모델이 낸 code 를 backend 가 모르는(또는 그 반대) 상태가 되고,
     조용히 IMPLEMENTATION_MISC 로 뭉개진다. 정확도 저하가 원인 없이 나타난다.
+
+    대조 대상은 **assigned_by: REVIEWER 인 것만**이다(ADR-0004).
+    SYSTEM 이 부여하는 code 가 LLM enum 에 들어가면, 모델이 근거 없이 그 라벨을
+    낼 수 있게 된다 - SYNTAX_ERROR 가 정확히 그 경우다.
     """
     schema = load_json(CONTRACTS / "reviewer-output.llm.schema.json")
     if schema is None or not mistakes:
@@ -353,12 +493,23 @@ def check_mistake_enum_matches_yaml(mistakes: dict[str, dict]) -> None:
     if enum is None:
         fail("mistake-sync", "reviewer-output.llm.schema.json: $defs.mistakeCode.enum 이 없다")
         return
-    only_schema = sorted(set(enum) - set(mistakes))
-    only_yaml = sorted(set(mistakes) - set(enum))
+
+    reviewer_codes = {c for c, m in mistakes.items() if m.get("assigned_by") == "REVIEWER"}
+    system_codes = {c for c, m in mistakes.items() if m.get("assigned_by") == "SYSTEM"}
+
+    only_schema = sorted(set(enum) - reviewer_codes)
+    only_yaml = sorted(reviewer_codes - set(enum))
     if only_schema:
         fail("mistake-sync", f"스키마에만 있는 code: {only_schema}")
     if only_yaml:
-        fail("mistake-sync", f"mistakes.yaml 에만 있는 code: {only_yaml}")
+        fail("mistake-sync", f"mistakes.yaml 에만 있는 REVIEWER code: {only_yaml}")
+
+    leaked = sorted(system_codes & set(enum))
+    if leaked:
+        fail(
+            "mistake-sync",
+            f"SYSTEM 이 부여하는 code 가 LLM enum 에 있다 (ADR-0004): {leaked}",
+        )
 
 
 # -- 실행 ----------------------------------------------------------------
@@ -376,7 +527,14 @@ def main() -> int:
     check_prerequisites(prereq_doc, skills)
     mistakes = check_mistakes(mistakes_doc, skills)
 
+    # 계약 검사는 아래에서 위로 쌓인다.
+    #   1단계 규격 자체가 유효한가      (JSON Schema meta-schema)
+    #   2단계 키워드가 우리가 아는 것인가 (오타로 제약이 사라지는 것을 막는다)
+    #   3단계 우리 규칙을 지키는가       (폐쇄성 / LLM 경계 / taxonomy 동기화)
+    check_schemas_are_valid_json_schema()
+    check_schema_keywords_are_known()
     check_schemas_are_closed()
+    check_nullable_fields_are_required()
     check_llm_schema_owns_nothing_systemic()
     check_mistake_enum_matches_yaml(mistakes)
 
