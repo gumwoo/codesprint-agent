@@ -8,6 +8,7 @@
 | 제품 정의 · 전체 커리큘럼 | [_archive/](_archive/) PRD |
 | Mastery 산식 · 슬라이스 범위 · Sandbox | [_archive/](_archive/) Addendum |
 | 실제로 검증되는 Skill 목록 | [../curriculum/](../curriculum/) |
+| 사용자 코드를 어떻게 안전하게 실행하는가 | [../judge/](../judge/) |
 | LLM 이 낼 수 있는 값의 범위 | [../contracts/](../contracts/) |
 
 ## ADR
@@ -18,6 +19,7 @@
 | [0002](adr/0002-next-action-decided-by-rule-engine.md) | 다음 학습 행동은 Rule Engine 이 결정한다 |
 | [0003](adr/0003-skill-id-canonical-uppercase.md) | Skill ID 는 UPPER_SNAKE_CASE 정본 하나 |
 | [0004](adr/0004-reviewer-invocation-requires-case-evidence.md) | Reviewer 는 실패 Test Case 가 있을 때만 호출한다 |
+| [0005](adr/0005-judge-stops-at-first-failure.md) | 채점은 첫 실패에서 멈추고, 실패 case 를 특정한다 |
 
 ## 분해 계획 (미착수)
 

@@ -430,6 +430,42 @@ def check_schemas_are_closed() -> None:
         walk(schema, "")
 
 
+def check_judge_status_enums_match() -> None:
+    """Judge 판정 enum 이 두 계약에서 갈라지는 것을 막는다.
+
+    judge-result.schema.json 은 Sandbox Runner 가 내는 것이고,
+    submit-response.schema.json 의 judge.status 는 그것을 그대로 실어 나른다.
+    한쪽에만 상태를 추가하면 Runner 가 낸 값을 API 계층이 거부하거나, 반대로
+    아무도 내지 않는 상태를 프론트가 분기 처리하게 된다.
+
+    ADR-0004 의 Reviewer 호출 정책이 이 enum 위에 서 있으므로 특히 중요하다 -
+    새 상태가 한쪽에만 생기면 그 상태에서 Reviewer 를 부를지 아무도 정하지 않은
+    채로 코드가 먼저 굴러간다.
+    """
+    judge = load_json(CONTRACTS / "judge-result.schema.json")
+    response = load_json(CONTRACTS / "submit-response.schema.json")
+    if judge is None or response is None:
+        return
+
+    a = judge.get("properties", {}).get("status", {}).get("enum")
+    b = (
+        response.get("properties", {})
+        .get("judge", {})
+        .get("properties", {})
+        .get("status", {})
+        .get("enum")
+    )
+    if a is None or b is None:
+        fail("judge-sync", "judge status enum 을 찾지 못했다")
+        return
+    only_judge = sorted(set(a) - set(b))
+    only_response = sorted(set(b) - set(a))
+    if only_judge:
+        fail("judge-sync", f"judge-result 에만 있는 status: {only_judge}")
+    if only_response:
+        fail("judge-sync", f"submit-response 에만 있는 status: {only_response}")
+
+
 def check_dependencies_have_one_source() -> None:
     """CI 와 README 가 서로 다른 의존성을 설치하는 것을 막는다.
 
@@ -571,6 +607,7 @@ def main() -> int:
     check_schemas_are_valid_json_schema()
     check_schema_keywords_are_known()
     check_schemas_are_closed()
+    check_judge_status_enums_match()
     check_dependencies_have_one_source()
     check_nullable_fields_are_required()
     check_llm_schema_owns_nothing_systemic()
