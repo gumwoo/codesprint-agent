@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# 메타테스트(tools/meta_test_curriculum.py)는 이 파일들을 읽고 → 망가뜨리고 → 되돌린다.
+# Python 의 text mode read 는 CRLF 를 LF 로 바꿔 읽으므로, checkout 이 CRLF 라면
+# 되돌린 결과가 원본과 바이트 단위로 달라진다. 그러면 CI 의
+# "메타테스트가 원본을 되돌렸는지 확인" 스텝이 실제 오류가 아닌 줄바꿈 차이로 실패한다.
+# Windows 개발 / Linux CI 어느 쪽에서도 LF 로 고정한다.
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.json   text eol=lf
+*.py     text eol=lf
+*.md     text eol=lf

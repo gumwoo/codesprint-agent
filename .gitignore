@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 사용자 제출 코드 — 신뢰할 수 없는 입력이다. 저장소에 들어오면 안 된다.
+judge/submissions/
+**/submissions/
+
+# 빌드 산출물
+build/
+dist/
+target/
+node_modules/
+.gradle/
+.next/
+
+# 로컬 환경
+.env
+.env.*
+*.local
+
+# 에디터
+.idea/
+.vscode/
+*.swp
+.DS_Store
