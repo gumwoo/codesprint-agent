@@ -20,8 +20,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      # requirements-dev.txt 를 쓴다. 여기에 직접 나열하면 README 와 갈라지고,
+      # 그러면 새로 clone 한 사람의 로컬만 조용히 다른 의존성으로 검증하게 된다.
       - name: install deps
-        run: pip install pyyaml==6.0.2 jsonschema==4.23.0
+        run: pip install -r requirements-dev.txt
 
       - name: 커리큘럼/계약 검사
         run: python tools/check_curriculum.py

@@ -430,6 +430,43 @@ def check_schemas_are_closed() -> None:
         walk(schema, "")
 
 
+def check_dependencies_have_one_source() -> None:
+    """CI 와 README 가 서로 다른 의존성을 설치하는 것을 막는다.
+
+    실제로 한 번 갈라졌다. README 는 `pip install pyyaml`, CI 는
+    `pip install pyyaml jsonschema` 였다. 새로 clone 한 사람이 README 대로 따라 하면
+    하네스가 import 에서 죽는다. 더 나쁜 경우는 죽지 않고 **다른 의존성 트리로
+    통과하는 것**이다 - 그러면 로컬과 CI 가 서로 다른 것을 검증한 셈이라
+    하네스 결과의 근거가 통째로 흔들린다.
+
+    의존성을 requirements-dev.txt 한 곳에 두고, 워크플로와 README 가 그 파일을
+    가리키는지 확인한다.
+    """
+    req = ROOT / "requirements-dev.txt"
+    if not req.exists():
+        fail("deps", "requirements-dev.txt 가 없다")
+        return
+
+    for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if "pip install" in line and "-r requirements-dev.txt" not in line:
+                fail(
+                    "deps",
+                    f"{path.name}:{i}: 의존성을 직접 나열한다 "
+                    f"(requirements-dev.txt 를 쓴다) - {line.strip()}",
+                )
+
+    readme = ROOT / "README.md"
+    if readme.exists():
+        for i, line in enumerate(readme.read_text(encoding="utf-8").splitlines(), 1):
+            if "pip install" in line and "-r requirements-dev.txt" not in line:
+                fail(
+                    "deps",
+                    f"README.md:{i}: 의존성을 직접 나열한다 "
+                    f"(requirements-dev.txt 를 쓴다) - {line.strip()}",
+                )
+
+
 def _nullable(node) -> bool:
     t = node.get("type") if isinstance(node, dict) else None
     return isinstance(t, list) and "null" in t
@@ -534,6 +571,7 @@ def main() -> int:
     check_schemas_are_valid_json_schema()
     check_schema_keywords_are_known()
     check_schemas_are_closed()
+    check_dependencies_have_one_source()
     check_nullable_fields_are_required()
     check_llm_schema_owns_nothing_systemic()
     check_mistake_enum_matches_yaml(mistakes)

@@ -43,10 +43,13 @@ docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
 ## 검증
 
 ```bash
-pip install pyyaml
+pip install -r requirements-dev.txt
 python tools/check_curriculum.py      # 데이터/계약이 맞는가
 python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 ```
+
+CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 검증하면 하네스 결과의
+근거가 흔들리므로, 의존성을 한 곳에만 둔다 — **CI 워크플로가 이 파일을 쓰는지도 검사한다.**
 
 두 번째가 있는 이유: **검사가 통과하는 것과 검사가 일하는 것은 다르다.**
 아무것도 안 하는 검사도 통과한다. 그래서 계약을 일부러 망가뜨린 뒤 검사가 실제로

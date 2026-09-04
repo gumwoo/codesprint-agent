@@ -120,6 +120,28 @@ def schema_keyword_typo(schema):
     props["minItmes"] = 1
 
 
+def ci_inlines_dependencies(text: str) -> str:
+    # CI 가 requirements-dev.txt 대신 의존성을 직접 나열하면, README 와 갈라져도
+    # 아무도 모른다. 실제로 한 번 갈라졌다.
+    return text.replace(
+        "run: pip install -r requirements-dev.txt",
+        "run: pip install pyyaml jsonschema",
+    )
+
+
+ci_inlines_dependencies._text_mode = True
+
+
+def readme_inlines_dependencies(text: str) -> str:
+    return text.replace(
+        "pip install -r requirements-dev.txt",
+        "pip install pyyaml",
+    )
+
+
+readme_inlines_dependencies._text_mode = True
+
+
 def response_drops_review_from_required(schema):
     schema["required"].remove("review")
 
@@ -202,12 +224,24 @@ CASES = [
     # -- 생략 vs null (contracts/README.md 규칙 5) --
     ("생략 vs null · review 가 required 에서 빠지면", "contracts/submit-response.schema.json", response_drops_review_from_required, "review 은 null 을 허용하는데 required 가 아니다"),
     ("생략 vs null · promptVersion 이 required 에서 빠지면", "contracts/submit-response.schema.json", response_drops_prompt_version_from_required, "promptVersion 은 null 을 허용하는데 required 가 아니다"),
+
+    # -- 의존성 단일 출처 --
+    ("CI 가 의존성을 직접 나열하면", ".github/workflows/curriculum.yml", ci_inlines_dependencies, "의존성을 직접 나열한다"),
+    ("README 가 의존성을 직접 나열하면", "README.md", readme_inlines_dependencies, "의존성을 직접 나열한다"),
 ]
 
 
 def mutate(path: pathlib.Path, fn) -> str:
-    """파일을 파싱해 fn 으로 망가뜨린 뒤 다시 쓴다. 원본 텍스트를 돌려준다."""
+    """파일을 파싱해 fn 으로 망가뜨린 뒤 다시 쓴다. 원본 텍스트를 돌려준다.
+
+    워크플로처럼 파싱했다 되쓰면 형태가 무너지는 파일은 fn 에 _text_mode 를 달아
+    원문 문자열을 직접 다루게 한다. (YAML 의 `on:` 키는 safe_load 에서 True 가 되어
+    되쓸 때 `true:` 로 바뀌는 등, 왕복이 안전하지 않다.)
+    """
     original = path.read_text(encoding="utf-8")
+    if getattr(fn, "_text_mode", False):
+        path.write_text(fn(original), encoding="utf-8", newline="")
+        return original
     if path.suffix == ".json":
         doc = json.loads(original)
         fn(doc)
