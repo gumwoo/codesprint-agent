@@ -27,6 +27,9 @@ public interface SkillEvidenceRepository extends Repository<SkillEvidenceRow, Lo
     List<SkillEvidenceRow> findByUserIdAndSkillCodeOrderByOccurredAtAscIdAsc(
             Long userId, String skillCode);
 
+    /** 재계산 없이 개수만 필요할 때. Decision Engine 의 "제출 전 개수" 가 그렇다. */
+    long countByUserIdAndSkillCode(Long userId, String skillCode);
+
     boolean existsByUserIdAndSourceEventIdAndSkillCode(
             Long userId, String sourceEventId, String skillCode);
 }

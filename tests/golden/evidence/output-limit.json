@@ -1,0 +1,47 @@
+{
+  "name": "output-limit",
+  "description": "출력 초과는 WA 와 같은 관측이다.",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "OUTPUT_LIMIT",
+    "hintLevel": 0,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": null,
+    "expectedSolveSeconds": null,
+    "algorithmSelection": null,
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": {
+    "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.0,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": 0.3,
+      "independent": 0.25,
+      "retention": null,
+      "speed": null
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": "P02_GRID_TRAVERSAL",
+      "judgeStatus": "OUTPUT_LIMIT",
+      "hintLevel": 0,
+      "solutionViewed": false,
+      "independentAttempt": true,
+      "reviewSucceeded": null,
+      "daysSinceLast": null,
+      "verdict": null
+    }
+  }
+}

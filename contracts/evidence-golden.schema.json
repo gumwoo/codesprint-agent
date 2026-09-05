@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/evidence-golden.schema.json",
+  "title": "EvidenceGoldenCase",
+  "description": "제출 하나를 Evidence 로 옮기는 매핑(Addendum PART I 의 11~16)을 두 구현에 고정한다. mastery-golden 은 '이미 만들어진 Evidence 로부터의 계산'을 고정하지만, 그 Evidence 를 **어떻게 만드는가** 는 고정하지 않았다 - 서비스 계층이 붙으면서 그 매핑도 Java 에 생겼으므로 여기서 대조한다(ADR-0010).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "description", "input", "expected"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "from_submission 의 인자. 모든 키가 required 이며 해당 없는 것은 null 을 명시한다 - 생략은 '모른다', null 은 '확인했고 없었다'다(contracts/README.md 규칙 5).",
+      "required": [
+        "sourceEventId", "skillCode", "skillWeight", "judgeStatus",
+        "hintLevel", "solutionViewed", "occurredAt", "evidenceType",
+        "solveSeconds", "expectedSolveSeconds", "algorithmSelection",
+        "mode", "problemCode", "tleCause"
+      ],
+      "properties": {
+        "sourceEventId": { "type": "string", "minLength": 1 },
+        "skillCode": { "type": "string", "minLength": 1 },
+        "skillWeight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "judgeStatus": { "type": "string", "minLength": 1 },
+        "hintLevel": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "solutionViewed": { "type": "boolean" },
+        "occurredAt": { "type": "string", "pattern": "(Z|[+-][0-9]{2}:[0-9]{2})$" },
+        "evidenceType": { "type": "string", "minLength": 1 },
+        "solveSeconds": { "type": ["number", "null"], "minimum": 0 },
+        "expectedSolveSeconds": { "type": ["integer", "null"], "minimum": 0 },
+        "algorithmSelection": { "type": ["string", "null"] },
+        "mode": { "type": "string", "minLength": 1 },
+        "problemCode": { "type": ["string", "null"] },
+        "tleCause": { "type": ["string", "null"] }
+      }
+    },
+    "expected": {
+      "description": "null 이면 이 Skill 에 아무것도 기록하지 않는다는 뜻이다. COMPILE_ERROR 가 그렇다(Addendum 12) - 문법 오류를 알고리즘 Skill 의 penalty 로 쓰지 않는다. '관측값이 전부 null 인 Evidence' 와 다르다.",
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "https://codesprint.dev/contracts/skill-evidence.schema.json" }
+      ]
+    }
+  }
+}

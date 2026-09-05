@@ -33,6 +33,9 @@ dependencies {
     // PostgreSQL 고유 동작이 검증되지 않는다.
     testImplementation("org.testcontainers:junit-jupiter:1.20.3")
     testImplementation("org.testcontainers:postgresql:1.20.3")
+    // API 응답을 계약(contracts/submit-response.schema.json)에 대조한다.
+    // 계약과 구현이 갈라지는 것을 사람 눈으로 막을 수는 없다.
+    testImplementation("com.networknt:json-schema-validator:1.5.1")
 }
 
 // 커리큘럼 데이터를 jar 에 굽는다.

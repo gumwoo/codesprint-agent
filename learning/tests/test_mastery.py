@@ -454,6 +454,24 @@ def test_unknown_judge_status_is_rejected() -> None:
                                                 verdict="MAYBE", occurred_at="2026-09-01T10:00:00Z")))
 
 
+def test_non_positive_solve_seconds_is_rejected() -> None:
+    """speed 는 비율로 매기므로 음수 시간이 오히려 최고 점수를 받는다.
+
+    실제로 확인했다 - solve_seconds=-100, expected=300 이면 speed 가 1.0 이었다.
+    Evidence 는 append-only 정본이라 그렇게 저장되면 지울 수 없다.
+    """
+    for bad in (-100, -1, 0):
+        check(f"solveSeconds {bad} 를 거부한다",
+              _raises(lambda b=bad: sub(1, "ACCEPTED", solve_seconds=b,
+                                        expected_solve_seconds=300)))
+
+    check("None 은 허용한다 (재지 않았다)",
+          sub(1, "ACCEPTED", solve_seconds=None).observed["speed"] is None)
+    check("양수는 그대로 관측한다",
+          sub(1, "ACCEPTED", solve_seconds=100,
+              expected_solve_seconds=300).observed["speed"] == 1.00)
+
+
 def _raises(fn) -> bool:
     try:
         fn()
@@ -510,6 +528,7 @@ def main() -> int:
         test_independent_attempt_applies_to_failures, test_hinted_failures_do_not_weaken,
         test_idempotent_on_duplicate_source_event,
         test_conflicting_evidence_is_rejected, test_unknown_judge_status_is_rejected,
+        test_non_positive_solve_seconds_is_rejected,
         test_orders_by_actual_instant_not_string, test_naive_timestamp_is_rejected,
     ):
         print(f"\n== {fn.__name__} ==")

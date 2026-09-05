@@ -23,3 +23,14 @@ spring:
 # 재계산이 순서를 잘못 잡는다 - ADR-0009.
 server:
   port: ${PORT:8080}
+
+codesprint:
+  # 문제는 jar 에 넣지 않는다. 이 저장소의 것은 전부 DEV_FIXTURE 이고(ADR-0008)
+  # 실서비스 문제은행은 여기 없다 - 배포물에 구워 넣으면 갈아끼울 때 재배포해야 한다.
+  repo-root: ${CODESPRINT_REPO_ROOT:..}
+  problems-dir: ${CODESPRINT_PROBLEMS_DIR:../problems}
+  judge:
+    python: ${CODESPRINT_PYTHON:python}
+    # 하네스가 통째로 굳었을 때의 마지막 방어선. 컨테이너 안쪽 timeout 은
+    # judge/run_submission.py 가 따로 건다.
+    timeout-seconds: ${CODESPRINT_JUDGE_TIMEOUT:120}

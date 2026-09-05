@@ -1,0 +1,47 @@
+{
+  "name": "runtime-error",
+  "description": "런타임 오류는 개념을 낮추지 않는다(Addendum 12).",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "RUNTIME_ERROR",
+    "hintLevel": 0,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": null,
+    "expectedSolveSeconds": null,
+    "algorithmSelection": null,
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": {
+    "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.0,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": 0.3,
+      "independent": null,
+      "retention": null,
+      "speed": null
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": "P02_GRID_TRAVERSAL",
+      "judgeStatus": "RUNTIME_ERROR",
+      "hintLevel": 0,
+      "solutionViewed": false,
+      "independentAttempt": true,
+      "reviewSucceeded": null,
+      "daysSinceLast": null,
+      "verdict": null
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "accepted-speed-slow",
+  "description": "기대의 2배를 넘으면 바닥값 0.20.",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "ACCEPTED",
+    "hintLevel": 0,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": 900,
+    "expectedSolveSeconds": 300,
+    "algorithmSelection": null,
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": {
+    "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.0,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": 0.9,
+      "independent": 0.95,
+      "retention": null,
+      "speed": 0.2
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": "P02_GRID_TRAVERSAL",
+      "judgeStatus": "ACCEPTED",
+      "hintLevel": 0,
+      "solutionViewed": false,
+      "independentAttempt": true,
+      "reviewSucceeded": null,
+      "daysSinceLast": null,
+      "verdict": null
+    }
+  }
+}

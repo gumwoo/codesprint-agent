@@ -1,0 +1,21 @@
+{
+  "name": "compile-error",
+  "description": "문법 오류로는 알고리즘 Skill 에 아무것도 기록하지 않는다. '관측값이 전부 null 인 Evidence' 가 아니라 Evidence 자체가 없다.",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "COMPILE_ERROR",
+    "hintLevel": 0,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": null,
+    "expectedSolveSeconds": null,
+    "algorithmSelection": null,
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": null
+}

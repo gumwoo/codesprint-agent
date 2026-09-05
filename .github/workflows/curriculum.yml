@@ -36,7 +36,9 @@ jobs:
       # golden fixture 가 현재 Python 산식과 일치하는가.
       # Java 대조(backend.yml)는 이 파일들을 기준으로 삼으므로 여기가 먼저다.
       - name: golden fixture 검증
-        run: python tools/gen_mastery_golden.py
+        run: |
+          python tools/gen_mastery_golden.py
+          python tools/gen_evidence_golden.py
 
       # 문제 데이터도 같은 원칙이다 - 문서가 아니라 검증되는 데이터다.
       # Docker 가 필요한 검사(정답이 실제로 AC 를 받는가)는 judge.yml 에 있다.
