@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P04_AREA_SIZE
+title: 가장 큰 영역의 크기
+kind: NORMAL
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: "O(N*M)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  이어지는 N 개의 줄에 0 과 1 로 이루어진 격자가 주어진다.
+
+  상하좌우로 이어진 1 들을 하나의 영역이라고 할 때, 가장 큰 영역의 크기를 출력한다.
+  1 이 하나도 없으면 0 을 출력한다.
+
+skills:
+  - code: BFS_GRID_TRAVERSAL
+    role: PRIMARY
+    weight: 0.5
+  - code: BFS_VISITED_MANAGEMENT
+    role: SECONDARY
+    weight: 0.3
+  - code: GRID_BOUNDARY_CHECK
+    role: SECONDARY
+    weight: 0.2
+
+commonMistakes:
+  - BOUNDARY_CHECK
+  - VISITED_TIMING
+  - INDEX_ERROR

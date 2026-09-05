@@ -1,0 +1,53 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "3 3\n1 0 1\n1 1 1\n1 0 1\n",
+      "expectedOutput": "5\n"
+    },
+    {
+      "id": 2,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 1\n1\n",
+      "expectedOutput": "1\n"
+    },
+    {
+      "id": 3,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1 1\n0\n",
+      "expectedOutput": "-1\n"
+    },
+    {
+      "id": 4,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "3 3\n1 0 1\n0 0 1\n1 0 1\n",
+      "expectedOutput": "-1\n"
+    },
+    {
+      "id": 5,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "5 4\n1 1 1 1\n1 1 0 1\n1 1 1 1\n1 1 1 1\n1 1 1 1\n",
+      "expectedOutput": "8\n"
+    },
+    {
+      "id": 6,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "5 2\n1 1\n1 1\n1 1\n1 1\n1 1\n",
+      "expectedOutput": "6\n"
+    },
+    {
+      "id": 7,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "3 3\n1 1 1\n1 1 1\n1 1 1\n",
+      "expectedOutput": "5\n"
+    }
+  ]
+}

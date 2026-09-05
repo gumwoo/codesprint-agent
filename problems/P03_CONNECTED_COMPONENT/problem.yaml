@@ -1,0 +1,32 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P03_CONNECTED_COMPONENT
+title: 영역의 개수 세기
+kind: NORMAL
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: "O(N*M)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  이어지는 N 개의 줄에 0 과 1 로 이루어진 격자가 주어진다.
+
+  상하좌우로 이어진 1 들을 하나의 영역이라고 할 때, 영역의 개수를 출력한다.
+
+skills:
+  - code: BFS_GRID_TRAVERSAL
+    role: PRIMARY
+    weight: 0.5
+  - code: BFS_VISITED_MANAGEMENT
+    role: SECONDARY
+    weight: 0.25
+  - code: GRID_BOUNDARY_CHECK
+    role: SECONDARY
+    weight: 0.25
+
+commonMistakes:
+  - BOUNDARY_CHECK
+  - VISITED_TIMING
+  - NO_VISITED

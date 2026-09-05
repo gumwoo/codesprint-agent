@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/test-cases.schema.json",
+  "title": "TestCases",
+  "description": "문제의 Test Case 집합. problems/<CODE>/cases.json 이 이 형식을 지킨다. expectedOutput 은 채점 데이터이므로 샌드박스 안으로 들어가지 않는다 - 근거: docs/adr/0006-expected-output-never-enters-sandbox.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cases"],
+  "properties": {
+    "cases": {
+      "type": "array",
+      "minItems": 2,
+      "description": "case 가 하나뿐이면 무엇을 검증하는지 알 수 없다. 최소 sample 하나와 hidden 하나를 요구한다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "hidden", "input", "expectedOutput"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "type": {
+            "enum": [
+              "SAMPLE",
+              "MINIMUM",
+              "MAXIMUM",
+              "BOUNDARY",
+              "DUPLICATE",
+              "SINGLE",
+              "ALL_SAME",
+              "RANDOM",
+              "ADVERSARIAL"
+            ],
+            "description": "Addendum 66 의 case 구성. 무엇을 노린 case 인지 적어두지 않으면 나중에 어떤 축이 비어 있는지 알 수 없다."
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "사용자에게 보여줄 것인가. SAMPLE 은 보여주고 나머지는 숨긴다. 숨긴다는 말이 성립하려면 expectedOutput 이 샌드박스에 없어야 한다(ADR-0006)."
+          },
+          "input": { "type": "string" },
+          "expectedOutput": { "type": "string" }
+        }
+      }
+    }
+  }
+}

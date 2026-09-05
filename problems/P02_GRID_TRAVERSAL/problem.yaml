@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P02_GRID_TRAVERSAL
+title: 출발점에서 도달할 수 있는 칸 세기
+kind: NORMAL
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: "O(N*M)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  이어지는 N 개의 줄에 0 과 1 로 이루어진 격자가 주어진다. 1 은 지나갈 수 있는 칸이다.
+
+  (0, 0) 에서 시작해 상하좌우로만 이동할 때, 도달할 수 있는 칸의 개수를 출력한다.
+  시작 칸이 0 이면 0 을 출력한다.
+
+skills:
+  - code: BFS_GRID_TRAVERSAL
+    role: PRIMARY
+    weight: 0.5
+  - code: BFS_BASIC
+    role: SECONDARY
+    weight: 0.25
+  - code: GRID_BOUNDARY_CHECK
+    role: SECONDARY
+    weight: 0.25
+
+commonMistakes:
+  - BOUNDARY_CHECK
+  - NO_VISITED
+  - INDEX_ERROR

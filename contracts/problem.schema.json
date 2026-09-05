@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/problem.schema.json",
+  "title": "Problem",
+  "description": "문제 정의. problems/<CODE>/problem.yaml 이 이 형식을 지킨다. 커리큘럼과 마찬가지로 문서가 아니라 검증되는 데이터다 - Skill/Mistake 참조가 실재하는지, Test Case 가 실제로 오답을 거르는지 CI 가 확인한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "title",
+    "kind",
+    "statement",
+    "timeLimitMs",
+    "memoryLimitMb",
+    "expectedSolveSeconds",
+    "referenceComplexity",
+    "skills",
+    "commonMistakes"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "pattern": "^P[0-9]{2}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
+      "description": "P01_QUEUE_BASIC 형태. 디렉터리 이름과 같아야 한다."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "kind": {
+      "enum": ["NORMAL", "MICRO_DRILL", "REVIEW"],
+      "description": "MICRO_DRILL 은 특정 Mistake 를 교정하는 2~5분짜리 문제다(Addendum 72). auto_drill 이 켜진 Mistake 는 그 target_skill 을 노리는 MICRO_DRILL 이 최소 하나 있어야 한다 - 없으면 Decision Engine 이 갈 곳 없는 액션을 낸다."
+    },
+    "statement": { "type": "string", "minLength": 1 },
+    "timeLimitMs": { "type": "integer", "minimum": 100 },
+    "memoryLimitMb": { "type": "integer", "minimum": 16 },
+    "expectedSolveSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "speed_score 계산의 분모다(Addendum 13). 없으면 속도 차원을 평가할 수 없다."
+    },
+    "referenceComplexity": { "type": "string", "minLength": 1 },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "description": "이 문제가 요구하는 Skill 과 비중. weight 합은 1.0 이며 PRIMARY 는 정확히 하나다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "role", "weight"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
+            "description": "curriculum/skills.yaml 에 실재하는 code 만."
+          },
+          "role": { "enum": ["PRIMARY", "SECONDARY", "PREREQUISITE"] },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "commonMistakes": {
+      "type": "array",
+      "description": "이 문제에서 자주 나오는 오답 원인. curriculum/mistakes.yaml 의 code 만. Reviewer 프롬프트의 힌트로 쓰이지만 정답을 알려주지는 않는다.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+      }
+    }
+  }
+}
