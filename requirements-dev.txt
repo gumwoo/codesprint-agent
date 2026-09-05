@@ -17,3 +17,10 @@
 
 pyyaml==6.0.3
 jsonschema==4.23.0
+
+# Judge Worker 가 큐(judge_jobs)를 읽는다. 언어 경계가 DB 다 - ADR-0013.
+#
+# ⚠️ pyyaml 과 같은 이유로 버전을 올려 잡았다. 3.2.3 에는 Python 3.14 용 wheel 이
+# 없어 로컬(3.14)에서 설치가 실패한다 - CI(3.12)에서만 되는 핀은 새로 clone 한
+# 사람을 막는다.
+psycopg[binary]==3.2.13
