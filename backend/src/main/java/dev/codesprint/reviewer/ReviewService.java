@@ -73,8 +73,14 @@ public class ReviewService {
      *     분석에 실패했거나, 검증을 통과하지 못했다. 셋을 응답에서 구분하지 않는다.
      *     사용자가 할 수 있는 일이 같기 때문이다.
      */
+    /**
+     * @param corroboration 채점 결과의 모양이 무엇을 뒷받침하는가(ADR-0015).
+     *     <b>Reviewer 출력에서 만들지 않는다</b> - 요청으로 알려준 값을 되돌려받는
+     *     것은 확인이 아니다(ADR-0014). 뒷받침할 데이터가 없으면
+     *     {@link CaseCorroboration#NONE} 을 넘긴다.
+     */
     public Optional<Review> review(Long userId, Long submissionId, Long problemId,
-            ReviewerPort.Request request) {
+            ReviewerPort.Request request, CaseCorroboration corroboration) {
 
         Optional<ReviewerOutput> analysed;
         try {
@@ -101,13 +107,20 @@ public class ReviewService {
 
         int recent = recentDetectionCount(userId, problemId, output.primaryMistake());
 
-        // §21-A 의 독립적인 근거는 아직 없다. Reviewer 가 실패 case 를 인용했다는
-        // 사실은 근거가 아니다 - 그 번호를 요청으로 알려줬으므로 되돌려주기만 하면
-        // 된다(ADR-0014). case 성격 태그나 결정론적 Rule 이 생기면 여기에 꽂는다.
-        boolean corroborated = false;
+        // §21-A 의 독립적인 근거. **Reviewer 가 만들지 않은 것만 들어온다.**
+        //
+        // 어떤 case 가 실패하고 어떤 case 가 통과했는지는 Judge 가 관측한 것이고,
+        // 어떤 case 가 그 실수를 겨냥하는지는 문제 데이터에 적혀 있다. 둘 다
+        // 이 분석 이전에 정해져 있다.
+        boolean corroborated = corroboration.supports(output.primaryMistake());
 
         MistakeConfirmation.Verdict verdict = MistakeConfirmation.decide(
                 output.confidence(), corroborated, recent);
+        if (corroborated) {
+            log.info("submission {}: {} 를 실패 case 의 모양이 뒷받침한다 - {}",
+                    submissionId, output.primaryMistake(),
+                    corroboration.describe(output.primaryMistake()));
+        }
 
         record(userId, submissionId, output, verdict);
 

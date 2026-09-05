@@ -61,7 +61,7 @@ class MistakeConfirmationTest {
         void conditionA() {
             var verdict = MistakeConfirmation.decide(0.95, true, 1);
             assertThat(verdict.status()).isEqualTo(MistakeStatus.CONFIRMED);
-            assertThat(verdict.reason()).contains("독립");
+            assertThat(verdict.reason()).contains("case 의 모양");
         }
 
         @Test

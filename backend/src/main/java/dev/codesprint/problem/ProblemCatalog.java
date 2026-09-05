@@ -218,6 +218,41 @@ public class ProblemCatalog {
     }
 
     /**
+     * 어떤 case 가 어떤 Mistake 를 겨냥하는가. {@code cases.json} 의 {@code probes} 다.
+     *
+     * <p>Reviewer 주장을 뒷받침하는 독립 근거가 여기서 나온다(ADR-0015). 태그가
+     * 실제로 그 실수를 잡는지는 {@code tools/verify_problems.py} 가 실제 채점으로
+     * 확인하며, Java 는 <b>검증하지 않고 읽기만 한다</b> - 같은 검사를 두 언어로 두면
+     * 둘이 갈라진다(ADR-0012 와 같은 이유).
+     *
+     * @return Mistake code -> 그것을 겨냥한 case id. 태그가 없으면 빈 Map 이다.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, java.util.Set<Integer>> probesOf(String code) {
+        Path file = casesFile(code);
+        if (!Files.exists(file)) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> doc = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(Files.readString(file), Map.class);
+            Map<String, java.util.Set<Integer>> probes = new LinkedHashMap<>();
+            for (Map<String, Object> row
+                    : (List<Map<String, Object>>) doc.getOrDefault("cases", List.of())) {
+                int id = ((Number) row.get("id")).intValue();
+                for (String mistake
+                        : (List<String>) row.getOrDefault("probes", List.of())) {
+                    probes.computeIfAbsent(mistake, k -> new java.util.LinkedHashSet<>())
+                            .add(id);
+                }
+            }
+            return Map.copyOf(probes);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Test Case 를 읽지 못했다: " + file, e);
+        }
+    }
+
+    /**
      * 이 Skill 을 PRIMARY 로 갖는 문제들. code 순으로 고정한다 - 같은 상황에서 같은
      * 문제가 나와야 사용자가 왜 이 문제를 받았는지 설명할 수 있다.
      */

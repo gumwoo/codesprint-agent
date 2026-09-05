@@ -102,6 +102,15 @@ read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다. 하네�
 공개 저장소이므로 Test Case 와 정답이 그대로 보인다 — `hidden` 은 UI 노출 여부일 뿐
 기밀성 보장이 아니다. 실서비스 문제은행(`CURATED`)은 여기 두지 않으며 CI 가 막는다.
 
+`cases.json` 의 `probes` 는 그 case 가 겨냥하는 Mistake 다 - Reviewer 주장을 뒷받침하는
+독립 근거가 여기서 나온다(ADR-0015). **태그도 주장이므로 검증한다** -
+`probes/<MISTAKE>.py` 가 그 실수를 담은 풀이이고, CI 가 실제로 채점해서 태그된 case 를
+전부 실패시키는지, 그리고 **다른** 실수의 오답은 만족시키지 못하는지 본다.
+
+그래서 태그는 `negativeControl.mistake` 와 같은 실수에는 붙일 수 없다 - 붙이면
+대조군이 사라져 검증이 공허해진다. 겨냥하는 실수가 없으면 `[]` 라고 적는다.
+생략은 "모른다" 다.
+
 ```bash
 python tools/check_problems.py      # 참조 무결성 (Docker 불필요)
 python tools/meta_test_problems.py  # 그 검사가 실제로 잡는가
@@ -201,14 +210,30 @@ GET  /api/submissions/{id}/next-problem   그 결정이 가리키는 문제를 �
 confidence < 0.60          LOGGED_ONLY   기록만
 0.60 ~ 0.80                POSSIBLE      자동 드릴 금지
 0.80 ~ 0.90                PROBABLE
-A. c >= 0.90 + Reviewer 밖의 독립 근거     CONFIRMED  (아직 그런 근거가 없다)
+A. c >= 0.90 + Reviewer 밖의 독립 근거     CONFIRMED
 B. c >= 0.80 + 최근 3문제에서 2회 이상      CONFIRMED
 ```
 
 **확신만으로 확정하지 않는다.** confidence 는 LLM 이 스스로 매기므로 그것만 보면
 순환이다. **Reviewer 에게 알려준 값을 되돌려받는 것도 근거가 아니다** - 실패 case
-번호를 요청에 넣어 보내므로 그대로 돌려주기만 하면 된다. 그래서 지금 확정은 B 로만
-일어나고, 처음 보는 실수는 확정되지 않는다.
+번호를 요청에 넣어 보내므로 그대로 돌려주기만 하면 된다.
+
+A 의 독립 근거는 **실패의 모양**이다([ADR-0015](docs/adr/0015-failure-shape-is-the-independent-evidence.md)).
+`cases.json` 의 `probes` 가 "그 실수가 있으면 이 case 는 반드시 실패한다" 를 적어 두고,
+Judge 가 어떤 case 를 실패시키고 어떤 case 를 통과시켰는지 관측한다. 둘 다 분석 이전에
+정해져 있고 Reviewer 가 건드리지 않는다.
+
+```
+겨냥한 case 가 **전부** 실패했다          필요조건
+겨냥하지 않은 case 중 통과한 것이 있다     대조군
+```
+
+**대조군이 핵심이다.** 없으면 전부 실패한 제출이 어떤 태그든 만족한다 - 무엇이
+틀렸든 그 Mistake 가 된다. 그리고 이것이 그 실수가 있었음을 증명하지는 않는다 -
+그래서 A 는 confidence 0.90 을 함께 요구한다.
+
+조건은 두 곳에 있고 **같아야 한다** - `CaseCorroboration.java` 와
+`tools/verify_problems.py` 의 `satisfies()`.
 
 **"최근 3문제" 는 제출 이력에서 정한다.** 탐지 기록에서 뽑으면 실수가 없었던 문제가
 창에 들어오지 않아, 몇 달 전 실수가 현재 실수와 묶인다. 그리고 검증(`ReviewerOutputValidator`)을 통과하지 못한 분석은 **통째로
