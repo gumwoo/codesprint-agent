@@ -36,6 +36,24 @@ public enum JudgeStatus {
         return terminal;
     }
 
+    /**
+     * 이 판정이 알고리즘 Skill 에 Evidence 를 남기는가.
+     *
+     * <p>{@code COMPILE_ERROR} 는 남기지 않는다 - 문법 오류를 알고리즘 Skill 의
+     * penalty 로 쓰면 안 된다(Addendum §12). {@code SYSTEM_ERROR} 는 우리 잘못이라
+     * 사용자 점수를 건드리지 않는다.
+     *
+     * <p>"관측값이 전부 null 인 Evidence 를 만든다" 와 다르다. 그런 Evidence 는
+     * mastery 를 바꾸지 않으면서 confidence 와 evidenceCount 만 올린다.
+     */
+    public boolean producesEvidence() {
+        return switch (this) {
+            case ACCEPTED, WRONG_ANSWER, RUNTIME_ERROR, TIME_LIMIT, MEMORY_LIMIT,
+                    OUTPUT_LIMIT -> true;
+            default -> false;
+        };
+    }
+
     /** Reviewer 를 호출하는 판정인가(ADR-0004). 실패 case 가 특정되는 것들이다. */
     public boolean invokesReviewer() {
         return switch (this) {

@@ -74,9 +74,11 @@ fixture**(`tests/golden/`)를 읽고 같은 값을 내야 하며 CI 가 대조�
 
 ```bash
 # 1. learning/mastery.py 또는 learning/evidence.py
-# 2. backend/.../MasteryCalculator.java
+# 2. backend/.../MasteryCalculator.java        (Evidence -> mastery)
+#    backend/.../SubmissionEvidenceFactory.java (제출 -> Evidence)
 # 3. golden 재생성
 python tools/gen_mastery_golden.py --write
+python tools/gen_evidence_golden.py --write
 ```
 
 한쪽만 고치면 CI 가 막는다. 실제로 `Dimension.INDEPENDENT` 가중치를 0.25 -> 0.30 으로
