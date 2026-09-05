@@ -70,10 +70,12 @@ public class JudgeResultApplier {
     private final UserSkillRepository userSkills;
     private final JudgeJobRepository jobs;
     private final ReviewService reviews;
+    private final NextProblemService nextProblem;
 
     public JudgeResultApplier(ProblemCatalog catalog, EvidenceStore evidenceStore,
             MasteryService mastery, DecisionEngine decisions, SubmissionRepository submissions,
-            UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews) {
+            UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews,
+            NextProblemService nextProblem) {
         this.catalog = catalog;
         this.evidenceStore = evidenceStore;
         this.mastery = mastery;
@@ -82,6 +84,7 @@ public class JudgeResultApplier {
         this.userSkills = userSkills;
         this.jobs = jobs;
         this.reviews = reviews;
+        this.nextProblem = nextProblem;
     }
 
     /**
@@ -161,6 +164,7 @@ public class JudgeResultApplier {
         if (problem == null) {
             submission.applyOutcome(ActionType.CONTINUE.name(), null,
                     "채점 결과를 반영할 문제 정보를 찾지 못했다", "[]");
+            submission.applyNextProblem(null, "문제 정보를 찾지 못해 다음 문제를 고를 수 없다");
             submissions.save(submission);
             job.markApplied(Instant.now());
             jobs.save(job);
@@ -258,8 +262,19 @@ public class JudgeResultApplier {
                 false,  // 복습 성공 기록은 복습 일정이 붙어야 생긴다
                 mastery.masteriesOf(userId)));
 
+        // 다음에 풀 문제도 지금 고정한다. 조회할 때 고르면 그 사이 다른 제출이
+        // 바꿔 놓은 상태를 보게 되어 같은 제출이 다른 문제를 가리킨다.
+        //
+        // **결정을 쓰기 전에 고른다.** 이 호출은 제출을 조회하므로 auto-flush 가
+        // 일어나는데, 결정만 쓰인 상태로 행이 나가면 "결정이 있으면 이유도 있다"
+        // 제약에 걸린다. 실제로 그렇게 깨졌다 - 제약이 순서 문제를 잡아냈다.
+        NextProblemService.Selection selection = nextProblem.select(
+                userId, action.type(), action.targetSkill(), submission.problemId());
+
         submission.applyOutcome(action.type().name(), action.targetSkill(), action.reason(),
                 updates.toString());
+        submission.applyNextProblem(selection.problemCode(), selection.reason());
+
         submissions.save(submission);
 
         job.markApplied(Instant.now());

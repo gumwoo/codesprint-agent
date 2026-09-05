@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/next-problem.schema.json",
+  "title": "NextProblem",
+  "description": "GET /api/submissions/{id}/next-problem 의 응답. 제출 하나가 낸 다음 행동(nextAction)을 실제 문제로 옮긴 것이다. 결정은 Decision Engine 이 이미 내렸고 여기서는 그 대상 Skill 에 맞는 문제를 고를 뿐이다 - 새로 판단하지 않는다(ADR-0002).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "submissionId",
+    "action",
+    "targetSkill",
+    "problem",
+    "reason"
+  ],
+  "properties": {
+    "submissionId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "action": {
+      "enum": [
+        "CONTINUE",
+        "HARDER",
+        "EASIER",
+        "MICRO_DRILL",
+        "REVIEW_CONCEPT",
+        "RETRY_VARIANT",
+        "CHANGE_SKILL",
+        "UNLOCK_NEXT",
+        "SCHEDULE_REVIEW",
+        "MOCK_TEST",
+        "END_SESSION"
+      ],
+      "description": "이 문제를 고르게 한 행동. 제출에 저장된 값을 그대로 읽는다 - 조회할 때 다시 계산하지 않는다. 목록은 submit-response 의 nextAction.type 과 같아야 하며 테스트가 대조한다 - 갈라지면 계약이 새 행동을 알아보지 못한다."
+    },
+    "targetSkill": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "행동이 겨냥한 Skill. 대상이 없는 행동에서는 null 이며 필드를 생략하지 않는다."
+    },
+    "problem": {
+      "description": "풀 문제. 고를 수 없으면 null 이다 - 그 행동에 맞는 문제가 없거나, 애초에 문제를 요구하지 않는 행동이다. 이유는 reason 에 적힌다.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "https://codesprint.dev/contracts/problem-view.schema.json"
+        }
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "description": "왜 이 문제인가, 또는 왜 없는가. 감사 로그다."
+    }
+  }
+}

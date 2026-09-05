@@ -49,4 +49,27 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             order by max(s.submittedAt) desc
             """)
     List<Long> recentProblemIds(@Param("userId") Long userId, Pageable page);
+
+    /**
+     * 이 사용자가 <b>스스로</b> 풀어낸 문제들.
+     *
+     * <p><b>AC 를 전부 "풀었다" 로 보면 안 된다.</b> 힌트를 많이 쓰거나 풀이를 보고
+     * 맞힌 것은 독립 풀이가 아니며(Addendum §22), Evidence 쪽은 이미 그렇게 센다 -
+     * {@code SubmissionEvidenceFactory.isIndependentAttempt}. 문제 선택에서만 다시
+     * "AC 한 번" 으로 단순화하면, 정답을 보고 맞힌 문제가 후보에서 영영 빠진다.
+     * 그 사람은 그 문제를 아직 혼자 풀지 못한다.
+     *
+     * @param hintCeiling 이 값 이상 힌트를 쓴 AC 는 독립 풀이로 세지 않는다.
+     *     상수는 {@code SubmissionEvidenceFactory.INDEPENDENT_HINT_CEILING} 하나뿐이며
+     *     호출자가 넘긴다 - 여기 숫자를 박으면 정본이 둘이 된다.
+     */
+    @Query("""
+            select distinct s.problemId from SubmissionRow s
+            where s.userId = :userId
+              and s.status = 'ACCEPTED'
+              and s.solutionViewed = false
+              and s.hintLevel < :hintCeiling
+            """)
+    List<Long> findIndependentlySolvedProblemIds(@Param("userId") Long userId,
+            @Param("hintCeiling") int hintCeiling);
 }

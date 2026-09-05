@@ -47,10 +47,32 @@ public class ProblemCatalog {
             String title,
             String kind,
             String source,
+            String statement,
             Integer timeLimitMs,
             Integer memoryLimitMb,
             Integer expectedSolveSeconds,
             List<SkillLink> skills) {
+
+        /** 이 문제가 주로 겨냥하는 Skill. */
+        public String primarySkill() {
+            return skills.stream()
+                    .filter(link -> "PRIMARY".equals(link.role()))
+                    .map(SkillLink::skillCode)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException(
+                            "PRIMARY Skill 이 없는 문제다: " + code
+                                    + ". tools/check_problems.py 가 막았어야 한다."));
+        }
+    }
+
+    /**
+     * 사용자에게 보여줄 수 있는 Test Case.
+     *
+     * <p><b>{@code hidden: true} 인 case 는 여기 들어오지 않는다.</b> 공개 저장소에서는
+     * 파일을 열면 다 보이지만(ADR-0008), 그것은 이 저장소가 fixture 를 담고 있기
+     * 때문이지 API 가 그래도 된다는 뜻이 아니다.
+     */
+    public record SampleCase(String input, String expectedOutput) {
     }
 
     /**
@@ -94,6 +116,7 @@ public class ProblemCatalog {
                         (String) doc.get("title"),
                         (String) doc.get("kind"),
                         (String) doc.get("source"),
+                        (String) doc.get("statement"),
                         integer(doc.get("timeLimitMs")),
                         integer(doc.get("memoryLimitMb")),
                         integer(doc.get("expectedSolveSeconds")),
@@ -122,8 +145,51 @@ public class ProblemCatalog {
         return List.copyOf(problems.keySet());
     }
 
-    /** Judge 에 넘길 Test Case 파일. 본문은 읽지 않는다 - 정답이 들어 있다(ADR-0006). */
+    /** Test Case 파일. Worker 가 읽는다 - 이 파일에는 정답이 들어 있다(ADR-0006). */
     public Path casesFile(String code) {
         return root.resolve(code).resolve("cases.json");
+    }
+
+    /**
+     * 공개 가능한 case 만 읽는다.
+     *
+     * <p>필터를 호출자에게 맡기지 않는다. 한 곳에서라도 잊으면 그대로 유출이고,
+     * 지금은 fixture 라 티가 나지 않는다.
+     */
+    @SuppressWarnings("unchecked")
+    public List<SampleCase> samplesOf(String code) {
+        Path file = casesFile(code);
+        if (!Files.exists(file)) {
+            return List.of();
+        }
+        try {
+            Map<String, Object> doc = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(Files.readString(file), Map.class);
+            List<SampleCase> samples = new ArrayList<>();
+            for (Map<String, Object> row
+                    : (List<Map<String, Object>>) doc.getOrDefault("cases", List.of())) {
+                if (Boolean.TRUE.equals(row.get("hidden"))) {
+                    continue;
+                }
+                samples.add(new SampleCase(
+                        (String) row.get("input"), (String) row.get("expectedOutput")));
+            }
+            return List.copyOf(samples);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Test Case 를 읽지 못했다: " + file, e);
+        }
+    }
+
+    /**
+     * 이 Skill 을 PRIMARY 로 갖는 문제들. code 순으로 고정한다 - 같은 상황에서 같은
+     * 문제가 나와야 사용자가 왜 이 문제를 받았는지 설명할 수 있다.
+     */
+    public List<ProblemDefinition> byPrimarySkill(String skillCode, String kind) {
+        return problems.values().stream()
+                .filter(problem -> kind == null || kind.equals(problem.kind()))
+                .filter(problem -> problem.skills().stream().anyMatch(link ->
+                        "PRIMARY".equals(link.role()) && link.skillCode().equals(skillCode)))
+                .sorted(java.util.Comparator.comparing(ProblemDefinition::code))
+                .toList();
     }
 }
