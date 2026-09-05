@@ -97,6 +97,11 @@ public class JudgeJobRow {
         return problemCode;
     }
 
+    /** 사용자가 낸 코드. Reviewer 가 분석 대상으로 받는다 - 서버는 실행하지 않는다. */
+    public String sourceCode() {
+        return sourceCode;
+    }
+
     public String status() {
         return status;
     }

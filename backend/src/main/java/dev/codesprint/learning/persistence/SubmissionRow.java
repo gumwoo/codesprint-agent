@@ -134,6 +134,62 @@ public class SubmissionRow {
         return solveSeconds;
     }
 
+    // Reviewer 분석. 부르지 않았거나 검증을 통과하지 못했으면 전부 null 이다.
+    @Column(name = "review_primary_mistake", length = 60)
+    private String reviewPrimaryMistake;
+
+    @Column(name = "review_confidence", precision = 5, scale = 4)
+    private java.math.BigDecimal reviewConfidence;
+
+    @Column(name = "review_status", length = 20)
+    private String reviewStatus;
+
+    @Column(name = "review_explanation")
+    private String reviewExplanation;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "review_secondary", columnDefinition = "jsonb")
+    private String reviewSecondary;
+
+    /** 어떤 프롬프트가 만든 분석인가(PRD 135). 없으면 나중에 라벨을 섞어 정확도를 잰다. */
+    @Column(name = "prompt_version", length = 40)
+    private String promptVersion;
+
+    /** Reviewer 분석을 남긴다. 부르지 않았으면 호출하지 않는다 - 전부 null 로 남는다. */
+    public void applyReview(String primaryMistake, java.math.BigDecimal confidence,
+            String status, String explanation, String secondaryJson, String promptVersion) {
+        this.reviewPrimaryMistake = primaryMistake;
+        this.reviewConfidence = confidence;
+        this.reviewStatus = status;
+        this.reviewExplanation = explanation;
+        this.reviewSecondary = secondaryJson;
+        this.promptVersion = promptVersion;
+    }
+
+    public String reviewPrimaryMistake() {
+        return reviewPrimaryMistake;
+    }
+
+    public java.math.BigDecimal reviewConfidence() {
+        return reviewConfidence;
+    }
+
+    public String reviewStatus() {
+        return reviewStatus;
+    }
+
+    public String reviewExplanation() {
+        return reviewExplanation;
+    }
+
+    public String reviewSecondary() {
+        return reviewSecondary;
+    }
+
+    public String promptVersion() {
+        return promptVersion;
+    }
+
     /** 결정과 갱신 내역을 함께 남긴다. 반영은 한 번뿐이므로 부분 갱신 경로를 두지 않는다. */
     public void applyOutcome(String nextActionType, String nextActionTarget,
             String nextActionReason, String skillUpdates) {

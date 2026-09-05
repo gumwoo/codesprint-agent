@@ -144,7 +144,8 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
 10개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
-제출 API, 그리고 Judge Worker + 큐까지 있다. **Reviewer 와 프론트는 아직 없다.**
+제출 API, Judge Worker + 큐, 그리고 Reviewer 오케스트레이션까지 있다.
+**LLM 어댑터와 프론트는 아직 없다** - `ReviewerPort` 구현이 없으면 분석 없이 진행한다.
 
 제출 하나가 지나는 길:
 
@@ -161,6 +162,27 @@ GET  /api/submissions/{id}         결과를 확인한다
 
 **Worker 는 학습 상태를 건드리지 않는다.** Evidence · mastery · 다음 행동은 전부 Java 가
 결과를 반영할 때 만든다. 두 언어가 같은 테이블을 고치면 어느 쪽이 정본인지 알 수 없다.
+
+## Reviewer 를 다룰 때
+
+**Reviewer 가 낸 Mistake 는 확정되기 전까지 주장일 뿐이다**
+([ADR-0014](docs/adr/0014-reviewer-output-is-a-claim-until-judge-evidence-agrees.md)).
+확정은 시스템이 하고, 그 규칙은 Addendum 19·21 이다.
+
+```
+confidence < 0.60          LOGGED_ONLY   기록만
+0.60 ~ 0.80                POSSIBLE      자동 드릴 금지
+0.80 ~ 0.90                PROBABLE
+A. c >= 0.90 + Judge 가 실패시킨 case 인용   CONFIRMED
+B. c >= 0.80 + 최근 3문제에서 2회 이상       CONFIRMED
+```
+
+**확신만으로 확정하지 않는다.** confidence 는 LLM 이 스스로 매기므로 그것만 보면
+순환이다. 그리고 검증(`ReviewerOutputValidator`)을 통과하지 못한 분석은 **통째로
+버린다** - 부분적으로 맞는 절반을 살리려다 잘못된 절반이 학습 경로에 들어간다.
+
+확정되지 않은 탐지도 지우지 않는다. 재발(§21-B)을 세려면 남아 있어야 하고, 나중에
+Reviewer 정확도를 재는 라벨이 된다.
 
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.

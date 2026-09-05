@@ -41,11 +41,21 @@ public class SubmissionQueryService {
     }
 
     /**
+     * Reviewer 분석과 시스템의 확정 판단. 부르지 않았으면 null 이다.
+     *
+     * @param status 시스템이 붙인다. LLM 이 스스로 CONFIRMED 를 선언할 수 없다.
+     */
+    public record ReviewView(String primaryMistake, List<String> secondaryMistakes,
+            double confidence, String status, String explanation) {
+    }
+
+    /**
      * @param complete 채점이 끝났고 그 결과가 학습 상태에 반영됐는가. 둘을 구분해
      *     보여주지 않는 이유는 사용자가 할 일이 같기 때문이다 - 기다린다.
      */
     public record View(long submissionId, boolean complete, Judgement judge,
-            List<SkillUpdate> skillUpdates, NextActionView nextAction) {
+            List<SkillUpdate> skillUpdates, NextActionView nextAction, ReviewView review,
+            String promptVersion) {
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +68,7 @@ public class SubmissionQueryService {
         // 판단할 수 없다 - 채점은 끝났는데 아직 반영하지 않은 구간이 있다.
         boolean complete = row.nextActionType() != null;
         if (!complete) {
-            return new View(row.id(), false, null, List.of(), null);
+            return new View(row.id(), false, null, List.of(), null, null, null);
         }
         return new View(
                 row.id(),
@@ -67,7 +77,38 @@ public class SubmissionQueryService {
                         row.executionMs(), row.memoryKb(), row.failedCaseId(), null),
                 readUpdates(row.skillUpdates()),
                 new NextActionView(row.nextActionType(), row.nextActionTarget(),
-                        row.nextActionReason()));
+                        row.nextActionReason()),
+                readReview(row),
+                row.promptVersion());
+    }
+
+    /**
+     * Reviewer 를 부르지 않았거나 분석을 버렸으면 null 이다. 셋을 구분해 보여주지
+     * 않는다 - 사용자가 할 수 있는 일이 같다.
+     */
+    private static ReviewView readReview(SubmissionRow row) {
+        if (row.reviewPrimaryMistake() == null) {
+            return null;
+        }
+        return new ReviewView(
+                row.reviewPrimaryMistake(),
+                readCodes(row.reviewSecondary()),
+                row.reviewConfidence() == null ? 0.0 : row.reviewConfidence().doubleValue(),
+                row.reviewStatus(),
+                row.reviewExplanation());
+    }
+
+    private static List<String> readCodes(String json) {
+        if (json == null) {
+            return List.of();
+        }
+        try {
+            List<String> codes = new ArrayList<>();
+            MAPPER.readTree(json).forEach(node -> codes.add(node.asText()));
+            return codes;
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("secondaryMistakes 를 읽지 못했다: " + json, e);
+        }
     }
 
     private static int value(Integer number) {
