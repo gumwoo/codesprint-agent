@@ -183,6 +183,76 @@ class SkillEvidencePersistenceTest {
     }
 
     @Test
+    @DisplayName("범위를 벗어난 관측값은 DB 가 거부한다")
+    void rejectsOutOfRangeObservation() {
+        // skill_evidence 는 append-only 정본이다. user_skills 는 캐시라 다시 계산하면
+        // 되지만 이쪽은 잘못 저장되면 지울 수 없고, 그 값으로 접은 mastery 가 계속 나온다.
+        SkillEvidenceRow tooBig = new SkillEvidenceRow(
+                "submission:range", "ev_range", userId, "BFS_GRID_TRAVERSAL",
+                "PROBLEM_SUBMISSION", Instant.parse("2026-09-01T10:00:00Z"),
+                new BigDecimal("1.0000"), new BigDecimal("1.0000"),
+                null, null, new BigDecimal("3.5000"), null, null, null,
+                "{}");
+        assertThatThrownBy(() -> repository.saveAndFlush(tooBig)).isInstanceOf(Exception.class);
+    }
+
+    @Test
+    @DisplayName("음수 weight 와 범위 밖 sourceConfidence 를 DB 가 거부한다")
+    void rejectsOutOfRangeWeightAndConfidence() {
+        SkillEvidenceRow negativeWeight = new SkillEvidenceRow(
+                "submission:w", "ev_w", userId, "BFS_GRID_TRAVERSAL",
+                "PROBLEM_SUBMISSION", Instant.parse("2026-09-01T10:00:00Z"),
+                new BigDecimal("-5.0000"), new BigDecimal("1.0000"),
+                null, null, new BigDecimal("0.9000"), null, null, null, "{}");
+        assertThatThrownBy(() -> repository.saveAndFlush(negativeWeight))
+                .isInstanceOf(Exception.class);
+
+        SkillEvidenceRow badConfidence = new SkillEvidenceRow(
+                "submission:c", "ev_c", userId, "BFS_GRID_TRAVERSAL",
+                "PROBLEM_SUBMISSION", Instant.parse("2026-09-01T10:00:00Z"),
+                new BigDecimal("1.0000"), new BigDecimal("-1.0000"),
+                null, null, new BigDecimal("0.9000"), null, null, null, "{}");
+        assertThatThrownBy(() -> repository.saveAndFlush(badConfidence))
+                .isInstanceOf(Exception.class);
+    }
+
+    @Test
+    @DisplayName("mastery 가 null 이어도 LOCKED / READY 는 저장된다")
+    void allowsPrerequisiteDrivenStatusesWithoutMastery() {
+        // LOCKED 와 READY 는 Evidence 가 아니라 선수 관계에서 나오는 상태다(ADR-0009).
+        // 신규 사용자의 잠긴 Skill 은 mastery 가 null 인 채로 LOCKED 다.
+        for (String status : List.of("UNASSESSED", "LOCKED", "READY")) {
+            entityManager.createNativeQuery(
+                    "INSERT INTO user_skills (user_id, skill_code, status) "
+                            + "VALUES (:uid, :code, :status)")
+                    .setParameter("uid", userId)
+                    .setParameter("code", "SKILL_" + status)
+                    .setParameter("status", status)
+                    .executeUpdate();
+        }
+        entityManager.flush();
+
+        Number stored = (Number) entityManager
+                .createNativeQuery("SELECT count(*) FROM user_skills WHERE user_id = :uid")
+                .setParameter("uid", userId)
+                .getSingleResult();
+        assertThat(stored.intValue()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("mastery 가 null 인데 학습 중 상태이면 DB 가 거부한다")
+    void rejectsNullMasteryWithLearningStatus() {
+        assertThatThrownBy(() -> {
+            entityManager.createNativeQuery(
+                    "INSERT INTO user_skills (user_id, skill_code, status) "
+                            + "VALUES (:uid, 'SKILL_X', 'PRACTICING')")
+                    .setParameter("uid", userId)
+                    .executeUpdate();
+            entityManager.flush();
+        }).isInstanceOf(Exception.class);
+    }
+
+    @Test
     @DisplayName("알 수 없는 evidence_type 은 DB 가 거부한다")
     void rejectsUnknownEvidenceType() {
         SkillEvidenceRow bad = new SkillEvidenceRow(

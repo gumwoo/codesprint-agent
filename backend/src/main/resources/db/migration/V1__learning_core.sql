@@ -110,7 +110,30 @@ CREATE TABLE skill_evidence (
     CONSTRAINT skill_evidence_type_known CHECK (evidence_type IN (
         'DIAGNOSTIC_RESULT', 'PROBLEM_SUBMISSION', 'MICRO_DRILL_RESULT',
         'REVIEW_RESULT', 'CONCEPT_CHECK', 'EXPLAIN_BACK', 'MOCK_TEST_RESULT'
-    ))
+    )),
+
+    -- 값 범위를 DB 에서도 막는다.
+    --
+    -- 계약(skill-evidence.schema.json)이 0~1 을 요구하지만, 그 검증을 통과하지 않는
+    -- 경로로 들어오는 값이 있을 수 있다 - 다른 서비스, 마이그레이션 스크립트, 수동 INSERT.
+    -- user_skills 는 캐시라 다시 계산하면 되지만 **skill_evidence 는 정본이고
+    -- append-only 다.** 잘못 저장되면 지울 수 없고, 그 값으로 접은 mastery 가
+    -- 계속 나온다.
+    --
+    -- 실제로 확인했다. 제약이 없을 때 weight=-5 / source_confidence=-1.0 /
+    -- observed_implementation=3.5 가 그대로 들어갔다.
+    CONSTRAINT skill_evidence_weight_non_negative CHECK (weight >= 0),
+    CONSTRAINT skill_evidence_source_confidence_range CHECK (
+        source_confidence IS NULL OR source_confidence BETWEEN 0 AND 1
+    ),
+    CONSTRAINT skill_evidence_observed_range CHECK (
+        (observed_concept        IS NULL OR observed_concept        BETWEEN 0 AND 1)
+        AND (observed_recognition    IS NULL OR observed_recognition    BETWEEN 0 AND 1)
+        AND (observed_implementation IS NULL OR observed_implementation BETWEEN 0 AND 1)
+        AND (observed_independent    IS NULL OR observed_independent    BETWEEN 0 AND 1)
+        AND (observed_retention      IS NULL OR observed_retention      BETWEEN 0 AND 1)
+        AND (observed_speed          IS NULL OR observed_speed          BETWEEN 0 AND 1)
+    )
 );
 
 -- 재계산은 (사용자, Skill) 의 Evidence 를 시간순으로 훑는다.
@@ -144,8 +167,34 @@ CREATE TABLE user_skills (
         'UNASSESSED', 'READY', 'LEARNING', 'PRACTICING',
         'MASTERED', 'REVIEW_DUE', 'WEAKENED', 'LOCKED'
     )),
-    -- mastery 가 NULL 인데 UNASSESSED 가 아니면 재계산이 잘못된 것이다.
-    CONSTRAINT user_skills_null_mastery_is_unassessed CHECK (
-        (mastery_score IS NULL) = (status = 'UNASSESSED')
+    -- mastery 가 NULL 이면 아직 평가되지 않은 상태여야 한다.
+    --
+    -- 양방향 동치(NULL <=> UNASSESSED)로 쓰면 안 된다. LOCKED 와 READY 는 Evidence 가
+    -- 아니라 **선수 관계**에서 나오는 상태라(ADR-0009), 신규 사용자의 잠긴 Skill 은
+    -- mastery 가 NULL 인 채로 LOCKED 다. 동치로 묶으면 그 정상 상태를 저장할 수 없다.
+    --
+    -- 반대로 mastery 가 있는데 LOCKED 인 것은 가능하다 - 다른 문제의 SECONDARY Skill 로
+    -- Evidence 가 쌓였는데 선수 조건은 아직 못 채운 경우다. 그래서 mastery 가 있을 때는
+    -- UNASSESSED 만 막는다.
+    CONSTRAINT user_skills_mastery_matches_status CHECK (
+        (mastery_score IS NULL AND status IN ('UNASSESSED', 'LOCKED', 'READY'))
+        OR (mastery_score IS NOT NULL AND status <> 'UNASSESSED')
+    ),
+
+    -- Evidence 가 있는데 mastery 가 없을 수는 없다. 모든 Evidence 는 관측값을
+    -- 최소 하나 갖기 때문이다(skill_evidence_has_observation). 어긋나면 캐시가 낡은 것이다.
+    CONSTRAINT user_skills_evidence_implies_mastery CHECK (
+        evidence_count = 0 OR mastery_score IS NOT NULL
+    ),
+
+    CONSTRAINT user_skills_score_range CHECK (
+        (concept_score        IS NULL OR concept_score        BETWEEN 0 AND 1)
+        AND (recognition_score    IS NULL OR recognition_score    BETWEEN 0 AND 1)
+        AND (implementation_score IS NULL OR implementation_score BETWEEN 0 AND 1)
+        AND (independent_score    IS NULL OR independent_score    BETWEEN 0 AND 1)
+        AND (retention_score      IS NULL OR retention_score      BETWEEN 0 AND 1)
+        AND (speed_score          IS NULL OR speed_score          BETWEEN 0 AND 1)
+        AND (mastery_score        IS NULL OR mastery_score        BETWEEN 0 AND 1)
+        AND confidence_score BETWEEN 0 AND 1
     )
 );

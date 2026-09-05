@@ -71,7 +71,14 @@ python tools/gen_mastery_golden.py --write
 | `CHECK` 관측값 최소 하나 | 측정한 게 없는데 confidence 만 오르는 Evidence |
 | `CHECK` status / evidence_type 목록 | 오타 난 값이 조용히 저장되는 것 |
 | `TIMESTAMPTZ` | 시간대 없는 시각. EMA 정렬이 틀어진다 |
-| `(mastery IS NULL) = (status = 'UNASSESSED')` | 재계산이 어긋난 캐시 |
+| `observed_* / source_confidence BETWEEN 0 AND 1`, `weight >= 0` | 정본에 범위 밖 값이 영구 저장되는 것 |
+| mastery ↔ status 정합 | 재계산이 어긋난 캐시 |
+
+`mastery` 와 `status` 의 관계를 **양방향 동치로 쓰지 않는다.** `LOCKED` 와 `READY` 는
+Evidence 가 아니라 선수 관계에서 나오는 상태라(ADR-0009), 신규 사용자의 잠긴 Skill 은
+mastery 가 `NULL` 인 채로 `LOCKED` 다. 동치로 묶으면 그 정상 상태를 저장할 수 없다.
+반대로 mastery 가 있는데 `LOCKED` 인 것은 가능하다 - 다른 문제의 SECONDARY Skill 로
+Evidence 가 쌓였는데 선수 조건은 아직 못 채운 경우다.
 
 `skill_evidence` 는 **append-only** 다. 엔티티에 setter 를 두지 않았다 - 한번 쓴
 Evidence 를 고치면 과거를 다시 접었을 때 다른 값이 나온다(ADR-0009).
