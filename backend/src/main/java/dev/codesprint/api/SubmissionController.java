@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,8 @@ public class SubmissionController {
      *     Judge 하네스가 무엇을 받든 Python 으로 돌리므로, 받아두면 language 와 실제
      *     판정이 어긋난 기록이 남는다.
      * @param hintLevel 0~6. 같은 AC 라도 이 값에 따라 독립 풀이 점수가 갈린다.
+     * @param solveSeconds 재지 않았으면 null 이다. 0 이나 음수는 400 - speed 를 기대
+     *     시간 대비 <b>비율</b>로 매기므로 음수 시간이 오히려 최고 점수를 받는다.
      */
     public record SubmitRequest(
             @NotNull Long userId,
@@ -51,7 +54,7 @@ public class SubmissionController {
             @NotBlank String sourceCode,
             @Min(0) @Max(6) int hintLevel,
             boolean solutionViewed,
-            Integer solveSeconds) {
+            @Positive Integer solveSeconds) {
     }
 
     public record JudgeView(String status, int passed, int total, Integer executionMs,

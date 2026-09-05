@@ -146,6 +146,21 @@ public final class SubmissionEvidenceFactory {
         // 형식과 시간대를 여기서 확인한다. 저장 뒤에 알면 늦다 - append-only 다.
         Evidence.parseInstant(submission.occurredAt());
 
+        // 풀이 시간이 0 이하일 수는 없다.
+        //
+        // speed 는 기대 시간 대비 비율로 매기는데(Addendum §13), 음수가 들어오면
+        // 비율도 음수가 되어 가장 빠른 구간(<= 0.70)에 걸린다. 즉 <b>말이 안 되는
+        // 입력이 최고 점수를 받는다.</b> 실제로 -100 / 300 이 speed 1.00 이었다.
+        //
+        // API 의 입력 검증만으로는 부족하다. 여기가 마지막 방어선인 이유는 Evidence 가
+        // append-only 정본이기 때문이다(ADR-0009) - 한번 저장되면 지울 수 없고,
+        // 그 값으로 접은 mastery 가 계속 나온다. Controller 를 거치지 않는 경로
+        // (Judge Worker, 배치 재처리)가 생기면 그쪽도 이 검사를 받아야 한다.
+        if (submission.solveSeconds() != null && submission.solveSeconds() <= 0) {
+            throw new IllegalArgumentException(
+                    "solveSeconds 는 0 보다 커야 한다: " + submission.solveSeconds());
+        }
+
         if (!submission.judgeStatus().producesEvidence()) {
             return null;
         }

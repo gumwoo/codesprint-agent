@@ -158,6 +158,22 @@ class SubmissionEvidenceGoldenTest {
                 .hasMessageContaining("시간대");
     }
 
+    @Test
+    @DisplayName("0 이하의 풀이 시간은 도메인에서도 거부한다")
+    void rejectsNonPositiveSolveSeconds() {
+        // Controller 의 @Positive 만으로는 부족하다. 그 경로를 거치지 않는 호출
+        // (Judge Worker, 배치 재처리)이 생기면 그쪽도 이 검사를 받아야 한다.
+        for (double bad : new double[] {-100, -1, 0}) {
+            assertThatThrownBy(() -> SubmissionEvidenceFactory.fromSubmission(new Submission(
+                    "submission:1", "BFS_GRID_TRAVERSAL", 1.0, JudgeStatus.ACCEPTED, 0, false,
+                    "2026-09-05T10:00:00Z", EvidenceType.PROBLEM_SUBMISSION, bad, 300,
+                    null, "NORMAL", "P02_GRID_TRAVERSAL", null)))
+                    .as("solveSeconds=%s", bad)
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("solveSeconds");
+        }
+    }
+
     private static Submission submission(JudgeStatus status, String occurredAt) {
         return new Submission("submission:1", "BFS_GRID_TRAVERSAL", 1.0, status, 0, false,
                 occurredAt, EvidenceType.PROBLEM_SUBMISSION, null, null, null, "NORMAL",

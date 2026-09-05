@@ -337,6 +337,47 @@ class SubmissionFlowTest {
         assertThat(judge.calls).as("채점을 시도하지 않는다").isZero();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest(name = "solveSeconds={0}")
+    @org.junit.jupiter.params.provider.ValueSource(ints = {-1, 0})
+    @DisplayName("0 이하의 풀이 시간은 400 이고 채점하지 않는다")
+    void nonPositiveSolveSecondsIsRejected(int solveSeconds) throws Exception {
+        // speed 를 기대 시간 대비 비율로 매기므로 음수 시간이 가장 빠른 구간에
+        // 걸린다 - 말이 안 되는 입력이 최고 점수를 받는다. 그리고 그 Evidence 는
+        // append-only 정본이라 지울 수 없다.
+        String body = """
+                {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
+                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": %d}
+                """.formatted(userId, solveSeconds);
+
+        int status = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).isEqualTo(400);
+        assertThat(judge.calls).as("채점을 시도하지 않는다").isZero();
+    }
+
+    @Test
+    @DisplayName("풀이 시간을 재지 않았으면 null 로 보낼 수 있다")
+    void nullSolveSecondsIsAllowed() throws Exception {
+        // null 은 "재지 않았다" 다. 0 으로 바꿔 보내면 안 된다 - 그것은 값이다.
+        judge.willReturn(new JudgePort.Result(JudgeStatus.ACCEPTED, 5, 5, 120, 20480, null, null));
+
+        String body = """
+                {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
+                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": null}
+                """.formatted(userId);
+
+        String json = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(MAPPER.readTree(json).get("judge").get("status").asText())
+                .isEqualTo("ACCEPTED");
+    }
+
     @Test
     @DisplayName("없는 문제는 404 다 - 채점 실패와 구분한다")
     void unknownProblemIsNotFound() throws Exception {
