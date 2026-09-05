@@ -376,6 +376,21 @@ class DecisionEngineTest {
         }
 
         @Test
+        @DisplayName("채점 실패는 선수 조건 검사보다 먼저다")
+        void systemErrorIsNotRedirected() {
+            // 선수 조건이 미충족이어도 CHANGE_SKILL 을 내지 않는다. 우리 하네스가
+            // 죽은 것을 계기로 사용자의 학습 경로가 바뀌면 안 된다.
+            NextAction action = engine.decide(new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH",
+                    new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
+                            SkillStatus.UNASSESSED),
+                    0,
+                    JudgeStatus.SYSTEM_ERROR, null, 1, false, Map.of()));
+
+            assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
+        }
+
+        @Test
         @DisplayName("선수 조건을 채웠으면 그대로 진행한다")
         void metPrerequisitesProceed() {
             NextAction action = engine.decide(new DecisionEngine.Context(

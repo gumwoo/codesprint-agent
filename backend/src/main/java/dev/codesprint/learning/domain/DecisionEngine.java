@@ -83,6 +83,16 @@ public class DecisionEngine {
                     "판정이 끝나지 않은 제출로 다음 행동을 정할 수 없다: " + context.judgeStatus());
         }
 
+        // 채점 실패는 우리 잘못이다. **아무 판단도 하지 않는다.**
+        //
+        // 이 분기가 아래 선수 조건 검사보다 먼저 와야 한다. 뒤에 두면 우리 하네스가
+        // 죽었을 때 사용자의 화면이 다른 Skill 로 튄다 - 사용자는 아무것도 하지
+        // 않았는데 학습 경로가 바뀐다. 선수 조건이 실제로 미충족이더라도, 그것을
+        // 알리는 계기가 우리 장애여서는 안 된다.
+        if (context.judgeStatus() == JudgeStatus.SYSTEM_ERROR) {
+            return NextAction.of(ActionType.CONTINUE, "채점 실패 - 사용자 잘못이 아니다");
+        }
+
         // 0. 아직 배우기 시작하지 않은 Skill 이면 선수 조건을 먼저 본다.
         //
         // Addendum §43 에는 없는 분기다. 그 pseudocode 는 "이미 이 Skill 을 하고 있다" 를
@@ -120,10 +130,6 @@ public class DecisionEngine {
             // 문법 오류는 고쳐 다시 내면 되는 상황이다. 다른 문제로 보내면 흐름이 끊긴다.
             case COMPILE_ERROR ->
                     NextAction.of(ActionType.CONTINUE, "문법 오류 - 같은 문제를 고쳐 다시 낸다");
-            // 채점 실패는 우리 잘못이다. 사용자의 학습 경로를 바꾸지 않는다.
-            case SYSTEM_ERROR ->
-                    NextAction.of(ActionType.CONTINUE, "채점 실패 - 사용자 잘못이 아니다");
-
             default -> onFailure(context);
         };
     }
