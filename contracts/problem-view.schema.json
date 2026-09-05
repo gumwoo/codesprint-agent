@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/problem-view.schema.json",
+  "title": "ProblemView",
+  "description": "사용자에게 보여주는 문제. **hidden Test Case 는 여기 들어오지 않는다.** 공개 저장소에서는 파일을 열면 다 보이지만(ADR-0008), 그것은 이 저장소가 fixture 를 담고 있기 때문이지 API 가 그래도 된다는 뜻이 아니다 - 실서비스 문제은행이 붙으면 이 응답이 그대로 유출 경로가 된다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "title",
+    "kind",
+    "statement",
+    "timeLimitMs",
+    "memoryLimitMb",
+    "expectedSolveSeconds",
+    "skills",
+    "samples"
+  ],
+  "properties": {
+    "code": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "minLength": 1 },
+    "statement": { "type": "string", "minLength": 1 },
+    "timeLimitMs": { "type": ["integer", "null"], "minimum": 1 },
+    "memoryLimitMb": { "type": ["integer", "null"], "minimum": 1 },
+    "expectedSolveSeconds": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "기대 풀이 시간. speed 관측의 기준이며(Addendum 13), 사용자에게도 목표로 보여준다. 없으면 null 이고 그때는 speed 를 관측하지 않는다."
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skillCode", "role"],
+        "properties": {
+          "skillCode": { "type": "string", "minLength": 1 },
+          "role": { "enum": ["PRIMARY", "SECONDARY"] }
+        }
+      },
+      "description": "weight 는 내보내지 않는다. 채점 가중치는 내부 값이고, 사용자가 그것을 보고 문제를 고를 이유가 없다."
+    },
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["input", "expectedOutput"],
+        "properties": {
+          "input": { "type": "string" },
+          "expectedOutput": { "type": "string" }
+        }
+      },
+      "description": "hidden: false 인 case 만. 샘플은 정답을 함께 보여주는 것이 정상이지만, hidden case 는 input 도 내보내지 않는다."
+    }
+  }
+}
