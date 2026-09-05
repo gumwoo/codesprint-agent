@@ -68,6 +68,39 @@ class ClaudeCliLlmClientTest {
     }
 
     @Test
+    @DisplayName("종료 코드가 0 이어도 is_error 면 실패로 본다")
+    void treatsIsErrorAsFailure() {
+        // **실제로 확인했다.** 로그인이 안 돼 있으면 CLI 는 result 에
+        // "Not logged in · Please run /login" 을 담고 exit 0 으로 끝난다.
+        //
+        // 종료 코드만 보면 그 문장을 모델 답변으로 넘기게 되고, 뒤에서 "JSON 이
+        // 아니다" 로 버려진다. 결과는 같지만 로그가 진짜 이유를 잃는다 -
+        // "모델이 이상하게 답했다" 와 "로그인이 안 돼 있다" 는 할 일이 다르다.
+        LlmClient client = client("cat > /dev/null; printf '"
+                + "{\"is_error\":true,\"terminal_reason\":\"api_error\","
+                + "\"result\":\"Not logged in\"}'");
+
+        assertThatThrownBy(() -> client.complete("무엇이든"))
+                .isInstanceOf(LlmClient.LlmUnavailable.class)
+                .hasMessageContaining("Not logged in")
+                .hasMessageContaining("api_error");
+    }
+
+    @Test
+    @DisplayName("상대가 stdin 을 읽지 않아도 timeout 이 동작한다")
+    void timesOutEvenWhenStdinIsNeverRead() {
+        // 프롬프트를 파이프로 밀어 넣으면 상대가 읽지 않을 때 write 자체가 막히고,
+        // 그러면 timeout 에 도달하지도 못한다. 제출 코드가 통째로 들어가므로
+        // 파이프 버퍼를 넘기기 쉽다. 그래서 파일로 넘긴다.
+        LlmClient client = new ClaudeCliLlmClient(
+                List.of("sh", "-c", "sleep 30"), Duration.ofSeconds(2));
+
+        assertThatThrownBy(() -> client.complete("x".repeat(200_000)))
+                .isInstanceOf(LlmClient.LlmUnavailable.class)
+                .hasMessageContaining("2초");
+    }
+
+    @Test
     @DisplayName("명령이 실패하면 예외로 알린다")
     void reportsFailure() {
         LlmClient client = client("cat > /dev/null; echo '로그인이 필요합니다' >&2; exit 1");
