@@ -33,17 +33,32 @@ public class PrerequisiteEvaluator {
     }
 
     /**
+     * mastery 를 읽는다. <b>모든 조회가 이 메서드를 거친다.</b>
+     *
+     * <p>{@code Map.getOrDefault} 를 쓰면 안 된다. 키가 없을 때는 기본값을 주지만
+     * <b>키가 있고 값이 null 이면 null 을 그대로 돌려준다.</b> 그 값을 primitive
+     * {@code double} 로 풀면 NPE 가 난다.
+     *
+     * <p>그리고 그건 정상 데이터다. {@code user_skills} 는 UNASSESSED / LOCKED / READY
+     * 에서 {@code mastery_score} 가 NULL 인 행을 허용한다(PR #5). DB 에서 그대로 map 을
+     * 만들면 null 값이 들어온다.
+     *
+     * @return 아직 평가되지 않았으면 0.0 - "안 봤다" 를 선수 조건 판정에서는 "못 채웠다" 로 본다
+     */
+    private static double masteryOf(Map<String, Double> masteries, String skillCode) {
+        Double value = masteries.get(skillCode);
+        return value == null ? 0.0 : value;
+    }
+
+    /**
      * 아직 채우지 못한 선수 조건들. 비어 있으면 이 Skill 을 시작할 수 있다.
      *
-     * @param masteries Skill code → mastery. 값이 없거나 null 이면 아직 평가되지 않은 것이며
-     *     선수 조건을 채우지 못한 것으로 본다.
+     * @param masteries Skill code → mastery. 키가 없거나 <b>값이 null 이어도</b> 아직
+     *     평가되지 않은 것이며 선수 조건을 채우지 못한 것으로 본다.
      */
     public List<Prerequisite> unmet(String skillCode, Map<String, Double> masteries) {
         return catalog.prerequisitesOf(skillCode).stream()
-                .filter(p -> {
-                    Double mastery = masteries.get(p.requires());
-                    return mastery == null || mastery < p.minimumMastery();
-                })
+                .filter(p -> masteryOf(masteries, p.requires()) < p.minimumMastery())
                 .toList();
     }
 
@@ -57,8 +72,8 @@ public class PrerequisiteEvaluator {
     public Optional<String> nextPrerequisite(String skillCode, Map<String, Double> masteries) {
         return unmet(skillCode, masteries).stream()
                 .min((a, b) -> Double.compare(
-                        masteries.getOrDefault(a.requires(), 0.0),
-                        masteries.getOrDefault(b.requires(), 0.0)))
+                        masteryOf(masteries, a.requires()),
+                        masteryOf(masteries, b.requires())))
                 .map(Prerequisite::requires);
     }
 
