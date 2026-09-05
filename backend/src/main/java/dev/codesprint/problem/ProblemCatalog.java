@@ -181,6 +181,43 @@ public class ProblemCatalog {
     }
 
     /**
+     * case 하나를 id 로 읽는다. <b>hidden 도 읽는다.</b>
+     *
+     * <p>{@link #samplesOf} 와 목적이 다르다. 그쪽은 사용자에게 보여줄 것이고,
+     * 이쪽은 Reviewer 에게 "무엇이 실패했는가" 를 알려주기 위한 것이다. 실패한 case
+     * 가 대개 hidden 이므로 여기서 거르면 근거를 하나도 못 준다.
+     *
+     * <p><b>이 값이 사용자 응답에 섞이지 않게 한다.</b> 호출자는 프롬프트를 만드는
+     * 쪽 하나뿐이다.
+     *
+     * @return 없으면 null
+     */
+    @SuppressWarnings("unchecked")
+    public SampleCase caseById(String code, Integer caseId) {
+        if (caseId == null) {
+            return null;
+        }
+        Path file = casesFile(code);
+        if (!Files.exists(file)) {
+            return null;
+        }
+        try {
+            Map<String, Object> doc = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(Files.readString(file), Map.class);
+            for (Map<String, Object> row
+                    : (List<Map<String, Object>>) doc.getOrDefault("cases", List.of())) {
+                if (caseId.equals(((Number) row.get("id")).intValue())) {
+                    return new SampleCase(
+                            (String) row.get("input"), (String) row.get("expectedOutput"));
+                }
+            }
+            return null;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Test Case 를 읽지 못했다: " + file, e);
+        }
+    }
+
+    /**
      * 이 Skill 을 PRIMARY 로 갖는 문제들. code 순으로 고정한다 - 같은 상황에서 같은
      * 문제가 나와야 사용자가 왜 이 문제를 받았는지 설명할 수 있다.
      */

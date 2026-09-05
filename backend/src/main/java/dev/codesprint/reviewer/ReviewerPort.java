@@ -24,11 +24,23 @@ public interface ReviewerPort {
      * @param failedCaseId Judge 가 실패시킨 case. Judge 는 첫 실패에서 멈추므로
      *     하나로 특정된다(ADR-0005).
      * @param skillCodes 이 문제가 겨냥하는 Skill 들. 분석 범위를 좁힌다.
+     * @param failedCaseInput 실패한 case 의 입력. <b>이것이 Judge 근거다</b> - 없으면
+     *     모델은 코드만 훑고 "있을 법한 실수" 를 나열하게 된다.
+     * @param failedCaseExpectedOutput 그 case 의 기대 출력. 정답을 모델 제공자에게
+     *     보내는 일이므로, 실서비스 문제({@code CURATED})에서는 넣지 않는다(ADR-0008).
+     * @param stderr 호스트 경로를 지운 결과만(Addendum 63). 없으면 null.
+     * @param problemSource {@code DEV_FIXTURE} / {@code CURATED}. 기대 출력을 보낼지
+     *     가른다.
      */
     record Request(
             String problemCode,
+            String problemTitle,
+            String problemSource,
             String judgeStatus,
             Integer failedCaseId,
+            String failedCaseInput,
+            String failedCaseExpectedOutput,
+            String stderr,
             String sourceCode,
             List<String> skillCodes) {
     }
