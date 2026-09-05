@@ -69,6 +69,24 @@ VERDICTS = [
     ("sol-answer-leak.py", "WRONG_ANSWER", True),
 ]
 
+# -- 실패의 모양 (ADR-0015) -----------------------------------------------
+# 첫 실패에서 멈추면 "무엇이 통과했는가" 를 알 수 없고, 그러면 Reviewer 주장을
+# 뒷받침할 독립 근거를 만들 수 없다. 그래서 싼 실패에서는 끝까지 돌린다.
+#
+# 반대로 비싼 실패(제한에 걸릴 때까지 기다린 것)에서 계속 돌리면 무한 루프 하나가
+# case 수만큼의 timeout 을 먹는다 - ADR-0005 가 조기 종료를 택한 이유이며 그 비용
+# 특성은 지켜야 한다. **두 방향을 함께 본다.**
+#
+# (이름, 남은 case 를 계속 돌려야 하는가)
+PROFILE = [
+    ("sol-wrong.py", True),
+    ("sol-runtime-error.py", True),
+    ("sol-boundary-missing.py", True),
+    ("sol-timeout.py", False),
+    ("sol-memory.py", False),
+    ("sol-output-flood.py", False),
+]
+
 # judge-result.schema.json 의 status 중 위에서 다루지 않는 것.
 # SYSTEM_ERROR 는 사용자 코드로 재현할 수 없어 별도 경로로 확인한다(아래 main).
 STATUS_COVERED_ELSEWHERE = {"SYSTEM_ERROR"}
@@ -320,6 +338,46 @@ def main() -> int:
             continue
         print(f"[O] {name} -> {actual}")
 
+    print("\n== 실패의 모양 (ADR-0015) ==")
+    total_cases = len(json.loads(JOB.read_text(encoding="utf-8"))["cases"])
+    for name, run_all in PROFILE:
+        result = judge((FIXTURES / name).read_text(encoding="utf-8"))
+        executed = result["cases"]
+        if result["status"] == "SYSTEM_ERROR":
+            failed += 1
+            print(f"[X] {name}: 채점 자체가 실패했다 - {result.get('stderr')}")
+            continue
+
+        if run_all and len(executed) != total_cases:
+            failed += 1
+            print(f"[X] {name}: {len(executed)}/{total_cases} case 에서 멈췄다 "
+                  f"- 통과한 case 를 알 수 없으면 독립 근거를 만들 수 없다")
+            continue
+        if not run_all and len(executed) >= total_cases:
+            failed += 1
+            print(f"[X] {name}: {result['status']} 인데 끝까지 돌았다 "
+                  f"- 무한 루프 하나가 case 수만큼의 timeout 을 먹는다")
+            continue
+
+        # 판정과 근거는 **첫** 실패가 정한다. 뒤의 case 가 이 값을 덮으면
+        # Reviewer 에게 주는 case 가 제출마다 흔들린다.
+        first_failed = next((c for c in executed if c["status"] != "ACCEPTED"), None)
+        if first_failed is None:
+            failed += 1
+            print(f"[X] {name}: 실패한 case 가 하나도 없다")
+            continue
+        if (result["status"], result["failedCaseId"]) != (
+                first_failed["status"], first_failed["id"]):
+            failed += 1
+            print(f"[X] {name}: 판정이 첫 실패({first_failed['status']} "
+                  f"case {first_failed['id']})와 다르다 - "
+                  f"{result['status']} case {result['failedCaseId']}")
+            continue
+
+        passed_ids = [c["id"] for c in executed if c["status"] == "ACCEPTED"]
+        print(f"[O] {name} -> 실행 {len(executed)}/{total_cases}, "
+              f"통과 {passed_ids}, 첫 실패 case {result['failedCaseId']}")
+
     print("\n== 격리 (Addendum 87) ==")
     for name, code, why in ISOLATION:
         result = judge(code)
@@ -420,8 +478,9 @@ def main() -> int:
     if failed:
         print(f"\n[FAIL] {failed}건 실패")
         return 1
-    print(f"\n[OK] 판정 {len(VERDICTS)}건 · 격리 {len(ISOLATION)}건 · "
-          f"기밀성 {len(CONFIDENTIALITY)}건 · 컨테이너 회수 · status 8종 커버 — 모두 통과")
+    print(f"\n[OK] 판정 {len(VERDICTS)}건 · 실패의 모양 {len(PROFILE)}건 · "
+          f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
+          f"컨테이너 회수 · status 8종 커버 — 모두 통과")
     return 0
 
 
