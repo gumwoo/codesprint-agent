@@ -36,6 +36,7 @@
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     LLM 요청/응답 + Judge 판정 계약 (JSON Schema)
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스
+problems/      슬라이스 1 의 검증된 문제 10개 (정답 + 틀린 풀이 + Test Case)
 tools/         계약 검사 + 메타테스트
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
@@ -56,7 +57,12 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 아무것도 안 하는 검사도 통과한다. 그래서 계약을 일부러 망가뜨린 뒤 검사가 실제로
 실패하는지 확인한다. 여기서 "검사가 놓침"이 나오면 데이터가 아니라 **하네스가 깨진 것**이다.
 
-현재 27개 위반 케이스를 차단한다.
+현재 계약 27건 + 문제 데이터 11건, 총 38개 위반 케이스를 차단한다.
+
+같은 논리가 문제 데이터에도 적용된다. **정답이 통과하는 것과 오답이 걸리는 것은
+다르다** — 아무것도 거르지 못하는 Test Case 집합도 정답은 통과시킨다. 그래서 문제마다
+그 문제에서 자주 나오는 실수를 담은 `wrong.py` 를 두고, 그것이 실제로 걸리는지
+확인한다([ADR-0007](docs/adr/0007-problems-are-verified-by-a-wrong-solution.md)).
 
 Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
 **실제로 안 되는 것**은 다르므로, 제한을 걸고 한 번 / 걷어내고 한 번 돌려 그 실패가
@@ -65,6 +71,7 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 ```bash
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
+python tools/verify_problems.py           # 문제 10개를 실제로 채점
 ```
 
 격리(실행이 갇혀 있는가)와 기밀성(채점 데이터가 새지 않는가)은 다른 축이다.
@@ -81,6 +88,7 @@ python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
 | Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
 | LLM 계약 + 검사 하네스 | 완료 |
 | Judge / Sandbox (Python 3.12) | 완료 |
+| 문제 · Test Case 10개 | 완료 |
 | Judge Worker / 큐 | 미착수 |
 | Backend / Frontend | 미착수 |
 | Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
