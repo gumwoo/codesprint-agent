@@ -59,7 +59,7 @@ def sub(day: int, status: str, **kw) -> ev.Evidence:
         judge_status=status,
         hint_level=kw.pop("hint", 0),
         solution_viewed=kw.pop("viewed", False),
-        occurred_at=f"2026-09-{day:02d}T10:00:00",
+        occurred_at=kw.pop("at", f"2026-09-{day:02d}T10:00:00Z"),
         **kw,
     )
 
@@ -158,7 +158,7 @@ def test_review() -> None:
     ok = state_of([
         sub(1, "ACCEPTED"),
         ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
-                       occurred_at="2026-09-08T10:00:00"),
+                       occurred_at="2026-09-08T10:00:00Z"),
     ])
     check("7일 뒤 복습 성공은 retention 0.90 이다 (Addendum 16)",
           ok.scores["retention"] == 0.90, f"{ok.scores['retention']}")
@@ -167,7 +167,7 @@ def test_review() -> None:
         sub(1, "ACCEPTED"),
         ev.from_review(source_event_id="review:late", skill_code=SKILL,
                        days_since_last=30, succeeded=True,
-                       occurred_at="2026-10-01T10:00:00"),
+                       occurred_at="2026-10-01T10:00:00Z"),
     ])
     check("더 오래 지나서 성공하면 retention 이 더 높다",
           late.scores["retention"] > ok.scores["retention"],
@@ -177,7 +177,7 @@ def test_review() -> None:
         sub(1, "ACCEPTED"),
         ev.from_review(source_event_id="review:fail", skill_code=SKILL,
                        days_since_last=7, succeeded=False,
-                       occurred_at="2026-09-08T10:00:00"),
+                       occurred_at="2026-09-08T10:00:00Z"),
     ])
     check("복습 실패는 retention 을 크게 낮춘다",
           bad.scores["retention"] < 0.5, f"{bad.scores['retention']}")
@@ -199,7 +199,7 @@ def test_confidence_accumulates() -> None:
     normal = state_of([sub(1, "ACCEPTED")]).confidence
     drill = state_of([sub(1, "ACCEPTED", evidence_type="MICRO_DRILL_RESULT")]).confidence
     review = state_of([ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
-                                      occurred_at="2026-09-01T10:00:00")]).confidence
+                                      occurred_at="2026-09-01T10:00:00Z")]).confidence
     check("드릴은 일반 문제보다 confidence 를 덜 올린다 (Addendum 18)",
           drill < normal, f"{drill} vs {normal}")
     check("복습은 일반 문제보다 confidence 를 더 올린다", review > normal, f"{review} vs {normal}")
@@ -214,9 +214,9 @@ def mastered_sequence() -> list[ev.Evidence]:
     """Addendum 22 의 네 조건을 모두 채우는 흐름."""
     items = [sub(d, "ACCEPTED") for d in range(1, 11)]
     items.append(ev.from_concept_check(source_event_id="concept:1", skill_code=SKILL, verdict="CORRECT",
-                                       occurred_at="2026-09-11T10:00:00"))
+                                       occurred_at="2026-09-11T10:00:00Z"))
     items.append(ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
-                                occurred_at="2026-09-12T10:00:00"))
+                                occurred_at="2026-09-12T10:00:00Z"))
     return items
 
 
@@ -231,14 +231,14 @@ def test_mastered() -> None:
 
     few = [sub(1, "ACCEPTED"),
            ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
-                          occurred_at="2026-09-02T10:00:00")]
+                          occurred_at="2026-09-02T10:00:00Z")]
     s2 = state_of(few)
     check("confidence 가 낮으면 mastery 가 높아도 MASTERED 가 아니다",
           s2.status != "MASTERED", f"status={s2.status} confidence={s2.confidence}")
 
     viewed = [sub(d, "ACCEPTED", viewed=True) for d in range(1, 11)]
     viewed.append(ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
-                                 occurred_at="2026-09-12T10:00:00"))
+                                 occurred_at="2026-09-12T10:00:00Z"))
     check("정답을 보고 맞힌 것만으로는 MASTERED 가 되지 않는다 (PRD 143-4)",
           state_of(viewed).status != "MASTERED", f"{state_of(viewed).status}")
 
@@ -252,7 +252,7 @@ def test_weakened() -> None:
     seq2 = mastered_sequence()
     seq2.append(ev.from_review(source_event_id="review:2", skill_code=SKILL,
                                days_since_last=7, succeeded=False,
-                               occurred_at="2026-09-20T10:00:00"))
+                               occurred_at="2026-09-20T10:00:00Z"))
     check("MASTERED 이후 복습에 실패하면 WEAKENED 로 간다",
           state_of(seq2).status == "WEAKENED", f"{state_of(seq2).status}")
 
@@ -274,9 +274,9 @@ def test_contracts() -> None:
             problem_code="P03_CONNECTED_COMPONENT"),
         sub(2, "WRONG_ANSWER"),
         ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
-                       occurred_at="2026-09-08T10:00:00"),
+                       occurred_at="2026-09-08T10:00:00Z"),
         ev.from_concept_check(source_event_id="concept:1", skill_code=SKILL, verdict="PARTIAL",
-                              occurred_at="2026-09-09T10:00:00"),
+                              occurred_at="2026-09-09T10:00:00Z"),
     ]
     for e in samples:
         errs = [f"{list(x.path)}: {x.message}" for x in EVIDENCE_SCHEMA.iter_errors(e.to_dict())]
@@ -298,7 +298,7 @@ def test_deterministic() -> None:
     other = ev.from_submission(source_event_id="submission:99", skill_code="BFS_BASIC",
                                skill_weight=1.0,
                                judge_status="ACCEPTED", hint_level=0,
-                               solution_viewed=False, occurred_at="2026-09-01T10:00:00")
+                               solution_viewed=False, occurred_at="2026-09-01T10:00:00Z")
     try:
         ms.recompute([other], SKILL)
         check("다른 Skill 의 Evidence 가 섞이면 거부한다", False, "그냥 통과했다")
@@ -391,7 +391,7 @@ def test_idempotent_on_duplicate_source_event() -> None:
     a = sub(1, "ACCEPTED")
     b = ev.from_submission(source_event_id="submission:1", skill_code="BFS_BASIC",
                            skill_weight=0.3, judge_status="ACCEPTED", hint_level=0,
-                           solution_viewed=False, occurred_at="2026-09-01T10:00:00")
+                           solution_viewed=False, occurred_at="2026-09-01T10:00:00Z")
     check("같은 제출이라도 Skill 이 다르면 다른 Evidence 다",
           a.dedupe_key != b.dedupe_key and a.evidence_id != b.evidence_id)
 
@@ -451,7 +451,7 @@ def test_unknown_judge_status_is_rejected() -> None:
 
     check("알 수 없는 개념 확인 결과도 거부한다",
           _raises(lambda: ev.from_concept_check(source_event_id="c:9", skill_code=SKILL,
-                                                verdict="MAYBE", occurred_at="2026-09-01T10:00:00")))
+                                                verdict="MAYBE", occurred_at="2026-09-01T10:00:00Z")))
 
 
 def _raises(fn) -> bool:
@@ -460,6 +460,44 @@ def _raises(fn) -> bool:
         return False
     except ValueError:
         return True
+
+
+# -- 17. 시간대까지 반영한 정렬 -------------------------------------------
+def test_orders_by_actual_instant_not_string() -> None:
+    """ISO-8601 문자열의 사전순 정렬은 실제 시간순과 다르다.
+
+        A = 2026-09-05T10:00:00+09:00   실제 UTC 01:00
+        B = 2026-09-05T01:30:00Z        실제 UTC 01:30
+
+    실제 순서는 A -> B 인데 문자열로 정렬하면 B -> A 가 된다.
+    EMA 는 순서 계산이라 나중 일이 먼저 접히면 값이 달라진다.
+    """
+    a = sub(5, "ACCEPTED", at="2026-09-05T10:00:00+09:00", event="submission:A")
+    b = sub(5, "WRONG_ANSWER", at="2026-09-05T01:30:00Z", event="submission:B")
+    check("문자열로 정렬하면 순서가 뒤집힌다 (전제 확인)",
+          sorted([a.occurred_at, b.occurred_at])[0] == b.occurred_at)
+
+    # 같은 두 사건을 같은 시간대로 쓴 것과 결과가 같아야 한다.
+    a_utc = sub(5, "ACCEPTED", at="2026-09-05T01:00:00Z", event="submission:A")
+    b_utc = sub(5, "WRONG_ANSWER", at="2026-09-05T01:30:00Z", event="submission:B")
+    expected = state_of([a_utc, b_utc]).mastery
+
+    for order, label in (([a, b], "[a, b]"), ([b, a], "[b, a]")):
+        check(f"시간대가 섞여도 실제 시각 순으로 접는다 {label}",
+              state_of(order).mastery == expected,
+              f"{state_of(order).mastery} 기대={expected}")
+
+
+def test_naive_timestamp_is_rejected() -> None:
+    """시간대가 없으면 어느 지역 시간인지 알 수 없다."""
+    for bad in ("2026-09-05T10:00:00", "2026-09-05", "어제", ""):
+        check(f"시간대 없는 occurredAt 을 거부한다 ({bad!r})",
+              _raises(lambda b=bad: sub(1, "ACCEPTED", at=b)))
+
+    check("복습 Evidence 도 같은 검사를 받는다",
+          _raises(lambda: ev.from_review(source_event_id="r:9", skill_code=SKILL,
+                                         days_since_last=7, succeeded=True,
+                                         occurred_at="2026-09-05T10:00:00")))
 
 
 def main() -> int:
@@ -472,6 +510,7 @@ def main() -> int:
         test_independent_attempt_applies_to_failures, test_hinted_failures_do_not_weaken,
         test_idempotent_on_duplicate_source_event,
         test_conflicting_evidence_is_rejected, test_unknown_judge_status_is_rejected,
+        test_orders_by_actual_instant_not_string, test_naive_timestamp_is_rejected,
     ):
         print(f"\n== {fn.__name__} ==")
         fn()

@@ -77,6 +77,11 @@ evidenceCount 만 올라가기 때문이다 - 측정한 게 없는데 측정 신
 것은 독립 풀이에 *실패한* 것이 아니라 애초에 독립 풀이가 아니다. 이 값이 틀리면
 Decision Engine 이 잘못된 다음 문제를 추천한다.
 
+**occurredAt 에는 시간대가 반드시 있어야 한다.** ISO-8601 문자열의 사전순 정렬은 실제
+시간순과 다르다 - `10:00:00+09:00`(UTC 01:00)이 `01:30:00Z`(UTC 01:30)보다 뒤로 밀린다.
+EMA 는 순서 계산이라 나중 일이 먼저 접히면 값이 틀린다. UTC 로 바꾼 뒤 정렬하고,
+시간대 없는 값은 거부한다.
+
 **모르는 judge status 는 상류에서 거부한다.** 오타가 통과하면 관측값 없는 Evidence 가
 만들어진다. `KNOWN_JUDGE_STATUSES` 는 `contracts/judge-result.schema.json` 의 enum 과
 같아야 하며 테스트가 대조한다.

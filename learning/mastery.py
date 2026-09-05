@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .evidence import ALPHA, DIMENSIONS, Evidence
+from .evidence import ALPHA, DIMENSIONS, Evidence, to_utc
 
 # Addendum 6. 차원별 가중치.
 # independent 와 implementation 이 가장 큰 이유는 제품의 목표가 "설명할 수 있다" 가
@@ -183,7 +183,10 @@ def recompute(evidences: list[Evidence], skill_code: str) -> SkillState:
     #
     # 실제로 그랬다. submission:100 에 ACCEPTED 와 WRONG_ANSWER 가 함께 들어오면
     # 순서에 따라 mastery 가 0.925 와 0.275 로 갈렸다.
-    ordered_all = sorted(evidences, key=lambda e: (e.occurred_at, e.evidence_id))
+    # 문자열이 아니라 UTC 시각으로 정렬한다. ISO-8601 문자열의 사전순 정렬은 실제
+    # 시간순과 다르다 - "10:00:00+09:00"(UTC 01:00)이 "01:30:00Z"(UTC 01:30)보다
+    # 뒤로 밀린다. EMA 는 순서 계산이라 그러면 나중 일이 먼저 접힌다.
+    ordered_all = sorted(evidences, key=lambda e: (to_utc(e.occurred_at), e.evidence_id))
     seen: dict[tuple[str, str], Evidence] = {}
     ordered = []
     for e in ordered_all:

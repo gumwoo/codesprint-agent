@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Literal
 
 DIMENSIONS = ("concept", "recognition", "implementation", "independent", "retention", "speed")
@@ -69,6 +70,35 @@ RECOGNITION_MODES = {"EXAM", "MIXED", "DIAGNOSTIC"}
 # Addendum 16. 복습 간격별 성공 시 retention 관측값.
 RETENTION_BY_DAYS = ((1, 0.75), (3, 0.82), (7, 0.90), (14, 0.95), (30, 1.00))
 RETENTION_FAIL = 0.35  # 25~45 구간의 중앙
+
+
+def to_utc(occurred_at: str) -> datetime:
+    """occurredAt 을 timezone-aware UTC 로 바꾼다.
+
+    EMA 는 순서 계산이라 시간순 정렬이 정확해야 하는데, **ISO-8601 문자열의 사전순
+    정렬은 실제 시간순과 다르다.**
+
+        A = 2026-09-05T10:00:00+09:00   실제 UTC 01:00
+        B = 2026-09-05T01:30:00Z        실제 UTC 01:30
+
+    실제 순서는 A -> B 인데 문자열로 정렬하면 B -> A 가 된다. 나중 일이 먼저
+    적용되어 EMA 가 거꾸로 접힌다.
+
+    timezone 이 없는 값도 거부한다. 지금은 한 곳에서만 시각을 만들지만, 앞으로
+    Spring / DB / Judge Worker 가 각자 시각을 만들기 시작하면 naive timestamp 가
+    어느 지역 시간인지 알 방법이 없어진다. 그때 고치려면 이미 쌓인 Evidence 를
+    전부 해석해야 한다.
+    """
+    try:
+        parsed = datetime.fromisoformat(occurred_at)
+    except ValueError as e:
+        raise ValueError(f"occurredAt 을 ISO-8601 로 읽지 못했다: {occurred_at!r} ({e})") from e
+    if parsed.tzinfo is None:
+        raise ValueError(
+            f"occurredAt 에 시간대가 없다: {occurred_at!r}. "
+            f"'Z' 또는 '+09:00' 같은 오프셋을 붙인다."
+        )
+    return parsed.astimezone(timezone.utc)
 
 
 def _empty() -> dict[str, float | None]:
@@ -221,6 +251,8 @@ def from_submission(
             f"contracts/judge-result.schema.json 의 enum 과 맞춘다."
         )
 
+    to_utc(occurred_at)  # 형식과 시간대를 여기서 확인한다
+
     observed = _empty()
 
     if judge_status in NON_EVIDENCE_STATUSES:
@@ -280,6 +312,7 @@ def from_concept_check(*, source_event_id: str, skill_code: str, verdict: str,
     """Addendum 14. 개념을 설명할 수 있는가."""
     if verdict not in CONCEPT_BY_VERDICT:
         raise ValueError(f"알 수 없는 개념 확인 결과: {verdict!r}")
+    to_utc(occurred_at)
     observed = _empty()
     observed["concept"] = CONCEPT_BY_VERDICT[verdict]
     return Evidence(
@@ -299,6 +332,7 @@ def from_review(
     occurred_at: str
 ) -> Evidence:
     """Addendum 16. 며칠 뒤에도 되는가."""
+    to_utc(occurred_at)
     observed = _empty()
     observed["retention"] = retention_score(days_since_last, succeeded)
     if succeeded:
