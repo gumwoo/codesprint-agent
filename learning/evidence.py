@@ -9,6 +9,7 @@ Addendum 을 함께 고친다. 값 하나가 mastery 를 통해 학습 경로를
 """
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -84,10 +85,46 @@ def _context(**kw) -> dict:
     return {k: kw.get(k) for k in CONTEXT_KEYS}
 
 
+# 판정이 났다는 것 자체가 시도가 있었다는 뜻이다. 판정이 없는 상태는 시도가 아니다.
+JUDGED_STATUSES = ("ACCEPTED", "WRONG_ANSWER", "RUNTIME_ERROR", "TIME_LIMIT",
+                   "MEMORY_LIMIT", "OUTPUT_LIMIT")
+
+
+def _is_independent_attempt(judge_status: str, hint_level: int, solution_viewed: bool) -> bool:
+    """이 제출을 "최근 독립 풀이" 로 셀 것인가 (Addendum 22).
+
+    **성공과 실패에 같은 기준을 적용한다.** 힌트를 5단계까지 보고 틀린 것은 독립
+    풀이에 실패한 것이 아니라 애초에 독립 풀이가 아니다. 정답을 보고 나서 틀린 것도
+    마찬가지다.
+
+    처음에는 AC 에만 이 조건을 걸고 실패는 무조건 True 로 뒀다. Python 의 연산자
+    우선순위 때문에 `(A and B and C) or D` 가 되어 실패면 조건이 통째로 무시됐다.
+    그 결과 MASTERED 인 사용자가 힌트를 다 보고 두 번 틀리면 WEAKENED 로 떨어졌다 -
+    독립 풀이를 시도한 적이 없는데도.
+
+    이 값은 Decision Engine 의 입력이 되므로, 틀리면 잘못된 다음 문제를 추천하게 된다.
+    """
+    if judge_status not in JUDGED_STATUSES:
+        return False
+    return not solution_viewed and hint_level < INDEPENDENT_HINT_CEILING
+
+
+def make_evidence_id(source_event_id: str, skill_code: str) -> str:
+    """(원천 이벤트, Skill) 에서 결정론적으로 만든다.
+
+    무작위 id 를 쓰면 같은 Evidence 를 두 번 만들 때 서로 다른 id 가 붙어 재계산
+    결과가 입력에 따라 달라진다(ADR-0009 의 결정론). 파생값이면 같은 원천에서는
+    항상 같은 id 가 나오므로 중복을 알아볼 수 있다.
+    """
+    digest = hashlib.sha256(f"{source_event_id}|{skill_code}".encode()).hexdigest()
+    return f"ev_{digest[:24]}"
+
+
 @dataclass(frozen=True)
 class Evidence:
     """contracts/skill-evidence.schema.json 과 같은 모양."""
 
+    source_event_id: str
     skill_code: str
     evidence_type: str
     occurred_at: str
@@ -96,8 +133,19 @@ class Evidence:
     source_confidence: float | None = None
     context: dict = field(default_factory=dict)
 
+    @property
+    def evidence_id(self) -> str:
+        return make_evidence_id(self.source_event_id, self.skill_code)
+
+    @property
+    def dedupe_key(self) -> tuple[str, str]:
+        """DB 의 UNIQUE(source_event_id, skill_code) 와 같은 키."""
+        return (self.source_event_id, self.skill_code)
+
     def to_dict(self) -> dict:
         return {
+            "evidenceId": self.evidence_id,
+            "sourceEventId": self.source_event_id,
             "skillCode": self.skill_code,
             "evidenceType": self.evidence_type,
             "occurredAt": self.occurred_at,
@@ -132,6 +180,7 @@ def retention_score(days_since_last: int, succeeded: bool) -> float:
 
 def from_submission(
     *,
+    source_event_id: str,
     skill_code: str,
     skill_weight: float,
     judge_status: str,
@@ -187,6 +236,7 @@ def from_submission(
         observed["recognition"] = RECOGNITION_BY_VERDICT.get(algorithm_selection)
 
     return Evidence(
+        source_event_id=source_event_id,
         skill_code=skill_code,
         evidence_type=evidence_type,
         occurred_at=occurred_at,
@@ -199,23 +249,20 @@ def from_submission(
             judgeStatus=judge_status,
             hintLevel=hint_level,
             solutionViewed=solution_viewed,
-            # 힌트를 많이 쓴 AC 는 독립 풀이로 세지 않는다(Addendum 22).
-            independentAttempt=(
-                judge_status == "ACCEPTED"
-                and not solution_viewed
-                and hint_level < INDEPENDENT_HINT_CEILING
-            )
-            or judge_status in ("WRONG_ANSWER", "RUNTIME_ERROR", "TIME_LIMIT",
-                                "MEMORY_LIMIT", "OUTPUT_LIMIT"),
+            independentAttempt=_is_independent_attempt(
+                judge_status, hint_level, solution_viewed
+            ),
         ),
     )
 
 
-def from_concept_check(*, skill_code: str, verdict: str, occurred_at: str) -> Evidence:
+def from_concept_check(*, source_event_id: str, skill_code: str, verdict: str,
+                       occurred_at: str) -> Evidence:
     """Addendum 14. 개념을 설명할 수 있는가."""
     observed = _empty()
     observed["concept"] = CONCEPT_BY_VERDICT[verdict]
     return Evidence(
+        source_event_id=source_event_id,
         skill_code=skill_code,
         evidence_type="CONCEPT_CHECK",
         occurred_at=occurred_at,
@@ -227,7 +274,8 @@ def from_concept_check(*, skill_code: str, verdict: str, occurred_at: str) -> Ev
 
 
 def from_review(
-    *, skill_code: str, days_since_last: int, succeeded: bool, occurred_at: str
+    *, source_event_id: str, skill_code: str, days_since_last: int, succeeded: bool,
+    occurred_at: str
 ) -> Evidence:
     """Addendum 16. 며칠 뒤에도 되는가."""
     observed = _empty()
@@ -237,6 +285,7 @@ def from_review(
     else:
         observed["independent"] = 0.30
     return Evidence(
+        source_event_id=source_event_id,
         skill_code=skill_code,
         evidence_type="REVIEW_RESULT",
         occurred_at=occurred_at,

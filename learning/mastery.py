@@ -131,11 +131,19 @@ def determine_status(
     window = recent_independent[:RECENT_INDEPENDENT_WINDOW]
     failures = window.count(False)
 
-    # Addendum 23. 한번 올라갔다가 흔들리는 것은 처음부터 낮은 것과 다르다.
-    # WEAKENED 는 "됐었는데 지금은 아니다" 라서 복습 우선순위가 높다.
+    # Addendum 23. MASTERED 에서 나가는 길은 **열거돼 있다.**
+    #   복습 실패 / 최근 3개 독립 문제 중 2개 실패 / 동일 핵심 Mistake 2회 반복
+    # 그 밖의 이유로 점수가 조금 내려갔다고 강등하지 않는다.
+    #
+    # 그러지 않으면 힌트를 보며 푼 실패들이 EMA 로 점수를 끌어내려 조용히
+    # PRACTICING 으로 떨어진다. 독립 풀이를 시도한 적이 없는데도 "완료" 표시가
+    # 사라지는 것이고, 복습 우선순위도 잃는다.
+    #
+    # 세 번째 조건(동일 Mistake 2회)은 Reviewer 가 붙어야 판단할 수 있어 아직 없다.
     if previous_status == "MASTERED":
         if not review_succeeded or failures >= RECENT_INDEPENDENT_REQUIRED:
             return "WEAKENED"
+        return "MASTERED"
 
     # Addendum 22. 네 조건을 모두 만족해야 한다.
     if (
@@ -161,7 +169,23 @@ def recompute(evidences: list[Evidence], skill_code: str) -> SkillState:
     같은 결과가 나온다 - 산식을 고치면 과거 Evidence 를 다시 접어 값을 바로잡을 수
     있다(ADR-0009).
     """
-    ordered = sorted(evidences, key=lambda e: e.occurred_at)
+    # 같은 원천 이벤트에서 온 Evidence 는 한 번만 센다.
+    #
+    # Judge Worker 가 재시도로 같은 제출을 두 번 처리하면 같은 Evidence 가 두 번
+    # 들어온다. 그대로 접으면 EMA 가 두 번 적용되고 confidence 도 두 번 오른다.
+    # DB 에서는 UNIQUE(source_event_id, skill_code) 로 막지만, 재계산도 스스로
+    # 방어한다 - Evidence 가 정본이라면 그것을 접는 쪽이 정합성을 책임져야 한다.
+    #
+    # 정렬을 먼저 하고 걸러야 "먼저 발생한 것을 남긴다" 가 결정론적으로 성립한다.
+    # 같은 occurredAt 이면 evidenceId 로 순서를 고정한다.
+    ordered_all = sorted(evidences, key=lambda e: (e.occurred_at, e.evidence_id))
+    seen: set[tuple[str, str]] = set()
+    ordered = []
+    for e in ordered_all:
+        if e.dedupe_key in seen:
+            continue
+        seen.add(e.dedupe_key)
+        ordered.append(e)
     # skill_code 를 인자로 받는다. Evidence 가 하나도 없을 때도 상태를 내야 하는데
     # (UNASSESSED) 그때는 목록에서 code 를 알 수 없다.
     mismatched = {e.skill_code for e in ordered} - {skill_code}

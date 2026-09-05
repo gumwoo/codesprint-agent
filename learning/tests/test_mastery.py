@@ -53,6 +53,7 @@ def check(name: str, condition: bool, detail: str = "") -> None:
 def sub(day: int, status: str, **kw) -> ev.Evidence:
     """제출 Evidence 하나. day 가 곧 발생 순서다."""
     return ev.from_submission(
+        source_event_id=kw.pop("event", f"submission:{day}"),
         skill_code=SKILL,
         skill_weight=kw.pop("skill_weight", 1.0),
         judge_status=status,
@@ -156,7 +157,7 @@ def test_compile_error_is_not_evidence() -> None:
 def test_review() -> None:
     ok = state_of([
         sub(1, "ACCEPTED"),
-        ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=True,
+        ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
                        occurred_at="2026-09-08T10:00:00"),
     ])
     check("7일 뒤 복습 성공은 retention 0.90 이다 (Addendum 16)",
@@ -164,7 +165,8 @@ def test_review() -> None:
 
     late = state_of([
         sub(1, "ACCEPTED"),
-        ev.from_review(skill_code=SKILL, days_since_last=30, succeeded=True,
+        ev.from_review(source_event_id="review:late", skill_code=SKILL,
+                       days_since_last=30, succeeded=True,
                        occurred_at="2026-10-01T10:00:00"),
     ])
     check("더 오래 지나서 성공하면 retention 이 더 높다",
@@ -173,7 +175,8 @@ def test_review() -> None:
 
     bad = state_of([
         sub(1, "ACCEPTED"),
-        ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=False,
+        ev.from_review(source_event_id="review:fail", skill_code=SKILL,
+                       days_since_last=7, succeeded=False,
                        occurred_at="2026-09-08T10:00:00"),
     ])
     check("복습 실패는 retention 을 크게 낮춘다",
@@ -195,7 +198,7 @@ def test_confidence_accumulates() -> None:
 
     normal = state_of([sub(1, "ACCEPTED")]).confidence
     drill = state_of([sub(1, "ACCEPTED", evidence_type="MICRO_DRILL_RESULT")]).confidence
-    review = state_of([ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=True,
+    review = state_of([ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
                                       occurred_at="2026-09-01T10:00:00")]).confidence
     check("드릴은 일반 문제보다 confidence 를 덜 올린다 (Addendum 18)",
           drill < normal, f"{drill} vs {normal}")
@@ -210,9 +213,9 @@ def test_confidence_accumulates() -> None:
 def mastered_sequence() -> list[ev.Evidence]:
     """Addendum 22 의 네 조건을 모두 채우는 흐름."""
     items = [sub(d, "ACCEPTED") for d in range(1, 11)]
-    items.append(ev.from_concept_check(skill_code=SKILL, verdict="CORRECT",
+    items.append(ev.from_concept_check(source_event_id="concept:1", skill_code=SKILL, verdict="CORRECT",
                                        occurred_at="2026-09-11T10:00:00"))
-    items.append(ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=True,
+    items.append(ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
                                 occurred_at="2026-09-12T10:00:00"))
     return items
 
@@ -227,14 +230,14 @@ def test_mastered() -> None:
           state_of(no_review).status != "MASTERED", f"{state_of(no_review).status}")
 
     few = [sub(1, "ACCEPTED"),
-           ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=True,
+           ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
                           occurred_at="2026-09-02T10:00:00")]
     s2 = state_of(few)
     check("confidence 가 낮으면 mastery 가 높아도 MASTERED 가 아니다",
           s2.status != "MASTERED", f"status={s2.status} confidence={s2.confidence}")
 
     viewed = [sub(d, "ACCEPTED", viewed=True) for d in range(1, 11)]
-    viewed.append(ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=True,
+    viewed.append(ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
                                  occurred_at="2026-09-12T10:00:00"))
     check("정답을 보고 맞힌 것만으로는 MASTERED 가 되지 않는다 (PRD 143-4)",
           state_of(viewed).status != "MASTERED", f"{state_of(viewed).status}")
@@ -247,7 +250,8 @@ def test_weakened() -> None:
           state_of(seq).status == "WEAKENED", f"{state_of(seq).status}")
 
     seq2 = mastered_sequence()
-    seq2.append(ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=False,
+    seq2.append(ev.from_review(source_event_id="review:2", skill_code=SKILL,
+                               days_since_last=7, succeeded=False,
                                occurred_at="2026-09-20T10:00:00"))
     check("MASTERED 이후 복습에 실패하면 WEAKENED 로 간다",
           state_of(seq2).status == "WEAKENED", f"{state_of(seq2).status}")
@@ -269,9 +273,9 @@ def test_contracts() -> None:
         sub(1, "ACCEPTED", hint=2, solve_seconds=200, expected_solve_seconds=300,
             problem_code="P03_CONNECTED_COMPONENT"),
         sub(2, "WRONG_ANSWER"),
-        ev.from_review(skill_code=SKILL, days_since_last=7, succeeded=True,
+        ev.from_review(source_event_id="review:1", skill_code=SKILL, days_since_last=7, succeeded=True,
                        occurred_at="2026-09-08T10:00:00"),
-        ev.from_concept_check(skill_code=SKILL, verdict="PARTIAL",
+        ev.from_concept_check(source_event_id="concept:1", skill_code=SKILL, verdict="PARTIAL",
                               occurred_at="2026-09-09T10:00:00"),
     ]
     for e in samples:
@@ -291,7 +295,8 @@ def test_deterministic() -> None:
     check("입력 순서가 섞여도 occurredAt 으로 정렬해 같은 결과를 낸다",
           state_of(shuffled).to_dict() == first, "재계산이 입력 순서에 의존한다")
 
-    other = ev.from_submission(skill_code="BFS_BASIC", skill_weight=1.0,
+    other = ev.from_submission(source_event_id="submission:99", skill_code="BFS_BASIC",
+                               skill_weight=1.0,
                                judge_status="ACCEPTED", hint_level=0,
                                solution_viewed=False, occurred_at="2026-09-01T10:00:00")
     try:
@@ -324,6 +329,76 @@ def test_recognition_mode_gated() -> None:
           exam.scores["recognition"] == 0.90, f"{exam.scores['recognition']}")
 
 
+# -- 13. 독립 풀이 판정은 성공/실패에 같은 기준 (BLOCKER 였던 버그) ---------
+def test_independent_attempt_applies_to_failures() -> None:
+    cases = [
+        ("H0 + AC", sub(1, "ACCEPTED", hint=0), True),
+        ("H3 + AC", sub(1, "ACCEPTED", hint=3), True),
+        ("H4 + AC", sub(1, "ACCEPTED", hint=4), False),
+        ("H0 + WA", sub(1, "WRONG_ANSWER", hint=0), True),
+        ("H3 + WA", sub(1, "WRONG_ANSWER", hint=3), True),
+        # 힌트를 다 보고 틀린 것은 독립 풀이에 실패한 것이 아니라
+        # 애초에 독립 풀이가 아니다.
+        ("H4 + WA", sub(1, "WRONG_ANSWER", hint=4), False),
+        ("H5 + WA", sub(1, "WRONG_ANSWER", hint=5), False),
+        ("정답 보고 + WA", sub(1, "WRONG_ANSWER", viewed=True), False),
+        ("정답 보고 + TLE", sub(1, "TIME_LIMIT", viewed=True), False),
+        ("H5 + RE", sub(1, "RUNTIME_ERROR", hint=5), False),
+    ]
+    for label, e, expected in cases:
+        check(f"독립 풀이 판정: {label} -> {expected}",
+              e.context["independentAttempt"] is expected,
+              f"{e.context['independentAttempt']}")
+
+
+def test_hinted_failures_do_not_weaken() -> None:
+    """MASTERED 인 사용자가 힌트를 다 보고 틀렸다고 WEAKENED 가 되면 안 된다.
+
+    독립 풀이를 시도한 적이 없기 때문이다. 이 값은 Decision Engine 의 입력이므로
+    틀리면 잘못된 다음 문제를 추천하게 된다.
+    """
+    base = mastered_sequence()
+    check("사전 조건: MASTERED 다", state_of(base).status == "MASTERED",
+          f"{state_of(base).status}")
+
+    hinted = base + [sub(13, "WRONG_ANSWER", hint=5), sub(14, "WRONG_ANSWER", viewed=True)]
+    check("힌트를 다 보고 두 번 틀려도 WEAKENED 가 아니다",
+          state_of(hinted).status == "MASTERED", f"{state_of(hinted).status}")
+
+    independent = base + [sub(13, "WRONG_ANSWER", hint=0), sub(14, "WRONG_ANSWER", hint=1)]
+    check("힌트 없이 두 번 틀리면 WEAKENED 가 맞다",
+          state_of(independent).status == "WEAKENED", f"{state_of(independent).status}")
+
+
+# -- 14. 멱등성 - 같은 원천 이벤트는 한 번만 센다 --------------------------
+def test_idempotent_on_duplicate_source_event() -> None:
+    """Judge Worker 재시도로 같은 제출이 두 번 처리될 수 있다(ADR-0009)."""
+    once = [sub(1, "ACCEPTED"), sub(2, "WRONG_ANSWER")]
+    twice = once + [sub(1, "ACCEPTED"), sub(2, "WRONG_ANSWER")]
+    check("같은 원천 이벤트가 두 번 들어와도 결과가 같다",
+          state_of(twice).to_dict() == state_of(once).to_dict(),
+          f"{state_of(twice).evidence_count} vs {state_of(once).evidence_count}")
+    check("중복은 evidenceCount 에도 세지 않는다",
+          state_of(twice).evidence_count == 2, f"{state_of(twice).evidence_count}")
+
+    # 원천이 다르면 중복이 아니다.
+    distinct = once + [sub(3, "ACCEPTED", event="submission:3")]
+    check("다른 원천 이벤트는 그대로 센다",
+          state_of(distinct).evidence_count == 3, f"{state_of(distinct).evidence_count}")
+
+    # 한 제출이 여러 Skill 에 Evidence 를 남기는 경우 - sourceEventId 는 같고
+    # skillCode 가 다르므로 서로 다른 Evidence 다.
+    a = sub(1, "ACCEPTED")
+    b = ev.from_submission(source_event_id="submission:1", skill_code="BFS_BASIC",
+                           skill_weight=0.3, judge_status="ACCEPTED", hint_level=0,
+                           solution_viewed=False, occurred_at="2026-09-01T10:00:00")
+    check("같은 제출이라도 Skill 이 다르면 다른 Evidence 다",
+          a.dedupe_key != b.dedupe_key and a.evidence_id != b.evidence_id)
+
+    check("evidenceId 는 같은 원천에서 항상 같다",
+          sub(1, "ACCEPTED").evidence_id == sub(1, "ACCEPTED").evidence_id)
+
+
 def main() -> int:
     for fn in (
         test_unassessed, test_first_evidence, test_hint_levels, test_wrong_answer,
@@ -331,6 +406,8 @@ def main() -> int:
         test_compile_error_is_not_evidence, test_review, test_confidence_accumulates,
         test_mastered, test_weakened, test_contracts, test_deterministic,
         test_speed_only_on_success, test_recognition_mode_gated,
+        test_independent_attempt_applies_to_failures, test_hinted_failures_do_not_weaken,
+        test_idempotent_on_duplicate_source_event,
     ):
         print(f"\n== {fn.__name__} ==")
         fn()

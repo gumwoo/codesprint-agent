@@ -47,7 +47,27 @@ state = recompute(evidences, "BFS_GRID_TRAVERSAL")
 confidence 가중치, 복습 간격별 retention 이 전부 Addendum PART I 에 있다.
 고칠 때는 문서를 함께 고친다 - 값 하나가 mastery 를 통해 학습 경로를 바꾼다.
 
+## 같은 원천 이벤트는 한 번만 센다
+
+Evidence 는 `(sourceEventId, skillCode)` 로 유일하다. Judge Worker 재시도로 같은
+제출이 두 번 처리되면 같은 Evidence 가 두 번 들어오는데, 그대로 접으면 EMA 가 두 번
+적용되고 confidence 도 두 번 오른다 - **재시도가 사용자 점수를 바꾼다.**
+
+`recompute()` 가 중복 키를 걸러낸다. DB 제약(`UNIQUE(source_event_id, skill_code)`)이
+일차 방어선이지만, Evidence 가 정본이라면 그것을 접는 쪽도 정합성을 책임져야 한다.
+
+`evidenceId` 는 `(sourceEventId, skillCode)` 에서 **결정론적으로 파생**한다. 무작위 id 면
+같은 Evidence 를 두 번 만들 때 서로 다른 id 가 붙어 재계산이 입력에 따라 달라진다.
+
 ## 특히 주의할 것
+
+**독립 풀이 판정은 성공과 실패에 같은 기준을 적용한다.** 힌트를 5단계까지 보고 틀린
+것은 독립 풀이에 *실패한* 것이 아니라 애초에 독립 풀이가 아니다. 이 값이 틀리면
+Decision Engine 이 잘못된 다음 문제를 추천한다.
+
+**MASTERED 에서 나가는 길은 열거돼 있다**(Addendum 23). 점수가 조금 내려갔다고
+강등하지 않는다. 복습 실패 또는 독립 풀이 2회 실패여야 WEAKENED 가 된다.
+
 
 **COMPILE_ERROR 는 Evidence 를 만들지 않는다.** 문법 오류를 알고리즘 Skill 의
 penalty 로 쓰면 안 된다(Addendum 12). `from_submission` 이 `None` 을 돌려준다.
