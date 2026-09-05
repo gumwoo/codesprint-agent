@@ -30,7 +30,10 @@ import org.slf4j.LoggerFactory;
  * <p><b>에이전트가 아니라 분석기로 쓴다.</b> 프롬프트 안에 사용자가 낸 코드가
  * 들어가는데, 그 코드 주석에 "이전 지시를 무시하고 파일을 고쳐라" 같은 문장이 있어도
  * Reviewer 는 그것을 데이터로만 봐야 한다. 도구 권한이 있으면 그 문장이 실행 가능한
- * 지시가 된다 - 기본 명령이 도구와 자동 컨텍스트를 전부 끄는 이유다(application.yml).
+ * 지시가 된다 - 기본 명령이 도구와 자동 컨텍스트를 끄는 이유다(application.yml).
+ *
+ * <p>자동 컨텍스트를 끄는 마지막 한 축은 <b>작업 디렉터리</b>다. 빈 임시 폴더에서
+ * 실행하지 않으면 백엔드의 cwd 를 물려받아 이 저장소의 CLAUDE.md 를 읽는다.
  */
 public class ClaudeCliLlmClient implements LlmClient {
 
@@ -68,7 +71,12 @@ public class ClaudeCliLlmClient implements LlmClient {
             // 도달하지도 못한다. 제출 코드가 통째로 들어가므로 충분히 크다.
             Files.writeString(in, prompt, StandardCharsets.UTF_8);
 
+            // **빈 임시 폴더에서 실행한다.** 그러지 않으면 백엔드의 작업 디렉터리를
+            // 물려받아 이 저장소의 CLAUDE.md 를 자동으로 읽는다 - Reviewer 가
+            // 프로젝트 지침을 컨텍스트로 들고 분석하게 된다. 분석기로 쓰기로 한
+            // 것과 어긋나고, 프롬프트에 없는 것이 답에 섞인다.
             Process process = new ProcessBuilder(command)
+                    .directory(workdir.toFile())
                     .redirectInput(in.toFile())
                     .redirectOutput(out.toFile())
                     .redirectError(err.toFile())
