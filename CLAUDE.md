@@ -145,16 +145,18 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
 10개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
 제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
-LLM 어댑터도 붙어 있다. **다만 API 키가 없으면 붙지 않고**, 그때는 분석 없이
-나머지가 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
+LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않으면 분석 없이 나머지가
+그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
 **프론트는 아직 없다.**
 
 ```bash
-CODESPRINT_LLM_API_KEY=...   # 설정하면 Reviewer 가 붙는다
+CODESPRINT_REVIEWER_ENABLED=true   # 로컬 Claude CLI 가 있고 로그인돼 있을 때
 ```
 
-**키를 저장소에 적지 않는다.** 공개 저장소이고 한 번 커밋되면 히스토리에서 지우기
-어렵다. 환경변수로만 받는다.
+**API 키를 받지 않는다.** 이 프로젝트는 배포하지 않는다 - 만든 사람이 자기 PC 에서
+돌린다. 로컬 Claude CLI 의 로그인 세션을 쓰므로 저장소에 넣을 비밀이 없다.
+배포가 필요해지면 `LlmClient` 구현을 하나 더 만든다 - 그 인터페이스가
+`complete(String) -> String` 하나뿐인 이유가 그것이다.
 
 **프롬프트는 파일 이름이 버전이다**(`reviewer/prompts/reviewer-v1.md`). 내용을 고칠
 때는 새 파일을 만든다 - 같은 이름으로 내용을 바꾸면 이전에 쌓인 라벨과 이후 라벨이

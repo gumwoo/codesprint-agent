@@ -1,61 +1,47 @@
 package dev.codesprint.reviewer;
 
 import java.time.Duration;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Conditional;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * Reviewer 를 붙일지 정한다.
  *
- * <p><b>API 키가 없으면 붙지 않는다.</b> 그때는 {@link DisabledReviewer} 가 남고,
- * 분석 없이 나머지가 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이
- * 계산된다.
- *
- * <p>키를 설정 파일에 적지 않는다. 환경변수로만 받는다 - 공개 저장소이고, 한 번
- * 커밋되면 히스토리에서 지우기 어렵다.
+ * <p><b>기본은 붙이지 않는다.</b> 그때는 {@link DisabledReviewer} 가 남고 분석 없이
+ * 나머지가 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
+ * 켜려면 명시적으로 켜야 한다.
  *
  * <pre>
- *   CODESPRINT_LLM_API_KEY=sk-...   설정하면 Reviewer 가 붙는다
- *   (없으면)                         분석 없이 진행한다
+ *   CODESPRINT_REVIEWER_ENABLED=true    # 로컬에 Claude CLI 가 있고 로그인돼 있을 때
+ *   (기본)                               # 분석 없이 진행한다
  * </pre>
+ *
+ * <p><b>API 키를 받지 않는다.</b> 이 프로젝트는 배포하지 않는다 - 만든 사람이 자기
+ * PC 에서 돌린다. 로컬 Claude CLI 의 로그인 세션을 쓰므로 저장소에 넣을 비밀이 없다.
+ * 배포가 필요해지면 {@link LlmClient} 구현을 하나 더 만든다.
  */
 @Configuration
-@Conditional(ReviewerConfiguration.ApiKeyPresent.class)
+@ConditionalOnProperty(name = "codesprint.reviewer.enabled", havingValue = "true")
 public class ReviewerConfiguration {
-
-    /**
-     * 키가 <b>비어 있지 않을 때만</b> 붙인다.
-     *
-     * <p>{@code @ConditionalOnProperty} 를 쓰면 안 된다. application.yml 이 기본값으로
-     * 빈 문자열을 넣으므로 프로퍼티는 언제나 "존재" 하고, 그 조건은 값이 있다고 본다 -
-     * 키 없이 Reviewer 가 붙어 모든 호출이 401 로 실패한다.
-     */
-    static class ApiKeyPresent implements org.springframework.context.annotation.Condition {
-
-        @Override
-        public boolean matches(org.springframework.context.annotation.ConditionContext context,
-                org.springframework.core.type.AnnotatedTypeMetadata metadata) {
-            String key = context.getEnvironment().getProperty("codesprint.reviewer.api-key", "");
-            return !key.isBlank();
-        }
-    }
 
     private static final Logger log = LoggerFactory.getLogger(ReviewerConfiguration.class);
 
+    /**
+     * @param command 실행할 명령. 프롬프트는 stdin 으로 간다 - 명령행 인자로 넘기면
+     *     사용자가 낸 코드가 프로세스 목록에 그대로 보인다.
+     */
     @Bean
     public LlmClient llmClient(
-            @Value("${codesprint.reviewer.api-key}") String apiKey,
-            @Value("${codesprint.reviewer.model}") String model,
-            @Value("${codesprint.reviewer.max-tokens:2048}") int maxTokens,
-            @Value("${codesprint.reviewer.timeout-seconds:60}") long timeoutSeconds) {
+            @Value("${codesprint.reviewer.command}") List<String> command,
+            @Value("${codesprint.reviewer.timeout-seconds:120}") long timeoutSeconds) {
 
-        // 키 자체를 남기지 않는다. 붙었다는 사실과 모델 이름까지만.
-        log.info("Reviewer 를 붙인다: model={}", model);
-        return new AnthropicLlmClient(apiKey, model, maxTokens, Duration.ofSeconds(timeoutSeconds));
+        log.info("Reviewer 를 붙인다: command={}", command);
+        return new ClaudeCliLlmClient(command, Duration.ofSeconds(timeoutSeconds));
     }
 
     /**
