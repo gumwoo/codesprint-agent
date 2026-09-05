@@ -190,6 +190,28 @@ public class SubmissionRow {
         return promptVersion;
     }
 
+    // 그 결정이 가리키는 문제. 조회할 때 다시 고르지 않는다 - 그러면 같은 제출이
+    // 시점에 따라 다른 문제를 가리키고, nextAction 은 과거에 고정돼 있으므로 한
+    // 응답 안에서 기준 시점이 둘이 된다.
+    @Column(name = "next_problem_code", length = 100)
+    private String nextProblemCode;
+
+    @Column(name = "next_problem_reason")
+    private String nextProblemReason;
+
+    public void applyNextProblem(String problemCode, String reason) {
+        this.nextProblemCode = problemCode;
+        this.nextProblemReason = reason;
+    }
+
+    public String nextProblemCode() {
+        return nextProblemCode;
+    }
+
+    public String nextProblemReason() {
+        return nextProblemReason;
+    }
+
     /** 결정과 갱신 내역을 함께 남긴다. 반영은 한 번뿐이므로 부분 갱신 경로를 두지 않는다. */
     public void applyOutcome(String nextActionType, String nextActionTarget,
             String nextActionReason, String skillUpdates) {

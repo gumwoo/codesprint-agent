@@ -143,10 +143,15 @@ class ProblemDeliveryTest {
     }
 
     private long submitAndJudge(String problemCode, String judgeStatus) throws Exception {
+        return submitAndJudge(problemCode, judgeStatus, 0, false);
+    }
+
+    private long submitAndJudge(String problemCode, String judgeStatus, int hintLevel,
+            boolean solutionViewed) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
-                """.formatted(userId);
+                 "hintLevel": %d, "solutionViewed": %s, "solveSeconds": 120}
+                """.formatted(userId, hintLevel, solutionViewed);
         String json = mvc.perform(post("/api/problems/{code}/submit", problemCode)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andReturn().getResponse().getContentAsString();
@@ -252,18 +257,69 @@ class ProblemDeliveryTest {
                 .isEqualTo(next.get("targetSkill").asText());
     }
 
-    @Test
-    @DisplayName("이미 맞힌 문제는 다시 주지 않는다")
-    void solvedProblemsAreNotHandedOutAgain() throws Exception {
-        // P03 을 맞혀 둔다. 같은 Skill 의 후보에서 빠져야 한다.
-        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED");
-        long submissionId = submitAndJudge("P05_SHORTEST_PATH", "WRONG_ANSWER");
+    /**
+     * BFS_GRID_TRAVERSAL 의 다른 문제를 추천받는 상황을 만든다.
+     *
+     * <p>후보는 code 순으로 P02 · P03 · P04 이고 방금 낸 P02 는 빠지므로, 다음 문제는
+     * <b>P03 이 후보로 남아 있는가</b>에 따라 갈린다.
+     *
+     * @return 추천된 문제 code
+     */
+    private String retryVariantPick() throws Exception {
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
 
         JsonNode next = nextProblem(submissionId);
-        if (!next.get("problem").isNull()) {
-            assertThat(next.get("problem").get("code").asText())
-                    .isNotEqualTo("P03_CONNECTED_COMPONENT");
-        }
+        assertThat(next.get("action").asText()).isEqualTo("RETRY_VARIANT");
+        return next.get("problem").get("code").asText();
+    }
+
+    @Test
+    @DisplayName("스스로 푼 문제는 다시 주지 않는다")
+    void independentlySolvedProblemsAreNotHandedOutAgain() throws Exception {
+        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED", 0, false);
+
+        assertThat(retryVariantPick())
+                .as("P03 은 스스로 풀었으므로 건너뛴다")
+                .isEqualTo("P04_AREA_SIZE");
+    }
+
+    @Test
+    @DisplayName("힌트를 많이 쓴 AC 는 아직 푼 것이 아니다")
+    void heavilyHintedAcceptanceStillCountsAsUnsolved() throws Exception {
+        // 힌트 4단계 이상은 독립 풀이로 세지 않는다(Addendum 22). Evidence 쪽은
+        // 이미 그렇게 세는데 문제 선택에서만 "AC 한 번" 으로 단순화하면, 힌트로
+        // 맞힌 문제가 후보에서 영영 빠진다 - 그 사람은 아직 혼자 못 푼다.
+        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED", 4, false);
+
+        assertThat(retryVariantPick())
+                .as("아직 혼자 푼 것이 아니므로 다시 준다")
+                .isEqualTo("P03_CONNECTED_COMPONENT");
+    }
+
+    @Test
+    @DisplayName("풀이를 보고 맞힌 것도 아직 푼 것이 아니다")
+    void acceptanceAfterViewingTheSolutionCountsAsUnsolved() throws Exception {
+        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED", 0, true);
+
+        assertThat(retryVariantPick()).isEqualTo("P03_CONNECTED_COMPONENT");
+    }
+
+    @Test
+    @DisplayName("같은 제출을 두 번 조회해도 같은 문제를 가리킨다")
+    void theSameSubmissionAlwaysPointsAtTheSameProblem() throws Exception {
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+        String first = nextProblem(submissionId).get("problem").get("code").asText();
+
+        // 그 사이 추천됐던 문제를 스스로 풀어낸다. 조회할 때 다시 고르면 여기서
+        // 답이 바뀐다 - nextAction 은 과거에 고정돼 있는데 문제만 현재 상태로
+        // 고르면 한 응답 안에서 기준 시점이 둘이 된다.
+        submitAndJudge(first, "ACCEPTED", 0, false);
+
+        assertThat(nextProblem(submissionId).get("problem").get("code").asText())
+                .as("추천은 반영 시점에 고정된다")
+                .isEqualTo(first);
     }
 
     @Test
@@ -318,6 +374,25 @@ class ProblemDeliveryTest {
                 .andReturn().getResponse().getContentAsString());
         assertThat(schema("problem-view.schema.json").validate(problem))
                 .as("problem-view 계약 위반").isEmpty();
+    }
+
+    @Test
+    @DisplayName("계약의 action 목록이 ActionType 과 정확히 같다")
+    void actionEnumMatchesTheContract() throws Exception {
+        // 한쪽만 늘면 계약이 새 행동을 알아보지 못한다. Judge status 에서 같은
+        // 이유로 집합 비교를 넣었다.
+        java.util.Set<String> inCode = new java.util.TreeSet<>();
+        for (dev.codesprint.learning.domain.ActionType type
+                : dev.codesprint.learning.domain.ActionType.values()) {
+            inCode.add(type.name());
+        }
+        java.util.Set<String> inContract = new java.util.TreeSet<>();
+        MAPPER.readTree(Files.readString(repoRoot().resolve("contracts")
+                        .resolve("next-problem.schema.json")))
+                .get("properties").get("action").get("enum")
+                .forEach(node -> inContract.add(node.asText()));
+
+        assertThat(inCode).isEqualTo(inContract);
     }
 
     private static JsonSchema schema(String name) throws Exception {
