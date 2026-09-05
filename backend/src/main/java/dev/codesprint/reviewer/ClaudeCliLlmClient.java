@@ -48,8 +48,63 @@ public class ClaudeCliLlmClient implements LlmClient {
      *     프롬프트는 stdin 으로 간다.
      */
     public ClaudeCliLlmClient(List<String> command, Duration timeout) {
-        this.command = List.copyOf(command);
+        this.command = resolveExecutable(List.copyOf(command));
         this.timeout = timeout;
+    }
+
+    /**
+     * 첫 인자를 실제 실행 파일 경로로 바꾼다.
+     *
+     * <p><b>Windows 에서 필요하다.</b> npm 이 설치한 {@code claude} 는 확장자 없는 셸
+     * 스크립트이고 같은 폴더에 {@code claude.cmd} 가 함께 있다. 셸은 앞의 것을
+     * 실행하지만 Java 의 {@code ProcessBuilder} 는 그것을 실행 파일로 보지 않는다 -
+     * {@code CreateProcess error=2} 로 떨어진다.
+     *
+     * <p>실제로 그렇게 깨졌다. 터미널에서 {@code claude -p ...} 가 잘 도는 것을 확인해
+     * 놓고도 백엔드에서는 매 제출마다 "부르지 못했다" 가 났다. <b>같은 명령이 셸에서
+     * 되는 것과 Java 에서 되는 것은 다르다.</b>
+     *
+     * <p>찾지 못하면 원래 이름을 그대로 둔다. 여기서 실패시키지 않는 이유는, 실행
+     * 시점의 오류가 "무엇을 찾지 못했는지" 를 더 정확히 말해 주기 때문이다.
+     */
+    private static List<String> resolveExecutable(List<String> command) {
+        if (command.isEmpty()) {
+            return command;
+        }
+        String program = command.get(0);
+        if (program.contains("/") || program.contains("\\")) {
+            return command;   // 이미 경로다
+        }
+
+        String pathValue = System.getenv("PATH");
+        if (pathValue == null) {
+            return command;
+        }
+        // **순서가 중요하다.** Windows 에는 확장자 없는 claude(셸 스크립트)와
+        // claude.cmd 가 같은 폴더에 함께 있는데, 앞의 것은 파일로도 실행 권한으로도
+        // 걸러지지 않으면서 ProcessBuilder 로는 실행되지 않는다. 확장자 있는 쪽을
+        // 먼저 본다. 다른 OS 에서는 이름 그대로가 먼저다.
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        List<String> candidates = windows
+                ? List.of(program + ".cmd", program + ".exe", program + ".bat", program)
+                : List.of(program, program + ".cmd", program + ".exe", program + ".bat");
+
+        for (String dir : pathValue.split(java.io.File.pathSeparator)) {
+            for (String candidate : candidates) {
+                Path path = Path.of(dir, candidate);
+                if (Files.isRegularFile(path) && Files.isExecutable(path)) {
+                    List<String> resolved = new java.util.ArrayList<>(command);
+                    resolved.set(0, path.toString());
+                    return List.copyOf(resolved);
+                }
+            }
+        }
+        return command;
+    }
+
+    /** 설정이 그대로 전달됐는지 확인하는 데 쓴다. 명령은 만들어진 뒤 바뀌지 않는다. */
+    public List<String> command() {
+        return command;
     }
 
     @Override

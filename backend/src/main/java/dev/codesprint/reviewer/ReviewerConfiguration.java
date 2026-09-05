@@ -1,11 +1,10 @@
 package dev.codesprint.reviewer;
 
 import java.time.Duration;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,30 +26,20 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @ConditionalOnProperty(name = "codesprint.reviewer.enabled", havingValue = "true")
+@EnableConfigurationProperties(ReviewerProperties.class)
 public class ReviewerConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(ReviewerConfiguration.class);
 
-    /**
-     * @param command 실행할 명령. 프롬프트는 stdin 으로 간다 - 명령행 인자로 넘기면
-     *     사용자가 낸 코드가 프로세스 목록에 그대로 보인다.
-     */
     @Bean
-    public LlmClient llmClient(
-            @Value("${codesprint.reviewer.command}") List<String> command,
-            @Value("${codesprint.reviewer.timeout-seconds:120}") long timeoutSeconds) {
-
-        log.info("Reviewer 를 붙인다: command={}", command);
-        return new ClaudeCliLlmClient(command, Duration.ofSeconds(timeoutSeconds));
+    public LlmClient llmClient(ReviewerProperties properties) {
+        log.info("Reviewer 를 붙인다: command={}", properties.command());
+        return new ClaudeCliLlmClient(
+                properties.command(), Duration.ofSeconds(properties.timeoutSeconds()));
     }
 
-    /**
-     * @param promptVersion 프롬프트 파일 이름. 이 값이 그대로 {@code promptVersion} 으로
-     *     기록에 남는다(PRD §135). 내용을 고칠 때는 새 파일을 만들고 이 설정을 바꾼다.
-     */
     @Bean
-    public ReviewerPort promptReviewer(LlmClient llmClient,
-            @Value("${codesprint.reviewer.prompt-version:reviewer-v1}") String promptVersion) {
-        return new PromptReviewer(llmClient, PromptTemplate.load(promptVersion));
+    public ReviewerPort promptReviewer(LlmClient llmClient, ReviewerProperties properties) {
+        return new PromptReviewer(llmClient, PromptTemplate.load(properties.promptVersion()));
     }
 }
