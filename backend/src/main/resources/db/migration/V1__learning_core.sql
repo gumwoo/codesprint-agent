@@ -139,6 +139,31 @@ CREATE TABLE skill_evidence (
 -- 재계산은 (사용자, Skill) 의 Evidence 를 시간순으로 훑는다.
 CREATE INDEX idx_skill_evidence_replay ON skill_evidence (user_id, skill_code, occurred_at, id);
 
+-- append-only 를 **실제로 강제한다.**
+--
+-- 지금까지는 "엔티티에 setter 를 두지 않았다" 가 근거였는데, 그건 평범한 코드에서
+-- 필드를 바꾸기 어렵게 할 뿐 UPDATE 나 DELETE 를 막지 못한다. 실제로 확인했다 -
+-- 제약이 없을 때 UPDATE 1 / DELETE 1 이 그대로 됐다.
+--
+-- Evidence 하나가 사라지면 과거를 다시 접었을 때 다른 mastery 가 나오고, 그러면
+-- 다른 status 와 다른 Decision 으로 이어진다(ADR-0009). user_skills 는 캐시라
+-- 다시 만들면 되지만 이쪽은 복원할 방법이 없다.
+--
+-- ⚠️ 사용자 데이터 삭제(탈퇴 등)는 이 트리거를 우회해야 한다. 권한을 가진 경로에서
+--    ALTER TABLE skill_evidence DISABLE TRIGGER skill_evidence_append_only 를 쓰고
+--    다시 켠다. 그 경로를 만들 때 별도 감사 기록을 남긴다.
+CREATE FUNCTION skill_evidence_reject_mutation() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION
+        'skill_evidence 는 append-only 다 (%). Evidence 는 학습의 정본이며 '
+        '고치거나 지우면 과거 재계산이 다른 값을 낸다 - ADR-0009', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER skill_evidence_append_only
+    BEFORE UPDATE OR DELETE ON skill_evidence
+    FOR EACH ROW EXECUTE FUNCTION skill_evidence_reject_mutation();
+
 -- Evidence 로부터 재계산된 캐시. 정본이 아니다.
 CREATE TABLE user_skills (
     user_id     BIGINT       NOT NULL REFERENCES users (id),

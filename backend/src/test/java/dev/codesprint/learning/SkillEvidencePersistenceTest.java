@@ -253,6 +253,59 @@ class SkillEvidencePersistenceTest {
     }
 
     @Test
+    @DisplayName("Evidence 는 수정할 수 없다 (append-only)")
+    void rejectsUpdate() {
+        // "엔티티에 setter 를 두지 않았다" 는 append-only 의 근거가 되지 못한다.
+        // 그건 평범한 코드에서 필드를 바꾸기 어렵게 할 뿐이다. 실제로 제약이 없을 때
+        // UPDATE 1 이 그대로 됐다.
+        repository.saveAndFlush(
+                row("submission:1", "BFS_GRID_TRAVERSAL",
+                        Instant.parse("2026-09-01T10:00:00Z"), new BigDecimal("0.9000")));
+
+        assertThatThrownBy(() -> {
+            entityManager.createNativeQuery(
+                    "UPDATE skill_evidence SET observed_implementation = 0.1 "
+                            + "WHERE user_id = :uid")
+                    .setParameter("uid", userId)
+                    .executeUpdate();
+        }).isInstanceOf(Exception.class);
+    }
+
+    @Test
+    @DisplayName("Evidence 는 삭제할 수 없다 (append-only)")
+    void rejectsDelete() {
+        // Evidence 하나가 사라지면 과거를 다시 접었을 때 다른 mastery 가 나오고,
+        // 그러면 다른 status 와 다른 Decision 으로 이어진다(ADR-0009).
+        // user_skills 는 캐시라 다시 만들면 되지만 이쪽은 복원할 방법이 없다.
+        repository.saveAndFlush(
+                row("submission:1", "BFS_GRID_TRAVERSAL",
+                        Instant.parse("2026-09-01T10:00:00Z"), new BigDecimal("0.9000")));
+
+        assertThatThrownBy(() -> {
+            entityManager.createNativeQuery(
+                    "DELETE FROM skill_evidence WHERE user_id = :uid")
+                    .setParameter("uid", userId)
+                    .executeUpdate();
+        }).isInstanceOf(Exception.class);
+    }
+
+    @Test
+    @DisplayName("Repository 에 delete 계열 API 가 없다")
+    void repositoryDoesNotExposeDelete() {
+        // JpaRepository 를 상속하면 delete / deleteAll / deleteById 가 전부 열린다.
+        // 트리거가 마지막 방어선이지만, 애초에 호출할 수 없어야 실수가 줄어든다.
+        List<String> mutating = java.util.Arrays
+                .stream(SkillEvidenceRepository.class.getMethods())
+                .map(java.lang.reflect.Method::getName)
+                .filter(name -> name.startsWith("delete") || name.startsWith("remove"))
+                .toList();
+
+        assertThat(mutating)
+                .as("Evidence 는 append-only 다 - 삭제 API 를 노출하지 않는다")
+                .isEmpty();
+    }
+
+    @Test
     @DisplayName("알 수 없는 evidence_type 은 DB 가 거부한다")
     void rejectsUnknownEvidenceType() {
         SkillEvidenceRow bad = new SkillEvidenceRow(

@@ -80,8 +80,25 @@ mastery 가 `NULL` 인 채로 `LOCKED` 다. 동치로 묶으면 그 정상 상�
 반대로 mastery 가 있는데 `LOCKED` 인 것은 가능하다 - 다른 문제의 SECONDARY Skill 로
 Evidence 가 쌓였는데 선수 조건은 아직 못 채운 경우다.
 
-`skill_evidence` 는 **append-only** 다. 엔티티에 setter 를 두지 않았다 - 한번 쓴
-Evidence 를 고치면 과거를 다시 접었을 때 다른 값이 나온다(ADR-0009).
+## Evidence 는 append-only 이고, 그것을 세 층이 강제한다
+
+처음에는 "엔티티에 setter 를 두지 않았다" 를 근거로 삼았는데 **그건 근거가 되지 못한다.**
+평범한 코드에서 필드를 바꾸기 어렵게 할 뿐 UPDATE 나 DELETE 를 막지 못한다.
+실제로 확인했더니 `UPDATE 1` / `DELETE 1` 이 그대로 됐다.
+
+| 층 | 막는 것 |
+| --- | --- |
+| 엔티티 | setter 없음. 코드에서 필드 변경 |
+| Repository | `JpaRepository` 를 상속하지 않는다. `delete*` API 자체가 없다 |
+| DB 트리거 | `skill_evidence_append_only`. UPDATE / DELETE 를 거부한다 |
+
+Evidence 하나가 사라지면 과거를 다시 접었을 때 다른 mastery 가 나오고, 그러면 다른
+status 와 다른 Decision 으로 이어진다(ADR-0009). `user_skills` 는 캐시라 다시 만들면
+되지만 이쪽은 복원할 방법이 없다.
+
+⚠️ **사용자 데이터 삭제(탈퇴 등)는 이 트리거를 우회해야 한다.** 권한을 가진 경로에서
+`ALTER TABLE skill_evidence DISABLE TRIGGER skill_evidence_append_only` 를 쓰고 다시
+켠다. 그 경로를 만들 때 별도 감사 기록을 남긴다 - 아직 없다.
 
 ## 아직 없는 것
 
