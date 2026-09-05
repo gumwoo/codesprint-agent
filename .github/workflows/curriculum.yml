@@ -28,10 +28,17 @@ jobs:
       - name: 커리큘럼/계약 검사
         run: python tools/check_curriculum.py
 
+      # 문제 데이터도 같은 원칙이다 - 문서가 아니라 검증되는 데이터다.
+      # Docker 가 필요한 검사(정답이 실제로 AC 를 받는가)는 judge.yml 에 있다.
+      - name: 문제 데이터 검사
+        run: python tools/check_problems.py
+
       # 계약이 통과하는 것만으로는 부족하다. 검사가 아무것도 안 해도 통과한다.
       # 일부러 망가뜨렸을 때 실제로 막히는지 확인한다.
       - name: 메타테스트 — 검사가 실제로 위반을 잡는가
-        run: python tools/meta_test_curriculum.py
+        run: |
+          python tools/meta_test_curriculum.py
+          python tools/meta_test_problems.py
 
       # 메타테스트는 실제 파일을 수정한 뒤 되돌린다. 되돌리지 못했다면
       # 이후 검사가 오염된 파일을 보게 되므로 여기서 끊는다.

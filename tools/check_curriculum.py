@@ -53,6 +53,9 @@ ALLOWED_SCHEMA_KEYWORDS = {
     "properties", "required", "additionalProperties",
     "items", "minItems", "maxItems",
     "minimum", "maximum", "pattern",
+    # 문제 계약(PR 3)에서 추가. 제목/본문이 빈 문자열이면 스키마는 통과하지만
+    # 문제로서 성립하지 않는다.
+    "minLength", "maxLength",
 }
 
 # LLM 요청 스키마에 절대 나타나면 안 되는 필드명.
