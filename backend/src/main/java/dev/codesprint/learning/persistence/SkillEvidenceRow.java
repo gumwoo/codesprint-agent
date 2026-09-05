@@ -152,8 +152,32 @@ public class SkillEvidenceRow {
         return weight;
     }
 
+    public BigDecimal sourceConfidence() {
+        return sourceConfidence;
+    }
+
+    public BigDecimal observedConcept() {
+        return observedConcept;
+    }
+
+    public BigDecimal observedRecognition() {
+        return observedRecognition;
+    }
+
     public BigDecimal observedImplementation() {
         return observedImplementation;
+    }
+
+    public BigDecimal observedIndependent() {
+        return observedIndependent;
+    }
+
+    public BigDecimal observedRetention() {
+        return observedRetention;
+    }
+
+    public BigDecimal observedSpeed() {
+        return observedSpeed;
     }
 
     public String context() {
