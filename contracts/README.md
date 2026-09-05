@@ -7,6 +7,7 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | --- | --- | --- |
 | [reviewer-output.llm.schema.json](reviewer-output.llm.schema.json) | [ADR-0001](../docs/adr/0001-llm-analyzes-system-decides.md) | **LLM 요청 스키마.** 오답 분석만. 점수·액션 필드 없음 |
 | [submit-response.schema.json](submit-response.schema.json) | Addendum §82 | **API 응답 스키마.** 시스템이 점수와 액션을 채운 최종 결과 |
+| [judge-result.schema.json](judge-result.schema.json) | [ADR-0005](../docs/adr/0005-judge-stops-at-first-failure.md) | **Sandbox Runner 출력.** 결정론적 판정. status enum 은 submit-response 와 동일해야 하며 CI 가 검증한다 |
 
 ## 검증 지점
 

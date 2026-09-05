@@ -56,10 +56,25 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 `judge/submissions/` 아래는 **신뢰할 수 없는 입력**이다. 판정 대상이지 실행 대상이 아니다.
 읽거나 실행하지 않는다. `.gitignore`와 `.claude/settings.json`이 이중으로 막는다.
 
+`judge/fixtures/`는 다르다 — 우리가 만든 테스트 자산이라 읽고 고쳐도 된다.
+
+## 샌드박스를 건드릴 때
+
+`judge/run_submission.py`의 `DOCKER_LIMITS` / `MOUNT_MODE`에서 옵션을 빼면
+`judge/tests/test_judge.py`가 실패한다. 각 옵션이 무엇을 막는지 주석으로 적혀 있으니
+지우기 전에 읽는다. 새 제한을 추가하면 **그것을 뚫으려는 격리 케이스도 함께** 넣는다.
+
+격리 케이스에는 대조군이 있다. 제한을 걷어냈을 때도 실패하면 그 테스트는 아무것도
+검증하지 못하는 것이라 실패로 처리된다.
+
+**정답(`expectedOutput`)을 컨테이너 안으로 넣지 않는다**([ADR-0006](docs/adr/0006-expected-output-never-enters-sandbox.md)).
+read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다. 하네스는 실행만 하고,
+정답 비교는 호스트가 한다. 격리(쓰기)와 기밀성(읽기)은 다른 축이므로 따로 검사한다.
+
 ## 현재 상태
 
-첫 Vertical Slice 착수 전. 지금 존재하는 것은 커리큘럼 데이터, LLM 계약, 그리고
-그 둘을 지키는 하네스뿐이다. 백엔드/프론트/Judge는 아직 없다.
+Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, 그리고 Judge/Sandbox까지 있다.
+백엔드·프론트·Judge Worker(큐)는 아직 없다.
 
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.

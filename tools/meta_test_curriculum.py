@@ -142,6 +142,11 @@ def readme_inlines_dependencies(text: str) -> str:
 readme_inlines_dependencies._text_mode = True
 
 
+def judge_status_enums_drift(schema):
+    # Runner 쪽에만 상태를 추가하면 API 계층이 그 값을 거부한다.
+    schema["properties"]["status"]["enum"].append("SKIPPED")
+
+
 def response_drops_review_from_required(schema):
     schema["required"].remove("review")
 
@@ -224,6 +229,9 @@ CASES = [
     # -- 생략 vs null (contracts/README.md 규칙 5) --
     ("생략 vs null · review 가 required 에서 빠지면", "contracts/submit-response.schema.json", response_drops_review_from_required, "review 은 null 을 허용하는데 required 가 아니다"),
     ("생략 vs null · promptVersion 이 required 에서 빠지면", "contracts/submit-response.schema.json", response_drops_prompt_version_from_required, "promptVersion 은 null 을 허용하는데 required 가 아니다"),
+
+    # -- Judge 계약 (PR 2) --
+    ("Judge status enum 이 두 계약에서 갈라지면", "contracts/judge-result.schema.json", judge_status_enums_drift, "judge-result 에만 있는 status"),
 
     # -- 의존성 단일 출처 --
     ("CI 가 의존성을 직접 나열하면", ".github/workflows/curriculum.yml", ci_inlines_dependencies, "의존성을 직접 나열한다"),

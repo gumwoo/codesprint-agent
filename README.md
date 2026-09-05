@@ -34,7 +34,8 @@
 
 ```text
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
-contracts/     LLM 요청/응답 계약 (JSON Schema)
+contracts/     LLM 요청/응답 + Judge 판정 계약 (JSON Schema)
+judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스
 tools/         계약 검사 + 메타테스트
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
@@ -55,7 +56,20 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 아무것도 안 하는 검사도 통과한다. 그래서 계약을 일부러 망가뜨린 뒤 검사가 실제로
 실패하는지 확인한다. 여기서 "검사가 놓침"이 나오면 데이터가 아니라 **하네스가 깨진 것**이다.
 
-현재 26개 위반 케이스를 차단한다.
+현재 27개 위반 케이스를 차단한다.
+
+Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
+**실제로 안 되는 것**은 다르므로, 제한을 걸고 한 번 / 걷어내고 한 번 돌려 그 실패가
+격리 덕분인지 확인한다.
+
+```bash
+docker build -t codesprint-judge:py312 -f judge/Dockerfile .
+python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
+```
+
+격리(실행이 갇혀 있는가)와 기밀성(채점 데이터가 새지 않는가)은 다른 축이다.
+정답표가 컨테이너 안에 있으면 코드가 갇혀 있어도 그것을 읽어 되뱉을 수 있으므로,
+**정답은 신뢰 경계를 넘지 않는다**([ADR-0006](docs/adr/0006-expected-output-never-enters-sandbox.md)).
 
 ## 현재 상태
 
@@ -66,7 +80,8 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 | --- | --- |
 | Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
 | LLM 계약 + 검사 하네스 | 완료 |
-| Judge / Sandbox | 미착수 |
+| Judge / Sandbox (Python 3.12) | 완료 |
+| Judge Worker / 큐 | 미착수 |
 | Backend / Frontend | 미착수 |
 | Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
 

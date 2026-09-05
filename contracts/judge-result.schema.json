@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/judge-result.schema.json",
+  "title": "JudgeResult",
+  "description": "Sandbox Runner 가 내는 결정론적 판정 결과. AI 가 관여하지 않는다(Addendum 81). submit-response.schema.json 의 judge 객체가 이 결과에서 파생되며, status enum 은 두 파일이 같아야 한다 - CI 가 검증한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "passed",
+    "total",
+    "executionMs",
+    "memoryKb",
+    "failedCaseId",
+    "stderr",
+    "cases"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ACCEPTED",
+        "WRONG_ANSWER",
+        "TIME_LIMIT",
+        "MEMORY_LIMIT",
+        "RUNTIME_ERROR",
+        "COMPILE_ERROR",
+        "OUTPUT_LIMIT",
+        "SYSTEM_ERROR"
+      ],
+      "description": "제출 전체의 판정. 첫 실패 case 의 판정을 그대로 쓴다."
+    },
+    "passed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "통과한 case 수. 실패 시점에 멈추므로 total 과 합이 맞지 않을 수 있다."
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "문제가 가진 전체 case 수."
+    },
+    "executionMs": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "실행된 case 중 최대 소요 시간. COMPILE_ERROR 처럼 하나도 실행하지 못했으면 null 이다. 필드를 생략하지 않는다."
+    },
+    "memoryKb": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "관측된 최대 메모리. 측정하지 못했으면 null."
+    },
+    "failedCaseId": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "실패한 case 의 id. ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR 이면 null 이다. TIME_LIMIT 과 MEMORY_LIMIT 에서도 반드시 채운다 - Reviewer 출력의 failedCaseRefs 가 minItems 1 이라 이 값이 없으면 근거를 만들 수 없다(ADR-0004)."
+    },
+    "stderr": {
+      "type": ["string", "null"],
+      "description": "sanitize 된 표준 에러(Addendum 63). Host 경로를 제거하고 /app/solution.py 형태만 남긴다. 없으면 null."
+    },
+    "cases": {
+      "type": "array",
+      "description": "실행한 case 의 개별 결과. 실패 시점에 멈추므로 total 보다 짧을 수 있다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "executionMs"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "WRONG_ANSWER",
+              "TIME_LIMIT",
+              "MEMORY_LIMIT",
+              "RUNTIME_ERROR",
+              "OUTPUT_LIMIT"
+            ],
+            "description": "case 단위 판정. COMPILE_ERROR 와 SYSTEM_ERROR 는 case 에 귀속되지 않으므로 여기 없다."
+          },
+          "executionMs": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    }
+  }
+}
