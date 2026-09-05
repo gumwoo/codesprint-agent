@@ -155,9 +155,13 @@
             "description": "null 은 UNASSESSED. 0.0(평가했고 못함)과 구분한다(Addendum §4)."
           },
           "after": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0,
-            "maximum": 1
+            "maximum": 1,
+            "description": "이번 제출을 반영한 뒤의 mastery. null 은 여전히 UNASSESSED 라는 뜻이며 0.0(평가했고 못함)과 다르다 - COMPILE_ERROR 처럼 Evidence 를 만들지 않는 판정에서는 첫 제출 뒤에도 아무것도 측정되지 않는다(Addendum 12)."
           },
           "confidence": {
             "type": "number",
