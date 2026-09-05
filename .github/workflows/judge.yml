@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - 'judge/**'
+      - 'problems/**'
       - 'contracts/**'
       - 'requirements-dev.txt'
       - '.github/workflows/judge.yml'
@@ -44,3 +45,9 @@ jobs:
       #    기대지 않는다 - 기대면 로컬에서만 뚫려 있어도 CI 는 초록불이 된다.
       - name: judge & sandbox tests
         run: python judge/tests/test_judge.py
+
+      # 문제 데이터를 실제로 채점해 본다.
+      # reference 가 AC 를 받는지보다 **wrong 이 걸리는지**가 중요하다 -
+      # 아무것도 거르지 못하는 Test Case 집합도 reference 만으로는 통과한다.
+      - name: 문제 데이터 채점 검증
+        run: python tools/verify_problems.py

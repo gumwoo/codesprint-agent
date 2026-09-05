@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P08_VISITED_TIMING_DRILL
+title: 모든 칸까지의 거리 합
+kind: MICRO_DRILL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 300
+referenceComplexity: "O(N*M)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  이어지는 N 개의 줄에 0 과 1 로 이루어진 격자가 주어진다. 1 은 지나갈 수 있는 칸이다.
+
+  (0, 0) 에서 상하좌우로 이동할 때, 도달 가능한 모든 칸까지의 최단거리 합을 출력한다.
+  거리는 이동 횟수로 세며 시작 칸의 거리는 0 이다. 시작 칸이 0 이면 0 을 출력한다.
+
+  방문 처리를 큐에 넣는 시점에 하는지, 꺼내는 시점에 하는지에 따라 답이 달라진다.
+
+skills:
+  - code: BFS_VISITED_MANAGEMENT
+    role: PRIMARY
+    weight: 0.8
+  - code: BFS_SHORTEST_PATH
+    role: SECONDARY
+    weight: 0.2
+
+commonMistakes:
+  - VISITED_TIMING
+  - NO_VISITED
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 방문 처리를 꺼낼 때 한다
+negativeControl:
+  mistake: VISITED_TIMING
+  expectedStatus: WRONG_ANSWER

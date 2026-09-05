@@ -71,10 +71,35 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다. 하네스는 실행만 하고,
 정답 비교는 호스트가 한다. 격리(쓰기)와 기밀성(읽기)은 다른 축이므로 따로 검사한다.
 
+## 문제를 추가할 때
+
+`problems/<CODE>/` 에 네 파일을 함께 넣는다 — `problem.yaml`, `cases.json`,
+`reference.py`, **`wrong.py`**.
+
+`wrong.py` 는 그 문제에서 실제로 자주 나오는 실수를 담은 오답이며, CI 가 그것이
+**실제로 걸리는지** 확인한다([ADR-0007](docs/adr/0007-problems-are-verified-by-a-wrong-solution.md)).
+정답이 통과하는 것만 보면 아무것도 거르지 못하는 Test Case 집합도 통과한다.
+
+`negativeControl` 에 **무엇을 심었고 어떤 판정이 나와야 하는지**를 적는다.
+"실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 확인한다.
+
+`auto_drill` 이 켜진 Mistake 는 그 `target_skill` 을 PRIMARY 로 갖는 `MICRO_DRILL`
+문제가 반드시 있어야 한다. 없으면 Decision Engine 이 갈 곳 없는 액션을 낸다.
+
+**이 저장소의 문제는 전부 `source: DEV_FIXTURE` 다**([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
+공개 저장소이므로 Test Case 와 정답이 그대로 보인다 — `hidden` 은 UI 노출 여부일 뿐
+기밀성 보장이 아니다. 실서비스 문제은행(`CURATED`)은 여기 두지 않으며 CI 가 막는다.
+
+```bash
+python tools/check_problems.py      # 참조 무결성 (Docker 불필요)
+python tools/meta_test_problems.py  # 그 검사가 실제로 잡는가
+python tools/verify_problems.py     # 실제 채점 (Docker 필요)
+```
+
 ## 현재 상태
 
-Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, 그리고 Judge/Sandbox까지 있다.
-백엔드·프론트·Judge Worker(큐)는 아직 없다.
+Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 그리고
+검증된 문제 10개까지 있다. 백엔드·프론트·Judge Worker(큐)·Mastery 엔진은 아직 없다.
 
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.

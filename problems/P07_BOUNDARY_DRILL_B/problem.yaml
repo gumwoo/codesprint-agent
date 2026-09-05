@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P07_BOUNDARY_DRILL_B
+title: 격자 안에 있는 이웃 세기
+kind: MICRO_DRILL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 180
+referenceComplexity: "O(Q)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  둘째 줄에 질의의 개수 Q 가 주어진다.
+  이어지는 Q 개의 줄에 좌표 R C 가 주어진다. (0-based)
+
+  각 좌표에 대해, 상하좌우 네 방향 중 격자 안에 있는 칸의 개수를 한 줄에 하나씩 출력한다.
+
+skills:
+  - code: GRID_BOUNDARY_CHECK
+    role: PRIMARY
+    weight: 0.8
+  - code: GRID_COORDINATE
+    role: SECONDARY
+    weight: 0.2
+
+commonMistakes:
+  - BOUNDARY_CHECK
+  - INDEX_ERROR
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 상한만 보고 하한(음수)을 보지 않는다
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: WRONG_ANSWER

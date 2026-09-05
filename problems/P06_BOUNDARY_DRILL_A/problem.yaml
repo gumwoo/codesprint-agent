@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P06_BOUNDARY_DRILL_A
+title: 격자 밖으로 나갔는가
+kind: MICRO_DRILL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 180
+referenceComplexity: "O(K)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  둘째 줄에 시작 위치 R C 가 주어진다. (0-based)
+  셋째 줄에 이동 횟수 K 가 주어진다.
+  넷째 줄에 K 개의 이동 방향이 공백으로 주어진다. U D L R 중 하나다.
+
+  이동을 순서대로 수행하되, 격자 밖으로 나가는 이동은 무시한다.
+  모든 이동을 마친 뒤 최종 위치를 "R C" 형태로 출력한다.
+
+skills:
+  - code: GRID_BOUNDARY_CHECK
+    role: PRIMARY
+    weight: 0.8
+  - code: GRID_COORDINATE
+    role: SECONDARY
+    weight: 0.2
+
+commonMistakes:
+  - BOUNDARY_CHECK
+  - INDEX_ERROR
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 위/왼쪽만 검사하고 아래/오른쪽 경계를 빠뜨린다
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: WRONG_ANSWER
