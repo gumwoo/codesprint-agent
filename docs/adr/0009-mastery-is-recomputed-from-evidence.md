@@ -52,6 +52,36 @@ state = recompute(evidences, skill_code)
 `user_skills` 행은 **캐시**다. 조회 성능을 위해 존재하며, 언제든 Evidence로부터 다시
 만들 수 있다. 두 값이 어긋나면 Evidence가 이긴다.
 
+## Evidence는 (sourceEventId, skillCode)로 유일해야 한다
+
+Evidence가 정본이고 append-only라면 **같은 것이 두 번 들어오는 경우**를 정의해야 한다.
+앞으로 붙일 Judge Worker와 큐(Addendum §67~69)에서 재시도는 정상적인 동작이다.
+
+```text
+Submission #1042 처리 → Evidence 생성
+Worker 재시도        → 같은 Evidence 또 생성
+```
+
+그대로 접으면 EMA가 두 번 적용되고 confidence도 두 번 오른다. **재시도가 사용자의
+점수를 바꾼다.**
+
+그래서 Evidence에 두 식별자를 둔다.
+
+| | 역할 |
+| --- | --- |
+| `sourceEventId` | **멱등성 키.** `submission:1042` 처럼 원천 이벤트를 가리킨다 |
+| `evidenceId` | Evidence 자체의 식별자. `(sourceEventId, skillCode)` 에서 결정론적으로 파생 |
+
+한 제출이 Skill 3개에 Evidence를 남기면 `sourceEventId`는 같고 `skillCode`가 다르다.
+따라서 유일성은 두 값의 짝이다. DB에서는 `UNIQUE(source_event_id, skill_code)`가 된다.
+
+**`evidenceId`를 무작위로 만들지 않는다.** UUID를 쓰면 같은 Evidence를 두 번 만들 때
+서로 다른 id가 붙어, 재계산 결과가 입력에 따라 달라진다 — 이 ADR이 지키려는 결정론이
+깨진다. 파생값이면 같은 원천에서 항상 같은 id가 나온다.
+
+**재계산도 스스로 방어한다.** DB 제약이 일차 방어선이지만, `recompute()`도 중복 키를
+걸러낸다. Evidence가 정본이라면 그것을 접는 쪽이 정합성을 책임져야 한다.
+
 ## EMA는 순서에 의존한다
 
 재계산이 결정론적이려면 접는 순서가 고정돼야 한다. `occurredAt`으로 정렬한다.
@@ -59,9 +89,8 @@ state = recompute(evidences, skill_code)
 테스트가 이것을 확인한다 — 같은 Evidence 목록을 섞어 넣어도 결과가 같아야 한다.
 정렬을 빠뜨리면 이 테스트가 깨진다.
 
-같은 시각에 두 Evidence가 들어오면 순서가 불안정해진다. 지금은 문제가 없지만
-(제출은 사람이 하는 행위라 초 단위 충돌이 드물다) 실제 저장 시에는 `(occurredAt, id)`로
-정렬해야 한다 — DB 스키마를 만들 때의 확인 항목이다.
+같은 시각에 두 Evidence가 들어오면 순서가 불안정해지므로 `(occurredAt, evidenceId)`로
+정렬한다. `evidenceId`가 결정론적 파생값이라 이 정렬도 결정론적이다.
 
 ## 결과
 
@@ -96,6 +125,21 @@ JPA, DB 스키마가 먼저 있어야 한다. 그건 이 PR의 범위가 아니�
 
 즉 Java로 옮길 때 이 코드가 버려지는 것이 아니라 **테스트 오라클로 남는다.**
 그때까지는 이 파일이 Addendum PART I의 실행 가능한 사본 역할을 한다.
+
+## MASTERED에서 나가는 길은 열거돼 있다
+
+Addendum §23은 `MASTERED → WEAKENED` 전환을 세 조건으로 **열거**한다. 그 밖의 이유로
+점수가 조금 내려갔다고 강등하지 않는다.
+
+처음 구현은 그렇지 않았다. `mastery >= 0.80` 을 매번 다시 확인했기 때문에, 힌트를
+보며 푼 실패들이 EMA로 점수를 끌어내리면 조용히 `PRACTICING`으로 떨어졌다. 독립 풀이를
+시도한 적이 없는데도 "완료" 표시가 사라지고 복습 우선순위도 잃는다.
+
+`WEAKENED`는 "됐었는데 지금은 아니다"라는 뜻이라 복습 대상이 되지만, `PRACTICING`은
+그냥 진행 중이다. 둘을 섞으면 Decision Engine이 다르게 반응한다.
+
+세 번째 조건("동일 핵심 Mistake 2회 반복")은 Reviewer가 붙어야 판단할 수 있어 아직
+구현하지 않았다.
 
 ## 상태 전환에서 정하지 않은 것
 

@@ -2,10 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codesprint.dev/contracts/skill-evidence.schema.json",
   "title": "SkillEvidence",
-  "description": "학습 행동 하나가 남기는 관측 기록(Addendum 7~8). mastery 는 이 기록들로부터 재계산되며, 저장된 점수가 정본이 아니다 - 근거: docs/adr/0009-mastery-is-recomputed-from-evidence.md",
+  "description": "학습 행동 하나가 남기는 관측 기록(Addendum 7~8). mastery 는 이 기록들로부터 재계산되며, 저장된 점수가 정본이 아니다 - 근거: docs/adr/0009-mastery-is-recomputed-from-evidence.md Evidence 는 append-only 이며 (sourceEventId, skillCode) 가 유일해야 한다.",
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "evidenceId",
+    "sourceEventId",
     "skillCode",
     "evidenceType",
     "occurredAt",
@@ -15,6 +17,16 @@
     "context"
   ],
   "properties": {
+    "evidenceId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Evidence 자체의 식별자. (sourceEventId, skillCode) 에서 결정론적으로 파생한다 - 무작위 id 를 쓰면 같은 Evidence 를 두 번 만들 때 서로 다른 id 가 붙어 재계산이 입력에 따라 달라진다(ADR-0009 의 결정론)."
+    },
+    "sourceEventId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "이 Evidence 를 만든 원천 이벤트. 'submission:1042' 처럼 쓴다. **멱등성 키다.** 한 제출이 Skill 3개에 Evidence 를 남기면 sourceEventId 는 같고 skillCode 가 다르다. Judge Worker 가 재시도로 같은 제출을 두 번 처리하면 같은 Evidence 가 두 번 들어오는데, 그대로 접으면 EMA 가 두 번 적용되고 confidence 도 두 번 오른다. DB 에서는 UNIQUE(source_event_id, skill_code) 로 막고, 재계산은 이 키로 중복을 제거한다."
+    },
     "skillCode": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
