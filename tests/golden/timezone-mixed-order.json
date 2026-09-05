@@ -1,0 +1,74 @@
+{
+  "name": "timezone-mixed-order",
+  "description": "입력 순서와 시간대가 섞여 있다. 문자열이 아니라 실제 시각으로 정렬해야 accepted-then-wrong 과 같은 값이 나온다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_a3bb8519e906358841f6a3c3",
+      "sourceEventId": "submission:B",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-05T01:30:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.3,
+        "independent": 0.25,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "WRONG_ANSWER",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_4419ddd8426327d277b9f577",
+      "sourceEventId": "submission:A",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-05T10:00:00+09:00",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": 0.792,
+    "independent": 0.824,
+    "retention": null,
+    "speed": null,
+    "mastery": 0.808,
+    "confidence": 0.25,
+    "evidenceCount": 2,
+    "status": "PRACTICING"
+  }
+}

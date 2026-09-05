@@ -1,0 +1,74 @@
+{
+  "name": "accepted-then-wrong",
+  "description": "WA 가 EMA 로 구현 점수를 끌어내린다. 개념 점수는 건드리지 않는다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_ab01c32493cb8bc05ec28de8",
+      "sourceEventId": "submission:2",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-02T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.3,
+        "independent": 0.25,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "WRONG_ANSWER",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": 0.792,
+    "independent": 0.824,
+    "retention": null,
+    "speed": null,
+    "mastery": 0.808,
+    "confidence": 0.25,
+    "evidenceCount": 2,
+    "status": "PRACTICING"
+  }
+}

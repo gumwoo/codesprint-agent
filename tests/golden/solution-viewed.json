@@ -1,0 +1,47 @@
+{
+  "name": "solution-viewed",
+  "description": "정답을 본 뒤의 AC. 독립 풀이 0.10 이며 Mastered 근거로 쓸 수 없다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.55,
+        "independent": 0.1,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": true,
+        "independentAttempt": false,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": 0.55,
+    "independent": 0.1,
+    "retention": null,
+    "speed": null,
+    "mastery": 0.325,
+    "confidence": 0.125,
+    "evidenceCount": 1,
+    "status": "LEARNING"
+  }
+}

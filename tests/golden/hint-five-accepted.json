@@ -1,0 +1,47 @@
+{
+  "name": "hint-five-accepted",
+  "description": "힌트를 5단계까지 쓴 AC. 구현은 인정하되 독립 풀이는 0.25 다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.65,
+        "independent": 0.25,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 5,
+        "solutionViewed": false,
+        "independentAttempt": false,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": 0.65,
+    "independent": 0.25,
+    "retention": null,
+    "speed": null,
+    "mastery": 0.45,
+    "confidence": 0.125,
+    "evidenceCount": 1,
+    "status": "LEARNING"
+  }
+}

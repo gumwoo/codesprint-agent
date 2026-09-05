@@ -1,0 +1,398 @@
+{
+  "name": "weakened-by-independent-failures",
+  "description": "MASTERED 이후 힌트 없이 두 번 실패하면 WEAKENED.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_ab01c32493cb8bc05ec28de8",
+      "sourceEventId": "submission:2",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-02T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_f2c3a96ae8669717e7cdc9a2",
+      "sourceEventId": "submission:3",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-03T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_fc433dd1fa85c94482c9abd6",
+      "sourceEventId": "submission:4",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-04T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_69f56b989dc1a01d04d98ab8",
+      "sourceEventId": "submission:5",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-05T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_692c8bb2aa828e9527d9825b",
+      "sourceEventId": "submission:6",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-06T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_ecc001321bb9adcc940aa4c4",
+      "sourceEventId": "submission:7",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-07T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_18bcbfd8cd4b56f8ef04ccda",
+      "sourceEventId": "submission:8",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-08T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_fb10d9d38aaef4c521ba4f62",
+      "sourceEventId": "submission:9",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-09T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_413e29d2f18e0d3432fe4d75",
+      "sourceEventId": "submission:10",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-10T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_b72c7bcb9e39f886cdb6b5ee",
+      "sourceEventId": "concept:11",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "CONCEPT_CHECK",
+      "occurredAt": "2026-09-11T10:00:00Z",
+      "weight": 0.5,
+      "observed": {
+        "concept": 0.9,
+        "recognition": null,
+        "implementation": null,
+        "independent": null,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": null,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": null,
+        "hintLevel": null,
+        "solutionViewed": null,
+        "independentAttempt": null,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": "CORRECT"
+      }
+    },
+    {
+      "evidenceId": "ev_7d9dc6cccb3793679d351d3d",
+      "sourceEventId": "review:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "REVIEW_RESULT",
+      "occurredAt": "2026-09-12T10:00:00Z",
+      "weight": 1.3,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": null,
+        "independent": 0.85,
+        "retention": 0.9,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": null,
+        "hintLevel": null,
+        "solutionViewed": null,
+        "independentAttempt": true,
+        "reviewSucceeded": true,
+        "daysSinceLast": 7,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_200457c3ad831d6e0fa579a8",
+      "sourceEventId": "submission:13",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-13T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.3,
+        "independent": 0.25,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "WRONG_ANSWER",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    },
+    {
+      "evidenceId": "ev_b2910ae4410681ca8efa85ce",
+      "sourceEventId": "submission:14",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-14T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.3,
+        "independent": 0.25,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "WRONG_ANSWER",
+        "hintLevel": 1,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": 0.9,
+    "recognition": null,
+    "implementation": 0.7034,
+    "independent": 0.7059,
+    "retention": 0.9,
+    "speed": null,
+    "mastery": 0.7698,
+    "confidence": 1.0,
+    "evidenceCount": 14,
+    "status": "WEAKENED"
+  }
+}

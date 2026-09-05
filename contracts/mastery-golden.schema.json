@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mastery-golden.schema.json",
+  "title": "MasteryGoldenCase",
+  "description": "Mastery 산식의 golden fixture. Python oracle 과 Java production 구현이 **같은 파일을 읽고 같은 값을 내야 한다**. 한쪽만 고치면 CI 가 막는다. 근거: docs/adr/0010-java-implementation-is-checked-against-the-python-oracle.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "description", "skillCode", "evidences", "expected"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "파일 이름과 같다. 케이스를 지목해 부를 수 있어야 한다."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "이 케이스가 무엇을 고정하는가. 값이 바뀌었을 때 '왜 이 값이어야 했는지'를 읽을 수 있어야 한다."
+    },
+    "skillCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+    },
+    "evidences": {
+      "type": "array",
+      "description": "입력. skill-evidence.schema.json 형식이며 순서는 의도적으로 섞여 있을 수 있다 - 재계산이 occurredAt 으로 정렬하는지 확인하기 위해서다.",
+      "items": { "type": "object" }
+    },
+    "expected": {
+      "type": "object",
+      "description": "기대 출력. user-skill.schema.json 형식.",
+      "additionalProperties": true
+    }
+  }
+}

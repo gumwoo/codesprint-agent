@@ -1,0 +1,47 @@
+{
+  "name": "speed-fast-and-slow",
+  "description": "정답일 때만 speed 를 관측한다. 기대 시간의 1/3 이면 1.00.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": 1.0
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": 0.9,
+    "independent": 0.95,
+    "retention": null,
+    "speed": 1.0,
+    "mastery": 0.9318,
+    "confidence": 0.125,
+    "evidenceCount": 1,
+    "status": "PRACTICING"
+  }
+}
