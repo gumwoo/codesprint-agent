@@ -38,7 +38,7 @@ contracts/     LLM 요청/응답 + Judge 판정 계약 (JSON Schema)
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스
 problems/      슬라이스 1 의 검증된 문제 10개 (전부 개발 fixture — ADR-0008)
 learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
-backend/       Spring Boot · PostgreSQL · Mastery production 구현
+backend/       Spring Boot · PostgreSQL · Mastery / Decision Engine
 tests/golden/  두 구현을 대조하는 golden fixture
 tools/         계약 검사 + 메타테스트
 docs/adr/      결정과 그 이유
@@ -108,7 +108,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | Mastery / Evidence 산식 (Python oracle) | 완료 |
 | 백엔드 기반 · Evidence 영속성 · Java 산식 | 완료 |
 | Judge Worker / 큐 | 미착수 |
-| Decision Engine | 미착수 |
+| Decision Engine · 선수 관계 판정 | 완료 |
 | API / Frontend | 미착수 |
 | Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
 

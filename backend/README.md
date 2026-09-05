@@ -6,10 +6,38 @@ CodeSprint Agent 애플리케이션. Spring Boot 3 · Java 17 · PostgreSQL · F
 큐로만 이야기한다 - 근거: [ADR-0011](../docs/adr/0011-language-boundary.md).
 
 ```text
-learning/domain        Mastery 산식 (Addendum PART I 의 production 구현)
+learning/domain        Mastery 산식 · Decision Engine · 선수 관계 판정
 learning/persistence   Evidence 저장소
+curriculum/            커리큘럼 로더 (빌드 시점에 ../curriculum 을 굽는다)
 resources/db/migration Flyway. 스키마의 정본
 ```
+
+## 두 계산을 나눠 뒀다
+
+```text
+MasteryCalculator      Evidence  -> UNASSESSED / LEARNING / PRACTICING / MASTERED / WEAKENED
+PrerequisiteEvaluator  선수 관계 -> LOCKED / READY
+```
+
+Evidence 만 봐서는 "앞 Skill 을 충분히 했는가" 를 알 수 없기 때문이다(ADR-0009).
+둘을 합치는 규칙은 `PrerequisiteEvaluator.resolve` 에 있고, **이미 배우기 시작한 Skill 은
+잠그지 않는다** - 다른 문제의 SECONDARY Skill 로 Evidence 가 쌓여 선수 조건보다 먼저
+진도가 나가는 경우가 있는데, 그때 "잠김" 으로 되돌리면 사용자는 자기가 푼 것이 사라진
+것으로 본다.
+
+## 커리큘럼은 복사본을 두지 않는다
+
+`backend/src/main/resources` 에 커리큘럼 YAML 을 복사해 넣지 않는다. 정본이 둘이 되면
+`curriculum/` 을 고친 사람이 이쪽을 잊었을 때 조용히 갈라진다. Gradle 이 빌드 시점에
+`../curriculum` 에서 가져온다([ADR-0012](../docs/adr/0012-curriculum-is-packaged-from-one-source.md)).
+
+**Java 는 커리큘럼을 검증하지 않는다.** 순환 선수 관계, dangling 참조, `auto_drill` 대상의
+실재성은 `tools/check_curriculum.py` 와 `tools/check_problems.py` 가 막는다. 같은 검사를
+두 언어로 두면 갈라졌을 때 어느 쪽이 맞는지 알 수 없다.
+
+**자동 드릴 대상을 코드에 적지 않는다.** Addendum 43 의 pseudocode 는
+`MICRO_DRILL(GRID_BOUNDARY_CHECK)` 처럼 되어 있지만, 그대로 옮기면 `mistakes.yaml` 을
+고쳐도 코드가 따라가지 않는다. `catalog.autoDrillTarget(mistake)` 로 데이터에서 가져온다.
 
 ## 실행
 
@@ -103,7 +131,7 @@ status 와 다른 Decision 으로 이어진다(ADR-0009). `user_skills` 는 캐�
 ## 아직 없는 것
 
 - API 컨트롤러. 지금은 도메인과 영속성뿐이다
-- Decision Engine (ADR-0002, Addendum 43) - 다음 단계
+- Decision Engine 을 실제로 부르는 서비스 계층. 규칙은 있고 호출부가 없다
 - Reviewer 오케스트레이션
 - Judge Worker 와 큐 (Addendum 67~69). 언어 경계를 넘는 메시지 계약이 필요하다
 - Expand-Contract 마이그레이션 규율. 무중단 배포를 전제하기 전에 정해야 한다

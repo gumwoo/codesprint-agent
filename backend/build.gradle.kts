@@ -35,6 +35,22 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.20.3")
 }
 
+// 커리큘럼 데이터를 jar 에 굽는다.
+//
+// 복사본을 backend/src/main/resources 에 두지 않는다. 그러면 정본이 둘이 되고,
+// curriculum/ 을 고친 사람이 backend 쪽을 잊으면 조용히 갈라진다. 빌드 시점에
+// 저장소의 한 곳에서 가져온다 - 근거: docs/adr/0012-curriculum-is-packaged-from-one-source.md
+val curriculumSource = rootProject.projectDir.parentFile.resolve("curriculum")
+
+tasks.named<ProcessResources>("processResources") {
+    from(curriculumSource) {
+        into("curriculum")
+        include("*.yaml")
+    }
+    // 커리큘럼이 바뀌면 다시 굽는다.
+    inputs.dir(curriculumSource)
+}
+
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     // 경고를 쌓아두지 않는다.
