@@ -56,6 +56,25 @@ def drill_becomes_normal(doc):
     doc["kind"] = "NORMAL"
 
 
+def source_becomes_curated(doc):
+    doc["source"] = "CURATED"
+
+
+def dangling_control_mistake(doc):
+    doc["negativeControl"]["mistake"] = "MISTAKE_THAT_DOES_NOT_EXIST"
+
+
+def control_mistake_not_in_common(doc):
+    doc["commonMistakes"] = [m for m in doc["commonMistakes"]
+                             if m != doc["negativeControl"]["mistake"]]
+
+
+def drill_control_misses_its_skill(doc):
+    # P08 의 드릴 대상은 BFS_VISITED_MANAGEMENT 다. 겨냥이 어긋나면 잡아야 한다.
+    doc["negativeControl"]["mistake"] = "OUTPUT_FORMAT"
+    doc["commonMistakes"].append("OUTPUT_FORMAT")
+
+
 def duplicate_case_id(doc):
     doc["cases"].append(dict(doc["cases"][0]))
 
@@ -87,6 +106,14 @@ CASES = [
     # -- 레이아웃 / 메타 --
     ("code 와 디렉터리 이름이 다르면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", code_mismatch, "디렉터리 이름이 다르다"),
     ("expectedSolveSeconds 가 없으면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", drop_expected_solve_seconds, "expectedSolveSeconds"),
+
+    # -- 공개 저장소 경계 (ADR-0008) --
+    ("공개 저장소에 CURATED 문제가 들어오면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", source_becomes_curated, "DEV_FIXTURE 만 둔다"),
+
+    # -- negativeControl (ADR-0007) --
+    ("심어둔 실수가 존재하지 않는 code 면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", dangling_control_mistake, "없는 negativeControl.mistake"),
+    ("심어둔 실수가 commonMistakes 에 없으면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", control_mistake_not_in_common, "commonMistakes 에 없다"),
+    ("드릴이 자기 Skill 을 겨냥하지 않으면", "problems/P08_VISITED_TIMING_DRILL/problem.yaml", drill_control_misses_its_skill, "겨냥하지 않는다"),
 
     # -- 자동 드릴 착지점 --
     # auto_drill 이 켜진 Mistake 는 그 Skill 을 노리는 MICRO_DRILL 이 있어야 한다.

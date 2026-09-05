@@ -99,15 +99,33 @@ def main() -> int:
                   f"(case {ref['failedCaseId']}) {detail[0][:80]}")
             continue
 
+        control = problem["negativeControl"]
+        expected = control["expectedStatus"]
         wrong = judge(d / "wrong.py", job)
+
         if wrong["status"] == "ACCEPTED":
             failed += 1
             print(f"[X] {d.name}: **틀린 풀이가 통과한다** — Test Case 가 아무것도 "
                   f"거르지 못한다 [VACUOUS]")
             continue
 
-        print(f"[O] {d.name}: reference ACCEPTED / wrong {wrong['status']} "
-              f"(case {wrong['failedCaseId']})")
+        # 실패했다는 것만으로는 부족하다. wrong.py 의 문법이 깨져 COMPILE_ERROR 가
+        # 나도 "걸렸다" 로 읽히기 때문이다. 실제로 그런 구멍이 있었다 -
+        # wrong.py 를 문법 오류로 바꿔도 검증이 통과했다.
+        # 심어둔 실수가 드러나야 하는 판정을 데이터에 적어두고 그것과 대조한다.
+        if wrong["status"] != expected:
+            failed += 1
+            hint = ""
+            if wrong["status"] in ("COMPILE_ERROR", "SYSTEM_ERROR"):
+                hint = " — wrong.py 자체가 깨진 것으로 보인다"
+            detail = (wrong.get("stderr") or "").strip().splitlines()[-1:] or [""]
+            print(f"[X] {d.name}: wrong 이 {expected} 여야 하는데 {wrong['status']}{hint}"
+                  f" {detail[0][:70]}")
+            continue
+
+        print(f"[O] {d.name}: reference ACCEPTED / "
+              f"wrong {wrong['status']} (case {wrong['failedCaseId']}, "
+              f"심어둔 실수 {control['mistake']})")
 
     if failed:
         print(f"\n[FAIL] {failed}건 실패")

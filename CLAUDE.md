@@ -80,8 +80,15 @@ read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다. 하네�
 **실제로 걸리는지** 확인한다([ADR-0007](docs/adr/0007-problems-are-verified-by-a-wrong-solution.md)).
 정답이 통과하는 것만 보면 아무것도 거르지 못하는 Test Case 집합도 통과한다.
 
+`negativeControl` 에 **무엇을 심었고 어떤 판정이 나와야 하는지**를 적는다.
+"실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 확인한다.
+
 `auto_drill` 이 켜진 Mistake 는 그 `target_skill` 을 PRIMARY 로 갖는 `MICRO_DRILL`
 문제가 반드시 있어야 한다. 없으면 Decision Engine 이 갈 곳 없는 액션을 낸다.
+
+**이 저장소의 문제는 전부 `source: DEV_FIXTURE` 다**([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
+공개 저장소이므로 Test Case 와 정답이 그대로 보인다 — `hidden` 은 UI 노출 여부일 뿐
+기밀성 보장이 아니다. 실서비스 문제은행(`CURATED`)은 여기 두지 않으며 CI 가 막는다.
 
 ```bash
 python tools/check_problems.py      # 참조 무결성 (Docker 불필요)

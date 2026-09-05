@@ -59,6 +59,7 @@ def main() -> int:
     cases_schema = Draft202012Validator(load(CONTRACTS / "test-cases.schema.json"))
 
     seen_codes: set[str] = set()
+    control_mistakes: dict[str, list[str]] = {}
     drill_targets: set[str] = set()
     covered_skills: set[str] = set()
 
@@ -108,6 +109,14 @@ def main() -> int:
         if len({s.get("code") for s in entries}) != len(entries):
             fail("skill-map", f"{rel}: 같은 Skill 이 두 번 들어 있다")
 
+        # -- 공개 저장소에는 fixture 만 (ADR-0008) --
+        # 이 저장소는 public 이다. CURATED 문제를 넣으면 Hidden Test 와 정답 풀이가
+        # 그대로 공개된다 - 그러면 "Hidden" 이라는 말이 성립하지 않는다.
+        if problem.get("source") != "DEV_FIXTURE":
+            fail("visibility",
+                 f"{rel}: 공개 저장소에는 source: DEV_FIXTURE 만 둔다 "
+                 f"(지금 {problem.get('source')!r})")
+
         # -- Mistake 참조 --
         for mc in problem.get("commonMistakes") or []:
             if mc not in mistakes:
@@ -131,8 +140,28 @@ def main() -> int:
             if not str(c.get("expectedOutput", "")).strip():
                 fail("cases", f"{rel} case {c.get('id')}: expectedOutput 이 비어 있다")
 
+        # -- negativeControl --
+        # wrong.py 가 "실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 확인하려면
+        # 무엇을 심었는지가 데이터에 있어야 한다.
+        nc = problem.get("negativeControl") or {}
+        nc_mistake = nc.get("mistake")
+        if nc_mistake not in mistakes:
+            fail("negative-control", f"{rel}: mistakes.yaml 에 없는 negativeControl.mistake {nc_mistake!r}")
+        elif nc_mistake not in (problem.get("commonMistakes") or []):
+            # 심어둔 실수가 그 문제의 "자주 나오는 실수" 가 아니면 둘 중 하나가 틀렸다.
+            fail("negative-control",
+                 f"{rel}: negativeControl.mistake {nc_mistake} 가 commonMistakes 에 없다")
+
         if problem.get("kind") == "MICRO_DRILL" and primaries:
             drill_targets.add(primaries[0]["code"])
+            # MICRO_DRILL 은 자기가 교정하려는 실수를 심어둬야 한다.
+            drill_mistake = (mistakes.get(nc_mistake) or {}).get("target_skill")
+            if drill_mistake != primaries[0]["code"]:
+                fail("negative-control",
+                     f"{rel}: MICRO_DRILL 인데 negativeControl.mistake({nc_mistake})가 "
+                     f"PRIMARY Skill({primaries[0]['code']})을 겨냥하지 않는다")
+        if nc_mistake:
+            control_mistakes.setdefault(nc_mistake, []).append(rel)
 
     # -- 자동 드릴이 갈 곳이 있는가 --
     # auto_drill 이 켜진 Mistake 는 그 target_skill 을 노리는 MICRO_DRILL 이 있어야 한다.
@@ -152,6 +181,14 @@ def main() -> int:
     for code in sorted(skills):
         if code not in covered_skills:
             fail("skill-coverage", f"{code}: 이 Skill 을 다루는 문제가 하나도 없다")
+
+    # -- 오답 라벨 분포 --
+    # IMPLEMENTATION_MISC 가 많다는 것은 taxonomy 가 실제 오답을 담지 못한다는 신호다
+    # (curriculum/mistakes.yaml 의 IMPLEMENTATION_MISC 설명). 실패는 아니지만 보여준다.
+    misc = control_mistakes.get("IMPLEMENTATION_MISC", [])
+    if misc and len(misc) * 2 >= len(dirs):
+        print(f"[!] negativeControl 의 {len(misc)}/{len(dirs)} 가 IMPLEMENTATION_MISC 다 "
+              f"- 슬라이스 1 taxonomy 로 이름 붙일 수 없는 오답이 절반 이상이다")
 
     return report(len(dirs))
 
