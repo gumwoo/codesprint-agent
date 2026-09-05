@@ -23,8 +23,11 @@ import dev.codesprint.learning.persistence.SubmissionRow;
 import dev.codesprint.learning.persistence.UserSkillRepository;
 import dev.codesprint.learning.persistence.UserSkillRow;
 import dev.codesprint.problem.ProblemCatalog;
+import dev.codesprint.reviewer.ReviewService;
+import dev.codesprint.reviewer.ReviewerPort;
 import dev.codesprint.problem.ProblemCatalog.ProblemDefinition;
 import dev.codesprint.problem.ProblemCatalog.SkillLink;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
@@ -66,10 +69,11 @@ public class JudgeResultApplier {
     private final SubmissionRepository submissions;
     private final UserSkillRepository userSkills;
     private final JudgeJobRepository jobs;
+    private final ReviewService reviews;
 
     public JudgeResultApplier(ProblemCatalog catalog, EvidenceStore evidenceStore,
             MasteryService mastery, DecisionEngine decisions, SubmissionRepository submissions,
-            UserSkillRepository userSkills, JudgeJobRepository jobs) {
+            UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews) {
         this.catalog = catalog;
         this.evidenceStore = evidenceStore;
         this.mastery = mastery;
@@ -77,6 +81,7 @@ public class JudgeResultApplier {
         this.submissions = submissions;
         this.userSkills = userSkills;
         this.jobs = jobs;
+        this.reviews = reviews;
     }
 
     /**
@@ -199,6 +204,37 @@ public class JudgeResultApplier {
             }
         }
 
+        // ── Reviewer ────────────────────────────────────────────────────
+        //
+        // 실패 Test Case 가 있을 때만 부른다(ADR-0004). ACCEPTED 에는 설명할 실패가
+        // 없고, COMPILE_ERROR 는 근거로 들 case 가 없으며, SYSTEM_ERROR 는 우리 잘못이다.
+        //
+        // **확정된 것만 Decision Engine 으로 넘어간다.** Reviewer 가 낸 후보는
+        // 그대로 쓰이지 않는다(ADR-0001, ADR-0014).
+        String confirmedMistake = null;
+        if (reviews.shouldReview(judged.status())) {
+            var review = reviews.review(
+                    userId, submission.id(), submission.problemId(),
+                    new ReviewerPort.Request(
+                            problem.code(),
+                            judged.status().name(),
+                            judged.failedCaseId(),
+                            job.sourceCode(),
+                            problem.skills().stream().map(SkillLink::skillCode).toList()));
+
+            if (review.isPresent()) {
+                ReviewService.Review value = review.get();
+                confirmedMistake = value.confirmedMistake();
+                submission.applyReview(
+                        value.primaryMistake(),
+                        BigDecimal.valueOf(value.confidence()),
+                        value.status().name(),
+                        value.explanation(),
+                        writeSecondary(value.secondaryMistakes()),
+                        value.promptVersion());
+            }
+        }
+
         // 재계산. 선수 조건 판정에 쓸 mastery 는 매번 다시 읽는다 - 앞 Skill 의
         // 재계산 결과가 뒤 Skill 의 LOCKED / READY 판정에 영향을 준다.
         ArrayNode updates = MAPPER.createArrayNode();
@@ -217,7 +253,7 @@ public class JudgeResultApplier {
                 primaryState,
                 priorEvidenceCount,
                 judged.status(),
-                null,   // 확정된 Mistake 는 Reviewer 가 붙어야 나온다
+                confirmedMistake,
                 consecutiveFailures(userId, submission.problemId()),
                 false,  // 복습 성공 기록은 복습 일정이 붙어야 생긴다
                 mastery.masteriesOf(userId)));
@@ -228,6 +264,13 @@ public class JudgeResultApplier {
 
         job.markApplied(Instant.now());
         jobs.save(job);
+    }
+
+    /** secondary 는 목록이라 jsonb 로 남긴다. 비어 있어도 [] 를 쓴다 - null 과 다르다. */
+    private static String writeSecondary(List<String> codes) {
+        ArrayNode node = MAPPER.createArrayNode();
+        codes.forEach(node::add);
+        return node.toString();
     }
 
     private static ObjectNode toNode(String skillCode, Double before, SkillState state) {

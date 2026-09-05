@@ -77,17 +77,29 @@ public class SubmissionController {
     }
 
     /**
+     * Reviewer 분석에 시스템의 확정 판단을 덧붙인 것. 계약: submit-response 의 review.
+     *
+     * @param status <b>시스템이 부여한다.</b> Reviewer 요청 스키마에는 이 필드가 없고,
+     *     그래서 모델이 스스로 CONFIRMED 를 선언할 수 없다(ADR-0001, Addendum 19).
+     */
+    public record ReviewView(String primaryMistake, List<String> secondaryMistakes,
+            double confidence, String status, String explanation) {
+    }
+
+    /**
      * 계약과 필드가 그대로 맞는다. <b>null 인 필드를 생략하지 않는다</b> - 생략은
      * "모른다", null 은 "확인했고 없었다" 로 다른 뜻이다(contracts/README.md 규칙 5).
      *
-     * @param review Reviewer 를 부르지 않았으면 null. 아직 Reviewer 자체가 없다.
-     * @param promptVersion 같은 이유로 null 이다. 필드를 지우지 않는 이유는, 평가
-     *     하네스가 나중에 필요로 할 때 "그때부터 남기자" 로는 이미 늦기 때문이다.
+     * @param review Reviewer 를 부르지 않았거나(ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR),
+     *     분석이 검증을 통과하지 못했으면 null 이다.
+     * @param promptVersion 그 분석을 만든 프롬프트 버전(PRD 135). Reviewer 를 부르지
+     *     않았으면 null 이다. 필드를 지우지 않는 이유는, 평가 하네스가 나중에 필요로
+     *     할 때 "그때부터 남기자" 로는 이미 늦기 때문이다.
      */
     public record SubmitResponse(
             long submissionId,
             JudgeView judge,
-            Object review,
+            ReviewView review,
             List<SkillUpdateView> skillUpdates,
             NextActionView nextAction,
             String promptVersion) {
@@ -136,14 +148,20 @@ public class SubmissionController {
                         view.judge().memoryKb(),
                         view.judge().failedCaseId(),
                         view.judge().stderr()),
-                null,
+                toReview(view.review()),
                 view.skillUpdates().stream()
                         .map(update -> new SkillUpdateView(update.skillCode(), update.before(),
                                 update.after(), update.confidence(), update.status()))
                         .toList(),
                 new NextActionView(view.nextAction().type(), view.nextAction().targetSkill(),
                         view.nextAction().reason()),
-                null));
+                view.promptVersion()));
+    }
+
+    private static ReviewView toReview(SubmissionQueryService.ReviewView review) {
+        return review == null ? null : new ReviewView(review.primaryMistake(),
+                review.secondaryMistakes(), review.confidence(), review.status(),
+                review.explanation());
     }
 
     @ExceptionHandler(SubmissionIntakeService.UnsupportedLanguage.class)
