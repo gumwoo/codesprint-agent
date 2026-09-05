@@ -56,13 +56,22 @@ public class DecisionEngine {
                     "판정이 끝나지 않은 제출로 다음 행동을 정할 수 없다: " + context.judgeStatus());
         }
 
-        // 0. 잠긴 Skill 은 애초에 진행하지 않는다.
+        // 0. 아직 배우기 시작하지 않은 Skill 이면 선수 조건을 먼저 본다.
         //
         // Addendum §43 에는 없는 분기다. 그 pseudocode 는 "이미 이 Skill 을 하고 있다" 를
         // 전제하는데, 실제로는 선수 조건을 못 채운 Skill 의 문제가 주어질 수 있다.
         // 그대로 두면 사용자가 준비되지 않은 문제에서 반복 실패하고, 그 실패가
         // Evidence 로 쌓여 mastery 를 끌어내린다.
-        if (context.state().status() == SkillStatus.UNASSESSED) {
+        //
+        // 조건을 status 가 아니라 **evidenceCount** 로 본다. status 로 보면 어떤 값을
+        // 나열해도 빠지는 것이 생긴다 - 처음에는 UNASSESSED 만 봤는데,
+        // PrerequisiteEvaluator.resolve() 가 만들어내는 LOCKED / READY 가 그대로
+        // 통과했다. LOCKED 인 Skill 이 RETRY_VARIANT 를 받는 상태였다.
+        //
+        // "아직 배우기 시작하지 않았다" 는 결국 Evidence 가 하나도 없다는 뜻이고,
+        // 그것이 이 분기가 실제로 묻고 싶은 것이다. 반대로 Evidence 가 있으면
+        // 선수 관계로 되돌리지 않는다(PrerequisiteEvaluator 의 같은 판단).
+        if (context.state().evidenceCount() == 0) {
             Optional<String> blocker =
                     prerequisites.nextPrerequisite(context.skillCode(), context.masteries());
             if (blocker.isPresent()) {

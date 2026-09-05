@@ -261,11 +261,45 @@ class DecisionEngineTest {
         }
 
         @Test
+        @DisplayName("LOCKED 상태도 선수 Skill 로 보낸다")
+        void lockedStatusIsAlsoRedirected() {
+            // PrerequisiteEvaluator.resolve() 가 UNASSESSED + 선수 미충족을 LOCKED 로
+            // 바꾼다. 서비스 계층이 그 결과를 그대로 넘기면 Decision Engine 이 받는
+            // status 는 UNASSESSED 가 아니라 LOCKED 다.
+            //
+            // status 로 분기하던 시절에는 이것이 그대로 통과해 RETRY_VARIANT 가 나왔다 -
+            // 잠긴 Skill 의 문제를 계속 주는 것이다.
+            NextAction action = engine.decide(new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH",
+                    new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
+                            SkillStatus.LOCKED),
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()));
+
+            assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
+            assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
+        }
+
+        @Test
+        @DisplayName("READY 인데 선수가 다시 미충족이 되어도 보낸다")
+        void readyStatusIsAlsoChecked() {
+            // 선수 Skill 이 WEAKENED 로 떨어지면 mastery 가 문턱 아래로 내려갈 수 있다.
+            NextAction action = engine.decide(new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH",
+                    new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
+                            SkillStatus.READY),
+                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    Map.of("BFS_GRID_TRAVERSAL", 0.30)));
+
+            assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
+        }
+
+        @Test
         @DisplayName("이미 배우기 시작한 Skill 은 선수 관계로 되돌리지 않는다")
         void startedSkillIsNotLockedBack() {
             // 다른 문제의 SECONDARY Skill 로 Evidence 가 쌓여 선수 조건보다 먼저 진도가
             // 나가는 경우가 있다. 그때 "잠김" 으로 되돌리면 사용자는 자기가 푼 것이
             // 사라진 것으로 본다.
+            // state() 는 evidenceCount 5 인 상태를 만든다 - 실제로 푼 적이 있다는 뜻이다.
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH",
                     state(0.55, 0.40, SkillStatus.PRACTICING),
@@ -330,20 +364,32 @@ class DecisionEngineTest {
         }
 
         @Test
-        @DisplayName("판정 목록이 계약과 같다")
+        @DisplayName("판정 목록이 계약과 정확히 같다")
         void statusListMatchesContract() throws Exception {
-            // contracts/judge-result.schema.json 과 갈라지면 Judge 가 내는 값을
-            // Decision Engine 이 못 알아본다.
-            String schema = java.nio.file.Files.readString(java.nio.file.Path.of(
-                    System.getProperty("codesprint.repoRoot"),
-                    "contracts/judge-result.schema.json"));
+            // 한 방향만 보면 안 된다. "enum 의 값이 스키마 문자열에 있는가" 만 확인하면
+            // **스키마에 새 status 가 생기고 enum 이 안 따라가도 통과한다** -
+            // 그러면 Judge 가 내는 값을 Decision Engine 이 못 알아보는 상태가 조용히 남는다.
+            // 집합이 같은지 본다.
+            com.fasterxml.jackson.databind.JsonNode schema =
+                    new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                            java.nio.file.Files.readString(java.nio.file.Path.of(
+                                    System.getProperty("codesprint.repoRoot"),
+                                    "contracts/judge-result.schema.json")));
 
+            java.util.Set<String> inContract = new java.util.TreeSet<>();
+            schema.get("properties").get("status").get("enum")
+                    .forEach(node -> inContract.add(node.asText()));
+
+            java.util.Set<String> terminal = new java.util.TreeSet<>();
             for (JudgeStatus status : JudgeStatus.values()) {
-                if (!status.isTerminal()) {
-                    continue; // QUEUED / RUNNING 은 판정이 아니라 진행 상태다
+                if (status.isTerminal()) {
+                    terminal.add(status.name());
                 }
-                assertThat(schema).as(status.name()).contains("\"" + status.name() + "\"");
             }
+
+            assertThat(terminal)
+                    .as("QUEUED / RUNNING 은 판정이 아니라 진행 상태이므로 계약에 없다")
+                    .isEqualTo(inContract);
         }
     }
 
