@@ -89,6 +89,14 @@ def _context(**kw) -> dict:
 JUDGED_STATUSES = ("ACCEPTED", "WRONG_ANSWER", "RUNTIME_ERROR", "TIME_LIMIT",
                    "MEMORY_LIMIT", "OUTPUT_LIMIT")
 
+# Evidence 를 만들지 않는 판정. 문법 오류는 알고리즘 Skill 의 penalty 가 아니고
+# (Addendum 12), SYSTEM_ERROR 는 우리 잘못이다.
+NON_EVIDENCE_STATUSES = ("COMPILE_ERROR", "SYSTEM_ERROR")
+
+# contracts/judge-result.schema.json 의 status enum 과 같아야 한다.
+# 테스트가 두 목록을 대조한다 - 갈라지면 Judge 가 내는 값을 여기서 못 알아본다.
+KNOWN_JUDGE_STATUSES = frozenset(JUDGED_STATUSES + NON_EVIDENCE_STATUSES)
+
 
 def _is_independent_attempt(judge_status: str, hint_level: int, solution_viewed: bool) -> bool:
     """이 제출을 "최근 독립 풀이" 로 셀 것인가 (Addendum 22).
@@ -201,10 +209,21 @@ def from_submission(
     COMPILE_ERROR 가 그렇다 - 문법 오류를 알고리즘 Skill 의 penalty 로 쓰면 안 된다
     (Addendum 12). 별도 Language Skill 로 따로 기록한다.
     """
+    # 모르는 판정은 조용히 넘기지 않는다.
+    #
+    # 예전에는 오타 난 status("WRONGANSWER")가 그대로 통과해 **관측값이 하나도 없는
+    # Evidence** 를 weight 1.0 으로 만들었다. mastery 는 그대로인데 confidence 와
+    # evidenceCount 만 올라간다 - 측정한 게 없는데 측정 신뢰도가 오르는 상태다.
+    # 그 상태로 MASTERED 문턱(confidence >= 0.60)을 넘을 수 있다.
+    if judge_status not in KNOWN_JUDGE_STATUSES:
+        raise ValueError(
+            f"알 수 없는 judge status: {judge_status!r}. "
+            f"contracts/judge-result.schema.json 의 enum 과 맞춘다."
+        )
+
     observed = _empty()
 
-    if judge_status in ("COMPILE_ERROR", "SYSTEM_ERROR"):
-        # SYSTEM_ERROR 는 우리 잘못이라 사용자의 Skill 에 반영하지 않는다.
+    if judge_status in NON_EVIDENCE_STATUSES:
         return None
 
     if judge_status == "ACCEPTED":
@@ -259,6 +278,8 @@ def from_submission(
 def from_concept_check(*, source_event_id: str, skill_code: str, verdict: str,
                        occurred_at: str) -> Evidence:
     """Addendum 14. 개념을 설명할 수 있는가."""
+    if verdict not in CONCEPT_BY_VERDICT:
+        raise ValueError(f"알 수 없는 개념 확인 결과: {verdict!r}")
     observed = _empty()
     observed["concept"] = CONCEPT_BY_VERDICT[verdict]
     return Evidence(

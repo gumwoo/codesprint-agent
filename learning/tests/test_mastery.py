@@ -399,6 +399,69 @@ def test_idempotent_on_duplicate_source_event() -> None:
           sub(1, "ACCEPTED").evidence_id == sub(1, "ACCEPTED").evidence_id)
 
 
+# -- 15. 같은 원천, 다른 내용 -> 충돌 (BLOCKER 였던 구멍) -----------------
+def test_conflicting_evidence_is_rejected() -> None:
+    """중복 제거가 "조용히 하나를 버리는" 방식이면 결정론이 깨진다.
+
+    같은 원천에서 서로 다른 관측이 나왔다면 재시도가 아니라 데이터가 깨진 것이다.
+    하나를 골라 버리면 어느 것이 남는지가 입력 순서에 달린다 - 실제로 mastery 가
+    0.925 와 0.275 로 갈렸다.
+    """
+    a = sub(1, "ACCEPTED", event="submission:100")
+    b = sub(1, "WRONG_ANSWER", event="submission:100")
+    check("같은 원천에서 나온 두 Evidence 는 evidenceId 가 같다",
+          a.evidence_id == b.evidence_id)
+
+    for order, label in (([a, b], "[a, b]"), ([b, a], "[b, a]")):
+        try:
+            state_of(order)
+            check(f"내용이 다른 중복은 거부한다 {label}", False, "그냥 통과했다")
+        except ValueError:
+            check(f"내용이 다른 중복은 거부한다 {label}", True)
+
+    # 내용이 같으면 정상적인 재시도다.
+    same = sub(1, "ACCEPTED", event="submission:100")
+    try:
+        s = state_of([a, same])
+        check("내용이 같은 중복은 재시도로 보고 통과시킨다", s.evidence_count == 1,
+              f"evidenceCount={s.evidence_count}")
+    except ValueError as e:
+        check("내용이 같은 중복은 재시도로 보고 통과시킨다", False, str(e))
+
+
+# -- 16. 알 수 없는 judge status 는 상류에서 막는다 ------------------------
+def test_unknown_judge_status_is_rejected() -> None:
+    """오타 난 status 가 통과하면 관측값 없는 Evidence 가 만들어지고,
+    측정한 것 없이 confidence 와 evidenceCount 만 오른다."""
+    for bad in ("WRONGANSWER", "AC", "", "accepted"):
+        try:
+            sub(1, bad)
+            check(f"알 수 없는 status 를 거부한다 ({bad!r})", False, "Evidence 가 만들어졌다")
+        except ValueError:
+            check(f"알 수 없는 status 를 거부한다 ({bad!r})", True)
+
+    # 계약과 목록이 갈라지면 Judge 가 내는 값을 여기서 못 알아본다.
+    judge_enum = set(
+        json.loads((ROOT / "contracts" / "judge-result.schema.json")
+                   .read_text(encoding="utf-8"))["properties"]["status"]["enum"]
+    )
+    check("아는 status 목록이 judge-result.schema.json 과 같다",
+          ev.KNOWN_JUDGE_STATUSES == judge_enum,
+          f"차이={sorted(judge_enum ^ ev.KNOWN_JUDGE_STATUSES)}")
+
+    check("알 수 없는 개념 확인 결과도 거부한다",
+          _raises(lambda: ev.from_concept_check(source_event_id="c:9", skill_code=SKILL,
+                                                verdict="MAYBE", occurred_at="2026-09-01T10:00:00")))
+
+
+def _raises(fn) -> bool:
+    try:
+        fn()
+        return False
+    except ValueError:
+        return True
+
+
 def main() -> int:
     for fn in (
         test_unassessed, test_first_evidence, test_hint_levels, test_wrong_answer,
@@ -408,6 +471,7 @@ def main() -> int:
         test_speed_only_on_success, test_recognition_mode_gated,
         test_independent_attempt_applies_to_failures, test_hinted_failures_do_not_weaken,
         test_idempotent_on_duplicate_source_event,
+        test_conflicting_evidence_is_rejected, test_unknown_judge_status_is_rejected,
     ):
         print(f"\n== {fn.__name__} ==")
         fn()

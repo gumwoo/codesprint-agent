@@ -56,6 +56,18 @@ Evidence 는 `(sourceEventId, skillCode)` 로 유일하다. Judge Worker 재시�
 `recompute()` 가 중복 키를 걸러낸다. DB 제약(`UNIQUE(source_event_id, skill_code)`)이
 일차 방어선이지만, Evidence 가 정본이라면 그것을 접는 쪽도 정합성을 책임져야 한다.
 
+**다만 조용히 버리지 않는다.** 같은 키인데 내용이 다르면 재시도가 아니라 데이터가
+깨진 것이다. 하나를 골라 버리면 어느 것이 남는지가 입력 순서에 달리고, "같은 Evidence
+집합이면 같은 mastery" 가 무너진다. `ValueError` 로 거부한다.
+
+```text
+submission:100 -> ACCEPTED       recompute([a, b])  mastery 0.925
+submission:100 -> WRONG_ANSWER   recompute([b, a])  mastery 0.275
+```
+
+관측값이 하나도 없는 Evidence 도 거부한다. mastery 는 그대로인데 confidence 와
+evidenceCount 만 올라가기 때문이다 - 측정한 게 없는데 측정 신뢰도가 오른다.
+
 `evidenceId` 는 `(sourceEventId, skillCode)` 에서 **결정론적으로 파생**한다. 무작위 id 면
 같은 Evidence 를 두 번 만들 때 서로 다른 id 가 붙어 재계산이 입력에 따라 달라진다.
 
@@ -64,6 +76,10 @@ Evidence 는 `(sourceEventId, skillCode)` 로 유일하다. Judge Worker 재시�
 **독립 풀이 판정은 성공과 실패에 같은 기준을 적용한다.** 힌트를 5단계까지 보고 틀린
 것은 독립 풀이에 *실패한* 것이 아니라 애초에 독립 풀이가 아니다. 이 값이 틀리면
 Decision Engine 이 잘못된 다음 문제를 추천한다.
+
+**모르는 judge status 는 상류에서 거부한다.** 오타가 통과하면 관측값 없는 Evidence 가
+만들어진다. `KNOWN_JUDGE_STATUSES` 는 `contracts/judge-result.schema.json` 의 enum 과
+같아야 하며 테스트가 대조한다.
 
 **MASTERED 에서 나가는 길은 열거돼 있다**(Addendum 23). 점수가 조금 내려갔다고
 강등하지 않는다. 복습 실패 또는 독립 풀이 2회 실패여야 WEAKENED 가 된다.

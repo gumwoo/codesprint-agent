@@ -82,6 +82,31 @@ Worker 재시도        → 같은 Evidence 또 생성
 **재계산도 스스로 방어한다.** DB 제약이 일차 방어선이지만, `recompute()`도 중복 키를
 걸러낸다. Evidence가 정본이라면 그것을 접는 쪽이 정합성을 책임져야 한다.
 
+### 다만 중복을 조용히 버리지 않는다
+
+같은 키인데 **내용이 다르면** 재시도가 아니라 데이터가 깨진 것이다. 하나를 골라 버리면
+어느 것이 남는지가 입력 순서에 달린다.
+
+```text
+submission:100 → ACCEPTED
+submission:100 → WRONG_ANSWER
+
+recompute([a, b])  mastery 0.925
+recompute([b, a])  mastery 0.275
+```
+
+같은 Evidence 집합인데 결과가 갈렸다. 이 ADR이 지키려는 것을 정확히 깨는 경우다.
+그래서 내용이 다른 중복은 `ValueError`로 거부한다 — 조용히 넘어가면 어느 관측이 진짜인지
+아무도 모르는 채로 점수가 만들어진다.
+
+같은 이유로 **관측값이 하나도 없는 Evidence**도 거부한다. 그런 Evidence는 mastery를
+바꾸지 않으면서 `confidence`와 `evidenceCount`만 올린다. 측정한 게 없는데 측정
+신뢰도가 오르고, 그 상태로 `MASTERED` 문턱(`confidence >= 0.60`)을 넘을 수 있다.
+
+실제로 오타 난 judge status(`WRONGANSWER`)가 그런 Evidence를 만들었다. 지금은
+`from_submission()`이 `judge-result.schema.json`의 enum에 없는 status를 거부하고,
+테스트가 두 목록이 같은지 대조한다.
+
 ## EMA는 순서에 의존한다
 
 재계산이 결정론적이려면 접는 순서가 고정돼야 한다. `occurredAt`으로 정렬한다.

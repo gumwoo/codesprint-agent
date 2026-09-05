@@ -147,10 +147,18 @@
           ]
         },
         "judgeStatus": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "enum": [
+            "ACCEPTED",
+            "WRONG_ANSWER",
+            "TIME_LIMIT",
+            "MEMORY_LIMIT",
+            "RUNTIME_ERROR",
+            "COMPILE_ERROR",
+            "OUTPUT_LIMIT",
+            "SYSTEM_ERROR",
+            null
+          ],
+          "description": "이 Evidence 를 만든 Judge 판정. judge-result.schema.json 의 status 와 같은 목록이어야 한다 - 문자열로 열어두면 오타 난 status 가 통과해 관측값 없는 Evidence 가 만들어지고, 측정한 것 없이 confidence 만 오른다. 제출에서 온 Evidence 가 아니면 null."
         },
         "hintLevel": {
           "type": [

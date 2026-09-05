@@ -176,16 +176,35 @@ def recompute(evidences: list[Evidence], skill_code: str) -> SkillState:
     # DB 에서는 UNIQUE(source_event_id, skill_code) 로 막지만, 재계산도 스스로
     # 방어한다 - Evidence 가 정본이라면 그것을 접는 쪽이 정합성을 책임져야 한다.
     #
-    # 정렬을 먼저 하고 걸러야 "먼저 발생한 것을 남긴다" 가 결정론적으로 성립한다.
-    # 같은 occurredAt 이면 evidenceId 로 순서를 고정한다.
+    # 다만 **내용이 다르면 조용히 버리지 않는다.** 같은 원천에서 서로 다른 관측이
+    # 나왔다면 그것은 재시도가 아니라 데이터가 깨진 것이다. 하나를 골라 버리면
+    # 어느 것이 남는지가 입력 순서에 달리고, 그러면 "같은 Evidence 집합이면 같은
+    # mastery" 라는 이 모듈의 전제가 무너진다.
+    #
+    # 실제로 그랬다. submission:100 에 ACCEPTED 와 WRONG_ANSWER 가 함께 들어오면
+    # 순서에 따라 mastery 가 0.925 와 0.275 로 갈렸다.
     ordered_all = sorted(evidences, key=lambda e: (e.occurred_at, e.evidence_id))
-    seen: set[tuple[str, str]] = set()
+    seen: dict[tuple[str, str], Evidence] = {}
     ordered = []
     for e in ordered_all:
-        if e.dedupe_key in seen:
-            continue
-        seen.add(e.dedupe_key)
+        previous = seen.get(e.dedupe_key)
+        if previous is not None:
+            if previous.to_dict() != e.to_dict():
+                raise ValueError(
+                    f"같은 원천({e.source_event_id}, {e.skill_code})에서 서로 다른 "
+                    f"Evidence 가 왔다. 재시도가 아니라 데이터가 깨진 것이다."
+                )
+            continue  # 내용이 같으면 정상적인 재시도다
+        seen[e.dedupe_key] = e
         ordered.append(e)
+
+        # 아무것도 관측하지 못한 Evidence 는 confidence 만 올린다.
+        # 측정한 게 없는데 측정 신뢰도가 오르면 MASTERED 문턱을 헛되이 넘게 된다.
+        if all(v is None for v in e.observed.values()):
+            raise ValueError(
+                f"관측값이 하나도 없는 Evidence 다: {e.evidence_id} "
+                f"({e.evidence_type}). 만들어진 경위를 확인해야 한다."
+            )
     # skill_code 를 인자로 받는다. Evidence 가 하나도 없을 때도 상태를 내야 하는데
     # (UNASSESSED) 그때는 목록에서 code 를 알 수 없다.
     mismatched = {e.skill_code for e in ordered} - {skill_code}
