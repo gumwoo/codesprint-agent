@@ -7,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * submissions 한 행. 제출 하나와 그 판정.
@@ -62,6 +64,23 @@ public class SubmissionRow {
     @Column(name = "submitted_at", insertable = false, updatable = false)
     private Instant submittedAt;
 
+    // 결정 결과. 채점이 요청 밖으로 나가면서 사용자가 나중에 다시 물어보게 됐는데,
+    // 그때 다음 행동을 새로 계산하면 안 된다 - 그 사이 다른 제출이 바꿔 놓은 상태를
+    // 보게 되어 같은 제출을 두 번 조회했을 때 다른 답이 나온다.
+    @Column(name = "next_action_type", length = 30)
+    private String nextActionType;
+
+    @Column(name = "next_action_target", length = 100)
+    private String nextActionTarget;
+
+    @Column(name = "next_action_reason")
+    private String nextActionReason;
+
+    // before 값(이번 제출 전의 mastery)은 반영하는 그 순간에만 알 수 있다.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "skill_updates", columnDefinition = "jsonb")
+    private String skillUpdates;
+
     protected SubmissionRow() {
     }
 
@@ -115,7 +134,52 @@ public class SubmissionRow {
         return solveSeconds;
     }
 
+    /** 결정과 갱신 내역을 함께 남긴다. 반영은 한 번뿐이므로 부분 갱신 경로를 두지 않는다. */
+    public void applyOutcome(String nextActionType, String nextActionTarget,
+            String nextActionReason, String skillUpdates) {
+        this.nextActionType = nextActionType;
+        this.nextActionTarget = nextActionTarget;
+        this.nextActionReason = nextActionReason;
+        this.skillUpdates = skillUpdates;
+    }
+
     public Instant submittedAt() {
         return submittedAt;
+    }
+
+    public Integer passed() {
+        return passed;
+    }
+
+    public Integer total() {
+        return total;
+    }
+
+    public Integer executionMs() {
+        return executionMs;
+    }
+
+    public Integer memoryKb() {
+        return memoryKb;
+    }
+
+    public Integer failedCaseId() {
+        return failedCaseId;
+    }
+
+    public String nextActionType() {
+        return nextActionType;
+    }
+
+    public String nextActionTarget() {
+        return nextActionTarget;
+    }
+
+    public String nextActionReason() {
+        return nextActionReason;
+    }
+
+    public String skillUpdates() {
+        return skillUpdates;
     }
 }

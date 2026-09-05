@@ -142,9 +142,25 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 
 ## 현재 상태
 
-Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 그리고
-검증된 문제 10개, Mastery 산식, 백엔드 기반(Spring Boot · PostgreSQL · Flyway), 그리고
-Decision Engine 까지 있다. Reviewer · API · 프론트 · Judge Worker(큐)는 아직 없다.
+Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
+10개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
+제출 API, 그리고 Judge Worker + 큐까지 있다. **Reviewer 와 프론트는 아직 없다.**
+
+제출 하나가 지나는 길:
+
+```
+POST /api/problems/{code}/submit   접수하고 큐에 넣는다 (202)
+judge/worker.py                    꺼내 샌드박스에서 채점하고 결과를 큐에 쓴다
+JudgeResultPoller                  Evidence -> mastery 재계산 -> 다음 행동
+GET  /api/submissions/{id}         결과를 확인한다
+```
+
+**채점은 요청 안에서 하지 않는다**([ADR-0013](docs/adr/0013-judging-happens-outside-the-request.md)).
+큐의 정본은 `judge_jobs` 테이블이고, 그 행 하나가 언어 경계다 - Java 가 쓰고 Python 이
+읽는다. 컬럼을 늘릴 때는 `contracts/judge-job.schema.json` 과 Worker 를 함께 고친다.
+
+**Worker 는 학습 상태를 건드리지 않는다.** Evidence · mastery · 다음 행동은 전부 Java 가
+결과를 반영할 때 만든다. 두 언어가 같은 테이블을 고치면 어느 쪽이 정본인지 알 수 없다.
 
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.

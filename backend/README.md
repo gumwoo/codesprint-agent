@@ -6,11 +6,33 @@ CodeSprint Agent 애플리케이션. Spring Boot 3 · Java 17 · PostgreSQL · F
 큐로만 이야기한다 - 근거: [ADR-0011](../docs/adr/0011-language-boundary.md).
 
 ```text
-learning/domain        Mastery 산식 · Decision Engine · 선수 관계 판정
-learning/persistence   Evidence 저장소
+api/                   제출 접수와 조회
+learning/domain        Mastery 산식 · Decision Engine · 선수 관계 판정 · Evidence 매핑
+learning/service       접수 · 결과 반영 · 재계산
+learning/persistence   Evidence 저장소와 캐시
+judge/                 채점 큐 (판정은 하지 않는다)
+problem/               문제 메타데이터 로더 (런타임에 ../problems 를 읽는다)
 curriculum/            커리큘럼 로더 (빌드 시점에 ../curriculum 을 굽는다)
 resources/db/migration Flyway. 스키마의 정본
 ```
+
+## 제출 하나가 지나는 길
+
+```text
+POST /api/problems/{code}/submit   SubmissionIntakeService  제출 + job 을 쓰고 끝 (202)
+                                   judge_jobs               ← 여기가 언어 경계다
+                                   judge/worker.py (Python) 샌드박스에서 채점
+JudgeResultPoller                  JudgeResultApplier       Evidence → mastery → 다음 행동
+GET  /api/submissions/{id}         SubmissionQueryService   저장된 결과를 그대로 읽는다
+```
+
+**접수 트랜잭션은 채점 시간과 무관하다**([ADR-0013](../docs/adr/0013-judging-happens-outside-the-request.md)).
+예전에는 같은 트랜잭션 안에서 컨테이너를 띄워 최대 120초를 기다렸고, 그동안 DB
+커넥션을 잡고 있었다 - 커넥션 풀이 사용자 수가 아니라 *채점 시간*에 따라 말랐다.
+
+**조회할 때 다시 계산하지 않는다.** 다음 행동과 갱신 내역은 반영하던 그 순간에 정해져
+제출 행에 남는다. 조회 때마다 새로 계산하면 그 사이 다른 제출이 바꿔 놓은 상태를 보게
+되어, 같은 제출을 두 번 조회했을 때 다른 답이 나온다.
 
 ## 두 계산을 나눠 뒀다
 

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/submission-status.schema.json",
+  "title": "SubmissionStatus",
+  "description": "POST /api/problems/{code}/submit 과 GET /api/submissions/{id} 의 응답. 채점이 요청 밖에서 일어나므로(ADR-0013) 제출은 즉시 끝나고 결과는 나중에 온다. 두 엔드포인트가 같은 모양을 쓰는 이유는, 클라이언트가 '접수 응답'과 '조회 응답'을 다르게 다룰 이유가 없기 때문이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["submissionId", "state", "result"],
+  "properties": {
+    "submissionId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "state": {
+      "enum": ["PENDING", "COMPLETE"],
+      "description": "PENDING 은 채점이 끝나지 않았거나 결과를 아직 학습 상태에 반영하지 않은 상태다. 둘을 구분해 보여주지 않는 이유는 사용자가 할 일이 같기 때문이다 - 기다린다."
+    },
+    "result": {
+      "description": "state 가 COMPLETE 일 때만 채워진다. 생략하지 않고 null 을 명시한다 - 생략은 '모른다', null 은 '아직 없다'다.",
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "https://codesprint.dev/contracts/submit-response.schema.json" }
+      ]
+    }
+  }
+}

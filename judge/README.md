@@ -4,13 +4,32 @@
 AI 는 여기 관여하지 않는다(ADR-0001, Addendum 81).
 
 ```text
-run_submission.py          호스트(신뢰). 컨테이너를 만들고, 정답과 비교하고, 판정을 조립한다
-  └─ Dockerfile            python:3.12-slim, non-root, 하네스를 구워 넣는다
-       └─ runner/harness.py 컨테이너 안(신뢰 안 함). **실행만 한다. 채점하지 않는다**
+worker.py                  큐에서 제출을 꺼내 채점하고 결과를 큐에 쓴다 (ADR-0013)
+  └─ run_submission.py     호스트(신뢰). 컨테이너를 만들고, 정답과 비교하고, 판정을 조립한다
+       └─ Dockerfile       python:3.12-slim, non-root, 하네스를 구워 넣는다
+            └─ runner/harness.py  컨테이너 안(신뢰 안 함). **실행만 한다. 채점하지 않는다**
 
 fixtures/                  판정을 재현하는 최소 문제 + 제출 코드
 tests/test_judge.py        판정 9건 + 격리 8건 + 기밀성 3건
+tests/test_worker.py       큐 동작 (배정 · 리스 · 재시도 상한 · 경계)
 ```
+
+## Worker — 채점은 요청 밖에서 일어난다
+
+백엔드는 제출을 저장하고 `judge_jobs` 에 행 하나를 넣고 끝난다. Worker 가 그것을 꺼내
+채점하고 결과를 같은 행에 쓴다([ADR-0013](../docs/adr/0013-judging-happens-outside-the-request.md)).
+
+```bash
+python judge/worker.py --once   # 큐를 한 번 비운다
+python judge/worker.py          # 계속 돈다
+```
+
+접속 정보는 환경변수다 — `CODESPRINT_DB_URL`, 또는 `DB_HOST` / `DB_PORT` / `DB_NAME` /
+`DB_USER` / `DB_PASSWORD`. 백엔드와 **같은 DB** 를 본다. 큐가 곧 경계이기 때문이다.
+
+**Worker 는 학습 상태를 건드리지 않는다.** Evidence 도, mastery 도, 다음 행동도 만들지
+않는다. 그건 전부 Java 가 결과를 반영할 때 한다(ADR-0011). `test_worker.py` 가 그것을
+확인한다 - 채점을 끝낸 뒤에도 `skill_evidence` 와 `user_skills` 가 비어 있어야 한다.
 
 ## 신뢰 경계 — 정답은 컨테이너에 들어가지 않는다
 

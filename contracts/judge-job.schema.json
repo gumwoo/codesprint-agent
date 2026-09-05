@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/judge-job.schema.json",
+  "title": "JudgeJob",
+  "description": "채점 큐(judge_jobs)의 행 하나. 언어 경계를 넘는 유일한 메시지다 - Java 가 쓰고 Python Worker 가 읽는다(ADR-0011, ADR-0013). 정답(expectedOutput)은 여기 들어가지 않는다. Worker 가 problems/<CODE>/cases.json 을 직접 읽고, 컨테이너에는 현재 case 의 input 만 들어간다(ADR-0006).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "jobId",
+    "submissionId",
+    "problemCode",
+    "language",
+    "sourceCode",
+    "status",
+    "attempts",
+    "leaseExpiresAt",
+    "result",
+    "failureReason"
+  ],
+  "properties": {
+    "jobId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "submissionId": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "이 job 이 채점하는 제출. 결과를 되돌릴 곳이다."
+    },
+    "problemCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language": {
+      "enum": ["PYTHON"],
+      "description": "슬라이스 1 은 Python 뿐이다. Worker 가 다른 값을 만나면 채점하지 않고 실패시킨다 - 무엇이든 solution.py 로 써서 Python 으로 돌리면 language 와 실제 판정이 어긋난 기록이 남는다."
+    },
+    "sourceCode": {
+      "type": "string",
+      "description": "사용자가 낸 코드. 신뢰할 수 없는 입력이다 - 읽거나 실행하지 않고 샌드박스로 넘긴다."
+    },
+    "status": {
+      "enum": ["QUEUED", "RUNNING", "DONE", "FAILED"],
+      "description": "DONE 은 '채점이 끝났다'이며 '정답이다'가 아니다. 채점 자체가 불가능했던 경우는 FAILED 이고, 그때 결과는 SYSTEM_ERROR 로 적용된다 - 우리 잘못이므로 사용자 점수를 건드리지 않는다."
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "몇 번 집어갔는가. 리스가 만료되어 다른 Worker 가 다시 가져가면 늘어난다. 상한을 넘으면 FAILED 로 끝낸다 - 무한히 재시도하면 같은 job 이 큐를 계속 막는다."
+    },
+    "leaseExpiresAt": {
+      "type": ["string", "null"],
+      "pattern": "(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "description": "이 시각까지는 집어간 Worker 의 것이다. 지나면 다른 Worker 가 가져갈 수 있다 - Worker 가 죽어도 job 이 영원히 RUNNING 으로 남지 않는다. QUEUED 일 때는 null 이며 필드를 생략하지 않는다."
+    },
+    "result": {
+      "description": "채점 결과. 아직 끝나지 않았으면 null 이다. 생략이 아니라 null 로 명시한다 - 생략은 '모른다', null 은 '아직 없다'다.",
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "https://codesprint.dev/contracts/judge-result.schema.json" }
+      ]
+    },
+    "failureReason": {
+      "type": ["string", "null"],
+      "description": "채점 자체가 불가능했던 이유. 사용자에게 보여주는 문구가 아니라 운영 로그다. 성공했으면 null."
+    }
+  }
+}
