@@ -144,7 +144,7 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
 10개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
-제출 API, Judge Worker + 큐, 그리고 Reviewer 오케스트레이션까지 있다.
+제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
 **LLM 어댑터와 프론트는 아직 없다** - `ReviewerPort` 구현이 없으면 분석 없이 진행한다.
 
 제출 하나가 지나는 길:
@@ -154,6 +154,7 @@ POST /api/problems/{code}/submit   접수하고 큐에 넣는다 (202)
 judge/worker.py                    꺼내 샌드박스에서 채점하고 결과를 큐에 쓴다
 JudgeResultPoller                  Evidence -> mastery 재계산 -> 다음 행동
 GET  /api/submissions/{id}         결과를 확인한다
+GET  /api/submissions/{id}/next-problem   그 결정이 가리키는 문제를 받는다
 ```
 
 **채점은 요청 안에서 하지 않는다**([ADR-0013](docs/adr/0013-judging-happens-outside-the-request.md)).

@@ -49,4 +49,16 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             order by max(s.submittedAt) desc
             """)
     List<Long> recentProblemIds(@Param("userId") Long userId, Pageable page);
+
+    /**
+     * 이 사용자가 한 번이라도 <b>맞힌</b> 문제들.
+     *
+     * <p>다음 문제를 고를 때 이미 맞힌 것을 피하는 데 쓴다. 다시 주면 연습이 되지
+     * 않고, 그 결과가 Evidence 로 쌓여 mastery 를 부풀린다.
+     */
+    @Query("""
+            select distinct s.problemId from SubmissionRow s
+            where s.userId = :userId and s.status = 'ACCEPTED'
+            """)
+    List<Long> findAcceptedProblemIds(@Param("userId") Long userId);
 }
