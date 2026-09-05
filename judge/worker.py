@@ -41,6 +41,13 @@ LEASE_SECONDS = 300
 # 몇 번까지 다시 시도하는가. 상한이 없으면 계속 죽는 job 하나가 큐를 영원히 막는다.
 MAX_ATTEMPTS = 3
 
+# 하네스가 예상 밖으로 굳었을 때의 마지막 방어선.
+#
+# **리스보다 짧아야 한다.** 길면 내가 채점하는 동안 리스가 만료되어 다른 Worker 가
+# 같은 job 을 가져가고, 나는 그 뒤에 뒤늦은 결과를 들고 돌아온다. fencing 이 그것을
+# 버려주지만, 애초에 같은 제출을 두 번 채점하는 낭비를 하지 않는 편이 낫다.
+WORKER_TIMEOUT_SECONDS = LEASE_SECONDS - 60
+
 POLL_SECONDS = 1.0
 
 
@@ -105,8 +112,26 @@ def claim(conn) -> dict | None:
     }
 
 
-def finish(conn, job_id: int, result: dict | None, failure_reason: str | None) -> None:
-    """결과를 큐에 쓴다. 학습 상태는 건드리지 않는다 - 그건 Java 가 한다."""
+def finish(conn, job_id: int, attempt: int, result: dict | None,
+           failure_reason: str | None) -> bool:
+    """결과를 큐에 쓴다. 학습 상태는 건드리지 않는다 - 그건 Java 가 한다.
+
+    ``attempt`` 를 **fencing token** 으로 쓴다. 리스는 "다른 Worker 가 다시 가져갈 수
+    있다" 만 보장할 뿐, **이전 Worker 가 나중에 결과를 덮어쓰지 못한다** 는 것은
+    보장하지 않는다.
+
+        Worker A  job 10 집음 (attempts=1)
+                  멈춘다 - Docker hang / GC / OS pause
+        (5분 뒤)  리스 만료
+        Worker B  같은 job 집음 (attempts=2), 채점을 끝내고 DONE 을 쓴다
+        Worker A  뒤늦게 살아나 finish() -> B 의 결과를 덮어쓴다
+
+    ``attempts`` 가 일치할 때만 쓰면 A 의 UPDATE 는 0행이 되어 버려진다.
+    ``status = 'RUNNING'`` 조건도 함께 건다 - 시도 상한을 넘겨 FAILED 로 거둔 job 을
+    뒤늦은 Worker 가 DONE 으로 되살리는 것을 막는다.
+
+    :return: 실제로 썼으면 True. False 면 나는 이미 오래된 Worker 다.
+    """
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -117,15 +142,20 @@ def finish(conn, job_id: int, result: dict | None, failure_reason: str | None) -
                    lease_expires_at = NULL,
                    updated_at = now()
              WHERE id = %s
+               AND status = 'RUNNING'
+               AND attempts = %s
             """,
             (
                 "DONE" if result is not None else "FAILED",
                 json.dumps(result, ensure_ascii=False) if result is not None else None,
                 failure_reason,
                 job_id,
+                attempt,
             ),
         )
+        written = cur.rowcount == 1
     conn.commit()
+    return written
 
 
 def reap_exhausted(conn) -> int:
@@ -179,11 +209,17 @@ def run_job(job: dict) -> tuple[dict | None, str | None]:
         # 사용자 코드다. 읽지 않고 그대로 넘긴다.
         solution.write_text(job["sourceCode"], encoding="utf-8")
 
-        proc = subprocess.run(
-            [sys.executable, str(ROOT / "judge" / "run_submission.py"),
-             str(solution), str(cases)],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-        )
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "judge" / "run_submission.py"),
+                 str(solution), str(cases)],
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=WORKER_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            # run_submission.py 안에도 watchdog 이 있다. 여기까지 왔다는 것은 그
+            # watchdog 자체가 동작하지 않았다는 뜻이므로 프로세스를 끊고 끝낸다.
+            return None, f"하네스가 {WORKER_TIMEOUT_SECONDS}초 안에 끝나지 않았다"
         if proc.returncode != 0:
             return None, f"하네스가 실패했다 (exit={proc.returncode}): {proc.stderr[:500]}"
         try:
@@ -205,7 +241,11 @@ def drain(conn) -> int:
             return done
 
         result, reason = run_job(job)
-        finish(conn, job["jobId"], result, reason)
+        if not finish(conn, job["jobId"], job["attempts"], result, reason):
+            # 내가 채점하는 동안 다른 Worker 가 이 job 을 가져갔거나, 상한을 넘겨
+            # 거둬졌다. 내 결과는 버린다 - 쓰면 남의 판정을 덮어쓴다.
+            print(f"[job {job['jobId']}] 뒤늦은 결과라 버린다 (attempt {job['attempts']})")
+            continue
         status = result["status"] if result else f"FAILED({reason})"
         print(f"[job {job['jobId']}] {job['problemCode']} -> {status}")
         done += 1

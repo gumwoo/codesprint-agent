@@ -47,6 +47,9 @@ def migrate(conn) -> None:
     계속 통과하고, 정작 실물에서 Worker 가 깨진다.
     """
     with conn.cursor() as cur:
+        # 매번 처음부터 만든다. 이어서 돌리면 두 번째 실행이 DuplicateTable 로 죽고,
+        # 그러면 "테스트 DB 를 새로 띄웠을 때만 도는" 테스트가 된다.
+        cur.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public")
         for path in sorted(MIGRATIONS.glob("V*.sql")):
             cur.execute(path.read_text(encoding="utf-8"))
     conn.commit()
@@ -148,6 +151,64 @@ def test_exhausted_job_is_failed(conn) -> None:
           f"failureReason={after['failureReason']}")
 
 
+def test_stale_worker_cannot_overwrite(conn) -> None:
+    """리스가 만료된 뒤 살아난 Worker 가 남의 판정을 덮어쓰면 안 된다.
+
+    리스는 "다른 Worker 가 다시 가져갈 수 있다" 만 보장한다. 이전 Worker 가 나중에
+    결과를 쓰는 것은 막지 못하므로, attempts 를 fencing token 으로 쓴다.
+    """
+    reset(conn)
+    job_id = seed_job(conn)
+
+    a = worker.claim(conn)                      # Worker A: attempts = 1
+    with conn.cursor() as cur:                  # A 가 멈춘 사이 리스가 만료된다
+        cur.execute("UPDATE judge_jobs SET lease_expires_at = now() - interval '1 minute'"
+                    " WHERE id = %s", (job_id,))
+    conn.commit()
+    b = worker.claim(conn)                      # Worker B: attempts = 2
+
+    wrote_b = worker.finish(conn, job_id, b["attempts"],
+                            {"status": "ACCEPTED", "passed": 5, "total": 5}, None)
+    check("현재 주인은 결과를 쓴다", wrote_b)
+
+    # A 가 뒤늦게 살아나 자기 판정을 들고 온다.
+    wrote_a = worker.finish(conn, job_id, a["attempts"],
+                            {"status": "WRONG_ANSWER", "passed": 0, "total": 5}, None)
+    check("뒤늦은 Worker 의 쓰기는 거부된다", not wrote_a)
+
+    after = row(conn, job_id)
+    result = after["result"] if isinstance(after["result"], dict) else json.loads(
+        after["result"] or "{}")
+    check("판정이 덮어써지지 않는다", result.get("status") == "ACCEPTED",
+          f"result={result}")
+
+
+def test_stale_worker_cannot_revive_failed_job(conn) -> None:
+    """상한을 넘겨 거둔 job 을 뒤늦은 Worker 가 DONE 으로 되살리면 안 된다.
+
+    attempts 만 비교하면 이 경우가 통과한다 - 거둘 때 attempts 는 그대로이기 때문이다.
+    status = 'RUNNING' 조건이 그것을 막는다.
+    """
+    reset(conn)
+    job_id = seed_job(conn)
+    claimed = worker.claim(conn)
+
+    with conn.cursor() as cur:
+        cur.execute("UPDATE judge_jobs SET attempts = %s,"
+                    " lease_expires_at = now() - interval '1 minute' WHERE id = %s",
+                    (worker.MAX_ATTEMPTS, job_id))
+    conn.commit()
+    worker.reap_exhausted(conn)
+    check("거둔 job 은 FAILED 다", row(conn, job_id)["status"] == "FAILED")
+
+    # 거둘 때 attempts 를 바꾸지 않았으므로, 그 값을 든 Worker 가 돌아올 수 있다.
+    revived = worker.finish(conn, job_id, worker.MAX_ATTEMPTS,
+                            {"status": "ACCEPTED", "passed": 5, "total": 5}, None)
+    check("거둔 job 은 되살아나지 않는다", not revived)
+    check("FAILED 로 남는다", row(conn, job_id)["status"] == "FAILED")
+    check("claim 한 적이 있어도 마찬가지다", claimed is not None)
+
+
 # -- 2. 채점 -------------------------------------------------------------
 
 def test_accepted_submission(conn) -> None:
@@ -241,7 +302,8 @@ def main() -> int:
     with conn:
         migrate(conn)
         for fn in (test_claims_once, test_expired_lease_is_reclaimed,
-                   test_exhausted_job_is_failed, test_accepted_submission,
+                   test_exhausted_job_is_failed, test_stale_worker_cannot_overwrite,
+                   test_stale_worker_cannot_revive_failed_job, test_accepted_submission,
                    test_wrong_submission, test_missing_problem_fails,
                    test_worker_does_not_touch_learning_state):
             print(f"\n== {fn.__name__} ==")
