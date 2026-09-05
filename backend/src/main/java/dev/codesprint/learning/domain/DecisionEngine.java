@@ -33,6 +33,13 @@ public class DecisionEngine {
      *     아직 끝나지 않은 판정({@code QUEUED} / {@code RUNNING})은 받지 않는다.
      * @param confirmedMistake <b>확정된</b> Mistake code. Reviewer 가 낸 후보가 아니라
      *     Addendum §21 의 조건을 통과한 것만 들어온다. 없으면 null.
+     * @param state <b>이번 제출을 반영한 뒤</b>의 상태. 서비스 계층은 Evidence 를 저장하고
+     *     mastery 를 재계산한 결과를 넘긴다.
+     * @param priorEvidenceCount <b>이번 제출 전</b>에 이 Skill 에 쌓여 있던 Evidence 개수.
+     *     "이 Skill 을 이미 배우고 있었는가" 는 {@code state.evidenceCount()} 로 알 수 없다 -
+     *     실제 흐름이 Judge -> Evidence 저장 -> 재계산 -> Decision 이라서, Decision 이 보는
+     *     시점에는 이번 실패가 이미 1개로 세어져 있다. 그 값으로 판단하면 선수 조건을
+     *     못 채운 Skill 이 첫 제출에서 바로 선수 검사를 통과해버린다.
      * @param sameProblemAttempts 이 문제를 몇 번째 시도하는가 (이번 제출 포함).
      * @param reviewCompleted 이 Skill 에 복습 성공 기록이 있는가.
      * @param masteries 다른 Skill 들의 mastery. 선수 조건 판정에 쓴다.
@@ -40,11 +47,31 @@ public class DecisionEngine {
     public record Context(
             String skillCode,
             SkillState state,
+            int priorEvidenceCount,
             JudgeStatus judgeStatus,
             String confirmedMistake,
             int sameProblemAttempts,
             boolean reviewCompleted,
             Map<String, Double> masteries) {
+
+        public Context {
+            if (priorEvidenceCount < 0) {
+                throw new IllegalArgumentException(
+                        "priorEvidenceCount 는 음수일 수 없다: " + priorEvidenceCount);
+            }
+            // 제출 전 개수가 반영 후보다 많을 수는 없다. 그런 값이 들어왔다면 서비스
+            // 계층이 순서를 잘못 엮은 것이고, 조용히 넘기면 선수 검사가 사라진다.
+            if (state != null && priorEvidenceCount > state.evidenceCount()) {
+                throw new IllegalArgumentException(
+                        "priorEvidenceCount(" + priorEvidenceCount + ") 가 반영 후 개수("
+                                + state.evidenceCount() + ") 보다 많다");
+            }
+        }
+
+        /** 이번 제출 전에 이미 이 Skill 을 배우고 있었는가. */
+        public boolean startedBeforeAttempt() {
+            return priorEvidenceCount > 0;
+        }
     }
 
     public NextAction decide(Context context) {
@@ -63,15 +90,19 @@ public class DecisionEngine {
         // 그대로 두면 사용자가 준비되지 않은 문제에서 반복 실패하고, 그 실패가
         // Evidence 로 쌓여 mastery 를 끌어내린다.
         //
-        // 조건을 status 가 아니라 **evidenceCount** 로 본다. status 로 보면 어떤 값을
+        // 조건을 status 가 아니라 Evidence 유무로 본다. status 로 보면 어떤 값을
         // 나열해도 빠지는 것이 생긴다 - 처음에는 UNASSESSED 만 봤는데,
         // PrerequisiteEvaluator.resolve() 가 만들어내는 LOCKED / READY 가 그대로
         // 통과했다. LOCKED 인 Skill 이 RETRY_VARIANT 를 받는 상태였다.
         //
-        // "아직 배우기 시작하지 않았다" 는 결국 Evidence 가 하나도 없다는 뜻이고,
-        // 그것이 이 분기가 실제로 묻고 싶은 것이다. 반대로 Evidence 가 있으면
-        // 선수 관계로 되돌리지 않는다(PrerequisiteEvaluator 의 같은 판단).
-        if (context.state().evidenceCount() == 0) {
+        // 그리고 **이번 제출을 반영하기 전** 개수를 본다. state.evidenceCount() 를
+        // 쓰면 안 된다 - 실제 흐름이 Judge -> Evidence 저장 -> 재계산 -> Decision 이라서
+        // 여기 도착했을 때는 이번 실패가 이미 1개로 세어져 있다. 잠긴 Skill 을 처음
+        // 틀린 사용자가 CHANGE_SKILL 대신 RETRY_VARIANT 를 받게 된다.
+        //
+        // 반대로 제출 전에 이미 Evidence 가 있었으면 선수 관계로 되돌리지 않는다
+        // (PrerequisiteEvaluator 의 같은 판단).
+        if (!context.startedBeforeAttempt()) {
             Optional<String> blocker =
                     prerequisites.nextPrerequisite(context.skillCode(), context.masteries());
             if (blocker.isPresent()) {

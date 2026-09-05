@@ -55,8 +55,10 @@ class DecisionEngineTest {
 
     private NextAction decide(JudgeStatus judgeStatus, SkillState state, String mistake,
             int attempts, boolean reviewCompleted) {
+        // 이번 제출 전 개수는 반영 후에서 이번 것 하나를 뺀 값이다.
         return engine.decide(new DecisionEngine.Context(
-                SKILL, state, judgeStatus, mistake, attempts, reviewCompleted,
+                SKILL, state, Math.max(0, state.evidenceCount() - 1),
+                judgeStatus, mistake, attempts, reviewCompleted,
                 allPrerequisitesMet()));
     }
 
@@ -253,6 +255,7 @@ class DecisionEngineTest {
                     "BFS_SHORTEST_PATH",
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
+                    0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
                     Map.of()));
 
@@ -273,6 +276,7 @@ class DecisionEngineTest {
                     "BFS_SHORTEST_PATH",
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.LOCKED),
+                    0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
@@ -287,6 +291,7 @@ class DecisionEngineTest {
                     "BFS_SHORTEST_PATH",
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.READY),
+                    0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
                     Map.of("BFS_GRID_TRAVERSAL", 0.30)));
 
@@ -303,6 +308,7 @@ class DecisionEngineTest {
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH",
                     state(0.55, 0.40, SkillStatus.PRACTICING),
+                    4,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
                     Map.of()));
 
@@ -324,6 +330,7 @@ class DecisionEngineTest {
                     "BFS_GRID_TRAVERSAL",
                     new SkillState("BFS_GRID_TRAVERSAL", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
+                    0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false, masteries));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
@@ -333,12 +340,49 @@ class DecisionEngineTest {
         }
 
         @Test
+        @DisplayName("이번 제출이 반영된 뒤에도 제출 전 기준으로 선수 조건을 본다")
+        void firstAttemptOnLockedSkillIsStillRedirected() {
+            // 실제 서비스 흐름은 Judge -> Evidence 저장 -> mastery 재계산 -> Decision 이다.
+            // 그래서 Decision 이 받는 state 에는 이번 실패가 이미 세어져 있다.
+            //
+            // state.evidenceCount() 로 판단하던 시절에는 이 케이스가 통과해버렸다 -
+            // 잠긴 Skill 을 처음 틀린 사용자가 CHANGE_SKILL 대신 RETRY_VARIANT 를 받는다.
+            // 기존 테스트는 전부 evidenceCount 0 으로 호출해서 이것을 잡지 못했다.
+            SkillState afterThisSubmission = new SkillState(
+                    "BFS_SHORTEST_PATH", Map.of(Dimension.IMPLEMENTATION, 0.0),
+                    0.0, 0.25, 1, SkillStatus.LEARNING);
+
+            NextAction action = engine.decide(new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH", afterThisSubmission,
+                    0,                                   // 제출 전에는 하나도 없었다
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()));
+
+            assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
+            assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
+        }
+
+        @Test
+        @DisplayName("제출 전 개수가 반영 후보다 많으면 거부한다")
+        void priorCountCannotExceedCurrent() {
+            // 서비스 계층이 순서를 잘못 엮은 것이다. 조용히 넘기면 선수 검사가 사라진다.
+            assertThatThrownBy(() -> new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH",
+                    new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 1,
+                            SkillStatus.LEARNING),
+                    2,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("priorEvidenceCount");
+        }
+
+        @Test
         @DisplayName("선수 조건을 채웠으면 그대로 진행한다")
         void metPrerequisitesProceed() {
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH",
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
+                    0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
                     Map.of("BFS_GRID_TRAVERSAL", 0.95)));
 
