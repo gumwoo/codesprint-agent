@@ -1,6 +1,7 @@
 package dev.codesprint.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -349,6 +350,20 @@ class ProblemDeliveryTest {
 
         assertThat(mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
                 .andReturn().getResponse().getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    @DisplayName("결정이 있는데 이유가 없는 제출은 DB 가 거부한다")
+    void decidedSubmissionMustCarryAReason() throws Exception {
+        // V4 이전에 반영된 제출은 next_problem_reason 이 NULL 이었다. 조회는
+        // next_action_type 만 보고 "완료" 로 판단하므로 reason 이 required 인
+        // 계약을 그대로 어긴다 - 새 데이터만 보는 테스트로는 볼 수 없는 자리다.
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE submissions SET next_problem_reason = NULL WHERE id = ?", submissionId))
+                .as("결정이 있으면 이유도 있어야 한다")
+                .hasMessageContaining("submissions_decided_has_next_problem_reason");
     }
 
     @Test
