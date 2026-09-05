@@ -1,0 +1,21 @@
+{
+  "name": "system-error",
+  "description": "채점 실패는 우리 잘못이라 사용자 점수를 건드리지 않는다.",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "SYSTEM_ERROR",
+    "hintLevel": 0,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": null,
+    "expectedSolveSeconds": null,
+    "algorithmSelection": null,
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": null
+}

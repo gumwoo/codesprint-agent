@@ -48,7 +48,9 @@ jobs:
       # golden 이 현재 Python 산식과 일치하는지 먼저 본다.
       # 여기가 깨지면 Java 대조는 낡은 기대값을 검증하는 셈이다.
       - name: golden fixture 가 Python oracle 과 일치하는가
-        run: python tools/gen_mastery_golden.py
+        run: |
+          python tools/gen_mastery_golden.py
+          python tools/gen_evidence_golden.py
 
       # Testcontainers 가 러너의 Docker 를 쓴다. 외부 DB 를 주지 않으므로
       # 컨테이너를 띄우지 못하면 skip 이 아니라 실패한다.

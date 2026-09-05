@@ -1,0 +1,47 @@
+{
+  "name": "recognition-ignored-in-normal-mode",
+  "description": "유형을 알려준 상태의 선택은 관측이 아니다. 같은 인자라도 mode 가 다르면 null 이다.",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "ACCEPTED",
+    "hintLevel": 0,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": null,
+    "expectedSolveSeconds": null,
+    "algorithmSelection": "CORRECT",
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": {
+    "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.0,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": 0.9,
+      "independent": 0.95,
+      "retention": null,
+      "speed": null
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": "P02_GRID_TRAVERSAL",
+      "judgeStatus": "ACCEPTED",
+      "hintLevel": 0,
+      "solutionViewed": false,
+      "independentAttempt": true,
+      "reviewSucceeded": null,
+      "daysSinceLast": null,
+      "verdict": null
+    }
+  }
+}

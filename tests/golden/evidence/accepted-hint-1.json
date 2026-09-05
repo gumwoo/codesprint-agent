@@ -1,0 +1,47 @@
+{
+  "name": "accepted-hint-1",
+  "description": "힌트 1단계. 구현은 거의 그대로지만 독립 풀이가 떨어진다.",
+  "input": {
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "skillWeight": 1.0,
+    "judgeStatus": "ACCEPTED",
+    "hintLevel": 1,
+    "solutionViewed": false,
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "solveSeconds": null,
+    "expectedSolveSeconds": null,
+    "algorithmSelection": null,
+    "mode": "NORMAL",
+    "problemCode": "P02_GRID_TRAVERSAL",
+    "tleCause": null
+  },
+  "expected": {
+    "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+    "sourceEventId": "submission:1",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "PROBLEM_SUBMISSION",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.0,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": 0.88,
+      "independent": 0.78,
+      "retention": null,
+      "speed": null
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": "P02_GRID_TRAVERSAL",
+      "judgeStatus": "ACCEPTED",
+      "hintLevel": 1,
+      "solutionViewed": false,
+      "independentAttempt": true,
+      "reviewSucceeded": null,
+      "daysSinceLast": null,
+      "verdict": null
+    }
+  }
+}
