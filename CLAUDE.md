@@ -54,7 +54,19 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 ## 사용자 제출 코드
 
 `judge/submissions/` 아래는 **신뢰할 수 없는 입력**이다. 판정 대상이지 실행 대상이 아니다.
-읽거나 실행하지 않는다. `.gitignore`와 `.claude/settings.json`이 이중으로 막는다.
+읽거나 실행하지 않는다.
+
+**이건 규범이지 강제되는 보장이 아니다.** 세 수단이 각각 하는 일이 다르다.
+
+| 수단 | 실제로 하는 것 | 하지 않는 것 |
+| --- | --- | --- |
+| `.gitignore` | 저장소에 커밋되는 것을 막는다 | 읽기·실행은 막지 않는다 |
+| `Read(./**/submissions/**)` | Claude 의 Read 툴 경로를 막는다 | 셸을 경유한 읽기는 막지 않는다 |
+| `Bash(python judge/submissions/**)` | 그 리터럴 한 형태를 막는다 | `python3`, `./`, 다른 리더는 막지 않는다 |
+
+`Bash` deny 목록을 늘려 셸을 봉쇄하려 하지 않는다. `head` / `less` 를 더해도
+`python -c`, `sed`, `awk`, `git show` 가 남고, **목록이 길어질수록 "막혀 있다" 는
+잘못된 안심만 커진다.** 실수를 줄이는 장치지 경계가 아니다.
 
 `judge/fixtures/`는 다르다 — 우리가 만든 테스트 자산이라 읽고 고쳐도 된다.
 
