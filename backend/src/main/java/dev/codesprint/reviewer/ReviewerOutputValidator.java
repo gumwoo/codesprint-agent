@@ -10,11 +10,15 @@ import org.springframework.stereotype.Component;
  * Reviewer 출력이 쓸 수 있는 것인지 확인한다. 정본: ADR-0014, Addendum §20.
  *
  * <p>스키마만으로는 부족하다. 스키마는 "enum 안의 값인가" 까지만 보고, <b>그 값이
- * 이 저장소의 커리큘럼에 실재하는지</b>나 <b>Judge 가 실제로 실패시킨 case 를
- * 근거로 들었는지</b>는 보지 못한다.
+ * 이 저장소의 커리큘럼에 실재하는지</b>는 보지 못한다.
  *
  * <p><b>어긋나면 그 분석은 통째로 버린다.</b> 고쳐서 쓰지 않는다 - 부분적으로 맞는
  * 분석을 살리려다 잘못된 절반이 학습 경로에 들어간다.
+ *
+ * <p><b>여기서 Judge 근거와의 "일치" 를 판정하지 않는다.</b> Reviewer 가 실패 case 를
+ * 인용했다는 사실은 근거가 아니다 - 그 번호를 요청으로 알려줬으므로 되돌려주기만 하면
+ * 된다(ADR-0014). {@code failedCaseRefs} 는 비어 있지 않은지만 본다. 그 값은 근거가
+ * 아니라 나중에 평가 데이터셋으로 쓸 라벨이다.
  */
 @Component
 public class ReviewerOutputValidator {
@@ -39,7 +43,6 @@ public class ReviewerOutputValidator {
         }
     }
 
-    /** Judge 근거와의 대조는 {@link #citesJudgeFailure} 가 따로 본다. */
     public Result validate(ReviewerOutput output) {
         List<String> problems = new ArrayList<>();
 
@@ -81,21 +84,6 @@ public class ReviewerOutputValidator {
         }
 
         return new Result(List.copyOf(problems));
-    }
-
-    /**
-     * Reviewer 가 <b>Judge 가 실제로 실패시킨 case</b> 를 근거로 들었는가.
-     *
-     * <p>Addendum §21-A 의 "실패 Test Case 특성이 해당 Mistake 와 일치" 를 지금
-     * 구현할 수 있는 형태다. case 에 성격 태그(경계 / 최소 / 최대…)가 붙으면 더
-     * 강하게 볼 수 있지만, <b>지금은 이것이 전부다</b> - 더 강한 척하지 않는다
-     * (ADR-0014).
-     *
-     * <p>Judge 가 case 를 특정하지 못한 판정에서는 확인할 것이 없으므로 false 다.
-     * 그런 분석은 §21-A 로 확정되지 않고 재발(§21-B)을 기다린다.
-     */
-    public boolean citesJudgeFailure(ReviewerOutput output, Integer judgeFailedCaseId) {
-        return judgeFailedCaseId != null && output.failedCaseRefs().contains(judgeFailedCaseId);
     }
 
     private void checkAssignable(String code, String field, List<String> problems) {

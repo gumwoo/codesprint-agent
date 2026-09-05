@@ -57,16 +57,16 @@ class MistakeConfirmationTest {
     class Confirmation {
 
         @Test
-        @DisplayName("A: confidence 0.90 이상이고 Judge 가 실패시킨 case 를 인용했다")
+        @DisplayName("A: confidence 0.90 이상이고 독립적인 근거가 뒷받침한다")
         void conditionA() {
             var verdict = MistakeConfirmation.decide(0.95, true, 1);
             assertThat(verdict.status()).isEqualTo(MistakeStatus.CONFIRMED);
-            assertThat(verdict.reason()).contains("Judge");
+            assertThat(verdict.reason()).contains("독립");
         }
 
         @Test
-        @DisplayName("확신이 높아도 근거가 어긋나면 확정하지 않는다")
-        void highConfidenceWithoutEvidenceIsNotConfirmed() {
+        @DisplayName("확신만으로는 확정하지 않는다")
+        void highConfidenceAloneIsNotConfirmed() {
             // Judge Evidence 가 LLM 보다 우선한다(Addendum 20). 확신에 찬 오분류를
             // 막을 수 있는 유일한 지점이다 - confidence 는 LLM 이 스스로 매긴다.
             var verdict = MistakeConfirmation.decide(0.99, false, 1);

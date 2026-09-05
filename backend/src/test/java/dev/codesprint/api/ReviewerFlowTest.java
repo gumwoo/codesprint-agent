@@ -212,12 +212,14 @@ class ReviewerFlowTest {
     }
 
     @Test
-    @DisplayName("확정된 Mistake 가 자동 드릴로 이어진다")
-    void confirmedMistakeTriggersDrill() throws Exception {
-        // confidence 0.95 이고 Judge 가 실패시킨 case 를 인용했다 - 확정 조건 A.
-        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.95, 4);
+    @DisplayName("서로 다른 문제에서 재발하면 확정되고 자동 드릴로 이어진다")
+    void recurringMistakeTriggersDrill() throws Exception {
+        // 확정 조건 B. 지금 확정이 일어나는 유일한 경로다 - A 의 독립 근거가 아직 없다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
         alreadyLearning("P02_GRID_TRAVERSAL");
 
+        // 다른 문제에서 같은 실수. 두 문제에서 나왔으므로 재발이다.
+        submitAndJudge("P09_BFS_VARIANT_A", "WRONG_ANSWER", 4);
         long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
         JsonNode result = resultOf(submissionId).get("result");
 
@@ -234,11 +236,13 @@ class ReviewerFlowTest {
     }
 
     @Test
-    @DisplayName("확신이 높아도 Judge 근거와 어긋나면 드릴로 가지 않는다")
-    void unsupportedAnalysisDoesNotDrill() throws Exception {
-        // 실패한 case 는 4번인데 7번을 근거로 들었다. 이 분석은 실제로 일어난
-        // 실패를 설명하고 있지 않다(Addendum 20).
-        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.99, 7);
+    @DisplayName("실패한 case 를 그대로 인용해도 그것만으로는 확정되지 않는다")
+    void echoingTheFailedCaseIsNotEvidence() throws Exception {
+        // 요청에 failedCaseId = 4 를 넣어 보내므로, 모델은 받은 번호를 그대로
+        // 돌려주기만 하면 된다. case 4 가 실제로 BOUNDARY_CHECK 를 보여주는
+        // case 인지는 아무도 확인하지 않았다 - 이것을 근거로 인정하면
+        // "확신만으로 확정한다" 와 사실상 같아진다(ADR-0014).
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.99, 4);
         alreadyLearning("P02_GRID_TRAVERSAL");
 
         long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
@@ -248,6 +252,46 @@ class ReviewerFlowTest {
         assertThat(result.get("nextAction").get("type").asText())
                 .as("확정되지 않았으므로 드릴이 아니다")
                 .isNotEqualTo("MICRO_DRILL");
+    }
+
+    @Test
+    @DisplayName("같은 문제에서 반복한 것은 재발이 아니다")
+    void repeatingTheSameProblemIsNotRecurrence() throws Exception {
+        // "최근 3문제에서 2회" 는 문제 단위다. 같은 문제를 두 번 틀린 것을 재발로
+        // 세면 한 문제에서 고전하는 사용자가 곧바로 확정을 받는다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
+
+        assertThat(resultOf(submissionId).get("result").get("review").get("status").asText())
+                .isEqualTo("PROBABLE");
+    }
+
+    @Test
+    @DisplayName("사이에 깨끗한 문제가 끼면 창 밖의 실수는 세지 않는다")
+    void oldMistakeOutsideTheWindowIsNotCounted() throws Exception {
+        // P02 에서 한 번 탐지되고, 그 뒤로 다른 문제 세 개를 푼다. 실제 최근
+        // 3문제 안에는 P02 가 없으므로 이번 것과 묶이면 안 된다.
+        //
+        // 탐지 기록에서 창을 뽑으면 깨끗한 문제들이 보이지 않아, 아주 오래된
+        // 실수가 현재 실수와 나란히 서서 2회가 된다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);   // 여기서 1회
+
+        reviewer.scripted = null;                                   // 깨끗한 문제 셋
+        submitAndJudge("P03_CONNECTED_COMPONENT", "WRONG_ANSWER", 4);
+        submitAndJudge("P04_AREA_SIZE", "WRONG_ANSWER", 4);
+        submitAndJudge("P10_BFS_REVIEW", "WRONG_ANSWER", 4);
+
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        long submissionId = submitAndJudge("P09_BFS_VARIANT_A", "WRONG_ANSWER", 4);
+
+        assertThat(resultOf(submissionId).get("result").get("review").get("status").asText())
+                .as("최근 3문제 안에서는 이번 1회뿐이다")
+                .isEqualTo("PROBABLE");
     }
 
     @Test

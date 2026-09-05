@@ -220,8 +220,7 @@ public class JudgeResultApplier {
                             judged.status().name(),
                             judged.failedCaseId(),
                             job.sourceCode(),
-                            problem.skills().stream().map(SkillLink::skillCode).toList()),
-                    judged.failedCaseId());
+                            problem.skills().stream().map(SkillLink::skillCode).toList()));
 
             if (review.isPresent()) {
                 ReviewService.Review value = review.get();

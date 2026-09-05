@@ -1,12 +1,11 @@
 package dev.codesprint.reviewer;
 
 import dev.codesprint.learning.domain.JudgeStatus;
+import dev.codesprint.learning.persistence.SubmissionRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -33,12 +32,14 @@ public class ReviewService {
     private final ReviewerPort reviewer;
     private final ReviewerOutputValidator validator;
     private final MistakeDetectionRepository detections;
+    private final SubmissionRepository submissions;
 
     public ReviewService(ReviewerPort reviewer, ReviewerOutputValidator validator,
-            MistakeDetectionRepository detections) {
+            MistakeDetectionRepository detections, SubmissionRepository submissions) {
         this.reviewer = reviewer;
         this.validator = validator;
         this.detections = detections;
+        this.submissions = submissions;
     }
 
     /**
@@ -68,13 +69,12 @@ public class ReviewService {
     }
 
     /**
-     * @param failedCaseId Judge 가 실패시킨 case. 확정 조건 A 의 근거 대조에 쓴다.
      * @return 비어 있으면 <b>기록할 분석이 없다</b>는 뜻이다 - Reviewer 가 없거나,
      *     분석에 실패했거나, 검증을 통과하지 못했다. 셋을 응답에서 구분하지 않는다.
      *     사용자가 할 수 있는 일이 같기 때문이다.
      */
     public Optional<Review> review(Long userId, Long submissionId, Long problemId,
-            ReviewerPort.Request request, Integer failedCaseId) {
+            ReviewerPort.Request request) {
 
         Optional<ReviewerOutput> analysed;
         try {
@@ -100,10 +100,14 @@ public class ReviewService {
         }
 
         int recent = recentDetectionCount(userId, problemId, output.primaryMistake());
+
+        // §21-A 의 독립적인 근거는 아직 없다. Reviewer 가 실패 case 를 인용했다는
+        // 사실은 근거가 아니다 - 그 번호를 요청으로 알려줬으므로 되돌려주기만 하면
+        // 된다(ADR-0014). case 성격 태그나 결정론적 Rule 이 생기면 여기에 꽂는다.
+        boolean corroborated = false;
+
         MistakeConfirmation.Verdict verdict = MistakeConfirmation.decide(
-                output.confidence(),
-                validator.citesJudgeFailure(output, failedCaseId),
-                recent);
+                output.confidence(), corroborated, recent);
 
         record(userId, submissionId, output, verdict);
 
@@ -126,32 +130,24 @@ public class ReviewService {
      * 같은 Mistake 가 <b>최근 {@value MistakeConfirmation#RECENT_WINDOW}문제</b>에서 몇 번
      * 나왔는가. 이번 것을 포함한다.
      *
-     * <p>문제 단위로 센다. 같은 문제를 세 번 틀린 것은 "세 문제에서 반복됐다" 가
-     * 아니다 - 그렇게 세면 한 문제에서 고전하는 사용자가 곧바로 확정을 받는다.
+     * <p><b>창을 먼저 정하고 그 안에서 센다.</b> 탐지 기록에서 창을 뽑으면 실수가
+     * 없었던 문제가 창에 들어오지 않아, 아주 오래된 실수가 현재 실수와 묶인다 -
+     * {@code SubmissionRepository.recentProblemIds} 에 그 예를 적어 뒀다.
      */
     private int recentDetectionCount(Long userId, Long problemId, String mistakeCode) {
-        // 넉넉히 읽고 문제 단위로 접는다. 한 문제에 제출이 여러 번 있을 수 있으므로
-        // 창(3문제)보다 많이 가져와야 한다.
-        List<Object[]> rows = detections.recentPrimaryDetections(
-                userId, PageRequest.of(0, MistakeConfirmation.RECENT_WINDOW * 10));
+        // 이번 제출의 문제는 아직 탐지가 저장되기 전이므로 따로 센다.
+        List<Long> window = new ArrayList<>(submissions.recentProblemIds(
+                userId, PageRequest.of(0, MistakeConfirmation.RECENT_WINDOW)));
+        window.remove(problemId);
 
-        // 문제별로 "이 Mistake 가 그 문제에서 나왔는가" 를 한 번만 센다.
-        // 같은 문제의 제출 세 번을 3회로 세면, 한 문제에서 고전하는 사용자가
-        // 곧바로 확정을 받는다.
-        Map<Long, Boolean> byProblem = new LinkedHashMap<>();
-        byProblem.put(problemId, true);   // 이번 제출의 문제, 이번 탐지
+        // 이번 문제가 창의 한 자리를 차지한다.
+        List<Long> others = window.subList(0,
+                Math.min(window.size(), MistakeConfirmation.RECENT_WINDOW - 1));
 
-        for (Object[] row : rows) {
-            String code = (String) row[0];
-            Long seen = ((Number) row[1]).longValue();
-            if (!byProblem.containsKey(seen)
-                    && byProblem.size() >= MistakeConfirmation.RECENT_WINDOW) {
-                break;   // 창을 넘겼다
-            }
-            byProblem.merge(seen, code.equals(mistakeCode), (a, b) -> a || b);
-        }
-
-        return (int) byProblem.values().stream().filter(Boolean::booleanValue).count();
+        long previous = others.isEmpty()
+                ? 0
+                : detections.countProblemsWithPrimary(userId, mistakeCode, others);
+        return (int) previous + 1;
     }
 
     private void record(Long userId, Long submissionId, ReviewerOutput output,
