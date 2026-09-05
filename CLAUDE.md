@@ -96,10 +96,27 @@ python tools/meta_test_problems.py  # 그 검사가 실제로 잡는가
 python tools/verify_problems.py     # 실제 채점 (Docker 필요)
 ```
 
+## 점수를 계산할 때
+
+`learning/` 은 Addendum PART I 을 그대로 옮긴 것이다. 값을 임의로 고치지 않는다 —
+힌트 단계별 관측값, EMA alpha, confidence 가중치가 전부 정본 문서에 있다.
+
+**mastery 는 저장된 값이 아니라 Evidence 로부터 재계산되는 파생값이다**
+([ADR-0009](docs/adr/0009-mastery-is-recomputed-from-evidence.md)).
+EMA 는 되돌릴 수 없으므로, 저장된 값이 정본이면 산식을 고쳐도 과거에 적용할 수 없다.
+
+세 가지를 구분한다 — `null`(아직 안 봤다) / `0.0`(보았고 못한다) /
+`mastery` vs `confidence`(얼마나 잘하는가 vs 그 판단을 얼마나 믿는가).
+
+```bash
+python learning/tests/test_mastery.py
+```
+
 ## 현재 상태
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 그리고
-검증된 문제 10개까지 있다. 백엔드·프론트·Judge Worker(큐)·Mastery 엔진은 아직 없다.
+검증된 문제 10개, 그리고 Mastery 산식까지 있다.
+백엔드·프론트·Judge Worker(큐)·Decision Engine 은 아직 없다.
 
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.
