@@ -112,11 +112,29 @@ EMA 는 되돌릴 수 없으므로, 저장된 값이 정본이면 산식을 고�
 python learning/tests/test_mastery.py
 ```
 
+## 산식을 고칠 때는 세 곳을 함께 고친다
+
+Mastery 는 두 번 구현돼 있다 — `learning/`(Python oracle, 실행 가능한 명세)과
+`backend/`(Java production). 둘이 같은 golden fixture 를 읽고 같은 값을 내야 한다
+([ADR-0010](docs/adr/0010-java-implementation-is-checked-against-the-python-oracle.md)).
+
+```bash
+# 1. learning/mastery.py 또는 learning/evidence.py
+# 2. backend/src/main/java/.../MasteryCalculator.java
+# 3. python tools/gen_mastery_golden.py --write
+```
+
+한쪽만 고치면 CI 가 막는다. golden 재생성은 기본 동작이 아니라 `--write` 를 붙여야 한다 —
+값이 조용히 따라 바뀌면 golden 이 아무것도 고정하지 못한다.
+
+**언어 경계는 ADR-0011 이다.** Java 는 애플리케이션(API·영속성·산식·Decision),
+Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들지 않는다.
+
 ## 현재 상태
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 그리고
-검증된 문제 10개, 그리고 Mastery 산식까지 있다.
-백엔드·프론트·Judge Worker(큐)·Decision Engine 은 아직 없다.
+검증된 문제 10개, Mastery 산식, 그리고 백엔드 기반(Spring Boot · PostgreSQL · Flyway)까지
+있다. Decision Engine · Reviewer · API · 프론트 · Judge Worker(큐)는 아직 없다.
 
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.

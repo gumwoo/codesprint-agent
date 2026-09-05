@@ -37,7 +37,9 @@ curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     LLM 요청/응답 + Judge 판정 계약 (JSON Schema)
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스
 problems/      슬라이스 1 의 검증된 문제 10개 (전부 개발 fixture — ADR-0008)
-learning/      Evidence → mastery / confidence / status 산식
+learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
+backend/       Spring Boot · PostgreSQL · Mastery production 구현
+tests/golden/  두 구현을 대조하는 golden fixture
 tools/         계약 검사 + 메타테스트
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
@@ -78,8 +80,15 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
 python tools/verify_problems.py           # 문제 10개를 실제로 채점
-python learning/tests/test_mastery.py     # Mastery 산식
+python learning/tests/test_mastery.py     # Mastery 산식 (Python oracle)
+python tools/gen_mastery_golden.py        # golden 이 oracle 과 일치하는가
+cd backend && gradle test                 # Java 구현이 oracle 과 같은 값을 내는가
 ```
+
+Mastery 는 두 번 구현돼 있다. `learning/` 은 Addendum PART I 의 **실행 가능한 명세**이고
+`backend/` 가 production 이다. 둘이 **같은 golden fixture 를 읽고 같은 값을 내는지**
+CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-against-the-python-oracle.md)) —
+문서를 읽고 옮긴 것이 맞는지 기계가 확인한다.
 
 격리(실행이 갇혀 있는가)와 기밀성(채점 데이터가 새지 않는가)은 다른 축이다.
 정답표가 컨테이너 안에 있으면 코드가 갇혀 있어도 그것을 읽어 되뱉을 수 있으므로,
@@ -96,9 +105,11 @@ python learning/tests/test_mastery.py     # Mastery 산식
 | LLM 계약 + 검사 하네스 | 완료 |
 | Judge / Sandbox (Python 3.12) | 완료 |
 | 문제 · Test Case 10개 | 완료 |
-| Mastery / Evidence 산식 | 완료 |
+| Mastery / Evidence 산식 (Python oracle) | 완료 |
+| 백엔드 기반 · Evidence 영속성 · Java 산식 | 완료 |
 | Judge Worker / 큐 | 미착수 |
-| Backend / Frontend | 미착수 |
+| Decision Engine | 미착수 |
+| API / Frontend | 미착수 |
 | Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이다.
