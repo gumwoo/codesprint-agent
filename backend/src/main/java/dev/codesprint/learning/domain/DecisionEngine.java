@@ -1,0 +1,133 @@
+package dev.codesprint.learning.domain;
+
+import dev.codesprint.curriculum.CurriculumCatalog;
+import java.util.Map;
+import java.util.Optional;
+import org.springframework.stereotype.Component;
+
+/**
+ * 다음 학습 행동을 정한다. 정본: Addendum §43, PRD §75~76.
+ *
+ * <p><b>LLM 에게 묻지 않는다</b>(ADR-0002). Reviewer 는 오답 원인 후보와 confidence 까지만
+ * 내고, 그 Mistake 를 확정할지조차 시스템이 판단한다(Addendum §21). 여기 있는 규칙이
+ * 유일한 결정 주체다.
+ *
+ * <p>순수 함수다. 같은 입력에는 같은 출력이 나오고, 상태도 시간도 보지 않는다.
+ * 규칙 하나하나가 단위 테스트 대상이다(Addendum §86).
+ */
+@Component
+public class DecisionEngine {
+
+    private final CurriculumCatalog catalog;
+    private final PrerequisiteEvaluator prerequisites;
+
+    public DecisionEngine(CurriculumCatalog catalog, PrerequisiteEvaluator prerequisites) {
+        this.catalog = catalog;
+        this.prerequisites = prerequisites;
+    }
+
+    /**
+     * 결정에 필요한 것 전부.
+     *
+     * @param judgeStatus Judge 판정. AI 가 관여하지 않은 결정론적 값이다.
+     * @param confirmedMistake <b>확정된</b> Mistake code. Reviewer 가 낸 후보가 아니라
+     *     Addendum §21 의 조건을 통과한 것만 들어온다. 없으면 null.
+     * @param sameProblemAttempts 이 문제를 몇 번째 시도하는가 (이번 제출 포함).
+     * @param reviewCompleted 이 Skill 에 복습 성공 기록이 있는가.
+     * @param masteries 다른 Skill 들의 mastery. 선수 조건 판정에 쓴다.
+     */
+    public record Context(
+            String skillCode,
+            SkillState state,
+            String judgeStatus,
+            String confirmedMistake,
+            int sameProblemAttempts,
+            boolean reviewCompleted,
+            Map<String, Double> masteries) {
+    }
+
+    public NextAction decide(Context context) {
+        // 0. 잠긴 Skill 은 애초에 진행하지 않는다.
+        //
+        // Addendum §43 에는 없는 분기다. 그 pseudocode 는 "이미 이 Skill 을 하고 있다" 를
+        // 전제하는데, 실제로는 선수 조건을 못 채운 Skill 의 문제가 주어질 수 있다.
+        // 그대로 두면 사용자가 준비되지 않은 문제에서 반복 실패하고, 그 실패가
+        // Evidence 로 쌓여 mastery 를 끌어내린다.
+        if (context.state().status() == SkillStatus.UNASSESSED) {
+            Optional<String> blocker =
+                    prerequisites.nextPrerequisite(context.skillCode(), context.masteries());
+            if (blocker.isPresent()) {
+                return NextAction.targeting(ActionType.CHANGE_SKILL, blocker.get(),
+                        "선수 조건 미충족: " + blocker.get() + " 을(를) 먼저 채운다");
+            }
+        }
+
+        if ("ACCEPTED".equals(context.judgeStatus())) {
+            return onAccepted(context);
+        }
+
+        // COMPILE_ERROR 와 SYSTEM_ERROR 에서는 Reviewer 를 부르지 않는다(ADR-0004).
+        // 확정된 Mistake 도 없으므로 드릴로 보낼 근거가 없다.
+        if ("COMPILE_ERROR".equals(context.judgeStatus())) {
+            // 문법을 고쳐 다시 내면 되는 상황이다. 다른 문제로 보내면 오히려 흐름이 끊긴다.
+            return NextAction.of(ActionType.CONTINUE, "문법 오류 - 같은 문제를 고쳐 다시 낸다");
+        }
+        if ("SYSTEM_ERROR".equals(context.judgeStatus())) {
+            // 우리 잘못이다. 사용자의 학습 경로를 바꾸지 않는다.
+            return NextAction.of(ActionType.CONTINUE, "채점 실패 - 사용자 잘못이 아니다");
+        }
+
+        return onFailure(context);
+    }
+
+    /** Addendum §43 의 성공 분기. */
+    private NextAction onAccepted(Context context) {
+        SkillState state = context.state();
+        Double mastery = state.mastery();
+
+        boolean strong = mastery != null
+                && mastery >= MasteryCalculator.MASTERY_THRESHOLD
+                && state.confidence() >= MasteryCalculator.CONFIDENCE_THRESHOLD;
+
+        if (!strong) {
+            return NextAction.of(ActionType.CONTINUE,
+                    "정답이지만 아직 문턱 아래 (mastery=" + mastery
+                            + ", confidence=" + state.confidence() + ")");
+        }
+
+        // 복습 없는 Mastery 를 인정하지 않는다(PRD §143-5, Addendum §22).
+        // 점수가 높아도 "며칠 뒤에도 되는가" 를 보지 않았으면 다음으로 넘기지 않는다.
+        if (!context.reviewCompleted()) {
+            return NextAction.of(ActionType.SCHEDULE_REVIEW,
+                    "문턱은 넘었으나 복습 성공 기록이 없다");
+        }
+        return NextAction.of(ActionType.UNLOCK_NEXT, "네 조건을 모두 채웠다");
+    }
+
+    /** Addendum §43 의 실패 분기. */
+    private NextAction onFailure(Context context) {
+        // 확정된 Mistake 가 자동 드릴 대상이면 거기로 보낸다.
+        //
+        // 대상 Skill 을 여기 하드코딩하지 않는다. curriculum/mistakes.yaml 의
+        // auto_drill / target_skill 이 정본이고, 그 Skill 을 PRIMARY 로 갖는
+        // MICRO_DRILL 문제가 실재하는지는 tools/check_problems.py 가 확인한다.
+        // 하드코딩하면 데이터를 고쳐도 코드가 따라가지 않는다.
+        String mistake = context.confirmedMistake();
+        if (mistake != null) {
+            String target = catalog.autoDrillTarget(mistake);
+            if (target != null) {
+                return NextAction.targeting(ActionType.MICRO_DRILL, target,
+                        "확정된 실수 " + mistake + " → " + target + " 드릴");
+            }
+        }
+
+        // 같은 문제를 세 번 넘게 틀리면 문제가 아니라 개념 쪽이다.
+        if (context.sameProblemAttempts() >= 3) {
+            return NextAction.targeting(ActionType.REVIEW_CONCEPT, context.skillCode(),
+                    "같은 문제 " + context.sameProblemAttempts() + "회 실패 - 개념부터 다시 본다");
+        }
+
+        return NextAction.targeting(ActionType.RETRY_VARIANT, context.skillCode(),
+                "구현 연습이 더 필요하다");
+    }
+}
