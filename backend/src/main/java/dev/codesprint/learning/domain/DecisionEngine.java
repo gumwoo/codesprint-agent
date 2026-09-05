@@ -30,6 +30,7 @@ public class DecisionEngine {
      * 결정에 필요한 것 전부.
      *
      * @param judgeStatus Judge 판정. AI 가 관여하지 않은 결정론적 값이다.
+     *     아직 끝나지 않은 판정({@code QUEUED} / {@code RUNNING})은 받지 않는다.
      * @param confirmedMistake <b>확정된</b> Mistake code. Reviewer 가 낸 후보가 아니라
      *     Addendum §21 의 조건을 통과한 것만 들어온다. 없으면 null.
      * @param sameProblemAttempts 이 문제를 몇 번째 시도하는가 (이번 제출 포함).
@@ -39,7 +40,7 @@ public class DecisionEngine {
     public record Context(
             String skillCode,
             SkillState state,
-            String judgeStatus,
+            JudgeStatus judgeStatus,
             String confirmedMistake,
             int sameProblemAttempts,
             boolean reviewCompleted,
@@ -47,6 +48,14 @@ public class DecisionEngine {
     }
 
     public NextAction decide(Context context) {
+        // 판정이 끝나지 않은 제출로는 다음 행동을 정할 수 없다.
+        // 문자열로 받던 시절에는 QUEUED 가 들어와도 일반 실패처럼 RETRY_VARIANT 를 냈다 -
+        // 채점이 끝나지도 않았는데 다른 문제로 보내는 것이다.
+        if (!context.judgeStatus().isTerminal()) {
+            throw new IllegalArgumentException(
+                    "판정이 끝나지 않은 제출로 다음 행동을 정할 수 없다: " + context.judgeStatus());
+        }
+
         // 0. 잠긴 Skill 은 애초에 진행하지 않는다.
         //
         // Addendum §43 에는 없는 분기다. 그 pseudocode 는 "이미 이 Skill 을 하고 있다" 를
@@ -62,46 +71,58 @@ public class DecisionEngine {
             }
         }
 
-        if ("ACCEPTED".equals(context.judgeStatus())) {
-            return onAccepted(context);
-        }
+        return switch (context.judgeStatus()) {
+            case ACCEPTED -> onAccepted(context);
 
-        // COMPILE_ERROR 와 SYSTEM_ERROR 에서는 Reviewer 를 부르지 않는다(ADR-0004).
-        // 확정된 Mistake 도 없으므로 드릴로 보낼 근거가 없다.
-        if ("COMPILE_ERROR".equals(context.judgeStatus())) {
-            // 문법을 고쳐 다시 내면 되는 상황이다. 다른 문제로 보내면 오히려 흐름이 끊긴다.
-            return NextAction.of(ActionType.CONTINUE, "문법 오류 - 같은 문제를 고쳐 다시 낸다");
-        }
-        if ("SYSTEM_ERROR".equals(context.judgeStatus())) {
-            // 우리 잘못이다. 사용자의 학습 경로를 바꾸지 않는다.
-            return NextAction.of(ActionType.CONTINUE, "채점 실패 - 사용자 잘못이 아니다");
-        }
+            // COMPILE_ERROR 와 SYSTEM_ERROR 에서는 Reviewer 를 부르지 않는다(ADR-0004).
+            // 확정된 Mistake 도 없으므로 드릴로 보낼 근거가 없다.
+            //
+            // 문법 오류는 고쳐 다시 내면 되는 상황이다. 다른 문제로 보내면 흐름이 끊긴다.
+            case COMPILE_ERROR ->
+                    NextAction.of(ActionType.CONTINUE, "문법 오류 - 같은 문제를 고쳐 다시 낸다");
+            // 채점 실패는 우리 잘못이다. 사용자의 학습 경로를 바꾸지 않는다.
+            case SYSTEM_ERROR ->
+                    NextAction.of(ActionType.CONTINUE, "채점 실패 - 사용자 잘못이 아니다");
 
-        return onFailure(context);
+            default -> onFailure(context);
+        };
     }
 
-    /** Addendum §43 의 성공 분기. */
+    /**
+     * Addendum §43 의 성공 분기.
+     *
+     * <p><b>"숙달했는가" 의 판정자는 {@link MasteryCalculator} 하나다.</b> 여기서
+     * mastery / confidence 문턱을 다시 확인하지 않는다 - 그러면 Mastery 규칙의 일부만
+     * 복제하게 되고, 나머지 조건(최근 독립 풀이 2/3 성공, 복습 성공, WEAKENED 이력)을
+     * 빠뜨린 채 다음 Skill 로 넘기게 된다.
+     *
+     * <p>실제로 그랬다. 문턱만 보던 시절에는 {@code PRACTICING} 과 {@code WEAKENED} 에서도
+     * {@code UNLOCK_NEXT} 가 나왔다 - 아직 숙달되지 않은 사용자를 다음 Skill 로 넘기는 것은
+     * Decision Engine 이 가장 피해야 할 오류다.
+     */
     private NextAction onAccepted(Context context) {
         SkillState state = context.state();
-        Double mastery = state.mastery();
 
-        boolean strong = mastery != null
+        if (state.status() == SkillStatus.MASTERED) {
+            return NextAction.of(ActionType.UNLOCK_NEXT,
+                    "MASTERED - Addendum 22 의 네 조건을 모두 채웠다");
+        }
+
+        // 점수는 충분한데 MASTERED 가 아닌 가장 흔한 이유가 "복습을 아직 안 했다" 다.
+        // 복습 없는 Mastery 를 인정하지 않으므로(PRD §143-5) 그쪽으로 밀어준다.
+        Double mastery = state.mastery();
+        boolean strongScores = mastery != null
                 && mastery >= MasteryCalculator.MASTERY_THRESHOLD
                 && state.confidence() >= MasteryCalculator.CONFIDENCE_THRESHOLD;
 
-        if (!strong) {
-            return NextAction.of(ActionType.CONTINUE,
-                    "정답이지만 아직 문턱 아래 (mastery=" + mastery
-                            + ", confidence=" + state.confidence() + ")");
+        if (strongScores && !context.reviewCompleted()) {
+            return NextAction.of(ActionType.SCHEDULE_REVIEW,
+                    "점수는 문턱을 넘었으나 복습 성공 기록이 없다");
         }
 
-        // 복습 없는 Mastery 를 인정하지 않는다(PRD §143-5, Addendum §22).
-        // 점수가 높아도 "며칠 뒤에도 되는가" 를 보지 않았으면 다음으로 넘기지 않는다.
-        if (!context.reviewCompleted()) {
-            return NextAction.of(ActionType.SCHEDULE_REVIEW,
-                    "문턱은 넘었으나 복습 성공 기록이 없다");
-        }
-        return NextAction.of(ActionType.UNLOCK_NEXT, "네 조건을 모두 채웠다");
+        return NextAction.of(ActionType.CONTINUE,
+                "정답이지만 아직 " + state.status() + " (mastery=" + mastery
+                        + ", confidence=" + state.confidence() + ")");
     }
 
     /** Addendum §43 의 실패 분기. */
