@@ -180,6 +180,17 @@ class Evidence:
         """DB 의 UNIQUE(source_event_id, skill_code) 와 같은 키."""
         return (self.source_event_id, self.skill_code)
 
+    def __post_init__(self) -> None:
+        # 값 범위는 계약이 요구하는 것이지만 여기서도 막는다. Evidence 는 append-only
+        # 정본이라 잘못 만들어지면 그대로 저장되고, 그 값으로 접은 mastery 가 계속 나온다.
+        if self.weight < 0:
+            raise ValueError(f"weight 는 음수일 수 없다: {self.weight}")
+        if self.source_confidence is not None and not (0.0 <= self.source_confidence <= 1.0):
+            raise ValueError(f"sourceConfidence 는 0~1 이어야 한다: {self.source_confidence}")
+        for dim, value in self.observed.items():
+            if value is not None and not (0.0 <= value <= 1.0):
+                raise ValueError(f"관측값은 0~1 이어야 한다: {dim}={value}")
+
     def to_dict(self) -> dict:
         return {
             "evidenceId": self.evidence_id,

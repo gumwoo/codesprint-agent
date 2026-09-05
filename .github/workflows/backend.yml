@@ -1,0 +1,62 @@
+name: Backend
+
+# Java 백엔드. Judge 는 여기 없다 - 사용자 코드는 별도 Python Worker 가 실행한다
+# (ADR-0011). 이 잡이 검증하는 것은 산식 이식과 영속성이다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'tests/golden/**'
+      - 'learning/**'
+      - 'contracts/**'
+      - '.github/workflows/backend.yml'
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Java 산식 대조 + 영속성
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Gradle wrapper jar 를 저장소에 넣지 않는다. 리뷰어가 내용을 읽을 수 없는
+      # 바이너리이고, 바꿔치기된 wrapper 는 실제로 알려진 공급망 공격 경로다.
+      # 대신 버전을 여기서 고정한다.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: install python deps
+        run: pip install -r requirements-dev.txt
+
+      # golden 이 현재 Python 산식과 일치하는지 먼저 본다.
+      # 여기가 깨지면 Java 대조는 낡은 기대값을 검증하는 셈이다.
+      - name: golden fixture 가 Python oracle 과 일치하는가
+        run: python tools/gen_mastery_golden.py
+
+      # Testcontainers 가 러너의 Docker 를 쓴다. 외부 DB 를 주지 않으므로
+      # 컨테이너를 띄우지 못하면 skip 이 아니라 실패한다.
+      - name: backend test (golden 대조 + 영속성)
+        working-directory: backend
+        run: gradle test --no-daemon
+
+      - name: upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/build/test-results/
+          retention-days: 14

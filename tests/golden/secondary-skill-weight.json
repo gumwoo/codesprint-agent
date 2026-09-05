@@ -1,0 +1,47 @@
+{
+  "name": "secondary-skill-weight",
+  "description": "SECONDARY Skill 로 참여한 문제는 confidence 를 덜 올린다. 그 문제가 그 Skill 을 덜 봤기 때문이다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 0.25,
+      "observed": {
+        "concept": null,
+        "recognition": null,
+        "implementation": 0.9,
+        "independent": 0.95,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "ACCEPTED",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": 0.9,
+    "independent": 0.95,
+    "retention": null,
+    "speed": null,
+    "mastery": 0.925,
+    "confidence": 0.0312,
+    "evidenceCount": 1,
+    "status": "PRACTICING"
+  }
+}

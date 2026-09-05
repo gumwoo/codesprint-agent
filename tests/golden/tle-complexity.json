@@ -1,0 +1,47 @@
+{
+  "name": "tle-complexity",
+  "description": "복잡도가 틀린 TLE 는 알고리즘 선택(recognition)도 낮춘다. 상수 최적화 문제였다면 recognition 은 건드리지 않는다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [
+    {
+      "evidenceId": "ev_bde7e2628ad7a59ed015122f",
+      "sourceEventId": "submission:1",
+      "skillCode": "BFS_GRID_TRAVERSAL",
+      "evidenceType": "PROBLEM_SUBMISSION",
+      "occurredAt": "2026-09-01T10:00:00Z",
+      "weight": 1.0,
+      "observed": {
+        "concept": null,
+        "recognition": 0.35,
+        "implementation": 0.45,
+        "independent": null,
+        "retention": null,
+        "speed": null
+      },
+      "sourceConfidence": 1.0,
+      "context": {
+        "problemCode": null,
+        "judgeStatus": "TIME_LIMIT",
+        "hintLevel": 0,
+        "solutionViewed": false,
+        "independentAttempt": true,
+        "reviewSucceeded": null,
+        "daysSinceLast": null,
+        "verdict": null
+      }
+    }
+  ],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": 0.35,
+    "implementation": 0.45,
+    "independent": null,
+    "retention": null,
+    "speed": null,
+    "mastery": 0.4056,
+    "confidence": 0.125,
+    "evidenceCount": 1,
+    "status": "LEARNING"
+  }
+}

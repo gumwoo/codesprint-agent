@@ -107,6 +107,32 @@ recompute([b, a])  mastery 0.275
 `from_submission()`이 `judge-result.schema.json`의 enum에 없는 status를 거부하고,
 테스트가 두 목록이 같은지 대조한다.
 
+## append-only는 말이 아니라 강제여야 한다
+
+"Evidence가 정본이고 append-only다"는 이 ADR의 전제인데, 처음 구현에서는 그것을
+**아무것도 강제하지 않았다.** 엔티티에 setter를 두지 않은 것이 근거였지만 그건 평범한
+코드에서 필드를 바꾸기 어렵게 할 뿐이다.
+
+```text
+UPDATE skill_evidence SET observed_implementation = 0.1 → UPDATE 1
+DELETE FROM skill_evidence WHERE id = 1                 → DELETE 1
+```
+
+Evidence 하나가 사라지면 과거를 다시 접었을 때 다른 mastery가 나온다. 그러면 다른
+status, 다른 Decision으로 이어진다. `user_skills`는 캐시라 다시 만들면 되지만 이쪽은
+복원할 방법이 없다 — **이 ADR이 얻으려던 것 전부가 무너진다.**
+
+세 층에서 막는다.
+
+| 층 | 막는 것 |
+| --- | --- |
+| 엔티티 | setter 없음 |
+| Repository | `JpaRepository` 미상속. `delete*` API 자체가 없다 |
+| DB 트리거 | `UPDATE` / `DELETE` 거부 |
+
+**남은 것**: 사용자 데이터 삭제(탈퇴, GDPR)는 이 트리거를 우회해야 한다. 권한을 가진
+경로에서 트리거를 잠시 끄고 감사 기록을 남기는 방식이 필요하며 아직 없다.
+
 ## EMA는 순서에 의존한다
 
 재계산이 결정론적이려면 접는 순서가 고정돼야 하고, **그 순서가 실제 시간순과 같아야

@@ -1,0 +1,19 @@
+{
+  "name": "unassessed",
+  "description": "Evidence 가 없으면 mastery 는 null 이다. 0.0(평가했고 못함)과 구분한다.",
+  "skillCode": "BFS_GRID_TRAVERSAL",
+  "evidences": [],
+  "expected": {
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "concept": null,
+    "recognition": null,
+    "implementation": null,
+    "independent": null,
+    "retention": null,
+    "speed": null,
+    "mastery": null,
+    "confidence": 0.0,
+    "evidenceCount": 0,
+    "status": "UNASSESSED"
+  }
+}
