@@ -4,13 +4,36 @@
 AI 는 여기 관여하지 않는다(ADR-0001, Addendum 81).
 
 ```text
-run_submission.py          호스트. 일회용 컨테이너를 만들고 결과를 수거한다
+run_submission.py          호스트(신뢰). 컨테이너를 만들고, 정답과 비교하고, 판정을 조립한다
   └─ Dockerfile            python:3.12-slim, non-root, 하네스를 구워 넣는다
-       └─ runner/harness.py 컨테이너 안. Test Case 를 순회 실행하고 JSON 을 낸다
+       └─ runner/harness.py 컨테이너 안(신뢰 안 함). **실행만 한다. 채점하지 않는다**
 
-fixtures/                  판정 8종을 재현하는 최소 문제 + 제출 코드
-tests/test_judge.py        판정 8건 + 격리 8건 (대조군 포함)
+fixtures/                  판정을 재현하는 최소 문제 + 제출 코드
+tests/test_judge.py        판정 9건 + 격리 8건 + 기밀성 3건
 ```
+
+## 신뢰 경계 — 정답은 컨테이너에 들어가지 않는다
+
+```text
+호스트 (신뢰)                          컨테이너 (신뢰하지 않음)
+─────────────                          ────────────────────────
+job.json 전체
+expectedOutput           ── input ──>  solution.py
+정답 비교                              현재 case 만 실행
+판정 조립                <── stdout ──  사용자 출력
+```
+
+**read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다.** 정답표를 컨테이너에 두면
+아래 코드가 알고리즘을 한 줄도 풀지 않고 전 case 를 통과한다. 실제로 그랬다.
+
+```python
+job = json.load(open("/job/job.json"))
+for case in job["cases"]:
+    if case["input"] == sys.stdin.read():
+        sys.stdout.write(case["expectedOutput"])
+```
+
+근거와 경위: [ADR-0006](../docs/adr/0006-expected-output-never-enters-sandbox.md)
 
 ## 실행
 
@@ -35,11 +58,23 @@ python judge/tests/test_judge.py --build
 | `--cap-drop ALL` | capability 를 이용한 권한 상승 |
 | `--security-opt no-new-privileges` | setuid 권한 상승 |
 | `--tmpfs /tmp:noexec,nosuid` | 받아온 바이너리 실행 |
-| `-v ...:/job:ro` | Test Case 변조로 오답을 정답으로 |
+| `-v ...:/job:ro` | 제출 코드 바꿔치기 |
+| 마운트에 `solution.py` 만 | **정답표 유출** (ADR-0006) |
 | `USER runner` (uid 10001) | 컨테이너 탈출 난이도 |
 
 Docker 는 완전한 보안 샌드박스가 아니다(호스트 커널 공유). 외부 공개 전에 gVisor
 도입 여부를 Security Gate 로 둔다(Addendum 49, 71).
+
+## 두 축을 따로 검사한다
+
+격리(실행이 갇혀 있는가)와 기밀성(채점 데이터가 새지 않는가)은 **다른 축**이다.
+처음에는 격리만 검사했고, 그 8종은 전부 통과하면서도 정답표 유출을 하나도 잡지 못했다.
+쓰기만 확인하고 읽기를 확인하지 않았기 때문이다.
+
+```text
+Test Case 변조 방지   격리   (open('/job/job.json', 'w') 가 실패하는가)
+Test Case 유출 방지   기밀성 (애초에 그 파일이 없는가)
+```
 
 ## 격리 테스트에 대조군이 있는 이유
 
@@ -85,6 +120,15 @@ Reviewer 출력의 `failedCaseRefs`(minItems 1)를 채울 수 없다(ADR-0004).
 줄 끝 공백과 마지막 개행 차이로 오답 처리하지 않는다. 관용이 아니라 정확성 문제다 -
 `print()` 가 붙이는 개행을 두고 WA 를 내면 사용자는 알고리즘을 의심하게 되고,
 오답 원인 분석 데이터도 그만큼 오염된다.
+
+## hard timeout 과 컨테이너 회수
+
+`--rm` 은 컨테이너가 **스스로 종료했을 때** 지워준다. hard timeout 으로 docker CLI 를
+끊으면 컨테이너는 계속 돌 수 있고, 그러면 CPU 와 메모리를 계속 먹는다.
+
+그래서 컨테이너에 이름을 붙이고(`codesprint-judge-<uuid>`), timeout 과 finally 양쪽에서
+`docker rm -f` 로 회수한다. 테스트가 짧은 hard timeout 을 걸고 무한 루프를 돌려
+잔존 컨테이너가 없는지 확인한다.
 
 ## 아직 없는 것
 

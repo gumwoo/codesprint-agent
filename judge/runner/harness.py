@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
-"""컨테이너 안에서 도는 채점 하네스.
+"""컨테이너 안에서 도는 실행 하네스.
 
-호스트가 /job 에 read-only 로 마운트한 작업을 읽어 Test Case 를 순서대로 실행하고,
-contracts/judge-result.schema.json 형태의 JSON 을 stdout 으로 낸다.
+**이 하네스는 채점하지 않는다.** 실행만 하고 결과를 그대로 돌려준다.
 
-Submission 당 컨테이너 1개, 그 안에서 case 를 순회한다(Addendum 61).
-case 마다 컨테이너를 새로 만들면 기동 비용이 실행 시간을 압도한다.
+정답(expectedOutput)은 컨테이너 안으로 들어오지 않는다. 들어오면 사용자 코드가
+그것을 읽어 그대로 출력할 수 있다 - read-only 마운트는 수정을 막을 뿐 읽기를 막지
+않는다. 실제로 그렇게 짜서 알고리즘을 한 줄도 풀지 않고 4/4 ACCEPTED 를 받아봤다.
+근거: docs/adr/0006-expected-output-never-enters-sandbox.md
 
-  /job/job.json       문제 메타 + Test Case
-  /job/solution.py    사용자 코드 (신뢰할 수 없다)
+그래서 비교는 신뢰 경계 바깥(호스트)에서 한다. 여기서 하는 일은 이것뿐이다.
+
+  /job/solution.py 를 읽어 문법을 확인한다
+  호스트가 stdin 으로 보내주는 case input 을 사용자 코드에 먹인다
+  사용자 코드의 stdout 과 실행 결과를 stdout 으로 돌려준다
+
+프로토콜은 줄 단위 JSON(NDJSON)이며 한 번에 한 case 씩 주고받는다.
+
+  호스트 -> 하네스   {"type":"config",...} {"type":"case",...} {"type":"end"}
+  하네스 -> 호스트   {"type":"ready"|"compile_error"} {"type":"case_result",...} {"type":"done"}
+
+한쪽이 쓰는 동안 다른 쪽은 읽고 있으므로 파이프가 막히지 않는다.
 
 이 파일은 사용자 코드를 **import 하지 않는다.** 별도 프로세스로 띄우고 stdin/stdout
 으로만 통신한다. import 하면 사용자 코드가 이 하네스의 메모리 공간에서 돌아
-결과 JSON 자체를 조작할 수 있다.
+프로토콜 자체를 조작할 수 있다.
 """
 from __future__ import annotations
 
@@ -24,11 +35,9 @@ import subprocess
 import sys
 import time
 
-JOB_DIR = pathlib.Path("/job")
-SOLUTION = JOB_DIR / "solution.py"
-JOB_FILE = JOB_DIR / "job.json"
+SOLUTION = pathlib.Path("/job/solution.py")
 
-# 사용자가 무한 출력으로 디스크/파이프를 채우는 것을 막는다(Addendum 64).
+# 사용자가 무한 출력으로 파이프를 채우는 것을 막는다(Addendum 64).
 STDOUT_LIMIT = 1024 * 1024
 STDERR_LIMIT = 256 * 1024
 
@@ -44,16 +53,6 @@ def sanitize_stderr(text: str) -> str | None:
     if len(cleaned) > STDERR_LIMIT:
         cleaned = cleaned[:STDERR_LIMIT] + "\n... (생략됨)"
     return cleaned
-
-
-def normalize(output: str) -> str:
-    """출력 비교 정규화.
-
-    줄 끝 공백과 마지막 개행 차이로 오답 처리하지 않는다. 이건 관용이 아니라
-    정확성 문제다 - print() 가 붙이는 개행을 두고 WA 를 내면 사용자는 알고리즘을
-    의심하게 되고, 오답 원인 분석 데이터도 그만큼 오염된다.
-    """
-    return "\n".join(line.rstrip() for line in output.replace("\r\n", "\n").split("\n")).rstrip("\n")
 
 
 def compile_check(path: pathlib.Path) -> str | None:
@@ -108,8 +107,10 @@ def _read_capped(path: pathlib.Path, cap: int) -> tuple[str, bool]:
         return "", False
 
 
-def run_case(case: dict, time_limit_ms: int) -> dict:
-    """Test Case 하나를 별도 프로세스로 실행한다.
+def run_case(case_input: str, time_limit_ms: int) -> dict:
+    """사용자 코드를 한 번 실행하고 **날것의 결과**를 돌려준다.
+
+    정답과 비교하지 않는다. 비교는 호스트가 한다.
 
     출력은 파이프가 아니라 tmpfs 의 파일로 받는다. 파이프로 받으면 하네스가 그것을
     메모리에 쌓게 되고, 무한 출력하는 코드 하나가 컨테이너 전체를 OOM 으로 끌어내린다.
@@ -124,7 +125,7 @@ def run_case(case: dict, time_limit_ms: int) -> dict:
         with out_path.open("wb") as out, err_path.open("wb") as err:
             proc = subprocess.run(
                 [sys.executable, str(SOLUTION)],
-                input=case.get("input", "").encode(),
+                input=case_input.encode(),
                 stdout=out,
                 stderr=err,
                 timeout=hard_limit,
@@ -132,12 +133,8 @@ def run_case(case: dict, time_limit_ms: int) -> dict:
             )
         returncode = proc.returncode
     except subprocess.TimeoutExpired:
-        return {
-            "id": case["id"],
-            "status": "TIME_LIMIT",
-            "executionMs": time_limit_ms,
-            "stderr": None,
-        }
+        return {"outcome": "TIME_LIMIT", "stdout": "", "stderr": None,
+                "executionMs": time_limit_ms}
     elapsed_ms = int((time.monotonic() - started) * 1000)
 
     stdout_text, stdout_capped = _read_capped(out_path, STDOUT_LIMIT)
@@ -146,109 +143,28 @@ def run_case(case: dict, time_limit_ms: int) -> dict:
     # SIGXFSZ(-25) 는 RLIMIT_FSIZE 초과. 파일 크기로도 한 번 더 본다 -
     # 시그널을 무시하도록 만든 코드가 있을 수 있다.
     if returncode == -25 or stdout_capped:
-        return {
-            "id": case["id"],
-            "status": "OUTPUT_LIMIT",
-            "executionMs": elapsed_ms,
-            "stderr": None,
-        }
+        return {"outcome": "OUTPUT_LIMIT", "stdout": "", "stderr": None,
+                "executionMs": elapsed_ms}
 
     if returncode != 0:
         # 137 / -9 = SIGKILL. 컨테이너 메모리 상한에 걸린 경우가 대부분이다.
-        status = "MEMORY_LIMIT" if returncode in (137, -9) else "RUNTIME_ERROR"
+        outcome = "MEMORY_LIMIT" if returncode in (137, -9) else "RUNTIME_ERROR"
         if "MemoryError" in stderr_text:
-            status = "MEMORY_LIMIT"
-        return {
-            "id": case["id"],
-            "status": status,
-            "executionMs": elapsed_ms,
-            "stderr": sanitize_stderr(stderr_text),
-        }
+            outcome = "MEMORY_LIMIT"
+        return {"outcome": outcome, "stdout": "", "stderr": sanitize_stderr(stderr_text),
+                "executionMs": elapsed_ms}
 
     if elapsed_ms > time_limit_ms:
-        return {"id": case["id"], "status": "TIME_LIMIT", "executionMs": elapsed_ms, "stderr": None}
+        return {"outcome": "TIME_LIMIT", "stdout": "", "stderr": None,
+                "executionMs": elapsed_ms}
 
-    if normalize(stdout_text) != normalize(case.get("expectedOutput", "")):
-        return {
-            "id": case["id"],
-            "status": "WRONG_ANSWER",
-            "executionMs": elapsed_ms,
-            "stderr": None,
-        }
-
-    return {"id": case["id"], "status": "ACCEPTED", "executionMs": elapsed_ms, "stderr": None}
+    return {"outcome": "OK", "stdout": stdout_text, "stderr": None,
+            "executionMs": elapsed_ms}
 
 
-def emit(result: dict) -> None:
-    sys.stdout.write(json.dumps(result, ensure_ascii=False))
+def emit(message: dict) -> None:
+    sys.stdout.write(json.dumps(message, ensure_ascii=False) + "\n")
     sys.stdout.flush()
-
-
-def main() -> int:
-    try:
-        job = json.loads(JOB_FILE.read_text(encoding="utf-8"))
-    except Exception as e:
-        emit({
-            "status": "SYSTEM_ERROR", "passed": 0, "total": 1,
-            "executionMs": None, "memoryKb": None, "failedCaseId": None,
-            "stderr": f"job 을 읽지 못했다: {type(e).__name__}", "cases": [],
-        })
-        return 0
-
-    cases = job.get("cases") or []
-    total = len(cases)
-    if total == 0:
-        emit({
-            "status": "SYSTEM_ERROR", "passed": 0, "total": 1,
-            "executionMs": None, "memoryKb": None, "failedCaseId": None,
-            "stderr": "Test Case 가 없다", "cases": [],
-        })
-        return 0
-
-    compile_error = compile_check(SOLUTION)
-    if compile_error is not None:
-        # case 를 하나도 실행하지 못했다. failedCaseId 는 null 이며,
-        # 이 상태에서는 Reviewer 를 호출하지 않는다(ADR-0004).
-        emit({
-            "status": "COMPILE_ERROR", "passed": 0, "total": total,
-            "executionMs": None, "memoryKb": None, "failedCaseId": None,
-            "stderr": compile_error, "cases": [],
-        })
-        return 0
-
-    time_limit_ms = int(job.get("timeLimitMs", 2000))
-    results: list[dict] = []
-    passed = 0
-    max_ms = 0
-
-    for case in cases:
-        outcome = run_case(case, time_limit_ms)
-        results.append({k: outcome[k] for k in ("id", "status", "executionMs")})
-        if outcome["executionMs"] is not None:
-            max_ms = max(max_ms, outcome["executionMs"])
-
-        if outcome["status"] != "ACCEPTED":
-            # 첫 실패에서 멈춘다. 남은 case 를 더 돌려도 판정은 바뀌지 않고,
-            # 무한루프 코드에 전체 case 수만큼의 timeout 을 쓰게 된다.
-            emit({
-                "status": outcome["status"],
-                "passed": passed,
-                "total": total,
-                "executionMs": max_ms,
-                "memoryKb": peak_memory_kb(),
-                "failedCaseId": outcome["id"],
-                "stderr": outcome["stderr"],
-                "cases": results,
-            })
-            return 0
-        passed += 1
-
-    emit({
-        "status": "ACCEPTED", "passed": passed, "total": total,
-        "executionMs": max_ms, "memoryKb": peak_memory_kb(),
-        "failedCaseId": None, "stderr": None, "cases": results,
-    })
-    return 0
 
 
 def peak_memory_kb() -> int | None:
@@ -257,6 +173,40 @@ def peak_memory_kb() -> int | None:
         return int(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)
     except Exception:
         return None
+
+
+def main() -> int:
+    compile_error = compile_check(SOLUTION)
+    if compile_error is not None:
+        emit({"type": "compile_error", "stderr": compile_error})
+        return 0
+    emit({"type": "ready"})
+
+    time_limit_ms = 2000
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            message = json.loads(line)
+        except json.JSONDecodeError:
+            emit({"type": "protocol_error", "detail": "JSON 이 아닌 줄을 받았다"})
+            return 0
+
+        kind = message.get("type")
+        if kind == "config":
+            time_limit_ms = int(message.get("timeLimitMs", 2000))
+        elif kind == "case":
+            result = run_case(message.get("input", ""), time_limit_ms)
+            emit({"type": "case_result", "id": message.get("id"), **result})
+        elif kind == "end":
+            break
+        else:
+            emit({"type": "protocol_error", "detail": f"알 수 없는 type: {kind!r}"})
+            return 0
+
+    emit({"type": "done", "memoryKb": peak_memory_kb()})
+    return 0
 
 
 if __name__ == "__main__":

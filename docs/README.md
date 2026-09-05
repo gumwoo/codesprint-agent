@@ -20,6 +20,7 @@
 | [0003](adr/0003-skill-id-canonical-uppercase.md) | Skill ID 는 UPPER_SNAKE_CASE 정본 하나 |
 | [0004](adr/0004-reviewer-invocation-requires-case-evidence.md) | Reviewer 는 실패 Test Case 가 있을 때만 호출한다 |
 | [0005](adr/0005-judge-stops-at-first-failure.md) | 채점은 첫 실패에서 멈추고, 실패 case 를 특정한다 |
+| [0006](adr/0006-expected-output-never-enters-sandbox.md) | 정답은 샌드박스 안으로 들어가지 않는다 |
 
 ## 분해 계획 (미착수)
 

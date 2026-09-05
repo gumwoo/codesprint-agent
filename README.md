@@ -64,8 +64,12 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 
 ```bash
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
-python judge/tests/test_judge.py          # 판정 8건 + 격리 8건
+python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
 ```
+
+격리(실행이 갇혀 있는가)와 기밀성(채점 데이터가 새지 않는가)은 다른 축이다.
+정답표가 컨테이너 안에 있으면 코드가 갇혀 있어도 그것을 읽어 되뱉을 수 있으므로,
+**정답은 신뢰 경계를 넘지 않는다**([ADR-0006](docs/adr/0006-expected-output-never-enters-sandbox.md)).
 
 ## 현재 상태
 

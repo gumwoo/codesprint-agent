@@ -3,10 +3,11 @@
 
 두 종류를 함께 돌린다.
 
-  판정   fixture 코드가 의도한 status 로 판정되는가
-  격리   Addendum 87 의 보안 항목이 실제로 막히는가
+  판정     fixture 코드가 의도한 status 로 판정되는가
+  격리     Addendum 87 의 보안 항목이 실제로 막히는가
+  기밀성   채점 데이터(정답표)가 컨테이너 안으로 새지 않는가 (ADR-0006)
 
-두 번째가 이 파일의 존재 이유다. `--network none` 을 옵션에 적어두는 것과
+뒤의 둘이 이 파일의 존재 이유다. `--network none` 을 옵션에 적어두는 것과
 **네트워크가 실제로 안 되는 것**은 다르다. 옵션을 지우거나 오타를 내도 채점은
 정상으로 보이고, 아무도 모른 채 신뢰 경계가 사라진다.
 
@@ -63,7 +64,14 @@ VERDICTS = [
     # 조용히 틀린 답을 내기도 한다(curriculum/mistakes.yaml BOUNDARY_CHECK).
     # 이 fixture 는 후자다 - 크래시 없이 WA 가 된다.
     ("sol-boundary-missing.py", "WRONG_ANSWER", True),
+    # 정답표를 찾아 그대로 출력하려는 제출. 컨테이너 안에 expectedOutput 이 없으므로
+    # 찾지 못하고 빈 출력을 낸다(ADR-0006). 아래 CONFIDENTIALITY 가 더 강하게 검사한다.
+    ("sol-answer-leak.py", "WRONG_ANSWER", True),
 ]
+
+# judge-result.schema.json 의 status 중 위에서 다루지 않는 것.
+# SYSTEM_ERROR 는 사용자 코드로 재현할 수 없어 별도 경로로 확인한다(아래 main).
+STATUS_COVERED_ELSEWHERE = {"SYSTEM_ERROR"}
 
 # -- 격리 (Addendum 87) ---------------------------------------------------
 # (이름, 사용자 코드, 이 코드가 성공하면 안 되는 이유)
@@ -126,12 +134,120 @@ ISOLATION = [
 ]
 
 
+# 컨테이너 안을 훑어 채점 데이터가 새어 들어왔는지 보는 프로브들.
+LEAK_PROBE_CASES = """
+import glob, json
+found = []
+for p in glob.glob('/job/**/*', recursive=True) + glob.glob('/tmp/**/*', recursive=True):
+    try:
+        d = json.load(open(p))
+    except Exception:
+        continue
+    if isinstance(d, dict) and 'cases' in d:
+        found.append(p)
+print('LEAK' if found else 'CLEAN')
+"""
+
+# 자기 자신(/job/solution.py)은 제외한다. 이 프로브의 소스에 'expectedOutput' 이라는
+# 문자열이 들어 있어서, 빼지 않으면 자기를 읽고 LEAK 로 오탐한다. 실제로 그랬다.
+# 사용자가 자기 제출 코드를 읽는 것은 유출이 아니다.
+LEAK_PROBE_KEYS = """
+import glob, os
+needles = ('expectedOutput', '"cases"')
+hay = ' '.join(f'{k}={v}' for k, v in os.environ.items())
+for p in glob.glob('/job/**/*', recursive=True) + glob.glob('/tmp/**/*', recursive=True):
+    if os.path.realpath(p) == os.path.realpath('/job/solution.py'):
+        continue
+    try:
+        hay += open(p, errors='ignore').read()
+    except Exception:
+        pass
+print('LEAK' if any(n in hay for n in needles) else 'CLEAN')
+"""
+
+LEAK_PROBE_LISTING = """
+import os
+print(','.join(sorted(os.listdir('/job'))))
+"""
+
+
+# -- 채점 데이터 기밀성 (ADR-0006) ---------------------------------------
+# 실행 격리와 별개의 축이다. 코드가 갇혀 있어도 정답표를 읽을 수 있으면
+# 알고리즘을 하나도 풀지 않고 전 case 를 AC 받을 수 있다. 실제로 그랬다.
+#
+# 프로브는 정답과 비교하지 않고 **사용자 출력 자체**를 확인한다.
+CONFIDENTIALITY = [
+    (
+        "정답표가 컨테이너 안에 없다",
+        LEAK_PROBE_CASES,
+        "CLEAN",
+    ),
+    (
+        "expectedOutput 이라는 키가 어디에도 없다",
+        LEAK_PROBE_KEYS,
+        "CLEAN",
+    ),
+    (
+        "마운트에는 제출 코드만 있다",
+        LEAK_PROBE_LISTING,
+        "solution.py",
+    ),
+]
+
+
 def judge(code: str) -> dict:
     """임시 solution 을 만들어 채점한다."""
     with tempfile.TemporaryDirectory() as d:
         path = pathlib.Path(d) / "solution.py"
         path.write_text(code, encoding="utf-8", newline="")
         return run_submission.run(path, JOB)
+
+
+def judge_with_job(code: str, job: dict) -> dict:
+    """job 을 직접 지정해 채점한다."""
+    with tempfile.TemporaryDirectory() as d:
+        base = pathlib.Path(d)
+        (base / "solution.py").write_text(code, encoding="utf-8", newline="")
+        (base / "job.json").write_text(
+            json.dumps(job, ensure_ascii=False), encoding="utf-8", newline="")
+        return run_submission.run(base / "solution.py", base / "job.json")
+
+
+def _judge_containers() -> set[str]:
+    """지금 살아 있는 채점 컨테이너 이름들."""
+    proc = subprocess.run(
+        ["docker", "ps", "-a", "--filter", "name=codesprint-judge-", "--format", "{{.Names}}"],
+        capture_output=True, text=True, errors="replace",
+    )
+    return {n for n in proc.stdout.split() if n}
+
+
+def judge_probe(code: str, expected_stdout: str) -> str | None:
+    """프로브 코드를 돌리고 **사용자 출력 자체**를 돌려준다.
+
+    판정이 아니라 출력을 봐야 한다. 채점 결과는 ACCEPTED/WRONG_ANSWER 로만 말하므로
+    "무엇이 보였는가" 를 알 수 없다. expectedOutput 을 프로브가 낼 값으로 두고
+    1-case job 을 만들어, ACCEPTED 면 그 값이 나온 것으로 읽는다.
+
+    이 job 의 expectedOutput 은 프로브의 기대 출력("CLEAN" 등)이라 정답표가 아니다 -
+    프로브가 그걸 읽어도 의미가 없다.
+    """
+    with tempfile.TemporaryDirectory() as d:
+        base = pathlib.Path(d)
+        (base / "solution.py").write_text(code, encoding="utf-8", newline="")
+        job = {
+            "problemId": 0,
+            "timeLimitMs": 5000,
+            "cases": [{"id": 1, "input": "", "expectedOutput": expected_stdout}],
+        }
+        (base / "job.json").write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8", newline="")
+        result = run_submission.run(base / "solution.py", base / "job.json")
+
+    if result["status"] == "ACCEPTED":
+        return expected_stdout
+    if result["status"] == "WRONG_ANSWER":
+        return "(기대와 다른 출력)"
+    return None
 
 
 def judge_unrestricted(code: str) -> dict:
@@ -231,10 +347,81 @@ def main() -> int:
             continue
         print(f"[O] {name} -> 제한 있음 RUNTIME_ERROR / 제한 없음 {control['status']}")
 
+    print("\n== 채점 데이터 기밀성 (ADR-0006) ==")
+    for name, code, expected_stdout in CONFIDENTIALITY:
+        seen = judge_probe(code, expected_stdout)
+        if seen is None:
+            failed += 1
+            print(f"[X] {name}: 프로브가 실행되지 않았다")
+            continue
+        if seen != expected_stdout:
+            failed += 1
+            print(f"[X] {name}: '{expected_stdout}' 를 기대했는데 '{seen}' [정답표 유출]")
+            continue
+        print(f"[O] {name} -> {seen}")
+
+    print("\n== SYSTEM_ERROR 경로 ==")
+    # 사용자 코드로는 재현할 수 없다. 우리 인프라가 고장난 상황을 직접 만든다.
+    broken = run_submission.run(FIXTURES / "sol-accepted.py", FIXTURES / "does-not-exist.json")
+    if broken["status"] != "SYSTEM_ERROR":
+        failed += 1
+        print(f"[X] job 이 없으면 SYSTEM_ERROR 여야 하는데 {broken['status']}")
+    elif contract_errors(broken):
+        failed += 1
+        print("[X] SYSTEM_ERROR 결과가 계약을 어긴다")
+    else:
+        print("[O] job 을 읽지 못하면 -> SYSTEM_ERROR")
+
+    print("\n== hard timeout 후 컨테이너 회수 ==")
+    # --rm 은 컨테이너가 스스로 종료했을 때만 지워준다. hard timeout 으로 docker CLI 를
+    # 끊으면 컨테이너는 계속 돌 수 있고, 그러면 CPU/메모리를 계속 먹는다.
+    # 짧은 hard timeout 을 걸고 무한 루프를 돌려 잔존 컨테이너가 없는지 확인한다.
+    before = _judge_containers()
+    original_timeout = run_submission.SUBMISSION_HARD_TIMEOUT_S
+    try:
+        run_submission.SUBMISSION_HARD_TIMEOUT_S = 3
+        # case timeout(60s)이 hard timeout(3s)보다 훨씬 길어야 하네스가 붙잡혀 있다.
+        stuck = judge_with_job(
+            "while True:\n    pass\n",
+            {"problemId": 0, "timeLimitMs": 60000,
+             "cases": [{"id": 1, "input": "", "expectedOutput": "x"}]},
+        )
+    finally:
+        run_submission.SUBMISSION_HARD_TIMEOUT_S = original_timeout
+
+    if stuck["status"] != "SYSTEM_ERROR":
+        failed += 1
+        print(f"[X] hard timeout 인데 {stuck['status']} 가 나왔다")
+    else:
+        leftover = _judge_containers() - before
+        if leftover:
+            failed += 1
+            print(f"[X] 컨테이너가 남았다: {sorted(leftover)}")
+            for name in leftover:
+                subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+        else:
+            print("[O] hard timeout -> SYSTEM_ERROR, 컨테이너 잔존 없음")
+
+    print("\n== status 커버리지 ==")
+    # 판정 fixture 개수와 status 종류 수는 다르다(WRONG_ANSWER 가 여러 번 나온다).
+    # "8종 전부 검증한다" 고 말하려면 근거가 있어야 한다.
+    all_status = set(
+        json.loads((ROOT / "contracts" / "judge-result.schema.json").read_text(encoding="utf-8"))
+        ["properties"]["status"]["enum"]
+    )
+    tested = {expected for _, expected, _ in VERDICTS} | STATUS_COVERED_ELSEWHERE
+    missing = sorted(all_status - tested)
+    if missing:
+        failed += 1
+        print(f"[X] 한 번도 검사하지 않는 status: {missing}")
+    else:
+        print(f"[O] judge-result.schema.json 의 status {len(all_status)}종 전부 검사한다")
+
     if failed:
         print(f"\n[FAIL] {failed}건 실패")
         return 1
-    print(f"\n[OK] 판정 {len(VERDICTS)}건 · 격리 {len(ISOLATION)}건 모두 통과")
+    print(f"\n[OK] 판정 {len(VERDICTS)}건 · 격리 {len(ISOLATION)}건 · "
+          f"기밀성 {len(CONFIDENTIALITY)}건 · 컨테이너 회수 · status 8종 커버 — 모두 통과")
     return 0
 
 

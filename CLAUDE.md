@@ -67,6 +67,10 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 격리 케이스에는 대조군이 있다. 제한을 걷어냈을 때도 실패하면 그 테스트는 아무것도
 검증하지 못하는 것이라 실패로 처리된다.
 
+**정답(`expectedOutput`)을 컨테이너 안으로 넣지 않는다**([ADR-0006](docs/adr/0006-expected-output-never-enters-sandbox.md)).
+read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다. 하네스는 실행만 하고,
+정답 비교는 호스트가 한다. 격리(쓰기)와 기밀성(읽기)은 다른 축이므로 따로 검사한다.
+
 ## 현재 상태
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, 그리고 Judge/Sandbox까지 있다.
