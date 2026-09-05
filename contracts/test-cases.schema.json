@@ -21,7 +21,8 @@
           "type",
           "hidden",
           "input",
-          "expectedOutput"
+          "expectedOutput",
+          "probes"
         ],
         "properties": {
           "id": {
@@ -51,6 +52,15 @@
           },
           "expectedOutput": {
             "type": "string"
+          },
+          "probes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+            },
+            "description": "이 case 가 겨냥하는 Mistake. **그 실수가 있으면 이 case 는 반드시 실패한다**는 주장이며, Reviewer 밖의 독립 근거로 쓰인다(ADR-0015). 주장이므로 확인한다 - problems/<CODE>/probes/<MISTAKE>.py 가 그 실수를 담은 풀이이고, tools/verify_problems.py 가 실제로 채점해서 태그가 맞는지 본다. ⚠️ 비어 있는 것과 없는 것은 다르다 - []는 \"보았고 겨냥하는 실수가 없다\"이고, 생략은 허용하지 않는다. 필수로 둔 이유는 case 를 추가하면서 조용히 지나치는 것을 막기 위해서다."
           }
         }
       }

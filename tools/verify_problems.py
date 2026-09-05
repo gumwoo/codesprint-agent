@@ -53,6 +53,75 @@ def build_job(problem: dict, cases_doc: dict) -> dict:
     }
 
 
+def failed_ids(result: dict) -> set[int]:
+    """통과하지 못한 case. **실행되지 않은 case 는 여기 없다.**
+
+    "실패했다" 와 "거기까지 가지 못했다" 를 섞으면, 첫 case 에서 멈춘 제출이
+    뒤쪽 태그까지 만족한 것으로 읽힌다.
+    """
+    return {c["id"] for c in result.get("cases", []) if c["status"] != "ACCEPTED"}
+
+
+def passed_ids(result: dict) -> set[int]:
+    return {c["id"] for c in result.get("cases", []) if c["status"] == "ACCEPTED"}
+
+
+def satisfies(result: dict, probed: set[int], all_ids: set[int]) -> bool:
+    """백엔드가 런타임에 쓰는 조건과 **같은 조건**이다(ADR-0015).
+
+    CaseCorroboration.java 와 여기가 갈리면, CI 는 통과하는데 실제로는 확정되지
+    않는(또는 그 반대의) 상태가 된다.
+    """
+    if not probed:
+        return False
+    return probed <= failed_ids(result) and bool((all_ids - probed) & passed_ids(result))
+
+
+def verify_probes(d: pathlib.Path, cases_doc: dict, problem: dict, job: dict) -> list[str]:
+    """probes 태그가 실제 채점으로 성립하는지 본다.
+
+    태그는 "그 실수가 있으면 이 case 는 반드시 실패한다" 는 주장이고, 그 주장이
+    Reviewer 밖의 독립 근거로 쓰인다. **주장을 검사하지 않으면 근거가 아니다.**
+
+    두 방향을 함께 본다. 한쪽만 보면 아무것도 거르지 못한다.
+
+      probes/<M>.py   그 실수를 담은 풀이가 태그된 case 를 **전부** 실패시키는가
+      wrong.py        **다른** 실수를 담은 풀이는 그 조건을 만족하지 **않는가**
+    """
+    problems_msgs: list[str] = []
+    all_ids = {c["id"] for c in cases_doc["cases"]}
+    tagged: dict[str, set[int]] = {}
+    for c in cases_doc["cases"]:
+        for mc in c.get("probes") or []:
+            tagged.setdefault(mc, set()).add(c["id"])
+
+    for mistake, probed in sorted(tagged.items()):
+        solution = d / "probes" / f"{mistake}.py"
+        if not solution.exists():
+            # check_problems.py 가 먼저 막지만, 그쪽만 믿고 여기서 조용히
+            # 건너뛰면 파일이 사라졌을 때 검증이 통과한다.
+            problems_msgs.append(f"probes/{mistake}.py 가 없다")
+            continue
+
+        result = judge(solution, job)
+        if not satisfies(result, probed, all_ids):
+            problems_msgs.append(
+                f"{mistake}: 태그된 case {sorted(probed)} 를 "
+                f"probes/{mistake}.py 가 만족시키지 못한다 "
+                f"(실패 {sorted(failed_ids(result))}, 통과 {sorted(passed_ids(result))})")
+            continue
+
+        # 대조군. 다른 실수를 담은 오답이 같은 조건을 만족하면, 그 태그는 실수를
+        # 구별하지 못한다 - 무엇이 틀렸든 그 Mistake 가 뒷받침된다.
+        control = judge(d / "wrong.py", job)
+        if satisfies(control, probed, all_ids):
+            problems_msgs.append(
+                f"{mistake}: **대조군이 같은 조건을 만족한다** — wrong.py 는 "
+                f"{problem['negativeControl']['mistake']} 인데 {mistake} 태그를 "
+                f"만족한다. 이 태그는 실수를 구별하지 못한다 [VACUOUS]")
+    return problems_msgs
+
+
 def judge(solution: pathlib.Path, job: dict) -> dict:
     with tempfile.TemporaryDirectory() as d:
         job_path = pathlib.Path(d) / "job.json"
@@ -123,9 +192,19 @@ def main() -> int:
                   f" {detail[0][:70]}")
             continue
 
+        probe_msgs = verify_probes(d, cases_doc, problem, job)
+        if probe_msgs:
+            failed += 1
+            print(f"[X] {d.name}: case 성격 태그가 성립하지 않는다")
+            for msg in probe_msgs:
+                print(f"    {msg}")
+            continue
+
         print(f"[O] {d.name}: reference ACCEPTED / "
               f"wrong {wrong['status']} (case {wrong['failedCaseId']}, "
-              f"심어둔 실수 {control['mistake']})")
+              f"심어둔 실수 {control['mistake']})"
+              + (f" / probes {sorted({m for c in cases_doc['cases'] for m in c['probes']})}"
+                 if any(c["probes"] for c in cases_doc["cases"]) else ""))
 
     if failed:
         print(f"\n[FAIL] {failed}건 실패")

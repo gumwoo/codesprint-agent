@@ -30,6 +30,7 @@ CONTRACTS = ROOT / "contracts"
 
 DIR_RE = re.compile(r"^P[0-9]{2}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$")
 REQUIRED_FILES = ("problem.yaml", "cases.json", "reference.py", "wrong.py")
+# probes/<MISTAKE>.py 는 선택이다 - cases.json 이 그 실수를 겨냥할 때만 요구한다.
 
 failures: list[str] = []
 
@@ -139,6 +140,57 @@ def main() -> int:
         for c in cases:
             if not str(c.get("expectedOutput", "")).strip():
                 fail("cases", f"{rel} case {c.get('id')}: expectedOutput 이 비어 있다")
+
+        # -- case 성격 태그 (probes) --
+        #
+        # "그 실수가 있으면 이 case 는 반드시 실패한다" 는 주장이다. 주장이므로
+        # 여기서는 **주장이 확인 가능한 형태인지**만 본다 - 실제로 실패하는지는
+        # tools/verify_problems.py 가 진짜로 채점해서 확인한다(ADR-0015).
+        tagged: dict[str, list[int]] = {}
+        for c in cases:
+            for mc in c.get("probes") or []:
+                tagged.setdefault(mc, []).append(c.get("id"))
+
+        probe_dir = d / "probes"
+        for mc, case_ids in sorted(tagged.items()):
+            if mc not in mistakes:
+                fail("probe", f"{rel}: mistakes.yaml 에 없는 Mistake {mc!r} 를 겨냥한다")
+                continue
+            if mistakes[mc].get("assigned_by") != "REVIEWER":
+                # SYSTEM 이 부여하는 Mistake 는 Reviewer 가 주장하지 않으므로
+                # 뒷받침할 일도 없다. 태그해 두면 절대 쓰이지 않는 데이터가 된다.
+                fail("probe",
+                     f"{rel}: {mc} 는 assigned_by 가 REVIEWER 가 아니다 "
+                     f"- Reviewer 주장을 뒷받침하는 태그로 쓸 수 없다")
+            if mc not in (problem.get("commonMistakes") or []):
+                fail("probe", f"{rel}: {mc} 를 겨냥하면서 commonMistakes 에는 없다")
+
+            # 태그를 뒷받침하는 풀이가 저장소에 있어야 한다. 없으면 아무도 확인하지
+            # 않은 주장이 확정 근거로 쓰인다.
+            if not (probe_dir / f"{mc}.py").exists():
+                fail("probe",
+                     f"{rel}: {mc} 를 겨냥한다면서 probes/{mc}.py 가 없다 "
+                     f"- 태그가 맞는지 확인할 방법이 없다")
+
+            # 대조군이 될 수 있는 case 가 있어야 한다. 모든 case 가 같은 실수를
+            # 겨냥하면 "그 실수가 아닌 것도 통과한다" 를 보일 수 없고, 전부 실패한
+            # 제출이 무조건 그 실수로 뒷받침된다.
+            if len(case_ids) == len(cases):
+                fail("probe",
+                     f"{rel}: 모든 case 가 {mc} 를 겨냥한다 - 대조군이 없다")
+
+            # wrong.py 가 같은 실수라면 "다른 실수는 이 태그를 만족하지 않는다" 를
+            # 보여줄 오답이 하나도 없다. 검사가 통과해도 아무것도 거르지 못한다.
+            if (problem.get("negativeControl") or {}).get("mistake") == mc:
+                fail("probe",
+                     f"{rel}: negativeControl.mistake 도 {mc} 다 - 태그를 만족하지 "
+                     f"않아야 할 다른 실수의 오답이 없어 검증이 공허해진다")
+
+        if probe_dir.exists():
+            for f in sorted(probe_dir.glob("*.py")):
+                if f.stem not in tagged:
+                    fail("probe",
+                         f"{rel}: probes/{f.name} 가 있는데 그 실수를 겨냥한 case 가 없다")
 
         # -- negativeControl --
         # wrong.py 가 "실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 확인하려면
