@@ -48,6 +48,12 @@ MAX_ATTEMPTS = 3
 # 버려주지만, 애초에 같은 제출을 두 번 채점하는 낭비를 하지 않는 편이 낫다.
 WORKER_TIMEOUT_SECONDS = LEASE_SECONDS - 60
 
+# 다시 시도하기 전에 기다리는 시간.
+#
+# 바로 다시 집으면 일시적인 Docker 장애에 3번을 몇 초 안에 다 써버린다 - 상한이
+# "세 번 시도했다" 가 아니라 "세 번 연속으로 같은 순간에 실패했다" 가 된다.
+RETRY_BACKOFF_SECONDS = 10
+
 POLL_SECONDS = 1.0
 
 
@@ -158,6 +164,51 @@ def finish(conn, job_id: int, attempt: int, result: dict | None,
     return written
 
 
+def is_retryable(result: dict | None) -> bool:
+    """다시 시도해 볼 만한 실패인가.
+
+    **인프라 장애와 사용자의 오답을 가른다.** WA / TLE / RE 는 다시 돌려도 같은
+    판정이 나오므로 재시도는 낭비다. 반대로 이 둘은 다음 번에 될 수 있다.
+
+      - ``None``           하네스가 죽었거나 결과를 읽지 못했다
+      - ``SYSTEM_ERROR``   하네스는 살아 있지만 채점하지 못했다 (Docker 일시 장애 등)
+
+    두 번째가 중요하다. run_submission.py 는 Docker 를 못 찾아도 SYSTEM_ERROR JSON 을
+    정상 출력하고 **exit 0 으로 끝난다.** 그래서 Worker 에게는 "결과가 있다" 로 보이고,
+    이것을 가르지 않으면 감지된 인프라 장애가 첫 시도에서 그대로 종료된다 -
+    큐를 도입한 이유 중 하나(ADR-0013 "실패한 채점을 다시 시도할 수 있다")가
+    실제로는 Worker 가 죽은 경우에만 동작하게 된다.
+    """
+    return result is None or result.get("status") == "SYSTEM_ERROR"
+
+
+def requeue(conn, job_id: int, attempt: int, reason: str | None) -> bool:
+    """다시 시도하도록 되돌린다. fencing 은 finish() 와 같다.
+
+    상태를 QUEUED 로 바꾸지 않고 **리스만 미래로 미룬다.** claim() 이 "QUEUED 이거나
+    리스가 만료된 RUNNING" 을 집으므로, 그 시각이 지나야 다시 집힌다 - 컬럼을 하나 더
+    두지 않고 backoff 를 얻는다.
+
+    :return: 실제로 되돌렸으면 True. False 면 나는 이미 오래된 Worker 다.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE judge_jobs
+               SET lease_expires_at = now() + make_interval(secs => %s),
+                   failure_reason = %s,
+                   updated_at = now()
+             WHERE id = %s
+               AND status = 'RUNNING'
+               AND attempts = %s
+            """,
+            (RETRY_BACKOFF_SECONDS, reason, job_id, attempt),
+        )
+        written = cur.rowcount == 1
+    conn.commit()
+    return written
+
+
 def reap_exhausted(conn) -> int:
     """시도 횟수를 다 쓴 job 을 끝낸다.
 
@@ -173,13 +224,15 @@ def reap_exhausted(conn) -> int:
             """
             UPDATE judge_jobs
                SET status = 'FAILED',
-                   failure_reason = %s,
+                   failure_reason = %s || coalesce(' / 마지막 이유: ' || failure_reason, ''),
                    lease_expires_at = NULL,
                    updated_at = now()
              WHERE status IN ('QUEUED', 'RUNNING')
                AND attempts >= %s
                AND (lease_expires_at IS NULL OR lease_expires_at < now())
             """,
+            # 마지막 실패 이유를 지우지 않는다. "세 번 실패했다" 만 남으면
+            # 무엇이 잘못됐는지는 로그를 뒤져야 알 수 있다.
             (f"{MAX_ATTEMPTS}회 시도했지만 끝내지 못했다", MAX_ATTEMPTS),
         )
         reaped = cur.rowcount
@@ -241,6 +294,17 @@ def drain(conn) -> int:
             return done
 
         result, reason = run_job(job)
+
+        # 인프라 장애면 끝내지 않고 되돌린다. 상한을 다 쓰면 reap_exhausted 가
+        # 다음 주기에 FAILED 로 거둔다.
+        if is_retryable(result) and job["attempts"] < MAX_ATTEMPTS:
+            detail = reason or (result or {}).get("stderr") or "채점하지 못했다"
+            if requeue(conn, job["jobId"], job["attempts"], detail):
+                print(f"[job {job['jobId']}] 다시 시도한다"
+                      f" (attempt {job['attempts']}/{MAX_ATTEMPTS}): {detail}")
+            done += 1
+            continue
+
         if not finish(conn, job["jobId"], job["attempts"], result, reason):
             # 내가 채점하는 동안 다른 Worker 가 이 job 을 가져갔거나, 상한을 넘겨
             # 거둬졌다. 내 결과는 버린다 - 쓰면 남의 판정을 덮어쓴다.

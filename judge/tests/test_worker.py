@@ -40,6 +40,36 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 MIGRATIONS = ROOT / "backend" / "src" / "main" / "resources" / "db" / "migration"
 
 
+def dsn_for_tests() -> str:
+    """**테스트 전용** 접속 정보. 없으면 실패한다.
+
+    worker.dsn() 을 그대로 쓰면 안 된다. 이 테스트는 아래에서 스키마를 통째로 지우는데,
+    worker.dsn() 은 실제 Worker 가 보는 DB 를 가리킨다 - CODESPRINT_DB_URL 을 개발
+    DB 로 맞춰 둔 사람이 이 파일을 실행하면 그 DB 가 날아간다.
+
+    기본값을 두지 않는 이유도 같다. "없으면 localhost/codesprint" 로 두면 그 이름의
+    개발 DB 를 쓰는 사람이 그대로 당한다. 명시적으로 주게 한다.
+    """
+    url = os.environ.get("CODESPRINT_TEST_DB_URL")
+    if url:
+        return url
+    host = os.environ.get("TEST_DB_HOST")
+    name = os.environ.get("TEST_DB_NAME")
+    if not host or not name:
+        raise SystemExit(chr(10).join([
+            "테스트 DB 를 지정해야 한다. 이 테스트는 스키마를 통째로 지운다.",
+            "  CODESPRINT_TEST_DB_URL=postgresql://user:pw@host:5432/codesprint_test",
+            "  또는 TEST_DB_HOST / TEST_DB_NAME"
+            " (+ TEST_DB_PORT / TEST_DB_USER / TEST_DB_PASSWORD)",
+            "운영이나 개발 DB 를 가리키지 않는지 확인한다.",
+        ]))
+    return (
+        f"host={host} port={os.environ.get('TEST_DB_PORT', '5432')} dbname={name} "
+        f"user={os.environ.get('TEST_DB_USER', 'codesprint')} "
+        f"password={os.environ.get('TEST_DB_PASSWORD', 'codesprint')}"
+    )
+
+
 def migrate(conn) -> None:
     """백엔드와 **같은 마이그레이션**으로 스키마를 만든다.
 
@@ -85,6 +115,14 @@ def seed_job(conn, *, source_code: str = "print(1)", problem: str = "P01_QUEUE_B
         job_id = cur.fetchone()[0]
     conn.commit()
     return job_id
+
+
+def expire_lease(conn, job_id: int) -> None:
+    """리스를 과거로 돌린다. Worker 가 죽었거나 backoff 가 끝난 상황을 만든다."""
+    with conn.cursor() as cur:
+        cur.execute("UPDATE judge_jobs SET lease_expires_at = now() - interval '1 minute'"
+                    " WHERE id = %s", (job_id,))
+    conn.commit()
 
 
 def row(conn, job_id: int) -> dict:
@@ -241,16 +279,53 @@ def test_wrong_submission(conn) -> None:
     check("판정은 ACCEPTED 가 아니다", result.get("status") != "ACCEPTED", f"result={result}")
 
 
-def test_missing_problem_fails(conn) -> None:
-    """Test Case 가 없으면 채점할 수 없다. 조용히 통과시키면 안 된다."""
+def test_infra_failure_is_retried(conn) -> None:
+    """감지된 인프라 장애는 첫 시도에서 끝나면 안 된다.
+
+    ADR-0013 이 큐를 도입한 이유 중 하나가 "실패한 채점을 다시 시도할 수 있다" 다.
+    그런데 run_submission.py 는 Docker 를 못 찾아도 SYSTEM_ERROR JSON 을 정상
+    출력하고 exit 0 으로 끝난다 - 가르지 않으면 Worker 에게는 "결과가 있다" 로 보여
+    곧바로 DONE 이 된다. 그러면 상한 3회는 Worker 가 죽은 경우에만 쓰인다.
+
+    Test Case 파일이 없는 job 으로 그 경로를 만든다 - run_job 이 (None, 이유)를 낸다.
+    """
     reset(conn)
     job_id = seed_job(conn, problem="NO_SUCH_PROBLEM")
 
     worker.drain(conn)
     after = row(conn, job_id)
-    check("채점하지 못하면 FAILED 다", after["status"] == "FAILED")
-    check("결과는 비어 있다", after["result"] is None)
-    check("이유가 남는다", bool(after["failureReason"]))
+    check("첫 실패로 끝내지 않는다", after["status"] == "RUNNING",
+          f"status={after['status']}")
+    check("이유는 남긴다", bool(after["failureReason"]))
+    check("backoff 동안은 다시 집히지 않는다", worker.claim(conn) is None)
+
+    # 상한까지 시도한다. backoff 를 기다리는 대신 리스를 과거로 돌린다.
+    for _ in range(worker.MAX_ATTEMPTS - 1):
+        expire_lease(conn, job_id)
+        worker.drain(conn)
+
+    check("상한만큼 시도한다", row(conn, job_id)["attempts"] == worker.MAX_ATTEMPTS,
+          f"attempts={row(conn, job_id)['attempts']}")
+
+    expire_lease(conn, job_id)
+    worker.drain(conn)
+    final = row(conn, job_id)
+    check("상한을 다 쓰면 FAILED 로 끝난다", final["status"] == "FAILED",
+          f"status={final['status']}")
+    check("마지막 실패 이유가 보존된다", "cases.json" in (final["failureReason"] or ""),
+          f"failureReason={final['failureReason']}")
+
+
+def test_user_failure_is_not_retried(conn) -> None:
+    """오답은 다시 돌려도 같은 판정이다. 재시도는 낭비다."""
+    reset(conn)
+    wrong = (ROOT / "problems" / "P01_QUEUE_BASIC" / "wrong.py").read_text(encoding="utf-8")
+    job_id = seed_job(conn, source_code=wrong)
+
+    worker.drain(conn)
+    after = row(conn, job_id)
+    check("오답은 한 번에 끝난다", after["status"] == "DONE")
+    check("시도 횟수도 한 번이다", after["attempts"] == 1, f"attempts={after['attempts']}")
 
 
 # -- 3. 경계 -------------------------------------------------------------
@@ -292,11 +367,11 @@ def main() -> int:
         return 1
 
     try:
-        conn = psycopg.connect(worker.dsn())
+        conn = psycopg.connect(dsn_for_tests())
     except Exception as e:  # noqa: BLE001 - 접속 실패 원인을 그대로 보여준다
         # 건너뛰지 않는다. 조용히 skip 하면 큐 검증이 사라진 줄 아무도 모른다.
-        print(f"[FAIL] DB 에 접속하지 못했다: {e}")
-        print("       CODESPRINT_DB_URL 또는 DB_HOST/DB_NAME/DB_USER/DB_PASSWORD 를 확인한다.")
+        print(f"[FAIL] 테스트 DB 에 접속하지 못했다: {e}")
+        print("       CODESPRINT_TEST_DB_URL 또는 TEST_DB_HOST / TEST_DB_NAME 을 확인한다.")
         return 1
 
     with conn:
@@ -304,7 +379,8 @@ def main() -> int:
         for fn in (test_claims_once, test_expired_lease_is_reclaimed,
                    test_exhausted_job_is_failed, test_stale_worker_cannot_overwrite,
                    test_stale_worker_cannot_revive_failed_job, test_accepted_submission,
-                   test_wrong_submission, test_missing_problem_fails,
+                   test_wrong_submission, test_infra_failure_is_retried,
+                   test_user_failure_is_not_retried,
                    test_worker_does_not_touch_learning_state):
             print(f"\n== {fn.__name__} ==")
             fn(conn)
