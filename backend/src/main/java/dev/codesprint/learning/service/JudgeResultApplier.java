@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.codesprint.judge.JudgeJobRepository;
 import dev.codesprint.judge.JudgeJobRow;
 import dev.codesprint.judge.JudgeResult;
+import dev.codesprint.learning.domain.ActionType;
 import dev.codesprint.learning.domain.AttemptStreak;
 import dev.codesprint.learning.domain.DecisionEngine;
 import dev.codesprint.learning.domain.Evidence;
@@ -145,9 +146,16 @@ public class JudgeResultApplier {
         submission.applyJudgement(judged.status().name(), judged.passed(), judged.total(),
                 judged.executionMs(), judged.memoryKb(), judged.failedCaseId());
 
-        // 문제를 모르면 Skill 도 모른다. 판정만 남기고 끝낸다.
+        // 문제를 모르면 Skill 도 모른다. 그래도 **끝내야 한다.**
+        //
+        // 처음에는 nextAction 을 null 로 두고 반영만 표시했는데, 조회 쪽은 완료 여부를
+        // nextActionType 으로 판단한다. 그래서 job 은 처리됐는데 GET 은 영원히
+        // PENDING 을 돌려줬다 - 사용자는 끝나지 않는 채점을 기다린다.
+        //
+        // CONTINUE 로 끝낸다. 우리 잘못이므로 학습 경로를 바꾸지 않는다(ADR-0013).
         if (problem == null) {
-            submission.applyOutcome(null, null, null, null);
+            submission.applyOutcome(ActionType.CONTINUE.name(), null,
+                    "채점 결과를 반영할 문제 정보를 찾지 못했다", "[]");
             submissions.save(submission);
             job.markApplied(Instant.now());
             jobs.save(job);

@@ -255,6 +255,32 @@ class SubmissionFlowTest {
     }
 
     @Test
+    @DisplayName("문제가 카탈로그에서 사라져도 조회가 끝난다")
+    void missingProblemStillCompletes() throws Exception {
+        // 반영만 표시하고 nextAction 을 비워 두면, 조회 쪽은 완료 여부를
+        // nextActionType 으로 판단하므로 GET 이 영원히 PENDING 을 돌려준다 -
+        // 사용자는 끝나지 않는 채점을 기다린다.
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+                .get("submissionId").asLong();
+        workerFinishes(submissionId, judged("ACCEPTED", 5, 5));
+        // 카탈로그에서 사라진 상황을 만든다.
+        jdbc.update("UPDATE judge_jobs SET problem_code = ? WHERE submission_id = ?",
+                "GONE_FROM_CATALOG", submissionId);
+
+        poller.applyFinishedJobs();
+
+        JsonNode status = statusOf(submissionId);
+        assertThat(status.get("state").asText()).as("PENDING 으로 남으면 안 된다")
+                .isEqualTo("COMPLETE");
+        JsonNode result = status.get("result");
+        assertThat(result.get("judge").get("status").asText()).isEqualTo("SYSTEM_ERROR");
+        // 우리 잘못이므로 학습 경로를 바꾸지 않는다.
+        assertThat(result.get("nextAction").get("type").asText()).isEqualTo("CONTINUE");
+        assertThat(schema("submission-status.schema.json").validate(status))
+                .as("계약 위반").isEmpty();
+    }
+
+    @Test
     @DisplayName("같은 job 을 두 번 반영해도 Evidence 는 한 번만 쌓인다")
     void applyingTwiceIsIdempotent() throws Exception {
         // 반영 도중 프로세스가 죽으면 같은 job 을 다시 집는다. Evidence 가 두 번

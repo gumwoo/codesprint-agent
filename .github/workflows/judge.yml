@@ -30,11 +30,14 @@ jobs:
 
     # Worker 의 큐 동작은 실물 PostgreSQL 로만 검증할 수 있다.
     # FOR UPDATE SKIP LOCKED 를 흉내 낸 것으로 검증하면 아무것도 검증하지 않는 것과 같다.
+    #
+    # DB 이름을 codesprint_test 로 둔다. 그 테스트는 스키마를 통째로 지우므로,
+    # 실서비스와 같은 이름을 쓰면 접속 설정 하나만 잘못돼도 그쪽이 날아간다.
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: codesprint
+          POSTGRES_DB: codesprint_test
           POSTGRES_USER: codesprint
           POSTGRES_PASSWORD: codesprint
         ports:
@@ -71,8 +74,9 @@ jobs:
       # 배정 · 리스 · 재시도 상한, 그리고 Worker 가 학습 상태를 건드리지 않는다는 것이다.
       - name: Judge Worker 큐 테스트
         env:
-          DB_HOST: localhost
-          DB_PORT: '5432'
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: '5432'
+          TEST_DB_NAME: codesprint_test
         run: python judge/tests/test_worker.py
 
       # 문제 데이터를 실제로 채점해 본다.
