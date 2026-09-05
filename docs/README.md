@@ -23,6 +23,7 @@
 | [0005](adr/0005-judge-stops-at-first-failure.md) | 채점은 첫 실패에서 멈추고, 실패 case 를 특정한다 |
 | [0006](adr/0006-expected-output-never-enters-sandbox.md) | 정답은 샌드박스 안으로 들어가지 않는다 |
 | [0007](adr/0007-problems-are-verified-by-a-wrong-solution.md) | 문제마다 틀린 풀이를 두고 그것이 걸리는지 검사한다 |
+| [0008](adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md) | 공개 저장소는 fixture 를 담고, 문제은행을 담지 않는다 |
 
 ## 분해 계획 (미착수)
 

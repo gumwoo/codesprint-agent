@@ -4,6 +4,7 @@
 code: P07_BOUNDARY_DRILL_B
 title: 격자 안에 있는 이웃 세기
 kind: MICRO_DRILL
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 180
@@ -27,3 +28,9 @@ skills:
 commonMistakes:
   - BOUNDARY_CHECK
   - INDEX_ERROR
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 상한만 보고 하한(음수)을 보지 않는다
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: WRONG_ANSWER

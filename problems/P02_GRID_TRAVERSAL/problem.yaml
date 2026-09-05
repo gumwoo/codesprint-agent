@@ -4,6 +4,7 @@
 code: P02_GRID_TRAVERSAL
 title: 출발점에서 도달할 수 있는 칸 세기
 kind: NORMAL
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 600
@@ -31,3 +32,10 @@ commonMistakes:
   - BOUNDARY_CHECK
   - NO_VISITED
   - INDEX_ERROR
+  - IMPLEMENTATION_MISC
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 도달 여부를 따지지 않고 전체 1 의 개수를 센다
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER

@@ -4,6 +4,7 @@
 code: P05_SHORTEST_PATH
 title: 격자 최단거리
 kind: NORMAL
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 1200
@@ -34,3 +35,10 @@ commonMistakes:
   - BOUNDARY_CHECK
   - VISITED_TIMING
   - OUTPUT_FORMAT
+  - IMPLEMENTATION_MISC
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 큐 대신 스택을 쓴다
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER

@@ -4,6 +4,7 @@
 code: P03_CONNECTED_COMPONENT
 title: 영역의 개수 세기
 kind: NORMAL
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 900
@@ -30,3 +31,10 @@ commonMistakes:
   - BOUNDARY_CHECK
   - VISITED_TIMING
   - NO_VISITED
+  - IMPLEMENTATION_MISC
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 대각선까지 이어진 것으로 본다
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER

@@ -2,6 +2,13 @@
 
 Vertical Slice 1 의 문제 집합. 생성형이 아니라 **검증된 고정 문제**다(Addendum 40).
 
+> ⚠️ **이 10개는 전부 개발 fixture(`source: DEV_FIXTURE`)다.**
+> Test Case 와 정답 풀이가 공개 저장소에 그대로 들어 있다. `hidden: true` 는 학습 UI 에서
+> 보여줄지를 뜻할 뿐 기밀성 보장이 아니다.
+> 실제 학습에 쓰는 문제은행(`CURATED`)은 여기 두지 않는다 —
+> [ADR-0008](../docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md).
+> 공개 저장소에 `CURATED` 문제가 들어오면 CI 가 막는다.
+
 ```text
 P01_QUEUE_BASIC              deque 로 명령 처리
 P02_GRID_TRAVERSAL           출발점에서 도달 가능한 칸 세기
@@ -24,15 +31,29 @@ P10_BFS_REVIEW               가장 먼 칸까지의 거리 (REVIEW)
 | `reference.py` | 정답. CI 가 실제로 채점해 ACCEPTED 를 확인한다 |
 | `wrong.py` | **일부러 틀린 풀이.** 아래 참고 |
 
+`problem.yaml` 의 `negativeControl` 이 `wrong.py` 가 무엇을 틀리게 했고 그 결과가
+어떤 판정이어야 하는지를 적는다.
+
+```yaml
+negativeControl:
+  mistake: VISITED_TIMING       # 심어둔 실수 (mistakes.yaml 의 code)
+  expectedStatus: WRONG_ANSWER  # 그 실수가 드러나야 하는 판정
+```
+
 ## wrong.py 가 있는 이유
 
 reference 만 검사하면 **모든 출력을 통과시키는 Test Case 집합**도 통과한다.
 아무것도 거르지 못하는 문제가 초록불을 받는다.
 
 ```text
-reference ACCEPTED   → 정답이 정답으로 판정되는가
-wrong 이 걸린다      → 이 Test Case 가 오답을 실제로 거르는가   ← 이쪽이 더 중요하다
+reference ACCEPTED              → 정답이 정답으로 판정되는가
+wrong 이 expectedStatus 로 걸림 → 이 Test Case 가 오답을 실제로 거르는가   ← 이쪽이 더 중요하다
 ```
+
+**"실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 본다.** 처음에는 ACCEPTED 만
+아니면 통과시켰는데, 그러면 누가 `wrong.py` 의 문법을 깨뜨려 `COMPILE_ERROR` 가 나도
+검증이 통과한다. 실제로 확인했다. 계약 하네스의 메타테스트가 exit code 만 보지 않고
+기대 메시지까지 대조하는 것과 같은 이유다.
 
 틀린 풀이가 통과한다는 것은 그 문제가 Skill 을 측정하지 못한다는 뜻이고,
 측정하지 못하는 문제로 쌓은 Evidence 는 mastery 를 오염시킨다.
@@ -75,6 +96,26 @@ python tools/check_problems.py      # 참조 무결성 / Test Case 형식 (Docke
 python tools/meta_test_problems.py  # 그 검사가 실제로 잡는가
 python tools/verify_problems.py     # 실제 채점 (Docker 필요)
 ```
+
+## 오답 라벨 분포
+
+`negativeControl.mistake` 를 모아 보면 지금 이렇다.
+
+```text
+BOUNDARY_CHECK        P06, P07
+VISITED_TIMING        P08
+OUTPUT_FORMAT         P01
+IMPLEMENTATION_MISC   P02, P03, P04, P05, P09, P10   ← 6/10
+```
+
+절반 이상이 `IMPLEMENTATION_MISC` 다. 슬라이스 1 taxonomy 8종으로는 "도달 여부를
+따지지 않았다", "큐 대신 스택을 썼다", "대각선을 빠뜨렸다" 같은 오답에 이름을 붙일 수
+없기 때문이다. `curriculum/mistakes.yaml` 의 `IMPLEMENTATION_MISC` 설명이 예고한
+"이 항목의 비율이 높으면 taxonomy 를 넓혀야 한다는 신호" 가 데이터로 나타난 것이다.
+
+`check_problems.py` 가 이 비율을 출력한다. 실패로 처리하지는 않는다 - 슬라이스 1 은
+자동 액션을 2종으로 묶어두기로 했고(Addendum 42), taxonomy 확장은 실제 사용자 제출
+분포를 보고 결정할 일이다. 지금 넓히면 근거 없이 넓히는 것이 된다.
 
 ## 아직 없는 것
 

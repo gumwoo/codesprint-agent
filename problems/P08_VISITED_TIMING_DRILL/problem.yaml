@@ -4,6 +4,7 @@
 code: P08_VISITED_TIMING_DRILL
 title: 모든 칸까지의 거리 합
 kind: MICRO_DRILL
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 300
@@ -29,3 +30,9 @@ skills:
 commonMistakes:
   - VISITED_TIMING
   - NO_VISITED
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 방문 처리를 꺼낼 때 한다
+negativeControl:
+  mistake: VISITED_TIMING
+  expectedStatus: WRONG_ANSWER

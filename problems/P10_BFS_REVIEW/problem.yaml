@@ -4,6 +4,7 @@
 code: P10_BFS_REVIEW
 title: 가장 멀리 있는 칸까지의 거리
 kind: REVIEW
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 900
@@ -32,3 +33,10 @@ commonMistakes:
   - VISITED_TIMING
   - BOUNDARY_CHECK
   - OUTPUT_FORMAT
+  - IMPLEMENTATION_MISC
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 도달 여부를 무시하고 맨해튼 거리 최대를 고른다
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER

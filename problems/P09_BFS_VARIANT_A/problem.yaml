@@ -4,6 +4,7 @@
 code: P09_BFS_VARIANT_A
 title: 대각선까지 갈 수 있는 최단거리
 kind: NORMAL
+source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
 expectedSolveSeconds: 900
@@ -32,3 +33,9 @@ commonMistakes:
   - BOUNDARY_CHECK
   - INDEX_ERROR
   - IMPLEMENTATION_MISC
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 대각선 이동을 빠뜨린다
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
