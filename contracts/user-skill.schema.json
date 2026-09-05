@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/user-skill.schema.json",
+  "title": "UserSkill",
+  "description": "한 사용자의 한 Skill 상태(Addendum 73). Evidence 로부터 재계산된 결과이며 저장된 값이 정본이 아니다 - 근거: docs/adr/0009-mastery-is-recomputed-from-evidence.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "skillCode",
+    "concept",
+    "recognition",
+    "implementation",
+    "independent",
+    "retention",
+    "speed",
+    "mastery",
+    "confidence",
+    "evidenceCount",
+    "status"
+  ],
+  "properties": {
+    "skillCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+    },
+    "concept": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "recognition": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "implementation": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "independent": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "retention": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "speed": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "mastery": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "평가된 차원만으로 계산하고 가중치를 재정규화한다(Addendum 6). 아무 차원도 평가되지 않았으면 null - 0.0(평가했고 못함)과 다르다."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "mastery 와 별개다(Addendum 17). '이 판단을 얼마나 믿을 수 있는가'이며 누적 Evidence 가중치에서 나온다."
+    },
+    "evidenceCount": { "type": "integer", "minimum": 0 },
+    "status": {
+      "enum": [
+        "UNASSESSED",
+        "READY",
+        "LEARNING",
+        "PRACTICING",
+        "MASTERED",
+        "REVIEW_DUE",
+        "WEAKENED",
+        "LOCKED"
+      ],
+      "description": "LOCKED / READY 는 선수 관계에서 나오므로 Evidence 만으로는 결정되지 않는다. 이 계약의 계산은 UNASSESSED / LEARNING / PRACTICING / MASTERED / WEAKENED 까지만 다룬다."
+    }
+  }
+}

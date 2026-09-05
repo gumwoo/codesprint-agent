@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/skill-evidence.schema.json",
+  "title": "SkillEvidence",
+  "description": "학습 행동 하나가 남기는 관측 기록(Addendum 7~8). mastery 는 이 기록들로부터 재계산되며, 저장된 점수가 정본이 아니다 - 근거: docs/adr/0009-mastery-is-recomputed-from-evidence.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "skillCode",
+    "evidenceType",
+    "occurredAt",
+    "weight",
+    "observed",
+    "sourceConfidence",
+    "context"
+  ],
+  "properties": {
+    "skillCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
+      "description": "curriculum/skills.yaml 에 실재하는 code."
+    },
+    "evidenceType": {
+      "enum": [
+        "DIAGNOSTIC_RESULT",
+        "PROBLEM_SUBMISSION",
+        "MICRO_DRILL_RESULT",
+        "REVIEW_RESULT",
+        "CONCEPT_CHECK",
+        "EXPLAIN_BACK",
+        "MOCK_TEST_RESULT"
+      ],
+      "description": "Addendum 8. EMA 의 alpha 와 confidence 가중치가 여기서 갈린다."
+    },
+    "occurredAt": {
+      "type": "string",
+      "description": "ISO-8601. EMA 는 순서에 의존하므로 재계산 시 이 값으로 정렬한다."
+    },
+    "weight": {
+      "type": "number",
+      "minimum": 0,
+      "description": "confidence 누적에 쓰는 가중치(Addendum 18). evidenceType 에서 유도되지만, 문제의 Skill 비중이 곱해지므로 기록해 둔다."
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "concept",
+        "recognition",
+        "implementation",
+        "independent",
+        "retention",
+        "speed"
+      ],
+      "description": "이 Evidence 가 관측한 차원별 값. 관측하지 못한 차원은 null 이며 갱신에서 제외된다. 생략과 null 을 구분한다(Addendum 4).",
+      "properties": {
+        "concept": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "recognition": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "implementation": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "independent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "retention": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "speed": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "sourceConfidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "이 관측의 신뢰도. Judge 결과에서 온 것은 1.0, Reviewer 분석에서 온 것은 그 confidence 다. 측정 대상이 아니면 null."
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "problemCode",
+        "judgeStatus",
+        "hintLevel",
+        "solutionViewed",
+        "independentAttempt",
+        "reviewSucceeded",
+        "daysSinceLast",
+        "verdict"
+      ],
+      "description": "무엇을 보고 이 값이 나왔는지. 재계산과 감사에 필요하다. 모든 필드가 required 이고 nullable 이다 - 해당 없는 항목은 생략이 아니라 null 로 명시한다. 생략은 '기록하지 않았다', null 은 '해당 없다' 로 서로 다른 뜻이다.",
+      "properties": {
+        "problemCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "judgeStatus": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hintLevel": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 6,
+          "description": "사용한 힌트 단계(PRD 73). 4 이상이면 독립 풀이로 세지 않는다(Addendum 22)."
+        },
+        "solutionViewed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "independentAttempt": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "MASTERED 판정의 '최근 독립 풀이 3개' 를 세는 대상인가."
+        },
+        "reviewSucceeded": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "REVIEW_RESULT 일 때만 채운다. MASTERED 판정의 '최소 1회 복습 성공' 조건에 쓰인다."
+        },
+        "daysSinceLast": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "복습까지 지난 날짜. retention 관측값의 근거다(Addendum 16)."
+        },
+        "verdict": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "CONCEPT_CHECK / EXPLAIN_BACK 의 판정(CORRECT / PARTIAL / INCORRECT)."
+        }
+      }
+    }
+  }
+}
