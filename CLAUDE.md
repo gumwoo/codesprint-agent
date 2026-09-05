@@ -54,7 +54,19 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 ## 사용자 제출 코드
 
 `judge/submissions/` 아래는 **신뢰할 수 없는 입력**이다. 판정 대상이지 실행 대상이 아니다.
-읽거나 실행하지 않는다. `.gitignore`와 `.claude/settings.json`이 이중으로 막는다.
+읽거나 실행하지 않는다.
+
+**이건 규범이지 강제되는 보장이 아니다.** 세 수단이 각각 하는 일이 다르다.
+
+| 수단 | 실제로 하는 것 | 하지 않는 것 |
+| --- | --- | --- |
+| `.gitignore` | 저장소에 커밋되는 것을 막는다 | 읽기·실행은 막지 않는다 |
+| `Read(./**/submissions/**)` | Claude 의 Read 툴 경로를 막는다 | 셸을 경유한 읽기는 막지 않는다 |
+| `Bash(python judge/submissions/**)` | 그 리터럴 한 형태를 막는다 | `python3`, `./`, 다른 리더는 막지 않는다 |
+
+`Bash` deny 목록을 늘려 셸을 봉쇄하려 하지 않는다. `head` / `less` 를 더해도
+`python -c`, `sed`, `awk`, `git show` 가 남고, **목록이 길어질수록 "막혀 있다" 는
+잘못된 안심만 커진다.** 실수를 줄이는 장치지 경계가 아니다.
 
 `judge/fixtures/`는 다르다 — 우리가 만든 테스트 자산이라 읽고 고쳐도 된다.
 
@@ -145,7 +157,22 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
 10개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
 제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
-**LLM 어댑터와 프론트는 아직 없다** - `ReviewerPort` 구현이 없으면 분석 없이 진행한다.
+LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않으면 분석 없이 나머지가
+그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
+**프론트는 아직 없다.**
+
+```bash
+CODESPRINT_REVIEWER_ENABLED=true   # 로컬 Claude CLI 가 있고 로그인돼 있을 때
+```
+
+**API 키를 받지 않는다.** 이 프로젝트는 배포하지 않는다 - 만든 사람이 자기 PC 에서
+돌린다. 로컬 Claude CLI 의 로그인 세션을 쓰므로 저장소에 넣을 비밀이 없다.
+배포가 필요해지면 `LlmClient` 구현을 하나 더 만든다 - 그 인터페이스가
+`complete(String) -> String` 하나뿐인 이유가 그것이다.
+
+**프롬프트는 파일 이름이 버전이다**(`reviewer/prompts/reviewer-v1.md`). 내용을 고칠
+때는 새 파일을 만든다 - 같은 이름으로 내용을 바꾸면 이전에 쌓인 라벨과 이후 라벨이
+섞여 Reviewer 정확도를 잴 수 없게 된다.
 
 제출 하나가 지나는 길:
 

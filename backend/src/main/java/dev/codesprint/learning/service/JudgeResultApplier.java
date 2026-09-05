@@ -219,12 +219,7 @@ public class JudgeResultApplier {
         if (reviews.shouldReview(judged.status())) {
             var review = reviews.review(
                     userId, submission.id(), submission.problemId(),
-                    new ReviewerPort.Request(
-                            problem.code(),
-                            judged.status().name(),
-                            judged.failedCaseId(),
-                            job.sourceCode(),
-                            problem.skills().stream().map(SkillLink::skillCode).toList()));
+                    reviewRequest(problem, judged, job));
 
             if (review.isPresent()) {
                 ReviewService.Review value = review.get();
@@ -279,6 +274,29 @@ public class JudgeResultApplier {
 
         job.markApplied(Instant.now());
         jobs.save(job);
+    }
+
+    /**
+     * Reviewer 에게 넘길 것. <b>Judge 근거를 함께 준다.</b>
+     *
+     * <p>실패한 case 의 입력이 없으면 모델은 코드만 훑고 "있을 법한 실수" 를
+     * 나열하게 된다. 그 분석은 실제로 일어난 실패를 설명하지 못한다(Addendum 20).
+     */
+    private ReviewerPort.Request reviewRequest(ProblemDefinition problem, JudgeResult judged,
+            JudgeJobRow job) {
+
+        var failedCase = catalog.caseById(problem.code(), judged.failedCaseId());
+        return new ReviewerPort.Request(
+                problem.code(),
+                problem.title(),
+                problem.source(),
+                judged.status().name(),
+                judged.failedCaseId(),
+                failedCase == null ? null : failedCase.input(),
+                failedCase == null ? null : failedCase.expectedOutput(),
+                judged.stderr(),
+                job.sourceCode(),
+                problem.skills().stream().map(SkillLink::skillCode).toList());
     }
 
     /** secondary 는 목록이라 jsonb 로 남긴다. 비어 있어도 [] 를 쓴다 - null 과 다르다. */

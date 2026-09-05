@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,8 +23,18 @@ public class DisabledReviewer {
 
     private static final Logger log = LoggerFactory.getLogger(DisabledReviewer.class);
 
+    /**
+     * <b>{@code @ConditionalOnMissingBean} 을 쓰지 않는다.</b> 일반 {@code @Configuration}
+     * 에서는 평가 순서에 의존하므로, 이 클래스가 먼저 등록되면 실제 어댑터가 붙어도
+     * 이 bean 이 남는다 - 그러면 ReviewerPort 가 둘이 되어 애플리케이션이 뜨지 않는다.
+     * 실제로 그렇게 깨졌다.
+     *
+     * <p>{@link ReviewerConfiguration} 과 <b>같은 조건을 반대로</b> 건다. 두 곳이 같은
+     * 스위치를 보므로 어느 쪽이 먼저 평가되든 결과가 같다.
+     */
     @Bean
-    @ConditionalOnMissingBean(ReviewerPort.class)
+    @ConditionalOnProperty(name = "codesprint.reviewer.enabled", havingValue = "false",
+            matchIfMissing = true)
     public ReviewerPort disabledReviewerPort() {
         AtomicBoolean warned = new AtomicBoolean(false);
         return new ReviewerPort() {
