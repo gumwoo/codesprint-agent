@@ -28,6 +28,7 @@
 | [0009](adr/0009-mastery-is-recomputed-from-evidence.md) | mastery 는 Evidence 로부터 재계산되는 파생값이다 |
 | [0010](adr/0010-java-implementation-is-checked-against-the-python-oracle.md) | Java 구현은 Python oracle 과 golden fixture 로 대조한다 |
 | [0011](adr/0011-language-boundary.md) | Java 는 애플리케이션, Python 은 샌드박스와 하네스 |
+| [0012](adr/0012-curriculum-is-packaged-from-one-source.md) | 커리큘럼은 저장소의 한 곳에서 빌드 시점에 실린다 |
 
 ## 분해 계획 (미착수)
 
