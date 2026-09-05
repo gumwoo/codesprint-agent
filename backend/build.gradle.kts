@@ -35,7 +35,9 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.20.3")
     // API 응답을 계약(contracts/submit-response.schema.json)에 대조한다.
     // 계약과 구현이 갈라지는 것을 사람 눈으로 막을 수는 없다.
-    testImplementation("com.networknt:json-schema-validator:1.5.1")
+    // Reviewer 출력을 계약에 대조한다. 테스트뿐 아니라 런타임에도 필요하다 -
+    // 모델이 스키마를 어기고 답할 수 있다.
+    implementation("com.networknt:json-schema-validator:1.5.1")
 }
 
 // 커리큘럼 데이터를 jar 에 굽는다.
@@ -45,13 +47,31 @@ dependencies {
 // 저장소의 한 곳에서 가져온다 - 근거: docs/adr/0012-curriculum-is-packaged-from-one-source.md
 val curriculumSource = rootProject.projectDir.parentFile.resolve("curriculum")
 
+// 프롬프트도 같은 원칙이다. 복사본을 두면 저장소의 것과 배포된 것이 갈라지고,
+// 그러면 promptVersion 이 가리키는 내용이 무엇인지 알 수 없게 된다.
+val promptSource = rootProject.projectDir.parentFile.resolve("reviewer/prompts")
+
+// Reviewer 요청용 계약. 프롬프트에 그대로 넣으므로 런타임에 필요하다 -
+// 스키마를 손으로 옮겨 적으면 계약과 프롬프트가 갈라지고, 그때 모델은 프롬프트를 따른다.
+val contractSource = rootProject.projectDir.parentFile.resolve("contracts")
+
 tasks.named<ProcessResources>("processResources") {
     from(curriculumSource) {
         into("curriculum")
         include("*.yaml")
     }
-    // 커리큘럼이 바뀌면 다시 굽는다.
+    from(promptSource) {
+        into("prompts")
+        include("*.md")
+    }
+    from(contractSource) {
+        into("contracts")
+        include("reviewer-output.llm.schema.json")
+    }
+    // 커리큘럼이나 프롬프트가 바뀌면 다시 굽는다.
     inputs.dir(curriculumSource)
+    inputs.dir(promptSource)
+    inputs.dir(contractSource)
 }
 
 tasks.withType<JavaCompile> {
