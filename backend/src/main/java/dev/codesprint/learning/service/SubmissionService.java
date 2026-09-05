@@ -1,6 +1,7 @@
 package dev.codesprint.learning.service;
 
 import dev.codesprint.judge.JudgePort;
+import dev.codesprint.learning.domain.AttemptStreak;
 import dev.codesprint.learning.domain.DecisionEngine;
 import dev.codesprint.learning.domain.Evidence;
 import dev.codesprint.learning.domain.EvidenceType;
@@ -97,6 +98,26 @@ public class SubmissionService {
             Integer solveSeconds) {
     }
 
+    /**
+     * 지원하는 언어. <b>슬라이스 1 은 Python 뿐이다</b>(Addendum PART III).
+     *
+     * <p>다른 값을 받아 넘기면 안 된다. Judge 하네스는 무엇을 받든 {@code solution.py}
+     * 로 써서 Python 으로 돌리므로, {@code language = JAVA} 로 저장해 놓고 실제로는
+     * Java 코드를 Python 으로 실행한 판정이 나온다. 그 판정으로 만든 Evidence 는
+     * append-only 정본에 그대로 남는다.
+     */
+    private static final String SUPPORTED_LANGUAGE = "PYTHON";
+
+    /** 아직 지원하지 않는 언어. 사용자 입력 문제이므로 400 이다. */
+    public static class UnsupportedLanguage extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public UnsupportedLanguage(String message) {
+            super(message);
+        }
+    }
+
     /** 문제나 사용자가 없을 때. 채점 실패(SYSTEM_ERROR)와 구분한다 - 그쪽은 우리 잘못이다. */
     public static class NotFound extends RuntimeException {
 
@@ -109,6 +130,12 @@ public class SubmissionService {
 
     @Transactional
     public Result submit(Request request) {
+        // 채점하기 전에 막는다. 제출 행을 만든 뒤에 알면 language 와 실제 판정이
+        // 어긋난 기록이 남는다.
+        if (!SUPPORTED_LANGUAGE.equalsIgnoreCase(request.language())) {
+            throw new UnsupportedLanguage(
+                    "아직 " + SUPPORTED_LANGUAGE + " 만 채점한다: " + request.language());
+        }
         ProblemDefinition problem = catalog.find(request.problemCode());
         if (problem == null) {
             throw new NotFound("그런 문제가 없다: " + request.problemCode());
@@ -186,11 +213,26 @@ public class SubmissionService {
                 priorEvidenceCount,
                 judged.status(),
                 null,   // 확정된 Mistake 는 Reviewer 가 붙어야 나온다
-                (int) submissions.countByUserIdAndProblemId(request.userId(), problemRow.id()),
+                consecutiveFailures(request.userId(), problemRow.id()),
                 false,  // 복습 성공 기록은 복습 일정이 붙어야 생긴다
                 mastery.masteriesOf(request.userId())));
 
         return new Result(submission.id(), judged, updates, action);
+    }
+
+    /**
+     * 지금 이 문제에서 연속으로 몇 번 막혀 있는가.
+     *
+     * <p>제출 행을 그냥 세지 않는다. 그러면 우리 장애(SYSTEM_ERROR)와 문법 오류가
+     * 나중 제출의 경로를 바꾸고, 몇 달 전 기록까지 계속 누적된다 -
+     * {@link AttemptStreak} 에 그 이유를 적어 뒀다.
+     */
+    private int consecutiveFailures(Long userId, Long problemId) {
+        List<JudgeStatus> statuses = submissions
+                .findStatusesNewestFirst(userId, problemId).stream()
+                .map(JudgeStatus::valueOf)
+                .toList();
+        return AttemptStreak.consecutiveFailures(statuses);
     }
 
     /** 드릴의 관측은 좁다 - alpha 와 confidence 가중치가 모두 작다(Addendum §9, §18). */

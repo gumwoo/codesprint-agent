@@ -283,6 +283,61 @@ class SubmissionFlowTest {
     }
 
     @Test
+    @DisplayName("우리 장애는 나중 제출의 경로도 바꾸지 않는다")
+    void systemErrorsDoNotAccumulateIntoAttempts() throws Exception {
+        // SYSTEM_ERROR 두 번 뒤의 첫 WA 다. 제출 행을 그냥 세면 3회째가 되어
+        // REVIEW_CONCEPT 로 간다 - 그 순간에는 CONTINUE 를 냈으니 "즉시 바꾸지
+        // 않는다" 는 지켰지만, 시간을 두고 바꾼 셈이다.
+        judge.willReturn(new JudgePort.Result(
+                JudgeStatus.SYSTEM_ERROR, 0, 1, null, null, null, null));
+        judge.willReturn(new JudgePort.Result(
+                JudgeStatus.SYSTEM_ERROR, 0, 1, null, null, null, null));
+        judge.willReturn(new JudgePort.Result(
+                JudgeStatus.WRONG_ANSWER, 0, 5, 90, 20480, 1, null));
+
+        submit("P01_QUEUE_BASIC", requestBody(0));
+        submit("P01_QUEUE_BASIC", requestBody(0));
+        JsonNode third = submit("P01_QUEUE_BASIC", requestBody(0));
+
+        assertThat(third.get("nextAction").get("type").asText())
+                .as("실제 실패는 이번 한 번뿐이다")
+                .isNotEqualTo("REVIEW_CONCEPT");
+    }
+
+    @Test
+    @DisplayName("같은 문제를 세 번 틀리면 개념부터 다시 본다")
+    void threeRealFailuresGoToConcept() throws Exception {
+        JudgePort.Result wrong =
+                new JudgePort.Result(JudgeStatus.WRONG_ANSWER, 0, 5, 90, 20480, 1, null);
+        judge.willReturn(wrong);
+
+        submit("P01_QUEUE_BASIC", requestBody(0));
+        submit("P01_QUEUE_BASIC", requestBody(0));
+        JsonNode third = submit("P01_QUEUE_BASIC", requestBody(0));
+
+        assertThat(third.get("nextAction").get("type").asText()).isEqualTo("REVIEW_CONCEPT");
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 언어는 400 이고 채점하지 않는다")
+    void unsupportedLanguageIsRejected() throws Exception {
+        // 받아두면 language = JAVA 로 저장해 놓고 실제로는 Java 코드를 Python 으로
+        // 돌린 판정이 나온다. 그 판정으로 만든 Evidence 는 지울 수 없다.
+        String body = """
+                {"userId": %d, "language": "JAVA", "sourceCode": "class Main {}",
+                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                """.formatted(userId);
+
+        int status = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).isEqualTo(400);
+        assertThat(judge.calls).as("채점을 시도하지 않는다").isZero();
+    }
+
+    @Test
     @DisplayName("없는 문제는 404 다 - 채점 실패와 구분한다")
     void unknownProblemIsNotFound() throws Exception {
         int status = mvc.perform(post("/api/problems/{code}/submit", "NO_SUCH_PROBLEM")

@@ -40,6 +40,9 @@ public class SubmissionController {
     /**
      * @param sourceCode 사용자가 낸 코드. <b>신뢰할 수 없는 입력이다</b> - 서버가 읽거나
      *     실행하지 않고 샌드박스로 넘긴다.
+     * @param language 슬라이스 1 은 {@code PYTHON} 만 받는다. 다른 값은 400 이다 -
+     *     Judge 하네스가 무엇을 받든 Python 으로 돌리므로, 받아두면 language 와 실제
+     *     판정이 어긋난 기록이 남는다.
      * @param hintLevel 0~6. 같은 AC 라도 이 값에 따라 독립 풀이 점수가 갈린다.
      */
     public record SubmitRequest(
@@ -109,6 +112,14 @@ public class SubmissionController {
     private static SkillUpdateView toView(SkillUpdate update) {
         return new SkillUpdateView(update.skillCode(), update.before(), update.after(),
                 update.confidence(), update.status());
+    }
+
+    @ExceptionHandler(SubmissionService.UnsupportedLanguage.class)
+    public ResponseEntity<java.util.Map<String, String>> unsupportedLanguage(
+            SubmissionService.UnsupportedLanguage e) {
+        // 사용자 입력 문제다. 채점 실패(SYSTEM_ERROR)와 구분한다 - 그쪽은 우리 잘못이라
+        // 판정으로 돌려주고 학습 경로를 건드리지 않는다.
+        return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
     }
 
     @ExceptionHandler(SubmissionService.NotFound.class)
