@@ -26,3 +26,6 @@ node_modules/
 .vscode/
 *.swp
 .DS_Store
+
+# Python 캐시 (learning 패키지 추가로 생김)
+**/__pycache__/

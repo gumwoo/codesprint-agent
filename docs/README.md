@@ -10,6 +10,7 @@
 | 실제로 검증되는 Skill 목록 | [../curriculum/](../curriculum/) |
 | 사용자 코드를 어떻게 안전하게 실행하는가 | [../judge/](../judge/) |
 | 슬라이스 1 의 문제와 Test Case | [../problems/](../problems/) |
+| 점수를 어떻게 계산하는가 | [../learning/](../learning/) |
 | LLM 이 낼 수 있는 값의 범위 | [../contracts/](../contracts/) |
 
 ## ADR
@@ -24,6 +25,7 @@
 | [0006](adr/0006-expected-output-never-enters-sandbox.md) | 정답은 샌드박스 안으로 들어가지 않는다 |
 | [0007](adr/0007-problems-are-verified-by-a-wrong-solution.md) | 문제마다 틀린 풀이를 두고 그것이 걸리는지 검사한다 |
 | [0008](adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md) | 공개 저장소는 fixture 를 담고, 문제은행을 담지 않는다 |
+| [0009](adr/0009-mastery-is-recomputed-from-evidence.md) | mastery 는 Evidence 로부터 재계산되는 파생값이다 |
 
 ## 분해 계획 (미착수)
 

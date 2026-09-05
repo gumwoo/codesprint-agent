@@ -28,6 +28,11 @@ jobs:
       - name: 커리큘럼/계약 검사
         run: python tools/check_curriculum.py
 
+      # Mastery 산식. 순수 함수라 Docker 도 DB 도 필요 없다.
+      # Addendum 84 가 "반드시 테스트한다" 고 나열한 항목이 그대로 들어 있다.
+      - name: Mastery 단위 테스트
+        run: python learning/tests/test_mastery.py
+
       # 문제 데이터도 같은 원칙이다 - 문서가 아니라 검증되는 데이터다.
       # Docker 가 필요한 검사(정답이 실제로 AC 를 받는가)는 judge.yml 에 있다.
       - name: 문제 데이터 검사

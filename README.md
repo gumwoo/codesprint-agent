@@ -37,6 +37,7 @@ curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     LLM 요청/응답 + Judge 판정 계약 (JSON Schema)
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스
 problems/      슬라이스 1 의 검증된 문제 10개 (전부 개발 fixture — ADR-0008)
+learning/      Evidence → mastery / confidence / status 산식
 tools/         계약 검사 + 메타테스트
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
@@ -77,6 +78,7 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
 python tools/verify_problems.py           # 문제 10개를 실제로 채점
+python learning/tests/test_mastery.py     # Mastery 산식
 ```
 
 격리(실행이 갇혀 있는가)와 기밀성(채점 데이터가 새지 않는가)은 다른 축이다.
@@ -94,6 +96,7 @@ python tools/verify_problems.py           # 문제 10개를 실제로 채점
 | LLM 계약 + 검사 하네스 | 완료 |
 | Judge / Sandbox (Python 3.12) | 완료 |
 | 문제 · Test Case 10개 | 완료 |
+| Mastery / Evidence 산식 | 완료 |
 | Judge Worker / 큐 | 미착수 |
 | Backend / Frontend | 미착수 |
 | Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
