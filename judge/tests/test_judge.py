@@ -378,6 +378,37 @@ def main() -> int:
         print(f"[O] {name} -> 실행 {len(executed)}/{total_cases}, "
               f"통과 {passed_ids}, 첫 실패 case {result['failedCaseId']}")
 
+    print("\n== 진단 예산 (ADR-0015) ==")
+    # 싼 실패라고 case 가 빠른 것은 아니다. 제한 직전까지 돌다 WA 가 나는 case 가
+    # 이어지면 최악은 여전히 `case 수 x timeLimit` 이고, 그러면 hard timeout 에 걸려
+    # **사용자 코드가 느린 것이 SYSTEM_ERROR(우리 잘못)로 둔갑한다.**
+    slow = (FIXTURES / "sol-slow-wrong.py").read_text(encoding="utf-8")
+    original_budget = run_submission.DIAGNOSTIC_BUDGET_MS
+    try:
+        run_submission.DIAGNOSTIC_BUDGET_MS = 500
+        limited = judge(slow)
+    finally:
+        run_submission.DIAGNOSTIC_BUDGET_MS = original_budget
+    full = judge(slow)
+
+    if limited["status"] != "WRONG_ANSWER" or full["status"] != "WRONG_ANSWER":
+        failed += 1
+        print(f"[X] 진단 예산: 판정이 WRONG_ANSWER 가 아니다 "
+              f"({limited['status']} / {full['status']})")
+    elif len(limited["cases"]) >= len(full["cases"]):
+        # 대조군: 예산을 넉넉히 주면 더 돌아야 한다. 양쪽이 같으면 이 테스트는
+        # 예산이 아니라 다른 이유로 멈춘 것을 보고 있는 것이다.
+        failed += 1
+        print(f"[X] 진단 예산: 예산을 줄여도 실행한 case 가 줄지 않았다 "
+              f"({len(limited['cases'])} vs {len(full['cases'])}) [VACUOUS]")
+    elif limited["failedCaseId"] != full["failedCaseId"]:
+        failed += 1
+        print(f"[X] 진단 예산: 예산이 판정 근거를 바꿨다 "
+              f"(case {limited['failedCaseId']} vs {full['failedCaseId']})")
+    else:
+        print(f"[O] 진단 예산 -> 예산 500ms 에서 {len(limited['cases'])}개, "
+              f"기본 예산에서 {len(full['cases'])}개 실행, 판정은 그대로")
+
     print("\n== 격리 (Addendum 87) ==")
     for name, code, why in ISOLATION:
         result = judge(code)

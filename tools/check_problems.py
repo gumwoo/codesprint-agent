@@ -165,13 +165,6 @@ def main() -> int:
             if mc not in (problem.get("commonMistakes") or []):
                 fail("probe", f"{rel}: {mc} 를 겨냥하면서 commonMistakes 에는 없다")
 
-            # 태그를 뒷받침하는 풀이가 저장소에 있어야 한다. 없으면 아무도 확인하지
-            # 않은 주장이 확정 근거로 쓰인다.
-            if not (probe_dir / f"{mc}.py").exists():
-                fail("probe",
-                     f"{rel}: {mc} 를 겨냥한다면서 probes/{mc}.py 가 없다 "
-                     f"- 태그가 맞는지 확인할 방법이 없다")
-
             # 대조군이 될 수 있는 case 가 있어야 한다. 모든 case 가 같은 실수를
             # 겨냥하면 "그 실수가 아닌 것도 통과한다" 를 보일 수 없고, 전부 실패한
             # 제출이 무조건 그 실수로 뒷받침된다.
@@ -179,18 +172,33 @@ def main() -> int:
                 fail("probe",
                      f"{rel}: 모든 case 가 {mc} 를 겨냥한다 - 대조군이 없다")
 
-            # wrong.py 가 같은 실수라면 "다른 실수는 이 태그를 만족하지 않는다" 를
-            # 보여줄 오답이 하나도 없다. 검사가 통과해도 아무것도 거르지 못한다.
-            if (problem.get("negativeControl") or {}).get("mistake") == mc:
-                fail("probe",
-                     f"{rel}: negativeControl.mistake 도 {mc} 다 - 태그를 만족하지 "
-                     f"않아야 할 다른 실수의 오답이 없어 검증이 공허해진다")
+        # 태그가 있으면 **경쟁하는 실수 전부**의 오답이 저장소에 있어야 한다.
+        #
+        # 하나의 오답만으로는 부족하다. 실제로 그랬다 - P05 와 P10 의
+        # BOUNDARY_CHECK 태그를 OUTPUT_FORMAT 오답이 그대로 만족했고, 그 상태로
+        # 두면 출력 형식만 틀린 사용자가 경계 검사 드릴을 받는다. 태그가 이 문제의
+        # 어떤 실수와도 구별되는지는 verify_problems.py 가 실제 채점으로 본다.
+        control = (problem.get("negativeControl") or {}).get("mistake")
+        if tagged:
+            for mc in problem.get("commonMistakes") or []:
+                if mc == control:
+                    continue  # 그 실수의 오답은 wrong.py 다(ADR-0007)
+                if not (probe_dir / f"{mc}.py").exists():
+                    fail("probe",
+                         f"{rel}: 태그가 있는 문제인데 probes/{mc}.py 가 없다 "
+                         f"- {mc} 와 구별되는지 확인할 방법이 없다")
 
         if probe_dir.exists():
+            common = set(problem.get("commonMistakes") or [])
             for f in sorted(probe_dir.glob("*.py")):
-                if f.stem not in tagged:
+                if f.stem == control:
                     fail("probe",
-                         f"{rel}: probes/{f.name} 가 있는데 그 실수를 겨냥한 case 가 없다")
+                         f"{rel}: probes/{f.name} 는 negativeControl 과 같은 실수다 "
+                         f"- 그 오답은 wrong.py 하나로 둔다")
+                elif f.stem not in common:
+                    fail("probe",
+                         f"{rel}: probes/{f.name} 가 commonMistakes 에 없다 "
+                         f"- 아무와도 대조되지 않는 파일이다")
 
         # -- negativeControl --
         # wrong.py 가 "실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 확인하려면

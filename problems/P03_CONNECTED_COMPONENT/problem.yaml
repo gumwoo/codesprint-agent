@@ -28,8 +28,10 @@ skills:
     weight: 0.25
 
 commonMistakes:
+  # VISITED_TIMING 은 뺐다. 이 문제에서는 방문 처리를 꺼낼 때 해도 성분 개수가
+  # 달라지지 않아 **답이 바뀌지 않는다** - probes/ 로 실제 채점해서 확인했다.
+  # 잡을 수 없는 실수를 Reviewer 프롬프트 힌트로 주면 오분류를 부추긴다.
   - BOUNDARY_CHECK
-  - VISITED_TIMING
   - NO_VISITED
   - IMPLEMENTATION_MISC
 

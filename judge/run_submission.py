@@ -73,6 +73,17 @@ HOST_LINE_LIMIT = 4 * 1024 * 1024
 # 그것이고, 그 비용 특성은 그대로 지킨다.
 STOP_ON = ("TIME_LIMIT", "MEMORY_LIMIT", "OUTPUT_LIMIT")
 
+# 실패한 뒤 진단을 위해 더 돌리는 데 쓸 수 있는 시간.
+#
+# 싼 실패라고 해서 case 가 빠른 것은 아니다. 제한 직전까지 돌다가 WRONG_ANSWER 가
+# 나는 case 가 이어지면 최악은 여전히 `case 수 x timeLimit` 이고, 그러면
+# SUBMISSION_HARD_TIMEOUT_S 에 걸려 **사용자 코드가 느린 것이 SYSTEM_ERROR(우리 잘못)로
+# 둔갑한다.**
+#
+# 판정에는 영향이 없다 - 판정은 첫 실패가 이미 정했고, 여기서 멈추면 실패의 모양이
+# 덜 모일 뿐이다. 덜 모이면 뒷받침이 성립하지 않아 확정되지 않는 쪽으로 틀린다.
+DIAGNOSTIC_BUDGET_MS = 10_000
+
 
 def system_error(detail: str, total: int = 1) -> dict:
     return {
@@ -144,6 +155,7 @@ def _run_protocol(proc: subprocess.Popen, job: dict, total: int) -> dict:
     results: list[dict] = []
     passed = 0
     max_ms = 0
+    spent_ms = 0
     first_failure: dict | None = None
 
     for case in job["cases"]:
@@ -156,6 +168,7 @@ def _run_protocol(proc: subprocess.Popen, job: dict, total: int) -> dict:
         elapsed = reply.get("executionMs")
         if elapsed is not None:
             max_ms = max(max_ms, int(elapsed))
+            spent_ms += int(elapsed)
 
         outcome = reply.get("outcome")
         if outcome == "OK":
@@ -178,6 +191,9 @@ def _run_protocol(proc: subprocess.Popen, job: dict, total: int) -> dict:
             # 비싼 실패에서는 멈춘다(ADR-0015). 무한 루프 하나가 case 수만큼의
             # timeout 을 먹는 것이 ADR-0005 가 조기 종료를 택한 이유였고,
             # 그 비용 특성은 그대로 지킨다.
+            break
+        if spent_ms >= DIAGNOSTIC_BUDGET_MS:
+            # 이미 실패했고 예산도 다 썼다. 더 돌려도 판정은 바뀌지 않는다.
             break
 
     send({"type": "end"})

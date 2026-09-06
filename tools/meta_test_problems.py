@@ -107,9 +107,10 @@ def probe_not_in_common(doc):
     doc["cases"][0]["probes"] = ["INPUT_PARSE"]
 
 
-def probe_without_solution(doc):
-    # NO_VISITED 는 P03 의 commonMistakes 지만 그것을 담은 풀이가 저장소에 없다.
-    doc["cases"][0]["probes"] = ["NO_VISITED"]
+def competing_mistake_without_solution(doc):
+    # 태그가 있는 문제에 경쟁 실수를 하나 늘린다. 그것을 담은 오답이 없으면
+    # 태그가 그 실수와 구별되는지 확인할 수 없다.
+    doc["commonMistakes"].append("INPUT_PARSE")
 
 
 def probe_every_case(doc):
@@ -117,7 +118,9 @@ def probe_every_case(doc):
         c["probes"] = ["BOUNDARY_CHECK"]
 
 
-def control_is_the_probed_mistake(doc):
+def control_duplicates_a_probe_solution(doc):
+    # wrong.py 가 BOUNDARY_CHECK 가 되면 probes/BOUNDARY_CHECK.py 와 같은 실수의
+    # 오답이 둘이 된다. 어느 쪽이 정본인지 알 수 없다.
     doc["negativeControl"]["mistake"] = "BOUNDARY_CHECK"
 
 
@@ -165,9 +168,9 @@ CASES = [
     ("존재하지 않는 Mistake 를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", dangling_probe, "겨냥한다"),
     ("시스템이 부여하는 Mistake 를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_on_system_mistake, "assigned_by 가 REVIEWER 가 아니다"),
     ("commonMistakes 에 없는 것을 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_not_in_common, "commonMistakes 에는 없다"),
-    ("겨냥한 실수의 풀이가 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_without_solution, "probes/NO_VISITED.py 가 없다"),
+    ("경쟁하는 실수의 오답이 없으면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", competing_mistake_without_solution, "probes/INPUT_PARSE.py 가 없다"),
     ("모든 case 가 같은 실수를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_every_case, "대조군이 없다"),
-    ("wrong.py 가 겨냥한 실수와 같으면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", control_is_the_probed_mistake, "공허해진다"),
+    ("같은 실수의 오답이 둘이면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", control_duplicates_a_probe_solution, "wrong.py 하나로 둔다"),
 ]
 
 # 파일이 있고 없고로만 깨뜨릴 수 있는 것. (설명, 대상, 동작, 기대 메시지 조각)
@@ -175,9 +178,12 @@ FILE_CASES = [
     ("겨냥한 실수의 풀이 파일을 지우면",
      "problems/P03_CONNECTED_COMPONENT/probes/BOUNDARY_CHECK.py", "delete",
      "probes/BOUNDARY_CHECK.py 가 없다"),
-    ("겨냥하지 않는 실수의 풀이가 남아 있으면",
-     "problems/P03_CONNECTED_COMPONENT/probes/NO_VISITED.py", "create",
-     "겨냥한 case 가 없다"),
+    ("경쟁하는 실수의 오답 파일을 지우면",
+     "problems/P03_CONNECTED_COMPONENT/probes/NO_VISITED.py", "delete",
+     "probes/NO_VISITED.py 가 없다"),
+    ("commonMistakes 에 없는 실수의 풀이가 남아 있으면",
+     "problems/P03_CONNECTED_COMPONENT/probes/INPUT_PARSE.py", "create",
+     "commonMistakes 에 없다"),
 ]
 
 

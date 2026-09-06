@@ -14,9 +14,7 @@
       "hidden": true,
       "input": "1 1\n1\n",
       "expectedOutput": "1\n",
-      "probes": [
-        "BOUNDARY_CHECK"
-      ]
+      "probes": []
     },
     {
       "id": 3,
@@ -48,9 +46,7 @@
       "hidden": true,
       "input": "5 2\n1 1\n1 1\n1 1\n1 1\n1 1\n",
       "expectedOutput": "6\n",
-      "probes": [
-        "BOUNDARY_CHECK"
-      ]
+      "probes": []
     },
     {
       "id": 7,
