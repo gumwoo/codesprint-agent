@@ -89,3 +89,29 @@ tasks.withType<Test> {
     // golden fixture 위치를 테스트에 알려준다. 저장소 루트 기준이다.
     systemProperty("codesprint.repoRoot", rootProject.projectDir.parentFile.absolutePath)
 }
+
+// -- Reviewer 평가 하네스 (ADR-0016) --------------------------------------
+//
+// 실제 모델을 부르므로 test 에 섞지 않는다. 느리고 비결정적이라 CI 에 넣으면
+// 모델이 그날 다르게 답했다는 이유로 관계없는 PR 이 빨개진다.
+val evalReviewer by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "라벨된 오답으로 Reviewer 정확도를 잰다. 로컬 Claude CLI 가 필요하다."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "dev.codesprint.reviewer.ReviewerEvaluation"
+    systemProperty("codesprint.repoRoot", rootProject.projectDir.parentFile.absolutePath)
+}
+
+// gradle 이 없는 곳에서 위 하네스를 돌리기 위한 것.
+//
+// 이 저장소에서는 gradle 이 컨테이너 안에서 돌고 claude CLI 는 호스트에 있어서,
+// 한 프로세스가 둘을 동시에 볼 수 없다. 의존성 jar 를 build/eval-lib 로 모아 두면
+// 호스트에서 gradle 없이 돌릴 수 있다.
+//
+//   java -cp "backend/build/eval-lib/*;backend/build/classes/java/test;..." //        -Dcodesprint.repoRoot=. dev.codesprint.reviewer.ReviewerEvaluation
+val evalLibs by tasks.registering(Sync::class) {
+    group = "verification"
+    description = "평가 하네스를 gradle 없이 돌리기 위해 의존성 jar 를 모은다."
+    from(sourceSets["test"].runtimeClasspath.filter { it.isFile })
+    into(layout.buildDirectory.dir("eval-lib"))
+}

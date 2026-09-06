@@ -250,6 +250,39 @@ Judge 가 어떤 case 를 실패시키고 어떤 case 를 통과시켰는지 관
 확정되지 않은 탐지도 지우지 않는다. 재발(§21-B)을 세려면 남아 있어야 하고, 나중에
 Reviewer 정확도를 재는 라벨이 된다.
 
+## 정확도를 잴 때
+
+**정확도는 저장소의 라벨된 오답으로 잰다**([ADR-0016](docs/adr/0016-reviewer-accuracy-is-measured-with-labelled-wrong-answers.md)).
+`wrong.py` 와 `probes/<MISTAKE>.py` 는 무슨 실수를 심었는지 선언돼 있고 CI 가 실제
+채점으로 검증한 것이라, 그대로 정답지가 된다.
+
+```bash
+python tools/gen_reviewer_eval_cases.py --write   # 라벨 + 실제 채점 결과 (Docker)
+gradle evalReviewer                               # 진짜 모델을 부른다 (Claude CLI)
+```
+
+**하네스는 설정을 따로 갖지 않는다.** 명령 · timeout · 프롬프트 버전을 애플리케이션과
+같은 `application.yml` 에서 읽는다 - 따로 적으면 앱을 `reviewer-v2` 로 바꿔 놓고
+평가는 v1 을 재게 된다.
+
+**평가는 CI 에 넣지 않는다.** 모델 호출은 느리고 비결정적이라, 넣으면 모델이 그날
+다르게 답했다는 이유로 관계없는 PR 이 빨개진다. CI 는 평가 케이스가 실제 채점과
+일치하는지만 본다 - 그쪽은 결정론적이다.
+
+**정확도에 임의의 기준선을 두지 않는다** - 근거 없는 기준을 통과했다고 안심하는 편이
+재지 않는 것보다 나쁘다. 대신 두 가지만 본다.
+
+```
+오확정 0건         라벨과 다른 Mistake 가 확정되면 안 된다        exit 1
+평가가 성립했는가   쓸 수 있는 분석이 0건이면 아무것도 재지 않았다  exit 2
+```
+
+뒤쪽이 없으면 **Reviewer 가 완전히 죽어도 "오확정 0건" 으로 끝난다.** 정확도 기준선이
+아니라 실제 분석을 하나라도 평가했는지만 보는 것이다.
+
+평가 집합을 보고 프롬프트를 고치지 않는다. 그러면 그 집합에만 맞춘 프롬프트가 된다 -
+프롬프트를 바꿀 때는 새 파일을 만들고 두 버전을 같은 집합으로 재서 비교한다.
+
 슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.
 

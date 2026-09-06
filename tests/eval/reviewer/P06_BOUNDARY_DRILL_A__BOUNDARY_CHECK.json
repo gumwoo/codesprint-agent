@@ -1,0 +1,27 @@
+{
+  "problemCode": "P06_BOUNDARY_DRILL_A",
+  "problemTitle": "격자 밖으로 나갔는가",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GRID_BOUNDARY_CHECK",
+    "GRID_COORDINATE"
+  ],
+  "sourceCode": "\nimport sys\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\nr, c = int(data[2]), int(data[3])\nk = int(data[4])\nmoves = data[5:5 + k]\ndelta = {\"U\": (-1, 0), \"D\": (1, 0), \"L\": (0, -1), \"R\": (0, 1)}\n\nfor mv in moves:\n    dr, dc = delta[mv]\n    nr, nc = r + dr, c + dc\n    if nr >= 0 and nc >= 0:\n        r, c = nr, nc\nprint(r, c)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 3,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2
+    ],
+    "failedCaseIds": [
+      3,
+      4,
+      5
+    ]
+  },
+  "probes": {}
+}

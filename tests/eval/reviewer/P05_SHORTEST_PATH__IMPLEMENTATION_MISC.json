@@ -1,0 +1,31 @@
+{
+  "problemCode": "P05_SHORTEST_PATH",
+  "problemTitle": "격자 최단거리",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BFS_SHORTEST_PATH",
+    "BFS_GRID_TRAVERSAL",
+    "GRID_BOUNDARY_CHECK",
+    "BFS_VISITED_MANAGEMENT"
+  ],
+  "sourceCode": "\nimport sys\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0 or g[n - 1][m - 1] == 0:\n    print(-1)\n    raise SystemExit\n\ndist = [[0] * m for _ in range(n)]\ndist[0][0] = 1\nstack = [(0, 0)]\nwhile stack:\n    x, y = stack.pop()\n    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n        nx, ny = x + dx, y + dy\n        if 0 <= nx < n and 0 <= ny < m and dist[nx][ny] == 0 and g[nx][ny] == 1:\n            dist[nx][ny] = dist[x][y] + 1\n            stack.append((nx, ny))\nprint(dist[n - 1][m - 1] or -1)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 5,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      7
+    ],
+    "failedCaseIds": [
+      5,
+      6
+    ]
+  },
+  "probes": {}
+}
