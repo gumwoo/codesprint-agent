@@ -72,6 +72,68 @@ class ReviewerEvaluationReportTest {
         assertThat(output).contains("확정(§21-A) 1건");
     }
 
+    /** 호출이 실패했거나 응답이 오지 않은 것. predicted 조차 없다. */
+    private static ReviewerEvaluation.Outcome missing(String label) {
+        return new ReviewerEvaluation.Outcome(
+                "P02_GRID_TRAVERSAL", label, null, 0, null, "분석 없음");
+    }
+
+    @Test
+    @DisplayName("쓸 수 있는 분석이 하나도 없으면 평가가 성립하지 않는다")
+    void nothingEvaluatedIsNotSuccess() {
+        // Reviewer 가 완전히 죽어도 오확정은 0건이다. 그 초록은 "안전하다" 가
+        // 아니라 "아무 일도 일어나지 않았다" 다 - 로그인이 풀린 채로 돌려도
+        // 통과하면 이 하네스는 아무것도 지키지 못한다.
+        int code = ReviewerEvaluation.verdict(List.of(
+                missing("BOUNDARY_CHECK"), missing("NO_VISITED"), missing("INDEX_ERROR")));
+
+        assertThat(code).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("분석이 전부 검증에서 떨어져도 평가가 성립하지 않는다")
+    void allRejectedIsNotSuccess() {
+        // 모델은 답했지만 하나도 학습 경로에 닿지 않았다. 잰 것이 없다.
+        int code = ReviewerEvaluation.verdict(List.of(
+                rejected("BOUNDARY_CHECK", "BOUNDARY_CHECK"),
+                rejected("NO_VISITED", "NO_VISITED")));
+
+        assertThat(code).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("하나라도 평가했고 오확정이 없으면 통과다")
+    void oneUsableIsEnough() {
+        // 정확도 기준선이 아니다. 틀렸어도 확정되지 않았으면 학습 경로를 바꾸지 않는다.
+        int code = ReviewerEvaluation.verdict(List.of(
+                usable("OUTPUT_FORMAT", "BOUNDARY_CHECK"), missing("NO_VISITED")));
+
+        assertThat(code).isZero();
+    }
+
+    @Test
+    @DisplayName("오확정이 있으면 실패다")
+    void falseConfirmationFails() {
+        int code = ReviewerEvaluation.verdict(List.of(
+                new ReviewerEvaluation.Outcome("P01_QUEUE_BASIC", "OUTPUT_FORMAT",
+                        "BOUNDARY_CHECK", 0.95, MistakeStatus.CONFIRMED, null)));
+
+        assertThat(code).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("분석이 오지 않은 것과 검증에서 떨어진 것을 나눠 센다")
+    void missingAndRejectedAreSeparate() {
+        // 앞은 하네스나 CLI 가 고장난 것이고 뒤는 모델이 계약을 어긴 것이라
+        // 할 일이 다르다. 한 숫자로 합치면 어느 쪽인지 알 수 없다.
+        String output = render(List.of(
+                usable("BOUNDARY_CHECK", "BOUNDARY_CHECK"),
+                rejected("NO_VISITED", "NO_VISITED"),
+                missing("INDEX_ERROR")));
+
+        assertThat(output).contains("분석이 오지 않음 1 · 검증 탈락 1");
+    }
+
     @Test
     @DisplayName("라벨과 다른 것이 확정되면 오확정이다")
     void falseConfirmation() {

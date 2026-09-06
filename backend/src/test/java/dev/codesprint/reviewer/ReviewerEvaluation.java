@@ -26,20 +26,31 @@ import java.util.TreeMap;
  * - 여기서는 진짜 모델을 부르고, 라벨과 대조한다.
  *
  * <pre>
- *   CODESPRINT_REVIEWER_EVAL=true gradle test --tests '*ReviewerEvaluationTest*'
+ *   gradle evalReviewer                    # 전부
+ *   gradle evalReviewer --args P02_        # 파일 이름에 그것이 들어간 것만
  * </pre>
  *
  * <p><b>기본은 꺼져 있다.</b> 모델 호출은 느리고 비결정적이라 CI 에 넣지 않는다 -
  * 넣으면 모델이 그날 다르게 답했다는 이유로 관계없는 PR 이 빨개진다(ADR-0016).
  *
- * <h2>단언은 하나뿐이다</h2>
+ * <h2>무엇을 실패로 볼 것인가</h2>
  *
  * <p>정확도에는 임의의 기준선을 두지 않는다. "70% 이상" 같은 숫자는 근거가 없고,
  * 근거 없는 기준을 통과했다고 안심하는 편이 재지 않는 것보다 나쁘다.
  *
- * <p>대신 <b>오확정 0건</b>만 단언한다. §21-A 가 서 있는 전제이기 때문이다 - 라벨과
- * 다른 Mistake 가 CONFIRMED 까지 가면 그 사용자는 엉뚱한 드릴을 받는다. 나머지는
- * 전부 보고만 한다.
+ * <p>두 가지만 본다.
+ *
+ * <pre>
+ *   오확정 0건        라벨과 다른 Mistake 가 CONFIRMED 까지 가면 안 된다 (§21-A 의 전제)
+ *   평가가 성립했는가  쓸 수 있는 분석이 하나도 없으면 아무것도 재지 않은 것이다
+ * </pre>
+ *
+ * <p>뒤쪽이 없으면 <b>Reviewer 가 완전히 죽어도 "오확정 0건" 으로 끝난다.</b> 로그인이
+ * 풀렸거나 명령이 깨져 20건 전부 호출에 실패해도 초록이다 - 이 저장소가 계속 막아온
+ * "아무것도 검사하지 않았는데 통과" 와 같다.
+ *
+ * <p>이것은 정확도 기준선이 아니다. <b>실제 분석을 하나라도 평가했는가</b>일 뿐이다.
+ * 나머지(일치율, 검증 탈락률, 혼동 행렬)는 전부 보고만 한다.
  */
 public final class ReviewerEvaluation {
 
@@ -104,7 +115,15 @@ public final class ReviewerEvaluation {
         }
 
         report(outcomes, promptVersion());
+        System.exit(verdict(outcomes));
+    }
 
+    /**
+     * 이 평가를 어떻게 끝낼 것인가.
+     *
+     * @return 0 통과 · 1 오확정 · 2 평가가 성립하지 않음
+     */
+    static int verdict(List<Outcome> outcomes) {
         List<Outcome> falseConfirmations = outcomes.stream()
                 .filter(Outcome::isFalseConfirmation)
                 .toList();
@@ -117,10 +136,27 @@ public final class ReviewerEvaluation {
                 System.out.println("       " + o.problemCode() + ": 심어둔 것 " + o.label()
                         + ", 확정된 것 " + o.predicted());
             }
-            System.exit(1);
+            return 1;
         }
+
+        // **오확정이 0건인 것과 아무것도 재지 않은 것을 구분한다.**
+        //
+        // Reviewer 가 완전히 죽어도 오확정은 0건이다. 이 검사가 없으면 로그인이
+        // 풀린 상태로 돌려도 초록이 나오고, 그 초록은 "안전하다" 가 아니라
+        // "아무 일도 일어나지 않았다" 다.
+        //
+        // 정확도 기준선이 아니다 - 실제 분석을 하나라도 평가했는지만 본다.
+        if (outcomes.stream().noneMatch(Outcome::isUsable)) {
+            System.out.println();
+            System.out.println("[INVALID] 쓸 수 있는 분석이 0건이라 평가가 성립하지 않는다.");
+            System.out.println("          Reviewer 를 부르지 못했거나 응답이 전부 검증에서 "
+                    + "떨어졌다. 위 '비고' 열이 어느 쪽인지 말해 준다.");
+            return 2;
+        }
+
         System.out.println();
         System.out.println("[OK] 오확정 0건");
+        return 0;
     }
 
     private static Outcome evaluateOne(JsonNode one, ReviewerPort reviewer,
@@ -191,7 +227,12 @@ public final class ReviewerEvaluation {
 
         System.out.println();
         System.out.println("== Reviewer 평가 (" + promptVersion + ") ==");
-        System.out.printf("케이스 %d건 · 쓸 수 있는 분석 %d건%n", outcomes.size(), usable);
+        // 분석이 오지 않은 것과 와서 버려진 것을 나눠 센다. 앞은 하네스나 CLI 가
+        // 고장난 것이고 뒤는 모델이 계약을 어긴 것이라, 할 일이 다르다.
+        long missing = outcomes.stream().filter(o -> o.predicted() == null).count();
+        System.out.printf("케이스 %d건 · 쓸 수 있는 분석 %d건 "
+                        + "(분석이 오지 않음 %d · 검증 탈락 %d)%n",
+                outcomes.size(), usable, missing, outcomes.size() - usable - missing);
         System.out.printf("primary 일치  쓸 수 있는 분석 중 %d/%d · 버려진 것까지 %d/%d%n",
                 usableCorrect, usable, rawCorrect, outcomes.size());
         System.out.printf("한 번의 분석만으로 확정(§21-A) %d건%n", confirmed);
