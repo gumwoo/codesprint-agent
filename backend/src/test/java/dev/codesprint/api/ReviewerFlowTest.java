@@ -1,6 +1,7 @@
 package dev.codesprint.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -141,6 +142,12 @@ class ReviewerFlowTest {
     private JudgeResultPoller poller;
 
     @Autowired
+    private dev.codesprint.learning.service.JudgeResultApplier applier;
+
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager txManager;
+
+    @Autowired
     private MistakeDetectionRepository detections;
 
     @Autowired
@@ -205,6 +212,34 @@ class ReviewerFlowTest {
     }
 
     /**
+     * 제출하고 채점 결과까지 큐에 넣되 <b>반영하지는 않는다.</b>
+     *
+     * <p>채점은 요청 밖에서 일어나므로(ADR-0013), 결과를 반영하는 시점에는 그보다
+     * 나중의 제출이 이미 있을 수 있다. 그 상황을 만든다.
+     */
+    private long submitAndQueue(String problemCode, String judgeStatus, Integer failedCaseId)
+            throws Exception {
+        String body = """
+                {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
+                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                """.formatted(userId);
+        String json = mvc.perform(post("/api/problems/{code}/submit", problemCode)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse().getContentAsString();
+        long submissionId = MAPPER.readTree(json).get("submissionId").asLong();
+
+        JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
+        jdbc.update("""
+                UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?
+                """,
+                """
+                {"status": "%s", "passed": 0, "total": 5, "executionMs": 90,
+                 "memoryKb": 20480, "failedCaseId": %s, "stderr": null, "cases": []}
+                """.formatted(judgeStatus, failedCaseId), job.id());
+        return submissionId;
+    }
+
+    /**
      * 이 Skill 을 이미 배우고 있는 상태로 만든다.
      *
      * <p>신규 사용자에게는 선수 조건이 전부 미충족이라 <b>어떤 실패든 CHANGE_SKILL
@@ -217,6 +252,12 @@ class ReviewerFlowTest {
         submitAndJudge(problemCode, "WRONG_ANSWER", 4);
         reviewer.scripted = scripted;
         reviewer.calls = 0;
+    }
+
+    /** 자리 잡기를 별도 트랜잭션에서 한 번 시도한다. */
+    private int claim(long jobId) {
+        return new org.springframework.transaction.support.TransactionTemplate(txManager)
+                .execute(status -> jobs.claimForApply(jobId, java.time.Instant.now()));
     }
 
     private JsonNode resultOf(long submissionId) throws Exception {
@@ -359,6 +400,100 @@ class ReviewerFlowTest {
         assertThat(result.get("nextAction").get("type").asText())
                 .as("확정되지 않았으므로 드릴이 아니다")
                 .isNotEqualTo("MICRO_DRILL");
+    }
+
+    @Test
+    @DisplayName("자리는 한 번만 잡힌다")
+    void applyIsClaimedOnce() throws Exception {
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        long submissionId = submitAndQueue("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
+        long jobId = jobs.findBySubmissionId(submissionId).orElseThrow().id();
+
+        // 서로 다른 트랜잭션이다 - 다른 인스턴스가 각자 반영을 시도하는 모양이다.
+        assertThat(claim(jobId)).as("처음 잡는 쪽은 1 을 받는다").isEqualTo(1);
+        assertThat(claim(jobId)).as("이미 잡혀 있으면 0 이다").isZero();
+    }
+
+    @Test
+    @DisplayName("먼저 잡은 트랜잭션이 끝날 때까지 두 번째는 기다렸다가 0 을 받는다")
+    void theSecondClaimWaitsAndLoses() throws Exception {
+        // 8개 스레드로 apply() 를 동시에 부르는 테스트를 먼저 써 봤는데, **읽고
+        // 확인한 뒤 쓰는 예전 코드에서도 통과했다.** 첫 스레드가 다른 스레드들이
+        // 시작하기 전에 끝나 버려서 경합이 일어나지 않았다 - 아무것도 검증하지
+        // 못하는 테스트였다.
+        //
+        // 그래서 겹치는 순간을 직접 만든다. 첫 트랜잭션이 자리를 잡고 **커밋하지
+        // 않은 채** 두 번째가 같은 행을 노리게 한다.
+        long submissionId = submitAndQueue("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
+        long jobId = jobs.findBySubmissionId(submissionId).orElseThrow().id();
+
+        var claimed = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var first = pool.submit(() -> new org.springframework.transaction.support
+                    .TransactionTemplate(txManager).execute(status -> {
+                        int n = jobs.claimForApply(jobId, java.time.Instant.now());
+                        claimed.countDown();
+                        try {
+                            release.await();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        return n;
+                    }));
+            assertThat(claimed.await(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+
+            var second = pool.submit(() -> claim(jobId));
+
+            // 두 번째는 행 잠금에 걸려 기다려야 한다. 여기서 값이 나오면 두 트랜잭션이
+            // 같은 행을 나란히 가져간 것이다.
+            assertThatThrownBy(() -> second.get(2, java.util.concurrent.TimeUnit.SECONDS))
+                    .as("첫 트랜잭션이 커밋하기 전에는 두 번째가 진행하지 못한다")
+                    .isInstanceOf(java.util.concurrent.TimeoutException.class);
+
+            release.countDown();
+            assertThat(first.get(30, java.util.concurrent.TimeUnit.SECONDS))
+                    .as("먼저 잡은 쪽이 반영한다").isEqualTo(1);
+            assertThat(second.get(30, java.util.concurrent.TimeUnit.SECONDS))
+                    .as("두 번째는 반영하지 않는다").isZero();
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("재발 창은 그 제출 시점까지만 본다")
+    void recurrenceWindowStopsAtTheSubmission() throws Exception {
+        // 창은 "최근 3문제" 다. 그 제출보다 **나중에** 낸 문제가 창의 한 자리를
+        // 차지하면, 원래 창에 있어야 할 오래된 문제가 밀려난다. 그러면 실제로
+        // 있었던 재발이 보이지 않는다.
+        //
+        //   P02 탐지 · P05 깨끗 · P09 탐지(지금)   창 = P09·P05·P02 -> 2회 -> 확정
+        //   그 뒤에 P03 을 하나 더 내면              창 = P03·P09·P05 -> 1회 -> 확정 안 됨
+        //
+        // 채점은 요청 밖에서 일어나므로(ADR-0013) 이 상황은 실제로 생긴다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);   // 탐지
+        reviewer.scripted = null;
+        submitAndJudge("P05_SHORTEST_PATH", "WRONG_ANSWER", 4);    // 깨끗
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+
+        // 지금 볼 제출. 아직 반영하지 않는다.
+        long submissionId = submitAndQueue("P09_BFS_VARIANT_A", "WRONG_ANSWER", 4);
+
+        // 그 사이에 다른 문제를 하나 더 냈다. **이 제출은 위 제출보다 나중이다.**
+        submitAndQueue("P03_CONNECTED_COMPONENT", "WRONG_ANSWER", 4);
+
+        poller.applyFinishedJobs();
+
+        JsonNode result = resultOf(submissionId).get("result");
+        assertThat(result.get("review").get("status").asText())
+                .as("P09 시점의 최근 3문제는 P09·P05·P02 이고 그 안에서 2회다")
+                .isEqualTo("CONFIRMED");
     }
 
     @Test
