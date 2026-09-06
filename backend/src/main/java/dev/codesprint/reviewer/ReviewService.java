@@ -80,7 +80,8 @@ public class ReviewService {
      *     {@link CaseCorroboration#NONE} 을 넘긴다.
      */
     public Optional<Review> review(Long userId, Long submissionId, Long problemId,
-            ReviewerPort.Request request, CaseCorroboration corroboration) {
+            java.time.Instant submittedAt, ReviewerPort.Request request,
+            CaseCorroboration corroboration) {
 
         Optional<ReviewerOutput> analysed;
         try {
@@ -105,7 +106,8 @@ public class ReviewService {
             return Optional.empty();
         }
 
-        int recent = recentDetectionCount(userId, problemId, output.primaryMistake());
+        int recent = recentDetectionCount(
+                userId, submissionId, problemId, submittedAt, output.primaryMistake());
 
         // §21-A 의 독립적인 근거. **Reviewer 가 만들지 않은 것만 들어온다.**
         //
@@ -146,11 +148,20 @@ public class ReviewService {
      * <p><b>창을 먼저 정하고 그 안에서 센다.</b> 탐지 기록에서 창을 뽑으면 실수가
      * 없었던 문제가 창에 들어오지 않아, 아주 오래된 실수가 현재 실수와 묶인다 -
      * {@code SubmissionRepository.recentProblemIds} 에 그 예를 적어 뒀다.
+     *
+     * <p><b>그리고 그 제출 시점까지만 본다.</b> 나중 제출까지 세면 반대 방향으로
+     * 어긋난다 - 아직 일어나지 않은 문제가 창을 차지해 실제로 있었던 재발이 보이지
+     * 않는다.
      */
-    private int recentDetectionCount(Long userId, Long problemId, String mistakeCode) {
+    private int recentDetectionCount(Long userId, Long submissionId, Long problemId,
+            java.time.Instant submittedAt, String mistakeCode) {
         // 이번 제출의 문제는 아직 탐지가 저장되기 전이므로 따로 센다.
+        //
+        // **창은 이 제출 시점까지만이다.** 반영이 늦어지는 사이에 들어온 나중 제출을
+        // 세면 아직 일어나지 않은 문제가 창을 차지한다(ADR-0013 이 만든 시차다).
         List<Long> window = new ArrayList<>(submissions.recentProblemIds(
-                userId, PageRequest.of(0, MistakeConfirmation.RECENT_WINDOW)));
+                userId, submittedAt, submissionId,
+                PageRequest.of(0, MistakeConfirmation.RECENT_WINDOW)));
         window.remove(problemId);
 
         // 이번 문제가 창의 한 자리를 차지한다.

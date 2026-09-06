@@ -73,17 +73,15 @@ public class JudgeJobRow {
         this.status = "QUEUED";
     }
 
-    /**
-     * 결과를 학습 상태에 반영했다고 표시한다.
-     *
-     * <p>status 와 따로 두는 이유는 둘이 다른 것을 말하기 때문이다. DONE 은 "채점이
-     * 끝났다", 이 값은 "그 결과를 우리가 처리했다" 다. 하나로 합치면 반영 도중
-     * 실패했을 때 다시 시도할 방법이 없다.
-     */
-    public void markApplied(Instant at) {
-        this.appliedAt = at;
-        this.updatedAt = at;
-    }
+    // appliedAt 을 여기서 세터로 바꾸지 않는다.
+    //
+    // 엔티티를 읽어 확인하고 쓰면 두 인스턴스가 나란히 "아직 반영 안 됐다" 를 보고
+    // 둘 다 반영한다. 자리 잡기는 조건부 UPDATE 한 번으로 해야 하며,
+    // JudgeJobRepository.claimForApply 가 그것이다.
+    //
+    // status 와 따로 두는 이유는 둘이 다른 것을 말하기 때문이다. DONE 은 "채점이
+    // 끝났다", appliedAt 은 "그 결과를 우리가 처리했다" 다. 하나로 합치면 반영 도중
+    // 실패했을 때 다시 시도할 방법이 없다.
 
     public Long id() {
         return id;

@@ -41,14 +41,35 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
      *
      * <p>실제 최근 3문제는 P3·P4·P5 이고 그 안에서는 1회다. 그런데 탐지 기록만 보면
      * P1 과 P5 가 나란히 보여 2회가 되고, 아주 오래된 실수가 현재 실수와 묶여 확정된다.
+     *
+     * <h2>그 제출 시점까지만 본다</h2>
+     *
+     * <p>채점은 요청 밖에서 일어나므로(ADR-0013), 결과를 반영하는 시점에는 <b>그보다
+     * 나중의 제출이 이미 있을 수 있다.</b> 그것까지 세면 아직 일어나지 않은 문제가
+     * 창의 한 자리를 차지하고, 원래 창에 있어야 할 문제가 밀려난다.
+     *
+     * <pre>
+     *   P2 탐지 · P5 깨끗 · P9 탐지(지금)   창 = P9·P5·P2 -&gt; 2회 -&gt; 확정
+     *   그 뒤에 P3 을 하나 더 내면           창 = P3·P9·P5 -&gt; 1회 -&gt; 확정 안 됨
+     * </pre>
+     *
+     * <p>제출 시각이 같을 수 있으므로 id 로 한 번 더 가른다. 그냥 {@code <=} 로 두면
+     * 같은 순간의 <b>나중</b> 제출이 창에 들어온다.
+     *
+     * @param at 그 제출의 시각. 이 시점 이후는 보지 않는다.
+     * @param submissionId 그 제출. 시각이 같을 때의 경계다.
      */
     @Query("""
             select s.problemId from SubmissionRow s
             where s.userId = :userId
+              and (s.submittedAt < :at or (s.submittedAt = :at and s.id <= :submissionId))
             group by s.problemId
-            order by max(s.submittedAt) desc
+            order by max(s.submittedAt) desc, max(s.id) desc
             """)
-    List<Long> recentProblemIds(@Param("userId") Long userId, Pageable page);
+    List<Long> recentProblemIds(@Param("userId") Long userId,
+            @Param("at") java.time.Instant at,
+            @Param("submissionId") Long submissionId,
+            Pageable page);
 
     /**
      * 이 사용자가 <b>스스로</b> 풀어낸 문제들.

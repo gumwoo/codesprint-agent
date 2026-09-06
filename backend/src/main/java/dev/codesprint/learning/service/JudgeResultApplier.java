@@ -97,8 +97,16 @@ public class JudgeResultApplier {
      */
     @Transactional
     public void apply(Long jobId) {
+        // **먼저 자리를 잡는다.** 읽고 확인한 뒤 쓰면 두 인스턴스가 나란히
+        // "아직 반영 안 됐다" 를 보고 둘 다 반영한다(JudgeJobRepository.claimForApply).
+        if (jobs.claimForApply(jobId, Instant.now()) == 0) {
+            return;
+        }
         JudgeJobRow job = jobs.findById(jobId).orElse(null);
-        if (job == null || job.appliedAt() != null) {
+        if (job == null) {
+            // 자리를 잡았는데 행이 없다. 있을 수 없지만, 조용히 넘어가면
+            // 원인을 찾을 단서가 없다.
+            log.error("job {} 의 자리를 잡았는데 행이 없다", jobId);
             return;
         }
 
@@ -106,8 +114,6 @@ public class JudgeResultApplier {
         if (submission == null) {
             // 제출이 없는 job 은 반영할 곳이 없다. 다시 집어도 같으므로 끝낸 것으로 둔다.
             log.error("job {} 의 제출({})이 없다", jobId, job.submissionId());
-            job.markApplied(Instant.now());
-            jobs.save(job);
             return;
         }
 
@@ -176,8 +182,6 @@ public class JudgeResultApplier {
                     "채점 결과를 반영할 문제 정보를 찾지 못했다", "[]");
             submission.applyNextProblem(null, "문제 정보를 찾지 못해 다음 문제를 고를 수 없다");
             submissions.save(submission);
-            job.markApplied(Instant.now());
-            jobs.save(job);
             return;
         }
 
@@ -228,7 +232,7 @@ public class JudgeResultApplier {
         String confirmedMistake = null;
         if (reviews.shouldReview(judged.status())) {
             var review = reviews.review(
-                    userId, submission.id(), submission.problemId(),
+                    userId, submission.id(), submission.problemId(), submission.submittedAt(),
                     reviewRequest(problem, judged, job),
                     // Reviewer 밖의 근거. **Reviewer 출력을 넣지 않는다**(ADR-0014).
                     new CaseCorroboration(judged.passedCaseIds(), judged.failedCaseIds(),
@@ -284,9 +288,6 @@ public class JudgeResultApplier {
         submission.applyNextProblem(selection.problemCode(), selection.reason());
 
         submissions.save(submission);
-
-        job.markApplied(Instant.now());
-        jobs.save(job);
     }
 
     /**
