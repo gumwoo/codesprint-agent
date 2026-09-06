@@ -1,13 +1,19 @@
-# 구간의 끝을 하나 적게 잡아 마지막 구간을 보지 않는다.
+# 인덱스를 1 부터 센다. Python 의 음수 인덱싱 때문에 0 번 요청이 터지지 않고
+# 마지막 값을 돌려준다 - 조용히 틀린다.
 import sys
 
 data = sys.stdin.read().split()
-n, k = int(data[0]), int(data[1])
-values = [int(x) for x in data[2:2 + n]]
+n = int(data[0])
+values = [int(x) for x in data[1:1 + n]]
 
-window = sum(values[:k])
-best = window
-for i in range(k, n - 1):
-    window += values[i] - values[i - k]
-    best = max(best, window)
-print(best)
+at = 1 + n
+q = int(data[at])
+at += 1
+for _ in range(q):
+    command = data[at]
+    if command == "get":
+        print(values[int(data[at + 1]) - 1])
+        at += 2
+    else:
+        values[int(data[at + 1]) - 1] = int(data[at + 2])
+        at += 3

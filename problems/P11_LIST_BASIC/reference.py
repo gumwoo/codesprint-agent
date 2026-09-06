@@ -1,12 +1,17 @@
 import sys
 
 data = sys.stdin.read().split()
-n, k = int(data[0]), int(data[1])
-values = [int(x) for x in data[2:2 + n]]
+n = int(data[0])
+values = [int(x) for x in data[1:1 + n]]
 
-window = sum(values[:k])
-best = window
-for i in range(k, n):
-    window += values[i] - values[i - k]
-    best = max(best, window)
-print(best)
+at = 1 + n
+q = int(data[at])
+at += 1
+for _ in range(q):
+    command = data[at]
+    if command == "get":
+        print(values[int(data[at + 1])])
+        at += 2
+    else:
+        values[int(data[at + 1])] = int(data[at + 2])
+        at += 3

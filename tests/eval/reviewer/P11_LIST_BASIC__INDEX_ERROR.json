@@ -1,13 +1,13 @@
 {
   "problemCode": "P11_LIST_BASIC",
-  "problemTitle": "구간의 합이 가장 큰 곳 찾기",
+  "problemTitle": "리스트를 만들고 인덱스로 다루기",
   "problemSource": "DEV_FIXTURE",
   "label": "INDEX_ERROR",
   "labelSource": "negativeControl",
   "skillCodes": [
     "PYTHON_LIST_BASIC"
   ],
-  "sourceCode": "\nimport sys\n\ndata = sys.stdin.read().split()\nn, k = int(data[0]), int(data[1])\nvalues = [int(x) for x in data[2:2 + n]]\n\nwindow = sum(values[:k])\nbest = window\nfor i in range(k, n - 1):\n    window += values[i] - values[i - k]\n    best = max(best, window)\nprint(best)\n",
+  "sourceCode": "\n\nimport sys\n\ndata = sys.stdin.read().split()\nn = int(data[0])\nvalues = [int(x) for x in data[1:1 + n]]\n\nat = 1 + n\nq = int(data[at])\nat += 1\nfor _ in range(q):\n    command = data[at]\n    if command == \"get\":\n        print(values[int(data[at + 1]) - 1])\n        at += 2\n    else:\n        values[int(data[at + 1]) - 1] = int(data[at + 2])\n        at += 3\n",
   "judge": {
     "status": "WRONG_ANSWER",
     "failedCaseId": 1,

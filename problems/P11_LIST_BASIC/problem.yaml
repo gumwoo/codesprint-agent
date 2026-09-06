@@ -2,20 +2,28 @@
 # Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
 
 code: P11_LIST_BASIC
-title: 구간의 합이 가장 큰 곳 찾기
+title: 리스트를 만들고 인덱스로 다루기
 kind: NORMAL
 source: DEV_FIXTURE
 timeLimitMs: 2000
 memoryLimitMb: 256
-expectedSolveSeconds: 300
-referenceComplexity: "O(N)"
+expectedSolveSeconds: 240
+referenceComplexity: "O(N+Q)"
 
+# 이 문제가 재는 것은 **리스트를 만들고 인덱스로 읽고 쓰는 것** 하나다.
+# 알고리즘을 넣지 않는다 - 선수 조건이 미충족일 때 보내는 착지점이므로,
+# 다른 능력이 섞이면 "PYTHON_LIST_BASIC 이 부족하다" 는 Evidence 가 오염된다.
 statement: |
-  첫 줄에 정수의 개수 N 과 구간의 길이 K 가 주어진다.
+  첫 줄에 정수의 개수 N 이 주어진다.
   둘째 줄에 N 개의 정수가 공백으로 주어진다.
+  셋째 줄에 명령의 개수 Q 가 주어지고, 이어지는 Q 개의 줄에 명령이 주어진다.
 
-  길이가 정확히 K 인 연속 구간 중 합이 가장 큰 것의 합을 출력한다.
-  K 는 N 이하다.
+  명령은 두 가지다. 인덱스는 0 부터 센다.
+
+    get i     i 번째 값을 출력한다
+    set i v   i 번째 값을 v 로 바꾼다
+
+  명령을 주어진 순서대로 처리한다. get 의 결과만 한 줄에 하나씩 출력한다.
 
 skills:
   - code: PYTHON_LIST_BASIC
@@ -23,12 +31,13 @@ skills:
     weight: 1.0
 
 commonMistakes:
-  - INPUT_PARSE
   - INDEX_ERROR
+  - INPUT_PARSE
   - OUTPUT_FORMAT
 
 # wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
-# 마지막 구간을 세지 않는다 - range 의 끝을 하나 적게 잡았다
+# 인덱스를 1 부터 센다. Python 의 음수 인덱싱 때문에 0 번 요청이 터지지 않고
+# 마지막 값을 돌려준다 - 조용히 틀린다.
 negativeControl:
   mistake: INDEX_ERROR
   expectedStatus: WRONG_ANSWER

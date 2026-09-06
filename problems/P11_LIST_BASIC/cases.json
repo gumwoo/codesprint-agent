@@ -4,15 +4,15 @@
       "id": 1,
       "type": "SAMPLE",
       "hidden": false,
-      "input": "5 2\n1 2 3 4 5\n",
-      "expectedOutput": "9\n",
+      "input": "5\n10 20 30 40 50\n3\nget 0\nset 2 99\nget 2\n",
+      "expectedOutput": "10\n99\n",
       "probes": []
     },
     {
       "id": 2,
       "type": "MINIMUM",
       "hidden": true,
-      "input": "1 1\n7\n",
+      "input": "1\n7\n1\nget 0\n",
       "expectedOutput": "7\n",
       "probes": []
     },
@@ -20,24 +20,24 @@
       "id": 3,
       "type": "BOUNDARY",
       "hidden": true,
-      "input": "4 2\n1 1 1 9\n",
-      "expectedOutput": "10\n",
+      "input": "3\n1 2 3\n2\nget 2\nget 0\n",
+      "expectedOutput": "3\n1\n",
       "probes": []
     },
     {
       "id": 4,
-      "type": "ALL_SAME",
+      "type": "ADVERSARIAL",
       "hidden": true,
-      "input": "4 3\n2 2 2 2\n",
-      "expectedOutput": "6\n",
+      "input": "3\n1 2 3\n4\nset 1 5\nget 1\nset 1 6\nget 1\n",
+      "expectedOutput": "5\n6\n",
       "probes": []
     },
     {
       "id": 5,
-      "type": "ADVERSARIAL",
+      "type": "ALL_SAME",
       "hidden": true,
-      "input": "5 3\n-1 -2 -3 -4 -5\n",
-      "expectedOutput": "-6\n",
+      "input": "4\n7 7 7 7\n2\nget 3\nget 1\n",
+      "expectedOutput": "7\n7\n",
       "probes": []
     }
   ]
