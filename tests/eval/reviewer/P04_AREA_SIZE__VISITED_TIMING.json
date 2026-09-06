@@ -22,13 +22,18 @@
     ],
     "failedCaseIds": [
       4,
-      5
+      5,
+      7
     ]
   },
   "probes": {
     "BOUNDARY_CHECK": [
       3,
       6
+    ],
+    "VISITED_TIMING": [
+      4,
+      7
     ]
   }
 }

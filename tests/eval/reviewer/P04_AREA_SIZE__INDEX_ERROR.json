@@ -17,7 +17,8 @@
     "passedCaseIds": [
       1,
       2,
-      3
+      3,
+      7
     ],
     "failedCaseIds": [
       4,
@@ -29,6 +30,10 @@
     "BOUNDARY_CHECK": [
       3,
       6
+    ],
+    "VISITED_TIMING": [
+      4,
+      7
     ]
   }
 }
