@@ -1,0 +1,26 @@
+{
+  "problemCode": "P11_LIST_BASIC",
+  "problemTitle": "구간의 합이 가장 큰 곳 찾기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\ndata = sys.stdin.read().split()\nn, k = int(data[0]), int(data[1])\nvalues = [int(x) for x in data[2:2 + n]]\n\nwindow = sum(values[:k])\nbest = window\nfor i in range(k, n - 1):\n    window += values[i] - values[i - k]\n    best = max(best, window)\nprint(best)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      4,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      3
+    ]
+  },
+  "probes": {}
+}

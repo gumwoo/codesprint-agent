@@ -1,0 +1,27 @@
+{
+  "problemCode": "P14_GRAPH_REACHABLE",
+  "problemTitle": "그래프에서 도달 가능한 정점 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BFS_BASIC",
+    "PYTHON_DEQUE_BASIC"
+  ],
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, e = int(data[0]), int(data[1])\nadjacent = [[] for _ in range(n + 1)]\nfor i in range(e):\n    u, v = int(data[2 + i * 2]), int(data[3 + i * 2])\n    adjacent[u].append(v)\n\nvisited = [False] * (n + 1)\nvisited[1] = True\nq = deque([1])\ncount = 0\nwhile q:\n    node = q.popleft()\n    count += 1\n    for nxt in adjacent[node]:\n        if not visited[nxt]:\n            visited[nxt] = True\n            q.append(nxt)\nprint(count)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 3,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      4,
+      5
+    ],
+    "failedCaseIds": [
+      3
+    ]
+  },
+  "probes": {}
+}

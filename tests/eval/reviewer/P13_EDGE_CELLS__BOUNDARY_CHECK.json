@@ -1,0 +1,26 @@
+{
+  "problemCode": "P13_EDGE_CELLS",
+  "problemTitle": "이웃이 모두 있는 칸 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GRID_BOUNDARY_CHECK",
+    "GRID_COORDINATE"
+  ],
+  "sourceCode": "\nimport sys\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\ncount = 0\nfor x in range(n):\n    for y in range(m):\n        if g[x][y] != 1:\n            continue\n        ok = True\n        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n            nx, ny = (x + dx) % n, (y + dy) % m\n            if g[nx][ny] != 1:\n                ok = False\n                break\n        if ok:\n            count += 1\nprint(count)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "probes": {}
+}

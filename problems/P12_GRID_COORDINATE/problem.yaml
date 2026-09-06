@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P12_GRID_COORDINATE
+title: 격자에서 좌표 읽기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 300
+referenceComplexity: "O(N*M + Q)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  이어지는 N 개의 줄에 격자의 값이 주어진다.
+  다음 줄에 질의의 개수 Q 가 주어지고, 이어지는 Q 개의 줄에 좌표 R C 가 주어진다. (0-based)
+
+  각 질의에 대해 그 칸의 값을 한 줄에 하나씩 출력한다.
+  격자는 정사각형이 아닐 수 있다.
+
+skills:
+  - code: GRID_COORDINATE
+    role: PRIMARY
+    weight: 0.7
+  - code: PYTHON_LIST_BASIC
+    role: SECONDARY
+    weight: 0.3
+
+commonMistakes:
+  - INDEX_ERROR
+  - INPUT_PARSE
+  - OUTPUT_FORMAT
+
+# 행과 열을 뒤바꿔 읽는다. 직사각형이면 범위를 벗어나 터지고, 정사각형이면
+# 터지지 않고 조용히 틀린 값을 낸다 - 첫 case 가 직사각형이라 RUNTIME_ERROR 다.
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: RUNTIME_ERROR

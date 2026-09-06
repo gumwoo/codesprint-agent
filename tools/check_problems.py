@@ -63,6 +63,8 @@ def main() -> int:
     control_mistakes: dict[str, list[str]] = {}
     drill_targets: set[str] = set()
     covered_skills: set[str] = set()
+    # NORMAL 문제가 PRIMARY 로 겨냥하는 Skill. CHANGE_SKILL 의 착지점이다.
+    normal_primary: set[str] = set()
 
     dirs = sorted(d for d in PROBLEMS.iterdir() if d.is_dir())
     for d in dirs:
@@ -212,6 +214,9 @@ def main() -> int:
             fail("negative-control",
                  f"{rel}: negativeControl.mistake {nc_mistake} 가 commonMistakes 에 없다")
 
+        if problem.get("kind") == "NORMAL" and primaries:
+            normal_primary.add(primaries[0]["code"])
+
         if problem.get("kind") == "MICRO_DRILL" and primaries:
             drill_targets.add(primaries[0]["code"])
             # MICRO_DRILL 은 자기가 교정하려는 실수를 심어둬야 한다.
@@ -241,6 +246,27 @@ def main() -> int:
     for code in sorted(skills):
         if code not in covered_skills:
             fail("skill-coverage", f"{code}: 이 Skill 을 다루는 문제가 하나도 없다")
+
+    # -- CHANGE_SKILL 이 갈 곳이 있는가 --
+    #
+    # Decision Engine 은 선수 조건이 미충족이면 그 Skill 로 보낸다(CHANGE_SKILL).
+    # 그때 주는 것은 **일반 문제**다 - 드릴은 이미 배운 것을 좁게 다시 보는 것이라
+    # 아직 시작도 안 한 Skill 에 주면 맥락이 없다(NextProblemService).
+    #
+    # 그래서 선수 조건으로 지목될 수 있는 Skill 에는 그것을 PRIMARY 로 갖는 NORMAL
+    # 문제가 있어야 한다. 없으면 사용자가 추천을 따라갔을 때 "줄 문제가 없다" 로
+    # 끝난다 - 화면을 붙이고 나서야 눈에 보인 구멍이다.
+    #
+    # SECONDARY 로 거드는 것은 세지 않는다. 문제를 고르는 쪽이 PRIMARY 만 보기 때문이다.
+    prerequisites = load(CURRICULUM / "prerequisites.yaml") or {}
+    targets = {row["requires"] for row in prerequisites.get("prerequisites", [])}
+    for code in sorted(targets):
+        if code not in normal_primary:
+            fail(
+                "change-skill-landing",
+                f"{code}: 선수 조건으로 지목되는데 그것을 PRIMARY 로 갖는 NORMAL 문제가 "
+                f"없다 - CHANGE_SKILL 이 갈 곳 없는 Skill 을 가리키게 된다",
+            )
 
     # -- 오답 라벨 분포 --
     # IMPLEMENTATION_MISC 가 많다는 것은 taxonomy 가 실제 오답을 담지 못한다는 신호다

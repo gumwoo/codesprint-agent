@@ -124,6 +124,12 @@ def control_duplicates_a_probe_solution(doc):
     doc["negativeControl"]["mistake"] = "BOUNDARY_CHECK"
 
 
+def normal_becomes_review(doc):
+    # P15 는 BFS_VISITED_MANAGEMENT 의 유일한 NORMAL 문제다. 종류가 바뀌면
+    # CHANGE_SKILL 이 그 Skill 을 가리켜도 줄 문제가 없다.
+    doc["kind"] = "REVIEW"
+
+
 def drop_sample(doc):
     doc["cases"] = [c for c in doc["cases"] if c["type"] != "SAMPLE"]
 
@@ -160,6 +166,9 @@ CASES = [
     ("expectedOutput 이 비면", "problems/P03_CONNECTED_COMPONENT/cases.json", empty_expected_output, "expectedOutput 이 비어 있다"),
     ("hidden case 가 하나도 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", unhide_all_cases, "hidden case 가 없다"),
     ("SAMPLE 이 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", drop_sample, "SAMPLE case 가 없다"),
+
+    # -- CHANGE_SKILL 착지점 --
+    ("선수 조건 Skill 의 NORMAL 문제가 사라지면", "problems/P15_MULTI_SOURCE_SPREAD/problem.yaml", normal_becomes_review, "CHANGE_SKILL 이 갈 곳 없는"),
 
     # -- case 성격 태그 (ADR-0015) --
     # 태그가 Reviewer 밖의 확정 근거가 되므로, 아무도 확인하지 않은 태그가
