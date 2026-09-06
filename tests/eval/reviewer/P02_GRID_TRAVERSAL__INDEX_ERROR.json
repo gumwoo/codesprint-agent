@@ -9,7 +9,7 @@
     "BFS_BASIC",
     "GRID_BOUNDARY_CHECK"
   ],
-  "sourceCode": "import sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0:\n    print(0)\n    raise SystemExit\n\nvisited = [[False] * m for _ in range(n)]\nvisited[0][0] = True\nq = deque([(0, 0)])\ncount = 0\nwhile q:\n    x, y = q.popleft()\n    count += 1\n    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n        nx, ny = x + dx, y + dy\n        if 0 <= nx < n and 0 <= ny < m and not visited[nx][ny] and g[ny][nx] == 1:\n            visited[nx][ny] = True\n            q.append((nx, ny))\nprint(count)\n",
+  "sourceCode": "\n\n\n\n\n\nimport sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0:\n    print(0)\n    raise SystemExit\n\nvisited = [[False] * m for _ in range(n)]\nvisited[0][0] = True\nq = deque([(0, 0)])\ncount = 0\nwhile q:\n    x, y = q.popleft()\n    count += 1\n    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n        nx, ny = x + dx, y + dy\n        if 0 <= nx < n and 0 <= ny < m and not visited[nx][ny] and g[ny][nx] == 1:\n            visited[nx][ny] = True\n            q.append((nx, ny))\nprint(count)\n",
   "judge": {
     "status": "RUNTIME_ERROR",
     "failedCaseId": 4,

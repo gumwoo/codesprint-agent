@@ -8,7 +8,7 @@
     "PYTHON_DEQUE_BASIC",
     "PYTHON_LIST_BASIC"
   ],
-  "sourceCode": "import sys\nfrom collections import deque\n\nlines = sys.stdin.read().splitlines()\nn = int(lines[0])\nq = deque()\nfor i in range(1, n + 1):\n    parts = lines[i].split()\n    if parts[0] == \"push\":\n        q.append(int(parts[1]))\n    elif q:\n        print(q.popleft())\n",
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\nlines = sys.stdin.read().splitlines()\nn = int(lines[0])\nq = deque()\nfor i in range(1, n + 1):\n    parts = lines[i].split()\n    if parts[0] == \"push\":\n        q.append(int(parts[1]))\n    elif q:\n        print(q.popleft())\n",
   "judge": {
     "status": "WRONG_ANSWER",
     "failedCaseId": 1,

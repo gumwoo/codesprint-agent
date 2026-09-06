@@ -8,7 +8,7 @@
     "BFS_VISITED_MANAGEMENT",
     "BFS_SHORTEST_PATH"
   ],
-  "sourceCode": "import sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0:\n    print(0)\n    raise SystemExit\n\nINF = -1\ndist = [[INF] * m for _ in range(n)]\nvisited = [[False] * m for _ in range(n)]\ndist[0][0] = 0\nq = deque([(0, 0)])\ntotal = 0\nwhile q:\n    x, y = q.popleft()\n    total += dist[x][y]\n    if visited[x][y]:\n        continue\n    visited[x][y] = True\n    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n        nx, ny = x + dx, y + dy\n        if 0 <= nx < n and 0 <= ny < m and g[nx][ny] == 1 and not visited[nx][ny]:\n            dist[nx][ny] = dist[x][y] + 1\n            q.append((nx, ny))\nprint(total)\n",
+  "sourceCode": "\n\n\n\n\nimport sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0:\n    print(0)\n    raise SystemExit\n\nINF = -1\ndist = [[INF] * m for _ in range(n)]\nvisited = [[False] * m for _ in range(n)]\ndist[0][0] = 0\nq = deque([(0, 0)])\ntotal = 0\nwhile q:\n    x, y = q.popleft()\n    total += dist[x][y]\n    if visited[x][y]:\n        continue\n    visited[x][y] = True\n    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n        nx, ny = x + dx, y + dy\n        if 0 <= nx < n and 0 <= ny < m and g[nx][ny] == 1 and not visited[nx][ny]:\n            dist[nx][ny] = dist[x][y] + 1\n            q.append((nx, ny))\nprint(total)\n",
   "judge": {
     "status": "WRONG_ANSWER",
     "failedCaseId": 1,

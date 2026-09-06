@@ -24,7 +24,9 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
+import tempfile
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -47,17 +49,37 @@ SCHEMA = Draft202012Validator(
 REVIEWED = {"WRONG_ANSWER", "TIME_LIMIT", "MEMORY_LIMIT", "RUNTIME_ERROR", "OUTPUT_LIMIT"}
 
 
-def strip_label_comment(source: str) -> str:
-    """맨 앞 주석 블록을 지운다.
+def blank_label_comment(source: str) -> str:
+    """맨 앞 주석 블록을 **같은 줄 수의 빈 줄로** 바꾼다.
 
     오답 파일 첫머리에는 무엇을 틀리게 했는지 적혀 있다(ADR-0007). 그대로 보내면
     **모델은 분석하지 않고 읽기만 하면 된다** - 정확도가 아니라 독해력을 재게 된다.
+
+    ⚠️ **지우지 않고 비운다.** 줄을 없애면 뒤의 코드가 당겨져 traceback 의 줄 번호와
+    어긋난다. 실제로 그랬다 - stderr 는 28번 줄을 가리키는데 모델이 받은 코드에서는
+    그 줄이 21번이었다. 모델에게 서로 맞지 않는 증거를 주고 정확도를 잰 셈이다.
+
+    실서비스에서는 사용자가 낸 코드가 그대로 채점되고 그대로 Reviewer 에게 가므로
+    이런 어긋남이 없다. 평가가 그 조건을 재현하지 못하면 여기서 잰 숫자는 실제와
+    무관해진다.
     """
     lines = source.splitlines(keepends=True)
     i = 0
     while i < len(lines) and (lines[i].lstrip().startswith("#") or not lines[i].strip()):
         i += 1
-    return "".join(lines[i:])
+    return "\n" * i + "".join(lines[i:])
+
+
+def judge_source(source: str, name: str, job: dict) -> dict:
+    """문자열을 그대로 채점한다.
+
+    파일 이름을 유지한다 - 하네스가 제출을 solution.py 로 옮기므로 판정에는 영향이
+    없지만, 실패했을 때 어느 오답인지 알아야 한다.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        path = pathlib.Path(tmp) / name
+        path.write_text(source, encoding="utf-8", newline="")
+        return V.judge(path, job)
 
 
 def labelled_solutions(d: pathlib.Path, problem: dict) -> list[tuple[str, str, pathlib.Path]]:
@@ -101,7 +123,7 @@ def build(only: str | None) -> tuple[list[dict], list[str]]:
                 skipped.append(f"{d.name}/{path.name}: {label} 은 REVIEWER 가 붙이지 않는다")
                 continue
 
-            code_text = strip_label_comment(path.read_text(encoding="utf-8"))
+            code_text = blank_label_comment(path.read_text(encoding="utf-8"))
             leaked = sorted(code for code in mistakes if code in code_text)
             if leaked:
                 # 라벨이 코드 안에 남아 있으면 모델은 분석하지 않고 읽기만 하면
@@ -109,7 +131,10 @@ def build(only: str | None) -> tuple[list[dict], list[str]]:
                 skipped.append(f"{d.name}/{path.name}: 코드에 라벨 {leaked} 이 남아 있다")
                 continue
 
-            result = V.judge(path, job)
+            # **모델에게 보낼 그 코드를 채점한다.** 원본을 채점하고 다듬은 것을
+            # 보내면 traceback 이 모델이 보지 못한 파일을 가리킨다. 같은 바이트를
+            # 양쪽에 쓰는 것이 유일하게 확실한 방법이다.
+            result = judge_source(code_text, path.name, job)
             if result["status"] not in REVIEWED:
                 # 이 판정에서는 Reviewer 를 부르지 않으므로 평가할 것이 없다.
                 skipped.append(f"{d.name}/{path.name}: {result['status']} 은 Reviewer 를 부르지 않는다")
@@ -137,6 +162,32 @@ def build(only: str | None) -> tuple[list[dict], list[str]]:
     return cases, skipped
 
 
+TRACEBACK_LINE = re.compile(r'File "[^"]*", line (\d+), in .*\n\s+(.+)')
+
+
+def traceback_mismatches(case: dict) -> list[str]:
+    """traceback 의 줄 번호가 모델이 받는 코드와 맞는가.
+
+    **모델에게 서로 맞지 않는 증거를 주면 정확도가 아니라 혼란을 재게 된다.**
+    실서비스에서는 사용자가 낸 코드가 그대로 채점되고 그대로 Reviewer 에게 가므로
+    이런 어긋남이 없다 - 평가가 그 조건을 재현하지 못하면 여기서 잰 숫자는 실제와
+    무관하다.
+
+    실제로 어긋나 있었다. 라벨 주석을 **지워서** 보냈더니 뒤의 코드가 당겨져,
+    stderr 는 28번 줄을 가리키는데 모델이 받은 코드에서는 그 줄이 21번이었다.
+    """
+    problems: list[str] = []
+    source = case["sourceCode"].splitlines()
+    for match in TRACEBACK_LINE.finditer(case["judge"]["stderr"] or ""):
+        number, text = int(match.group(1)), match.group(2).strip()
+        actual = source[number - 1].strip() if number <= len(source) else None
+        if actual != text:
+            problems.append(
+                f"stderr 는 {number}번 줄을 가리키는데 모델이 받는 코드의 그 줄은 "
+                f"{actual!r} 다 (traceback: {text!r})")
+    return problems
+
+
 def name_of(case: dict) -> str:
     return f"{case['problemCode']}__{case['label']}.json"
 
@@ -157,6 +208,9 @@ def main() -> int:
         for err in SCHEMA.iter_errors(case):
             failed += 1
             print(f"[X] {name_of(case)}{list(err.path)}: {err.message}")
+        for problem in traceback_mismatches(case):
+            failed += 1
+            print(f"[X] {name_of(case)}: {problem}")
 
     OUT.mkdir(parents=True, exist_ok=True)
     if args.write:

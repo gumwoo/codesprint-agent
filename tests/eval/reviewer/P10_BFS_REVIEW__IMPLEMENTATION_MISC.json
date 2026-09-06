@@ -9,7 +9,7 @@
     "BFS_GRID_TRAVERSAL",
     "BFS_VISITED_MANAGEMENT"
   ],
-  "sourceCode": "import sys\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0:\n    print(-1)\n    raise SystemExit\n\nbest = 0\nfor i in range(n):\n    for j in range(m):\n        if g[i][j] == 1:\n            best = max(best, i + j)\nprint(best)\n",
+  "sourceCode": "\nimport sys\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nif g[0][0] == 0:\n    print(-1)\n    raise SystemExit\n\nbest = 0\nfor i in range(n):\n    for j in range(m):\n        if g[i][j] == 1:\n            best = max(best, i + j)\nprint(best)\n",
   "judge": {
     "status": "WRONG_ANSWER",
     "failedCaseId": 1,
