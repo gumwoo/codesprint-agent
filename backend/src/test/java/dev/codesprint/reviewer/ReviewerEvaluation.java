@@ -49,8 +49,8 @@ public final class ReviewerEvaluation {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 한 케이스의 평가 결과. */
-    private record Outcome(
+    /** 한 케이스의 평가 결과. 집계를 테스트에서 확인하려고 열어 뒀다. */
+    record Outcome(
             String problemCode,
             String label,
             String predicted,
@@ -58,8 +58,17 @@ public final class ReviewerEvaluation {
             MistakeStatus status,
             String note) {
 
+        /**
+         * 모델이 라벨과 같은 것을 답했는가. <b>그 분석을 쓸 수 있는지는 묻지 않는다</b>
+         * - 검증에서 떨어진 분석도 문자열은 남아 있다.
+         */
         boolean isCorrect() {
             return label.equals(predicted);
+        }
+
+        /** 검증을 통과해 실제로 학습 경로에 닿을 수 있는 분석인가. */
+        boolean isUsable() {
+            return status != null;
         }
 
         /** 라벨과 다른 것이 확정됐다. <b>이것이 일어나면 안 된다.</b> */
@@ -168,16 +177,23 @@ public final class ReviewerEvaluation {
                 output.confidence(), verdict.status(), verdict.reason());
     }
 
-    private static void report(List<Outcome> outcomes, String promptVersion) {
-        long usable = outcomes.stream().filter(o -> o.status() != null).count();
-        long correct = outcomes.stream().filter(Outcome::isCorrect).count();
+    static void report(List<Outcome> outcomes, String promptVersion) {
+        long usable = outcomes.stream().filter(Outcome::isUsable).count();
+        // **두 숫자를 나눠 적는다.** 검증에서 떨어진 분석도 primary 문자열은 남아
+        // 있어서, 하나로 합치면 "쓸 수 있는 분석 10/20, primary 일치 20/20" 같은
+        // 읽는 사람을 오해시키는 줄이 나온다. 실제로 학습 경로에 닿는 것은 앞의
+        // 것뿐이므로 그쪽을 먼저 적는다.
+        long usableCorrect = outcomes.stream()
+                .filter(Outcome::isUsable).filter(Outcome::isCorrect).count();
+        long rawCorrect = outcomes.stream().filter(Outcome::isCorrect).count();
         long confirmed = outcomes.stream()
-                .filter(o -> o.status() != null && o.status().isConfirmed()).count();
+                .filter(o -> o.isUsable() && o.status().isConfirmed()).count();
 
         System.out.println();
         System.out.println("== Reviewer 평가 (" + promptVersion + ") ==");
-        System.out.printf("케이스 %d건 · 쓸 수 있는 분석 %d건 · primary 일치 %d건%n",
-                outcomes.size(), usable, correct);
+        System.out.printf("케이스 %d건 · 쓸 수 있는 분석 %d건%n", outcomes.size(), usable);
+        System.out.printf("primary 일치  쓸 수 있는 분석 중 %d/%d · 버려진 것까지 %d/%d%n",
+                usableCorrect, usable, rawCorrect, outcomes.size());
         System.out.printf("한 번의 분석만으로 확정(§21-A) %d건%n", confirmed);
         System.out.println();
         System.out.printf("%-26s %-20s %-20s %6s %-12s %s%n",
