@@ -27,12 +27,12 @@
         "OUTPUT_LIMIT",
         "SYSTEM_ERROR"
       ],
-      "description": "제출 전체의 판정. 첫 실패 case 의 판정을 그대로 쓴다."
+      "description": "제출 전체의 판정. **첫** 실패 case 의 판정을 그대로 쓴다. 뒤의 case 를 더 돌려도 이 값은 바뀌지 않는다(ADR-0015)."
     },
     "passed": {
       "type": "integer",
       "minimum": 0,
-      "description": "통과한 case 수. 실패 시점에 멈추므로 total 과 합이 맞지 않을 수 있다."
+      "description": "통과한 case 수. 실패한 뒤에도 남은 case 를 계속 돌리므로 대개 total 과 짝이 맞지만, TIME_LIMIT / MEMORY_LIMIT / OUTPUT_LIMIT 에서는 거기서 멈춘다(ADR-0015). ⚠️ 부분 점수가 아니다 - mastery 는 case 통과율로 계산하지 않는다."
     },
     "total": {
       "type": "integer",
@@ -52,7 +52,7 @@
     "failedCaseId": {
       "type": ["integer", "null"],
       "minimum": 1,
-      "description": "실패한 case 의 id. ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR 이면 null 이다. TIME_LIMIT 과 MEMORY_LIMIT 에서도 반드시 채운다 - Reviewer 출력의 failedCaseRefs 가 minItems 1 이라 이 값이 없으면 근거를 만들 수 없다(ADR-0004)."
+      "description": "**첫** 실패 case 의 id. 실패가 여럿이어도 첫 번째다 - Reviewer 에게 주는 근거가 제출마다 흔들리면 안 된다. ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR 이면 null 이다. TIME_LIMIT 과 MEMORY_LIMIT 에서도 반드시 채운다 - Reviewer 출력의 failedCaseRefs 가 minItems 1 이라 이 값이 없으면 근거를 만들 수 없다(ADR-0004)."
     },
     "stderr": {
       "type": ["string", "null"],
@@ -60,7 +60,7 @@
     },
     "cases": {
       "type": "array",
-      "description": "실행한 case 의 개별 결과. 실패 시점에 멈추므로 total 보다 짧을 수 있다.",
+      "description": "실행한 case 의 개별 결과. **실패의 모양이 진단 데이터다**(ADR-0015) - 어떤 case 가 실패하고 어떤 case 가 통과했는지가 Reviewer 주장을 뒷받침하는 독립 근거가 된다. 비싼 실패(TIME_LIMIT / MEMORY_LIMIT / OUTPUT_LIMIT)에서는 멈추므로 total 보다 짧을 수 있다. ⚠️ 여기 없는 case 는 \"통과하지 못했다\" 가 아니라 \"실행되지 않았다\" 다.",
       "items": {
         "type": "object",
         "additionalProperties": false,

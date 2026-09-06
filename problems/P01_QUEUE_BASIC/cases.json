@@ -5,35 +5,40 @@
       "type": "SAMPLE",
       "hidden": false,
       "input": "5\npush 1\npush 2\npop\npop\npop\n",
-      "expectedOutput": "1\n2\n-1\n"
+      "expectedOutput": "1\n2\n-1\n",
+      "probes": []
     },
     {
       "id": 2,
       "type": "MINIMUM",
       "hidden": true,
       "input": "1\npop\n",
-      "expectedOutput": "-1\n"
+      "expectedOutput": "-1\n",
+      "probes": []
     },
     {
       "id": 3,
       "type": "SINGLE",
       "hidden": true,
       "input": "2\npush 7\npop\n",
-      "expectedOutput": "7\n"
+      "expectedOutput": "7\n",
+      "probes": []
     },
     {
       "id": 4,
       "type": "BOUNDARY",
       "hidden": true,
       "input": "6\npop\npush 3\npop\npop\npush 4\npop\n",
-      "expectedOutput": "-1\n3\n-1\n4\n"
+      "expectedOutput": "-1\n3\n-1\n4\n",
+      "probes": []
     },
     {
       "id": 5,
       "type": "MAXIMUM",
       "hidden": true,
       "input": "6\npush 1000000\npush -1000000\npop\npop\npop\npop\n",
-      "expectedOutput": "1000000\n-1000000\n-1\n-1\n"
+      "expectedOutput": "1000000\n-1000000\n-1\n-1\n",
+      "probes": []
     }
   ]
 }

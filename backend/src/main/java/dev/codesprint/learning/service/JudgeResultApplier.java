@@ -23,6 +23,7 @@ import dev.codesprint.learning.persistence.SubmissionRow;
 import dev.codesprint.learning.persistence.UserSkillRepository;
 import dev.codesprint.learning.persistence.UserSkillRow;
 import dev.codesprint.problem.ProblemCatalog;
+import dev.codesprint.reviewer.CaseCorroboration;
 import dev.codesprint.reviewer.ReviewService;
 import dev.codesprint.reviewer.ReviewerPort;
 import dev.codesprint.problem.ProblemCatalog.ProblemDefinition;
@@ -134,6 +135,13 @@ public class JudgeResultApplier {
         }
         try {
             JsonNode node = MAPPER.readTree(job.result());
+            java.util.Set<Integer> passed = new java.util.LinkedHashSet<>();
+            java.util.Set<Integer> failed = new java.util.LinkedHashSet<>();
+            for (JsonNode one : node.path("cases")) {
+                // 실행된 case 만 여기 있다. 없는 case 는 실패가 아니라 미실행이다.
+                (("ACCEPTED".equals(one.path("status").asText())) ? passed : failed)
+                        .add(one.get("id").asInt());
+            }
             return new JudgeResult(
                     JudgeStatus.valueOf(node.get("status").asText()),
                     node.get("passed").asInt(),
@@ -141,7 +149,9 @@ public class JudgeResultApplier {
                     integer(node, "executionMs"),
                     integer(node, "memoryKb"),
                     integer(node, "failedCaseId"),
-                    text(node, "stderr"));
+                    text(node, "stderr"),
+                    passed,
+                    failed);
         } catch (JsonProcessingException | IllegalArgumentException | NullPointerException e) {
             log.error("job {} 의 결과를 읽지 못했다: {}", job.id(), job.result(), e);
             return JudgeResult.systemError();
@@ -219,7 +229,10 @@ public class JudgeResultApplier {
         if (reviews.shouldReview(judged.status())) {
             var review = reviews.review(
                     userId, submission.id(), submission.problemId(),
-                    reviewRequest(problem, judged, job));
+                    reviewRequest(problem, judged, job),
+                    // Reviewer 밖의 근거. **Reviewer 출력을 넣지 않는다**(ADR-0014).
+                    new CaseCorroboration(judged.passedCaseIds(), judged.failedCaseIds(),
+                            catalog.probesOf(problem.code())));
 
             if (review.isPresent()) {
                 ReviewService.Review value = review.get();

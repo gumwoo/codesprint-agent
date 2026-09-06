@@ -5,42 +5,52 @@
       "type": "SAMPLE",
       "hidden": false,
       "input": "3 3\n1 0 1\n1 0 0\n0 0 1\n",
-      "expectedOutput": "3\n"
+      "expectedOutput": "3\n",
+      "probes": []
     },
     {
       "id": 2,
       "type": "MINIMUM",
       "hidden": true,
       "input": "1 1\n0\n",
-      "expectedOutput": "0\n"
+      "expectedOutput": "0\n",
+      "probes": []
     },
     {
       "id": 3,
       "type": "SINGLE",
       "hidden": true,
       "input": "1 1\n1\n",
-      "expectedOutput": "1\n"
+      "expectedOutput": "1\n",
+      "probes": [
+        "BOUNDARY_CHECK"
+      ]
     },
     {
       "id": 4,
       "type": "ALL_SAME",
       "hidden": true,
       "input": "2 2\n1 1\n1 1\n",
-      "expectedOutput": "1\n"
+      "expectedOutput": "1\n",
+      "probes": []
     },
     {
       "id": 5,
       "type": "ADVERSARIAL",
       "hidden": true,
       "input": "3 3\n1 0 1\n0 1 0\n1 0 1\n",
-      "expectedOutput": "5\n"
+      "expectedOutput": "5\n",
+      "probes": []
     },
     {
       "id": 6,
       "type": "BOUNDARY",
       "hidden": true,
       "input": "3 4\n1 0 0 1\n0 0 0 0\n1 0 0 1\n",
-      "expectedOutput": "4\n"
+      "expectedOutput": "4\n",
+      "probes": [
+        "BOUNDARY_CHECK"
+      ]
     }
   ]
 }

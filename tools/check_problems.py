@@ -30,6 +30,7 @@ CONTRACTS = ROOT / "contracts"
 
 DIR_RE = re.compile(r"^P[0-9]{2}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$")
 REQUIRED_FILES = ("problem.yaml", "cases.json", "reference.py", "wrong.py")
+# probes/<MISTAKE>.py 는 선택이다 - cases.json 이 그 실수를 겨냥할 때만 요구한다.
 
 failures: list[str] = []
 
@@ -139,6 +140,65 @@ def main() -> int:
         for c in cases:
             if not str(c.get("expectedOutput", "")).strip():
                 fail("cases", f"{rel} case {c.get('id')}: expectedOutput 이 비어 있다")
+
+        # -- case 성격 태그 (probes) --
+        #
+        # "그 실수가 있으면 이 case 는 반드시 실패한다" 는 주장이다. 주장이므로
+        # 여기서는 **주장이 확인 가능한 형태인지**만 본다 - 실제로 실패하는지는
+        # tools/verify_problems.py 가 진짜로 채점해서 확인한다(ADR-0015).
+        tagged: dict[str, list[int]] = {}
+        for c in cases:
+            for mc in c.get("probes") or []:
+                tagged.setdefault(mc, []).append(c.get("id"))
+
+        probe_dir = d / "probes"
+        for mc, case_ids in sorted(tagged.items()):
+            if mc not in mistakes:
+                fail("probe", f"{rel}: mistakes.yaml 에 없는 Mistake {mc!r} 를 겨냥한다")
+                continue
+            if mistakes[mc].get("assigned_by") != "REVIEWER":
+                # SYSTEM 이 부여하는 Mistake 는 Reviewer 가 주장하지 않으므로
+                # 뒷받침할 일도 없다. 태그해 두면 절대 쓰이지 않는 데이터가 된다.
+                fail("probe",
+                     f"{rel}: {mc} 는 assigned_by 가 REVIEWER 가 아니다 "
+                     f"- Reviewer 주장을 뒷받침하는 태그로 쓸 수 없다")
+            if mc not in (problem.get("commonMistakes") or []):
+                fail("probe", f"{rel}: {mc} 를 겨냥하면서 commonMistakes 에는 없다")
+
+            # 대조군이 될 수 있는 case 가 있어야 한다. 모든 case 가 같은 실수를
+            # 겨냥하면 "그 실수가 아닌 것도 통과한다" 를 보일 수 없고, 전부 실패한
+            # 제출이 무조건 그 실수로 뒷받침된다.
+            if len(case_ids) == len(cases):
+                fail("probe",
+                     f"{rel}: 모든 case 가 {mc} 를 겨냥한다 - 대조군이 없다")
+
+        # 태그가 있으면 **경쟁하는 실수 전부**의 오답이 저장소에 있어야 한다.
+        #
+        # 하나의 오답만으로는 부족하다. 실제로 그랬다 - P05 와 P10 의
+        # BOUNDARY_CHECK 태그를 OUTPUT_FORMAT 오답이 그대로 만족했고, 그 상태로
+        # 두면 출력 형식만 틀린 사용자가 경계 검사 드릴을 받는다. 태그가 이 문제의
+        # 어떤 실수와도 구별되는지는 verify_problems.py 가 실제 채점으로 본다.
+        control = (problem.get("negativeControl") or {}).get("mistake")
+        if tagged:
+            for mc in problem.get("commonMistakes") or []:
+                if mc == control:
+                    continue  # 그 실수의 오답은 wrong.py 다(ADR-0007)
+                if not (probe_dir / f"{mc}.py").exists():
+                    fail("probe",
+                         f"{rel}: 태그가 있는 문제인데 probes/{mc}.py 가 없다 "
+                         f"- {mc} 와 구별되는지 확인할 방법이 없다")
+
+        if probe_dir.exists():
+            common = set(problem.get("commonMistakes") or [])
+            for f in sorted(probe_dir.glob("*.py")):
+                if f.stem == control:
+                    fail("probe",
+                         f"{rel}: probes/{f.name} 는 negativeControl 과 같은 실수다 "
+                         f"- 그 오답은 wrong.py 하나로 둔다")
+                elif f.stem not in common:
+                    fail("probe",
+                         f"{rel}: probes/{f.name} 가 commonMistakes 에 없다 "
+                         f"- 아무와도 대조되지 않는 파일이다")
 
         # -- negativeControl --
         # wrong.py 가 "실패했는가" 가 아니라 "의도한 이유로 실패했는가" 를 확인하려면

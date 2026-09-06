@@ -167,8 +167,21 @@ class ReviewerFlowTest {
                 "경계 검사를 빠뜨렸다");
     }
 
+    /**
+     * case 를 하나도 실행하지 못한 채점. 실패의 모양이 없으므로 §21-A 는 성립하지
+     * 않고, 이 파일의 다른 테스트들이 보는 것은 §21-B(재발)다.
+     */
     private long submitAndJudge(String problemCode, String judgeStatus, Integer failedCaseId)
             throws Exception {
+        return submitAndJudge(problemCode, judgeStatus, failedCaseId, "[]");
+    }
+
+    /**
+     * @param casesJson 실행한 case 의 개별 결과. 여기 없는 case 는 <b>실행되지 않은
+     *     것</b>이지 실패한 것이 아니다.
+     */
+    private long submitAndJudge(String problemCode, String judgeStatus, Integer failedCaseId,
+            String casesJson) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
                  "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
@@ -181,8 +194,9 @@ class ReviewerFlowTest {
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
         String result = """
                 {"status": "%s", "passed": 0, "total": 5, "executionMs": 90,
-                 "memoryKb": 20480, "failedCaseId": %s, "stderr": null, "cases": []}
-                """.formatted(judgeStatus, failedCaseId == null ? "null" : failedCaseId);
+                 "memoryKb": 20480, "failedCaseId": %s, "stderr": null, "cases": %s}
+                """.formatted(judgeStatus, failedCaseId == null ? "null" : failedCaseId,
+                casesJson);
         jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
                 result, job.id());
 
@@ -233,6 +247,99 @@ class ReviewerFlowTest {
         JsonNode action = result.get("nextAction");
         assertThat(action.get("type").asText()).isEqualTo("MICRO_DRILL");
         assertThat(action.get("targetSkill").asText()).isEqualTo("GRID_BOUNDARY_CHECK");
+    }
+
+    /**
+     * P02 의 case 2 는 {@code cases.json} 에서 BOUNDARY_CHECK 를 겨냥한다.
+     * 그것이 실패하고, 겨냥하지 않는 case 3 이 통과한 모양.
+     */
+    private static final String BOUNDARY_SHAPED = """
+            [{"id": 1, "status": "WRONG_ANSWER", "executionMs": 10},
+             {"id": 2, "status": "RUNTIME_ERROR", "executionMs": 10},
+             {"id": 3, "status": "ACCEPTED", "executionMs": 10}]
+            """;
+
+    @Test
+    @DisplayName("겨냥한 case 가 실패하고 대조군이 통과하면 처음 보는 실수도 확정된다")
+    void caseShapeCorroboratesOnFirstSight() throws Exception {
+        // 확정 조건 A. 재발을 기다리지 않는다 - 실패의 모양이 Reviewer 밖의 근거다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.95, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        long submissionId = submitAndJudge(
+                "P02_GRID_TRAVERSAL", "RUNTIME_ERROR", 2, BOUNDARY_SHAPED);
+        JsonNode result = resultOf(submissionId).get("result");
+
+        assertThat(result.get("review").get("status").asText()).isEqualTo("CONFIRMED");
+        assertThat(result.get("nextAction").get("type").asText()).isEqualTo("MICRO_DRILL");
+        assertThat(result.get("nextAction").get("targetSkill").asText())
+                .isEqualTo("GRID_BOUNDARY_CHECK");
+    }
+
+    @Test
+    @DisplayName("뒷받침돼도 confidence 가 0.90 미만이면 확정하지 않는다")
+    void corroborationAloneDoesNotConfirm() throws Exception {
+        // 태그는 "그 실수와 무관한 실패는 아니다" 까지만 말한다. 그 case 를
+        // 실패시키는 다른 원인이 얼마든지 있으므로 확신 조건을 함께 요구한다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        long submissionId = submitAndJudge(
+                "P02_GRID_TRAVERSAL", "RUNTIME_ERROR", 2, BOUNDARY_SHAPED);
+
+        assertThat(resultOf(submissionId).get("result").get("review").get("status").asText())
+                .isEqualTo("PROBABLE");
+    }
+
+    @Test
+    @DisplayName("겨냥한 case 까지 가지 못했으면 뒷받침이 아니다")
+    void unexecutedProbeIsNotAFailure() throws Exception {
+        // case 1 에서 멈췄다. case 2 는 실패한 것이 아니라 실행되지 않았다.
+        // 둘을 섞으면 앞에서 멈춘 제출이 뒤쪽 태그까지 만족한 것으로 읽힌다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.95, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "TIME_LIMIT", 1,
+                """
+                [{"id": 1, "status": "TIME_LIMIT", "executionMs": 2000}]
+                """);
+
+        assertThat(resultOf(submissionId).get("result").get("review").get("status").asText())
+                .isEqualTo("PROBABLE");
+    }
+
+    @Test
+    @DisplayName("전부 실패하면 대조군이 없어 뒷받침이 아니다")
+    void everythingFailingCorroboratesNothing() throws Exception {
+        // 통과한 case 가 하나도 없으면 어떤 태그든 만족한다 - "무엇이 틀렸든
+        // 그 Mistake" 가 된다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.99, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 1,
+                """
+                [{"id": 1, "status": "WRONG_ANSWER", "executionMs": 10},
+                 {"id": 2, "status": "WRONG_ANSWER", "executionMs": 10},
+                 {"id": 3, "status": "WRONG_ANSWER", "executionMs": 10}]
+                """);
+
+        assertThat(resultOf(submissionId).get("result").get("review").get("status").asText())
+                .isEqualTo("PROBABLE");
+    }
+
+    @Test
+    @DisplayName("겨냥한 case 가 없는 실수는 모양으로 뒷받침되지 않는다")
+    void untaggedMistakeIsNotCorroborated() throws Exception {
+        // P02 는 NO_VISITED 를 겨냥한 case 가 없다. 태그가 없는 것은
+        // "뒷받침한다" 가 아니라 "말할 수 없다" 다.
+        reviewer.scripted = analysis("NO_VISITED", 0.99, 4);
+        alreadyLearning("P02_GRID_TRAVERSAL");
+
+        long submissionId = submitAndJudge(
+                "P02_GRID_TRAVERSAL", "RUNTIME_ERROR", 2, BOUNDARY_SHAPED);
+
+        assertThat(resultOf(submissionId).get("result").get("review").get("status").asText())
+                .isEqualTo("PROBABLE");
     }
 
     @Test

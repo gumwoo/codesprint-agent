@@ -59,6 +59,9 @@ ALLOWED_SCHEMA_KEYWORDS = {
     # Evidence golden(PR 7)에서 추가. "null 이거나 Evidence" 를 표현해야 하는데,
     # $ref 는 형제 type 과 함께 쓰면 둘 다 적용되어 null 을 통과시키지 못한다.
     "anyOf",
+    # case 성격 태그(PR 12)에서 추가. 같은 Mistake 를 두 번 적어도 의미가 없고,
+    # 중복은 대개 편집 실수다.
+    "uniqueItems",
 }
 
 # LLM 요청 스키마에 절대 나타나면 안 되는 필드명.

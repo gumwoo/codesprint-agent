@@ -24,9 +24,15 @@ package dev.codesprint.reviewer;
  * <p>case 4 가 실제로 그 Mistake 를 보여주는 case 인지는 <b>아무도 확인하지 않았다.</b>
  * 그래서 그 검사는 confidence 만 보는 것과 사실상 같았다.
  *
- * <p>지금은 그런 확인을 할 데이터가 없다 - {@code cases.json} 에 case 의 성격을
- * 나타내는, 기계가 읽을 수 있는 태그가 없다. 그때까지 <b>§21-A 로는 확정하지 않는다.</b>
- * 확정은 §21-B(실제 재발)로만 일어난다.
+ * <h2>대신 무엇을 보는가</h2>
+ *
+ * <p>지금은 <b>실패의 모양</b>을 본다(ADR-0015). {@code cases.json} 의 {@code probes} 가
+ * "그 실수가 있으면 이 case 는 반드시 실패한다" 를 적어 두고, Judge 가 실제로 어떤
+ * case 를 실패시키고 어떤 case 를 통과시켰는지 관측한다. 둘 다 <b>이 분석 이전에
+ * 정해져 있고 Reviewer 가 건드리지 않는다</b> - {@link CaseCorroboration} 을 본다.
+ *
+ * <p>그것도 그 실수가 있었음을 증명하지는 않는다. 그래서 §21-A 는 독립 근거 하나로
+ * 확정하지 않고 confidence 0.90 을 함께 요구한다.
  */
 public final class MistakeConfirmation {
 
@@ -57,12 +63,10 @@ public final class MistakeConfirmation {
     /**
      * @param confidence Reviewer 가 낸 값. 시스템이 고치지 않는다.
      * @param corroborated <b>Reviewer 와 독립적인</b> 근거가 그 Mistake 를 뒷받침하는가.
-     *     결정론적 Rule 탐지(§21-C)나 실패 case 의 성격 태그 대조가 여기 들어간다.
+     *     지금은 실패 case 의 성격 태그 대조가 여기 들어간다({@link CaseCorroboration}).
+     *     결정론적 Rule 탐지(§21-C)가 생기면 그것도 여기 들어간다.
      *     <b>Reviewer 자신의 출력에서 나온 값은 여기 들어올 수 없다</b> - 요청으로
      *     알려준 것을 되돌려받는 것은 확인이 아니다.
-     *     <p>지금은 그런 신호가 하나도 없으므로 호출자가 언제나 false 를 넘긴다.
-     *     인자를 남겨 두는 이유는 조건 A 를 지우지 않기 위해서다 - 데이터가 생기면
-     *     여기에 꽂는다.
      * @param recentDetections 같은 Mistake 가 <b>최근 {@value #RECENT_WINDOW}문제</b>에서
      *     몇 번 탐지됐는가. 이번 것을 포함한다.
      */
@@ -76,7 +80,8 @@ public final class MistakeConfirmation {
         // §21-A. 확신이 높고, 독립적인 근거가 같은 것을 가리킨다.
         if (confidence >= PROBABLE_CEILING && corroborated) {
             return new Verdict(MistakeStatus.CONFIRMED,
-                    "confidence " + confidence + " >= 0.90 이고 독립적인 근거가 뒷받침한다");
+                    "confidence " + confidence
+                            + " >= 0.90 이고 실패한 case 의 모양이 뒷받침한다");
         }
 
         // §21-B. 확신이 조금 낮아도 같은 실수가 실제로 반복됐다.

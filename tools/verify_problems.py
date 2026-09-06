@@ -53,6 +53,114 @@ def build_job(problem: dict, cases_doc: dict) -> dict:
     }
 
 
+def failed_ids(result: dict) -> set[int]:
+    """통과하지 못한 case. **실행되지 않은 case 는 여기 없다.**
+
+    "실패했다" 와 "거기까지 가지 못했다" 를 섞으면, 첫 case 에서 멈춘 제출이
+    뒤쪽 태그까지 만족한 것으로 읽힌다.
+    """
+    return {c["id"] for c in result.get("cases", []) if c["status"] != "ACCEPTED"}
+
+
+def passed_ids(result: dict) -> set[int]:
+    return {c["id"] for c in result.get("cases", []) if c["status"] == "ACCEPTED"}
+
+
+def satisfies(result: dict, probed: set[int], all_ids: set[int]) -> bool:
+    """백엔드가 런타임에 쓰는 조건과 **같은 조건**이다(ADR-0015).
+
+    CaseCorroboration.java 와 여기가 갈리면, CI 는 통과하는데 실제로는 확정되지
+    않는(또는 그 반대의) 상태가 된다.
+    """
+    if not probed:
+        return False
+    return probed <= failed_ids(result) and bool((all_ids - probed) & passed_ids(result))
+
+
+def competing_solutions(d: pathlib.Path, problem: dict) -> dict[str, pathlib.Path]:
+    """이 문제의 commonMistakes 를 담은 풀이들.
+
+    negativeControl 로 심어둔 실수는 wrong.py 가 그 풀이다(ADR-0007). 나머지는
+    probes/<MISTAKE>.py 에 있다.
+    """
+    control = (problem.get("negativeControl") or {}).get("mistake")
+    solutions: dict[str, pathlib.Path] = {}
+    for mistake in problem.get("commonMistakes") or []:
+        solutions[mistake] = (
+            d / "wrong.py" if mistake == control else d / "probes" / f"{mistake}.py")
+    return solutions
+
+
+def verify_probes(d: pathlib.Path, cases_doc: dict, problem: dict, job: dict) -> list[str]:
+    """probes 태그가 실제 채점으로 성립하는지 본다.
+
+    태그는 "그 실수가 있으면 이 case 는 반드시 실패한다" 는 주장이고, 그 주장이
+    Reviewer 밖의 독립 근거로 쓰인다. **주장을 검사하지 않으면 근거가 아니다.**
+
+    두 가지를 함께 본다. 한쪽만 보면 아무것도 거르지 못한다.
+
+      민감도  그 실수를 담은 풀이가 태그된 case 를 **전부** 실패시키는가
+      특이도  이 문제에서 **경쟁하는 다른 모든 실수**가 그 조건을 만족하지 **않는가**
+
+    특이도가 하나의 오답(wrong.py)만으로는 부족하다. 실제로 그랬다 - P05 와 P10 은
+    BOUNDARY_CHECK 태그를 OUTPUT_FORMAT 오답이 그대로 만족했고, 그 상태로 두면
+    출력 형식만 틀린 사용자가 경계 검사 드릴을 받는다. 그래서 commonMistakes 전체와
+    대조한다.
+    """
+    problems_msgs: list[str] = []
+    all_ids = {c["id"] for c in cases_doc["cases"]}
+    tagged: dict[str, set[int]] = {}
+    for c in cases_doc["cases"]:
+        for mc in c.get("probes") or []:
+            tagged.setdefault(mc, set()).add(c["id"])
+    if not tagged:
+        return problems_msgs
+
+    solutions = competing_solutions(d, problem)
+    results: dict[str, dict] = {}
+    for mistake, path in sorted(solutions.items()):
+        if not path.exists():
+            # check_problems.py 가 먼저 막지만, 그쪽만 믿고 여기서 조용히
+            # 건너뛰면 파일이 사라졌을 때 검증이 통과한다.
+            problems_msgs.append(f"{path.relative_to(d)} 가 없다")
+            continue
+        result = judge(path, job)
+        if result["status"] == "ACCEPTED":
+            # 통과하는 풀이는 대조군이 아니다. 이 문제로는 그 실수를 잡을 수
+            # 없다는 뜻이므로, 태그를 붙일 자격도 없고 힌트로 줄 자격도 없다.
+            problems_msgs.append(
+                f"{mistake}: 그 실수를 담은 풀이가 ACCEPTED 다 - 이 문제는 그 실수를 "
+                f"잡지 못한다. commonMistakes 에서 빼거나 case 를 보강한다 [VACUOUS]")
+            continue
+        results[mistake] = result
+
+    for mistake, probed in sorted(tagged.items()):
+        if mistake not in results:
+            continue
+
+        # 민감도
+        if not satisfies(results[mistake], probed, all_ids):
+            r = results[mistake]
+            problems_msgs.append(
+                f"{mistake}: 태그된 case {sorted(probed)} 를 그 실수를 담은 풀이가 "
+                f"만족시키지 못한다 "
+                f"(실패 {sorted(failed_ids(r))}, 통과 {sorted(passed_ids(r))})")
+            continue
+
+        # 특이도. **경쟁하는 실수 전부**와 대조한다.
+        for other, result in sorted(results.items()):
+            if other == mistake:
+                continue
+            if satisfies(result, probed, all_ids):
+                problems_msgs.append(
+                    f"{mistake}: **{other} 오답도 같은 조건을 만족한다** — "
+                    f"{other} 를 낸 사용자가 {mistake} 로 확정될 수 있다. "
+                    f"이 태그는 두 실수를 구별하지 못한다 "
+                    f"(실패 {sorted(failed_ids(result))}, "
+                    f"통과 {sorted(passed_ids(result))}) [VACUOUS]")
+    return problems_msgs
+
+
 def judge(solution: pathlib.Path, job: dict) -> dict:
     with tempfile.TemporaryDirectory() as d:
         job_path = pathlib.Path(d) / "job.json"
@@ -123,9 +231,19 @@ def main() -> int:
                   f" {detail[0][:70]}")
             continue
 
+        probe_msgs = verify_probes(d, cases_doc, problem, job)
+        if probe_msgs:
+            failed += 1
+            print(f"[X] {d.name}: case 성격 태그가 성립하지 않는다")
+            for msg in probe_msgs:
+                print(f"    {msg}")
+            continue
+
         print(f"[O] {d.name}: reference ACCEPTED / "
               f"wrong {wrong['status']} (case {wrong['failedCaseId']}, "
-              f"심어둔 실수 {control['mistake']})")
+              f"심어둔 실수 {control['mistake']})"
+              + (f" / probes {sorted({m for c in cases_doc['cases'] for m in c['probes']})}"
+                 if any(c["probes"] for c in cases_doc["cases"]) else ""))
 
     if failed:
         print(f"\n[FAIL] {failed}건 실패")

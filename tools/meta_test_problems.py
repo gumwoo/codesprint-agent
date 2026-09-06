@@ -88,6 +88,42 @@ def unhide_all_cases(doc):
         c["hidden"] = False
 
 
+def drop_probes_field(doc):
+    # 생략은 "모른다" 다. 겨냥하는 실수가 없으면 [] 라고 적는다.
+    doc["cases"][0].pop("probes")
+
+
+def dangling_probe(doc):
+    doc["cases"][0]["probes"] = ["MISTAKE_THAT_DOES_NOT_EXIST"]
+
+
+def probe_on_system_mistake(doc):
+    # SYNTAX_ERROR 는 시스템이 부여한다. Reviewer 가 주장하지 않으므로 뒷받침할 일이 없다.
+    doc["cases"][0]["probes"] = ["SYNTAX_ERROR"]
+
+
+def probe_not_in_common(doc):
+    # INPUT_PARSE 는 REVIEWER 가 붙이지만 P03 의 commonMistakes 에는 없다.
+    doc["cases"][0]["probes"] = ["INPUT_PARSE"]
+
+
+def competing_mistake_without_solution(doc):
+    # 태그가 있는 문제에 경쟁 실수를 하나 늘린다. 그것을 담은 오답이 없으면
+    # 태그가 그 실수와 구별되는지 확인할 수 없다.
+    doc["commonMistakes"].append("INPUT_PARSE")
+
+
+def probe_every_case(doc):
+    for c in doc["cases"]:
+        c["probes"] = ["BOUNDARY_CHECK"]
+
+
+def control_duplicates_a_probe_solution(doc):
+    # wrong.py 가 BOUNDARY_CHECK 가 되면 probes/BOUNDARY_CHECK.py 와 같은 실수의
+    # 오답이 둘이 된다. 어느 쪽이 정본인지 알 수 없다.
+    doc["negativeControl"]["mistake"] = "BOUNDARY_CHECK"
+
+
 def drop_sample(doc):
     doc["cases"] = [c for c in doc["cases"] if c["type"] != "SAMPLE"]
 
@@ -124,6 +160,30 @@ CASES = [
     ("expectedOutput 이 비면", "problems/P03_CONNECTED_COMPONENT/cases.json", empty_expected_output, "expectedOutput 이 비어 있다"),
     ("hidden case 가 하나도 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", unhide_all_cases, "hidden case 가 없다"),
     ("SAMPLE 이 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", drop_sample, "SAMPLE case 가 없다"),
+
+    # -- case 성격 태그 (ADR-0015) --
+    # 태그가 Reviewer 밖의 확정 근거가 되므로, 아무도 확인하지 않은 태그가
+    # 들어오는 길을 전부 막아야 한다.
+    ("probes 를 생략하면", "problems/P03_CONNECTED_COMPONENT/cases.json", drop_probes_field, "'probes' is a required property"),
+    ("존재하지 않는 Mistake 를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", dangling_probe, "겨냥한다"),
+    ("시스템이 부여하는 Mistake 를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_on_system_mistake, "assigned_by 가 REVIEWER 가 아니다"),
+    ("commonMistakes 에 없는 것을 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_not_in_common, "commonMistakes 에는 없다"),
+    ("경쟁하는 실수의 오답이 없으면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", competing_mistake_without_solution, "probes/INPUT_PARSE.py 가 없다"),
+    ("모든 case 가 같은 실수를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_every_case, "대조군이 없다"),
+    ("같은 실수의 오답이 둘이면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", control_duplicates_a_probe_solution, "wrong.py 하나로 둔다"),
+]
+
+# 파일이 있고 없고로만 깨뜨릴 수 있는 것. (설명, 대상, 동작, 기대 메시지 조각)
+FILE_CASES = [
+    ("겨냥한 실수의 풀이 파일을 지우면",
+     "problems/P03_CONNECTED_COMPONENT/probes/BOUNDARY_CHECK.py", "delete",
+     "probes/BOUNDARY_CHECK.py 가 없다"),
+    ("경쟁하는 실수의 오답 파일을 지우면",
+     "problems/P03_CONNECTED_COMPONENT/probes/NO_VISITED.py", "delete",
+     "probes/NO_VISITED.py 가 없다"),
+    ("commonMistakes 에 없는 실수의 풀이가 남아 있으면",
+     "problems/P03_CONNECTED_COMPONENT/probes/INPUT_PARSE.py", "create",
+     "commonMistakes 에 없다"),
 ]
 
 
@@ -142,8 +202,44 @@ def mutate(path: pathlib.Path, fn) -> str:
     return original
 
 
+def run_checker() -> tuple[int, str]:
+    res = subprocess.run(
+        [sys.executable, str(CHECKER)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    return res.returncode, (res.stdout or "") + (res.stderr or "")
+
+
+def report(name: str, code: int, output: str, expect: str) -> int:
+    if code != 1:
+        print(f"[X] meta: {name} -> 검사가 놓쳤다 (exit {code}) [FALSE NEGATIVE]")
+        return 1
+    if expect not in output:
+        print(f"[X] meta: {name} -> 실패는 했으나 의도한 규칙이 아님 (기대: {expect!r})")
+        return 1
+    print(f"[O] meta: {name} -> 검사가 정상적으로 차단")
+    return 0
+
+
 def main() -> int:
     failed = 0
+    for name, rel, action, expect in FILE_CASES:
+        path = ROOT / rel
+        if action == "delete":
+            original = path.read_bytes()
+            path.unlink()
+        else:
+            original = None
+            path.write_text("# 메타테스트가 만든 파일" + chr(10), encoding="utf-8", newline="")
+        try:
+            code, output = run_checker()
+        finally:
+            if original is None:
+                path.unlink()
+            else:
+                path.write_bytes(original)
+        failed += report(name, code, output, expect)
+
     for name, rel, fn, expect in CASES:
         path = ROOT / rel
         original = mutate(path, fn)
@@ -155,16 +251,8 @@ def main() -> int:
         finally:
             path.write_text(original, encoding="utf-8", newline="")
 
-        output = (res.stdout or "") + (res.stderr or "")
-        if res.returncode != 1:
-            failed += 1
-            print(f"[X] meta: {name} -> 검사가 놓쳤다 (exit {res.returncode}) [FALSE NEGATIVE]")
-            continue
-        if expect not in output:
-            failed += 1
-            print(f"[X] meta: {name} -> 실패는 했으나 의도한 규칙이 아님 (기대: {expect!r})")
-            continue
-        print(f"[O] meta: {name} -> 검사가 정상적으로 차단")
+        failed += report(name, res.returncode,
+                         (res.stdout or "") + (res.stderr or ""), expect)
 
     res = subprocess.run([sys.executable, str(CHECKER)], capture_output=True, text=True,
                          encoding="utf-8", errors="replace")
