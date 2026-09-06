@@ -512,6 +512,40 @@ def check_dependencies_have_one_source() -> None:
                 )
 
 
+def check_test_inputs_trigger_ci() -> None:
+    """gradle 이 테스트 입력이라고 선언한 디렉터리가 CI 트리거에도 있는가.
+
+    둘은 다른 것을 막는다.
+
+        build.gradle.kts 의 inputs.dir   그 파일이 바뀌면 **테스트를 다시 돌린다**
+        워크플로의 paths                  그 파일이 바뀌면 **워크플로를 시작한다**
+
+    앞의 것만 있으면 아무 일도 일어나지 않는다. 실제로 그랬다 - problems/ 를
+    입력으로 선언해 두고(PR #15) 정작 문제 5개를 추가한 PR 에서 Backend 잡이
+    시작되지 않았다. 초록이었지만 Java 테스트는 한 줄도 돌지 않았다.
+    """
+    gradle = ROOT / "backend" / "build.gradle.kts"
+    workflow = ROOT / ".github" / "workflows" / "backend.yml"
+    if not gradle.exists() or not workflow.exists():
+        fail("ci-trigger", "backend build.gradle.kts 또는 backend.yml 이 없다")
+        return
+
+    declared = set(re.findall(
+        r"inputs\.dir\(rootProject\.projectDir\.parentFile\.resolve\(\"([^\"]+)\"\)\)",
+        gradle.read_text(encoding="utf-8")))
+    triggers = set(re.findall(r"^\s+- '([^']+)'", workflow.read_text(encoding="utf-8"),
+                              re.MULTILINE))
+
+    for directory in sorted(declared):
+        if not any(t == f"{directory}/**" or t == f"{directory}/*" for t in triggers):
+            fail(
+                "ci-trigger",
+                f"backend.yml 이 {directory}/** 를 트리거로 두지 않는다 - "
+                f"build.gradle.kts 는 그것을 테스트 입력으로 선언한다. "
+                f"그 디렉터리만 바꾸면 Backend 잡이 아예 시작되지 않는다",
+            )
+
+
 def _nullable(node) -> bool:
     t = node.get("type") if isinstance(node, dict) else None
     return isinstance(t, list) and "null" in t
@@ -618,6 +652,7 @@ def main() -> int:
     check_schemas_are_closed()
     check_judge_status_enums_match()
     check_dependencies_have_one_source()
+    check_test_inputs_trigger_ci()
     check_nullable_fields_are_required()
     check_llm_schema_owns_nothing_systemic()
     check_mistake_enum_matches_yaml(mistakes)

@@ -132,6 +132,15 @@ def ci_inlines_dependencies(text: str) -> str:
 ci_inlines_dependencies._text_mode = True
 
 
+def ci_drops_a_test_input(text: str) -> str:
+    # gradle 이 테스트 입력으로 선언한 디렉터리를 워크플로 트리거에서 빼면,
+    # 그 디렉터리만 바꾼 PR 에서 Backend 잡이 아예 시작되지 않는다.
+    return text.replace("      - 'problems/**'" + chr(10), "")
+
+
+ci_drops_a_test_input._text_mode = True
+
+
 def readme_inlines_dependencies(text: str) -> str:
     return text.replace(
         "pip install -r requirements-dev.txt",
@@ -235,6 +244,7 @@ CASES = [
 
     # -- 의존성 단일 출처 --
     ("CI 가 의존성을 직접 나열하면", ".github/workflows/curriculum.yml", ci_inlines_dependencies, "의존성을 직접 나열한다"),
+    ("테스트 입력이 CI 트리거에서 빠지면", ".github/workflows/backend.yml", ci_drops_a_test_input, "트리거로 두지 않는다"),
     ("README 가 의존성을 직접 나열하면", "README.md", readme_inlines_dependencies, "의존성을 직접 나열한다"),
 ]
 

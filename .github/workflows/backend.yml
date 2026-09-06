@@ -11,7 +11,13 @@ on:
       # 커리큘럼은 빌드 시점에 jar 로 들어간다(ADR-0012). 데이터가 바뀌면
       # Decision Engine 의 동작도 바뀌므로 여기서도 돌아야 한다.
       - 'curriculum/**'
-      - 'tests/golden/**'
+      # 문제 데이터도 테스트 입력이다. build.gradle.kts 가 problems/ 와 tests/ 를
+      # test 태스크의 입력으로 선언하지만(PR #15), **워크플로가 시작되지 않으면
+      # 그 선언은 아무 일도 하지 않는다.** 실제로 그랬다 - 문제 5개를 추가한 PR 에서
+      # Backend 잡이 아예 돌지 않았다.
+      - 'problems/**'
+      # golden 뿐 아니라 평가 케이스도 여기 있다.
+      - 'tests/**'
       - 'learning/**'
       - 'contracts/**'
       - '.github/workflows/backend.yml'
