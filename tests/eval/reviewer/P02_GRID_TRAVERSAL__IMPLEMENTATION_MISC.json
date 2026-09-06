@@ -1,0 +1,33 @@
+{
+  "problemCode": "P02_GRID_TRAVERSAL",
+  "problemTitle": "출발점에서 도달할 수 있는 칸 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BFS_GRID_TRAVERSAL",
+    "BFS_BASIC",
+    "GRID_BOUNDARY_CHECK"
+  ],
+  "sourceCode": "import sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\n# 도달 가능 여부를 따지지 않고 전체 1 의 개수를 센다.\nprint(sum(row.count(1) for row in g))\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 5,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "failedCaseIds": [
+      5
+    ]
+  },
+  "probes": {
+    "BOUNDARY_CHECK": [
+      2
+    ]
+  }
+}

@@ -84,3 +84,12 @@ jobs:
       # 아무것도 거르지 못하는 Test Case 집합도 reference 만으로는 통과한다.
       - name: 문제 데이터 채점 검증
         run: python tools/verify_problems.py
+
+      # Reviewer 평가 케이스가 **실제 채점 결과와 같은가**(ADR-0016).
+      #
+      # 평가 자체는 여기서 돌리지 않는다 - 모델 호출은 느리고 비결정적이라 CI 에
+      # 넣으면 모델이 그날 다르게 답했다는 이유로 관계없는 PR 이 빨개진다. 그리고
+      # 이 저장소는 API 키를 받지 않아 CI 에는 부를 방법 자체가 없다.
+      # 대신 모델에게 무엇을 보여주는지는 결정론적이므로 그쪽을 고정한다.
+      - name: Reviewer 평가 케이스 검증
+        run: python tools/gen_reviewer_eval_cases.py

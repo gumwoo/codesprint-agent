@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/reviewer-eval-case.schema.json",
+  "title": "ReviewerEvalCase",
+  "description": "Reviewer 정확도를 재기 위한 라벨된 오답 하나. tools/gen_reviewer_eval_cases.py 가 만들고 backend 의 평가 하네스가 읽는다(ADR-0016). ⚠️ 채점 결과(judge)는 실제 샌드박스 채점을 그대로 옮긴 것이지 손으로 적은 기대값이 아니다 - 여기에 손을 대면 모델이 실제로 받는 것과 다른 입력으로 정확도를 재게 된다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "problemCode",
+    "problemTitle",
+    "problemSource",
+    "label",
+    "labelSource",
+    "skillCodes",
+    "sourceCode",
+    "judge",
+    "probes"
+  ],
+  "properties": {
+    "problemCode": {
+      "type": "string",
+      "pattern": "^P[0-9]{2}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+    },
+    "problemTitle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "problemSource": {
+      "enum": ["DEV_FIXTURE", "CURATED"],
+      "description": "기대 출력을 모델에게 보낼지 가른다(ADR-0008). 평가 대상은 전부 DEV_FIXTURE 다."
+    },
+    "label": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
+      "description": "이 풀이에 **실제로 심어둔** Mistake. 정답지다. curriculum/mistakes.yaml 의 code 이며 assigned_by 가 REVIEWER 인 것만 온다 - 시스템이 부여하는 Mistake 는 Reviewer 에게 묻지 않으므로 정확도를 잴 수 없다."
+    },
+    "labelSource": {
+      "enum": ["negativeControl", "probes"],
+      "description": "라벨의 출처. negativeControl 은 wrong.py(problem.yaml 이 선언), probes 는 probes/<MISTAKE>.py 다. 둘 다 CI 가 실제 채점으로 검증한 것이지 주석에만 적힌 주장이 아니다(ADR-0007, ADR-0015)."
+    },
+    "skillCodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+      }
+    },
+    "sourceCode": {
+      "type": "string",
+      "minLength": 1,
+      "description": "모델에게 보여줄 제출 코드 그대로. ⚠️ 라벨을 알려주는 주석이 들어 있으면 정확도가 아니라 독해력을 재게 된다 - 생성기가 첫 주석 블록을 지운다."
+    },
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "failedCaseId", "stderr", "passedCaseIds", "failedCaseIds"],
+      "description": "실제 샌드박스 채점 결과에서 Reviewer 입력과 뒷받침 판단에 필요한 것만 옮긴 것.",
+      "properties": {
+        "status": {
+          "enum": [
+            "WRONG_ANSWER",
+            "TIME_LIMIT",
+            "MEMORY_LIMIT",
+            "RUNTIME_ERROR",
+            "OUTPUT_LIMIT"
+          ],
+          "description": "Reviewer 를 호출하는 판정만 온다(ADR-0004). ACCEPTED / COMPILE_ERROR / SYSTEM_ERROR 는 애초에 평가 대상이 아니다."
+        },
+        "failedCaseId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "첫 실패 case. Reviewer 를 호출하는 판정이므로 반드시 있다."
+        },
+        "stderr": {
+          "type": ["string", "null"],
+          "description": "sanitize 된 표준 에러. 없으면 null."
+        },
+        "passedCaseIds": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "통과한 case."
+        },
+        "failedCaseIds": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "통과하지 못한 case. ⚠️ 실행되지 않은 case 는 여기 없다(ADR-0015)."
+        }
+      }
+    },
+    "probes": {
+      "type": "object",
+      "description": "Mistake code -> 그것을 겨냥한 case id. cases.json 에서 온다. 뒷받침 판단(CaseCorroboration)에 그대로 들어간다.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

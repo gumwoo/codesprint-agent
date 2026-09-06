@@ -1,0 +1,34 @@
+{
+  "problemCode": "P04_AREA_SIZE",
+  "problemTitle": "가장 큰 영역의 크기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BFS_GRID_TRAVERSAL",
+    "BFS_VISITED_MANAGEMENT",
+    "GRID_BOUNDARY_CHECK"
+  ],
+  "sourceCode": "import sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\n# 첫 영역을 찾으면 거기서 멈춘다 - 더 큰 영역이 뒤에 있으면 틀린다.\nvisited = [[False] * m for _ in range(n)]\nfor si in range(n):\n    for sj in range(m):\n        if g[si][sj] != 1:\n            continue\n        visited[si][sj] = True\n        q = deque([(si, sj)])\n        size = 0\n        while q:\n            x, y = q.popleft()\n            size += 1\n            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n                nx, ny = x + dx, y + dy\n                if 0 <= nx < n and 0 <= ny < m and not visited[nx][ny] and g[nx][ny] == 1:\n                    visited[nx][ny] = True\n                    q.append((nx, ny))\n        print(size)\n        raise SystemExit\nprint(0)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 5,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "failedCaseIds": [
+      5
+    ]
+  },
+  "probes": {
+    "BOUNDARY_CHECK": [
+      3,
+      6
+    ]
+  }
+}

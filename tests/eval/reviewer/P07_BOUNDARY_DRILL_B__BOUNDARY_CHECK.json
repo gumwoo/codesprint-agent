@@ -1,0 +1,26 @@
+{
+  "problemCode": "P07_BOUNDARY_DRILL_B",
+  "problemTitle": "격자 안에 있는 이웃 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GRID_BOUNDARY_CHECK",
+    "GRID_COORDINATE"
+  ],
+  "sourceCode": "import sys\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\nq = int(data[2])\nfor i in range(q):\n    r, c = int(data[3 + i * 2]), int(data[4 + i * 2])\n    count = 0\n    for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n        nr, nc = r + dr, c + dc\n        if nr < n and nc < m:\n            count += 1\n    print(count)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "probes": {}
+}
