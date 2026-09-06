@@ -98,9 +98,13 @@ public final class ReviewerEvaluation {
             System.exit(2);
         }
 
+        // 설정은 애플리케이션과 **같은 파일**에서 읽는다. 하네스에 따로 적어 두면
+        // 앱을 reviewer-v2 로 바꿔 놓고 평가는 v1 을 재는 일이 생긴다.
+        ReviewerSettings.Values settings = ReviewerSettings.load();
         ReviewerPort reviewer = new PromptReviewer(
-                new ClaudeCliLlmClient(command(), Duration.ofSeconds(180)),
-                PromptTemplate.load(promptVersion()));
+                new ClaudeCliLlmClient(settings.command(),
+                        Duration.ofSeconds(settings.timeoutSeconds())),
+                PromptTemplate.load(settings.promptVersion()));
         ReviewerOutputValidator validator = new ReviewerOutputValidator(new CurriculumCatalog());
 
         // 실패한 case 의 입력은 **실제 경로와 같은 곳에서** 읽는다. 평가 케이스에
@@ -114,7 +118,7 @@ public final class ReviewerEvaluation {
             outcomes.add(evaluateOne(one, reviewer, validator, problems));
         }
 
-        report(outcomes, promptVersion());
+        report(outcomes, settings.promptVersion());
         System.exit(verdict(outcomes));
     }
 
@@ -286,26 +290,6 @@ public final class ReviewerEvaluation {
             throw new IllegalStateException("codesprint.repoRoot 시스템 프로퍼티가 없다.");
         }
         return Path.of(root);
-    }
-
-    /**
-     * 실행에 쓸 CLI 명령. 기본값은 application.yml 과 같아야 한다.
-     *
-     * <p><b>{@code --bare} 를 넣지 않는다.</b> 그것을 붙이면 구독 로그인을 읽지 않고
-     * API 키를 요구한다.
-     */
-    private static List<String> command() {
-        String override = System.getenv("CODESPRINT_REVIEWER_COMMAND");
-        if (override != null && !override.isBlank()) {
-            return List.of(override.split(","));
-        }
-        return List.of("claude", "-p", "--tools", "", "--no-session-persistence",
-                "--strict-mcp-config", "--setting-sources", "", "--output-format", "json");
-    }
-
-    private static String promptVersion() {
-        String version = System.getenv("CODESPRINT_REVIEWER_PROMPT");
-        return version == null || version.isBlank() ? "reviewer-v1" : version;
     }
 
     private static List<String> names(JsonNode array) {

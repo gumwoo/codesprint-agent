@@ -261,6 +261,10 @@ python tools/gen_reviewer_eval_cases.py --write   # 라벨 + 실제 채점 결�
 gradle evalReviewer                               # 진짜 모델을 부른다 (Claude CLI)
 ```
 
+**하네스는 설정을 따로 갖지 않는다.** 명령 · timeout · 프롬프트 버전을 애플리케이션과
+같은 `application.yml` 에서 읽는다 - 따로 적으면 앱을 `reviewer-v2` 로 바꿔 놓고
+평가는 v1 을 재게 된다.
+
 **평가는 CI 에 넣지 않는다.** 모델 호출은 느리고 비결정적이라, 넣으면 모델이 그날
 다르게 답했다는 이유로 관계없는 PR 이 빨개진다. CI 는 평가 케이스가 실제 채점과
 일치하는지만 본다 - 그쪽은 결정론적이다.
