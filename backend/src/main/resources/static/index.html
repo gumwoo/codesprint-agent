@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  CodeSprint Agent 슬라이스 1 화면. 정본: docs/adr/0017-the-web-client-has-no-build-step.md
+
+  빌드 도구가 없다. 이 파일과 app.js 를 그대로 서빙한다 - 지금 화면 하나에
+  번들러와 프레임워크를 들이면 저장소에 두 번째 빌드 파이프라인이 생긴다.
+
+  이 화면은 API 를 **소비만** 한다. 판정도 점수도 다음 행동도 여기서 만들지 않는다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CodeSprint Agent</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <h1>CodeSprint Agent</h1>
+  <p class="sub">코딩테스트를 대신 풀어 주지 않는다. 무엇을 모르는지 찾아내고 그 Skill 을 겨냥한다.</p>
+  <div class="user">
+    <label>사용자 id <input id="userId" type="number" min="1"></label>
+    <button id="createUser" type="button">새로 시작</button>
+    <span class="note">
+      슬라이스 1 에는 인증이 없다. 서버가 이 값을 그대로 받고, 이 브라우저에만 기억한다.
+    </span>
+  </div>
+</header>
+
+<main>
+  <section id="picker">
+    <h2>문제 고르기</h2>
+    <p class="note">
+      첫 제출 이전에만 고른다. 그 뒤로는 <b>다음에 무엇을 할지 시스템이 정한다.</b>
+    </p>
+    <ul id="problemList"></ul>
+  </section>
+
+  <section id="workspace" hidden>
+    <h2 id="problemTitle"></h2>
+    <p class="meta" id="problemMeta"></p>
+    <pre class="statement" id="statement"></pre>
+    <div id="samples"></div>
+
+    <h3>제출</h3>
+    <label class="field">
+      힌트를 몇 단계까지 봤는가
+      <select id="hintLevel">
+        <option value="0">0 - 혼자 풀었다</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4 - 거의 다 봤다</option>
+      </select>
+    </label>
+    <label class="field">
+      <input id="solutionViewed" type="checkbox"> 해설을 봤다
+    </label>
+    <textarea id="sourceCode" spellcheck="false" rows="16"
+              placeholder="Python 3 코드를 붙여 넣는다"></textarea>
+    <button id="submitButton" type="button">제출</button>
+    <p class="note" id="submitNote"></p>
+  </section>
+
+  <section id="result" hidden>
+    <h2>결과</h2>
+    <p id="state"></p>
+    <dl id="judge"></dl>
+    <div id="review"></div>
+    <div id="nextAction"></div>
+    <button id="goNext" type="button" hidden>다음 문제로</button>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -53,6 +53,33 @@ public class ProblemController {
             ProblemView problem, String reason) {
     }
 
+    /** 목록에 담는 것. 본문과 예시는 없다 - 고르는 화면이지 푸는 화면이 아니다. */
+    public record ProblemSummary(String code, String title, String kind, String primarySkill) {
+    }
+
+    public record ProblemListResponse(List<ProblemSummary> problems) {
+    }
+
+    /**
+     * 풀 수 있는 문제 목록. 계약: contracts/problem-list.schema.json.
+     *
+     * <p><b>이것은 학습 경로가 아니다.</b> 무엇을 다음에 풀지는 Decision Engine 이
+     * 정하고(ADR-0002) {@code next-problem} 이 돌려준다. 이 목록은 <b>첫 제출 이전의
+     * 진입점</b>이다 - 제출이 하나도 없으면 결정할 근거 자체가 없다.
+     */
+    @GetMapping("/problems")
+    public ProblemListResponse list() {
+        // code 순으로 고정한다. 카탈로그의 Map 은 순서를 보장하지 않아, 그대로
+        // 내보내면 같은 데이터인데 실행할 때마다 목록 순서가 달라진다.
+        return new ProblemListResponse(catalog.codes().stream()
+                .sorted()
+                .map(catalog::find)
+                .map(problem -> new ProblemSummary(
+                        problem.code(), problem.title(), problem.kind(),
+                        problem.primarySkill()))
+                .toList());
+    }
+
     @GetMapping("/problems/{problemCode}")
     public ResponseEntity<ProblemView> find(@PathVariable String problemCode) {
         ProblemDefinition problem = catalog.find(problemCode);

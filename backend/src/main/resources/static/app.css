@@ -1,0 +1,149 @@
+/* 슬라이스 1 화면. 프레임워크 없이 이 파일 하나로 둔다(ADR-0017). */
+
+:root {
+  --ink: #16181d;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #1f6feb;
+  --warn: #b42318;
+  --bg: #ffffff;
+  --panel: #f7f8fa;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  max-width: 860px;
+  font: 15px/1.6 -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 28px 0 8px; }
+h3 { font-size: 15px; margin: 20px 0 6px; }
+h4 { font-size: 13px; margin: 0 0 4px; color: var(--muted); }
+
+.sub, .note, .meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.note { margin: 4px 0; }
+
+header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+
+.user {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.user input { width: 72px; margin: 0 8px; }
+
+.field {
+  display: block;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+input, select, textarea, button {
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: inherit;
+}
+
+textarea {
+  width: 100%;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 13px;
+  tab-size: 4;
+}
+
+button {
+  cursor: pointer;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg);
+}
+
+button:hover { background: #eef4ff; }
+button:disabled { opacity: .5; cursor: default; }
+
+#submitButton, #goNext {
+  margin-top: 10px;
+  padding: 8px 18px;
+  color: var(--bg);
+  background: var(--accent);
+}
+
+#problemList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#problemList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+#problemList button {
+  border: none;
+  padding: 4px 0;
+  text-align: left;
+}
+
+.tag { color: var(--muted); font-size: 12px; }
+
+pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.statement { line-height: 1.7; }
+
+.sample {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.sample h4 { grid-column: 1 / -1; }
+
+.stderr {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  color: var(--warn);
+  background: #fff5f5;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 16px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+dt { color: var(--muted); }
+dd { margin: 0; }
+
+#result { border-top: 1px solid var(--line); margin-top: 28px; }
