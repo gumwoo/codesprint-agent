@@ -45,12 +45,25 @@ public interface JudgeJobRepository extends JpaRepository<JudgeJobRow, Long> {
      * 여기서 기다렸다가 0 을 받는다. 실패해서 트랜잭션이 되돌아가면 이 표시도 함께
      * 되돌아가므로 다음 주기에 다시 집는다.
      *
-     * @return 1 이면 이 트랜잭션이 반영한다. 0 이면 이미 반영됐거나 다른 쪽이 가져갔다.
+     * <h2>끝난 job 만 잡는다</h2>
+     *
+     * <p>아직 채점 중인 job 에 자리를 내주면 <b>진짜 결과를 영원히 잃는다.</b>
+     * 완료되지 않은 job 의 결과를 읽으면 {@code SYSTEM_ERROR} 가 나오는데, 그건
+     * 예외가 아니라 정상 처리라 트랜잭션이 <b>커밋된다.</b> {@code applied_at} 이
+     * 남아 Poller 가 다시 집지 않으므로, 나중에 Worker 가 채점을 끝내도 그 결과는
+     * 반영되지 않는다.
+     *
+     * <p>Poller 는 완료된 것만 넘겨주지만, 그 조건이 호출자에게만 있으면 잘못된 호출
+     * 한 번이 결과를 버린다. <b>버릴 수 있는 쪽에서 막는다.</b>
+     *
+     * @return 1 이면 이 트랜잭션이 반영한다. 0 이면 이미 반영됐거나, 다른 쪽이
+     *     가져갔거나, 아직 채점이 끝나지 않았다.
      */
     @org.springframework.data.jpa.repository.Modifying
     @Query("""
             update JudgeJobRow j set j.appliedAt = :at, j.updatedAt = :at
             where j.id = :id and j.appliedAt is null
+              and j.status in ('DONE', 'FAILED')
             """)
     int claimForApply(@Param("id") Long id, @Param("at") java.time.Instant at);
 

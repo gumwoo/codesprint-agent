@@ -415,6 +415,51 @@ class ReviewerFlowTest {
     }
 
     @Test
+    @DisplayName("아직 채점되지 않은 job 은 자리를 내주지 않는다")
+    void claimRefusesUnfinishedJobs() throws Exception {
+        long submissionId = submitAndQueue("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
+        long jobId = jobs.findBySubmissionId(submissionId).orElseThrow().id();
+
+        for (String status : new String[] {"QUEUED", "RUNNING"}) {
+            jdbc.update("UPDATE judge_jobs SET status = ? WHERE id = ?", status, jobId);
+            assertThat(claim(jobId)).as("%s 인 job 은 반영할 것이 없다", status).isZero();
+            assertThat(jdbc.queryForObject(
+                    "SELECT applied_at FROM judge_jobs WHERE id = ?", Object.class, jobId))
+                    .as("%s 인데 반영했다고 표시되면 안 된다", status)
+                    .isNull();
+        }
+
+        for (String status : new String[] {"DONE", "FAILED"}) {
+            jdbc.update("UPDATE judge_jobs SET status = ?, applied_at = NULL WHERE id = ?",
+                    status, jobId);
+            assertThat(claim(jobId)).as("%s 는 반영 대상이다", status).isEqualTo(1);
+        }
+    }
+
+    @Test
+    @DisplayName("채점 전에 잘못 반영해도 진짜 결과를 잃지 않는다")
+    void applyingTooEarlyDoesNotDiscardTheResult() throws Exception {
+        // 자리를 먼저 잡는데(#14) readResult 는 완료되지 않은 job 을 예외가 아니라
+        // SYSTEM_ERROR 로 다룬다. 둘이 만나면 **조용히 커밋된다** - applied_at 이
+        // 남아 Poller 가 다시 집지 않으므로, 나중에 Worker 가 진짜로 채점을 끝내도
+        // 그 결과는 영원히 반영되지 않는다.
+        reviewer.scripted = analysis("BOUNDARY_CHECK", 0.85, 4);
+        long submissionId = submitAndQueue("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 4);
+        long jobId = jobs.findBySubmissionId(submissionId).orElseThrow().id();
+        jdbc.update("UPDATE judge_jobs SET status = 'RUNNING' WHERE id = ?", jobId);
+
+        applier.apply(jobId);   // 아직 채점 중이다
+
+        // Worker 가 채점을 끝냈다.
+        jdbc.update("UPDATE judge_jobs SET status = 'DONE' WHERE id = ?", jobId);
+        poller.applyFinishedJobs();
+
+        assertThat(resultOf(submissionId).get("result").get("judge").get("status").asText())
+                .as("진짜 판정이 반영돼야 한다")
+                .isEqualTo("WRONG_ANSWER");
+    }
+
+    @Test
     @DisplayName("먼저 잡은 트랜잭션이 끝날 때까지 두 번째는 기다렸다가 0 을 받는다")
     void theSecondClaimWaitsAndLoses() throws Exception {
         // 8개 스레드로 apply() 를 동시에 부르는 테스트를 먼저 써 봤는데, **읽고
