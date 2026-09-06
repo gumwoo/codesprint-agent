@@ -169,9 +169,14 @@ class ReviewerFlowTest {
 
     /** 실패한 case 4번을 근거로 드는 분석. 자동 드릴 대상 Mistake 다. */
     private static ReviewerOutput analysis(String mistake, double confidence, int citedCase) {
+        return analysis(mistake, confidence, citedCase, "BFS_GRID_TRAVERSAL");
+    }
+
+    private static ReviewerOutput analysis(String mistake, double confidence, int citedCase,
+            String affectedSkill) {
         return new ReviewerOutput("WRONG", mistake, List.of(), confidence,
-                List.of("BFS_GRID_TRAVERSAL"), List.of(citedCase), false, true,
-                "경계 검사를 빠뜨렸다");
+                List.of(affectedSkill), List.of(citedCase), false, true,
+                "실패한 case 를 설명한다");
     }
 
     /**
@@ -315,6 +320,43 @@ class ReviewerFlowTest {
         assertThat(result.get("nextAction").get("type").asText()).isEqualTo("MICRO_DRILL");
         assertThat(result.get("nextAction").get("targetSkill").asText())
                 .isEqualTo("GRID_BOUNDARY_CHECK");
+    }
+
+    /**
+     * P04 의 case 4·7 은 {@code cases.json} 에서 VISITED_TIMING 을 겨냥한다.
+     * 둘 다 실패하고, 겨냥하지 않는 case 가 통과한 모양.
+     */
+    private static final String VISITED_TIMING_SHAPED = """
+            [{"id": 1, "status": "ACCEPTED", "executionMs": 10},
+             {"id": 4, "status": "WRONG_ANSWER", "executionMs": 10},
+             {"id": 7, "status": "WRONG_ANSWER", "executionMs": 10}]
+            """;
+
+    @Test
+    @DisplayName("VISITED_TIMING 도 실패의 모양으로 확정되고 그 드릴로 이어진다")
+    void visitedTimingConfirmsOnFirstSight() throws Exception {
+        // 자동 드릴이 켜진 Mistake 는 둘인데(curriculum/mistakes.yaml) 실패의 모양으로
+        // 확정되는 것은 BOUNDARY_CHECK 하나뿐이었다. VISITED_TIMING 은 재발을
+        // 기다려야 했다.
+        reviewer.scripted = analysis("VISITED_TIMING", 0.95, 4, "BFS_VISITED_MANAGEMENT");
+        alreadyLearning("P04_AREA_SIZE");
+
+        long submissionId = submitAndJudge(
+                "P04_AREA_SIZE", "WRONG_ANSWER", 4, VISITED_TIMING_SHAPED);
+        JsonNode result = resultOf(submissionId).get("result");
+
+        assertThat(result.get("review").get("status").asText()).isEqualTo("CONFIRMED");
+
+        JsonNode action = result.get("nextAction");
+        assertThat(action.get("type").asText()).isEqualTo("MICRO_DRILL");
+        // 드릴 대상은 커리큘럼이 정한다 - 코드에 적지 않는다.
+        assertThat(action.get("targetSkill").asText()).isEqualTo("BFS_VISITED_MANAGEMENT");
+        String nextProblem = mvc.perform(
+                        get("/api/submissions/{id}/next-problem", submissionId))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(MAPPER.readTree(nextProblem).get("problem").get("code").asText())
+                .as("확정이 그 Skill 의 드릴로 이어진다")
+                .isEqualTo("P08_VISITED_TIMING_DRILL");
     }
 
     @Test

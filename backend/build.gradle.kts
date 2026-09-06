@@ -88,6 +88,16 @@ tasks.withType<Test> {
     }
     // golden fixture 위치를 테스트에 알려준다. 저장소 루트 기준이다.
     systemProperty("codesprint.repoRoot", rootProject.projectDir.parentFile.absolutePath)
+
+    // 테스트가 읽는 데이터도 입력이다.
+    //
+    // problems/ 는 jar 에 굽지 않으므로(ADR-0008) 적어 두지 않으면 gradle 이 입력으로
+    // 보지 않는다. 그러면 **case 를 고쳐도 테스트가 다시 돌지 않고 초록이 나온다** -
+    // 실제로 그랬다. 데이터만 바꾼 대조군이 통과해 버렸다.
+    //
+    // curriculum/ 과 프롬프트는 processResources 가 이미 입력으로 잡고 있다.
+    inputs.dir(rootProject.projectDir.parentFile.resolve("problems"))
+    inputs.dir(rootProject.projectDir.parentFile.resolve("tests"))
 }
 
 // -- Reviewer 평가 하네스 (ADR-0016) --------------------------------------

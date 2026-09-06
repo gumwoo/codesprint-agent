@@ -32,7 +32,9 @@
       "hidden": true,
       "input": "2 4\n1 1 1 1\n1 1 1 1\n",
       "expectedOutput": "8\n",
-      "probes": []
+      "probes": [
+        "VISITED_TIMING"
+      ]
     },
     {
       "id": 5,
@@ -50,6 +52,16 @@
       "expectedOutput": "3\n",
       "probes": [
         "BOUNDARY_CHECK"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "3 3\n1 1 0\n1 1 0\n0 0 1\n",
+      "expectedOutput": "4\n",
+      "probes": [
+        "VISITED_TIMING"
       ]
     }
   ]
