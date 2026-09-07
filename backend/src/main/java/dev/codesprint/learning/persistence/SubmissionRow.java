@@ -51,6 +51,10 @@ public class SubmissionRow {
     @Column(name = "failed_case_id")
     private Integer failedCaseId;
 
+    /** sanitize 된 표준 에러. 채점이 남긴 것을 그대로 옮긴다(ADR-0013). */
+    @Column(columnDefinition = "text")
+    private String stderr;
+
     /** 같은 AC 라도 이 값에 따라 독립 풀이 점수가 갈린다(Addendum 11). */
     @Column(name = "hint_level", nullable = false)
     private int hintLevel;
@@ -96,14 +100,20 @@ public class SubmissionRow {
     }
 
     /** 판정이 난 뒤에 붙인다. 제출 자체는 판정보다 먼저 존재한다. */
+    /**
+     * @param stderr sanitize 된 표준 에러(Addendum 63). 없으면 null 이다.
+     *     <b>화면까지 가는 값이다</b> - 실행이 왜 죽었는지 사용자가 볼 수 있는 유일한
+     *     단서라, 여기서 버리면 RUNTIME_ERROR 를 받고도 이유를 알 수 없다.
+     */
     public void applyJudgement(String status, Integer passed, Integer total,
-            Integer executionMs, Integer memoryKb, Integer failedCaseId) {
+            Integer executionMs, Integer memoryKb, Integer failedCaseId, String stderr) {
         this.status = status;
         this.passed = passed;
         this.total = total;
         this.executionMs = executionMs;
         this.memoryKb = memoryKb;
         this.failedCaseId = failedCaseId;
+        this.stderr = stderr;
     }
 
     public Long id() {
@@ -243,6 +253,10 @@ public class SubmissionRow {
 
     public Integer failedCaseId() {
         return failedCaseId;
+    }
+
+    public String stderr() {
+        return stderr;
     }
 
     public String nextActionType() {

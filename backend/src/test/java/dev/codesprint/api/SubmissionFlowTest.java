@@ -354,6 +354,55 @@ class SubmissionFlowTest {
     }
 
     @Test
+    @DisplayName("실행이 왜 죽었는지 조회에서 볼 수 있다")
+    void stderrReachesTheReader() throws Exception {
+        // 계약에는 judge.stderr 가 있고 Worker 는 sanitize 해서 만드는데, 저장할
+        // 자리가 없어 조회는 언제나 null 을 돌려줬다. 이 저장소에서 null 은
+        // "확인했고 없었다" 다 - 있는데 없다고 답하고 있었다.
+        //
+        // 화면에서는 RUNTIME_ERROR 를 받고도 이유를 볼 수 없었다. 학습 도구에서
+        // 그건 판정만 있고 배울 것이 없는 상태다.
+        String traceback = """
+                Traceback (most recent call last):
+                  File "solution.py", line 7, in <module>
+                    print(grid[n][0])
+                IndexError: list index out of range""";
+
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+                .get("submissionId").asLong();
+        JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
+        jdbc.update("""
+                UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?
+                """,
+                MAPPER.writeValueAsString(java.util.Map.of(
+                        "status", "RUNTIME_ERROR", "passed", 0, "total", 6,
+                        "executionMs", 90, "memoryKb", 20480, "failedCaseId", 1,
+                        "stderr", traceback, "cases", java.util.List.of())),
+                job.id());
+        poller.applyFinishedJobs();
+
+        assertThat(statusOf(submissionId).get("result").get("judge").get("stderr").asText())
+                .as("채점이 남긴 것을 그대로 보여준다")
+                .isEqualTo(traceback);
+    }
+
+    @Test
+    @DisplayName("stderr 가 없는 판정은 null 로 남는다")
+    void stderrIsNullWhenThereWasNone() throws Exception {
+        // 빈 문자열로 채우지 않는다. "에러 없이 끝났다" 와 "메시지가 비어 있다" 는
+        // 다르고, 계약이 그 둘을 구분한다.
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+                .get("submissionId").asLong();
+        JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
+        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+                judged("ACCEPTED", 6, 6), job.id());
+        poller.applyFinishedJobs();
+
+        assertThat(statusOf(submissionId).get("result").get("judge").get("stderr").isNull())
+                .isTrue();
+    }
+
+    @Test
     @DisplayName("지원하지 않는 언어는 400 이고 큐에 넣지 않는다")
     void unsupportedLanguageIsRejected() throws Exception {
         String body = """
