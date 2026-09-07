@@ -43,7 +43,8 @@
   <!-- 왼쪽: 문제 -->
   <section class="pane left">
     <div class="pane-head">
-      <span class="tab active" id="leftTitle">문제</span>
+      <button type="button" class="tab active" id="tabProblem">문제</button>
+      <button type="button" class="tab" id="tabSkills">내 Skill</button>
       <span class="meta" id="problemMeta"></span>
     </div>
 
@@ -58,6 +59,20 @@
       <h2 id="problemTitle"></h2>
       <pre class="statement" id="statement"></pre>
       <div id="samples"></div>
+    </div>
+
+    <!--
+      무엇을 모르는지 보여주는 자리. 점수는 서버가 정한 것을 그대로 옮긴다.
+      아직 손대지 않은 Skill 도 빠짐없이 담는다 - 빠지면 "모른다" 가 안 보인다.
+    -->
+    <div class="pane-body" id="skillsBody" hidden>
+      <p class="note" id="skillsNote"></p>
+      <table class="skills">
+        <thead>
+          <tr><th>Skill</th><th>상태</th><th class="num">mastery</th><th class="num">근거</th></tr>
+        </thead>
+        <tbody id="skillRows"></tbody>
+      </table>
     </div>
   </section>
 

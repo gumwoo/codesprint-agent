@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/skill-catalog.schema.json",
+  "title": "SkillCatalog",
+  "description": "활성 Skill 의 정의. curriculum/skills.yaml 과 prerequisites.yaml 에서 온다. 사용자와 무관하며 누구에게나 같다 - 그래서 상태(skill-map.schema.json)와 나눠 둔다. 하나로 합치면 커리큘럼이 사용자별 데이터처럼 보이고, 캐시하기도 어려워진다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skills"],
+  "properties": {
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "name", "domain", "tier", "requires"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "domain": { "type": "string", "minLength": 1 },
+          "tier": { "type": "string", "minLength": 1 },
+          "requires": {
+            "type": "array",
+            "description": "이 Skill 을 열려면 먼저 채워야 하는 것들. 화면이 왜 잠겼는지 설명하려면 필요하다.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["skillCode", "minimumMastery"],
+              "properties": {
+                "skillCode": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+                },
+                "minimumMastery": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/skill-map.schema.json",
+  "title": "SkillMap",
+  "description": "한 사용자의 Skill 상태 전체. **활성 Skill 을 하나도 빠뜨리지 않고 담는다** - 아직 손대지 않은 Skill 이 목록에서 빠지면 '무엇을 모르는지' 가 보이지 않는다. 값은 저장된 user_skills 행이 아니라 Evidence 에서 다시 계산한 것이다(ADR-0009).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["userId", "skills"],
+  "properties": {
+    "userId": { "type": "integer", "minimum": 1 },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "https://codesprint.dev/contracts/user-skill.schema.json" }
+    }
+  }
+}

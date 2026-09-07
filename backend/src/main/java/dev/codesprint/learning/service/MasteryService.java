@@ -32,12 +32,51 @@ public class MasteryService {
     private final EvidenceStore evidence;
     private final UserSkillRepository userSkills;
     private final PrerequisiteEvaluator prerequisites;
+    private final dev.codesprint.curriculum.CurriculumCatalog catalog;
 
     public MasteryService(EvidenceStore evidence, UserSkillRepository userSkills,
-            PrerequisiteEvaluator prerequisites) {
+            PrerequisiteEvaluator prerequisites,
+            dev.codesprint.curriculum.CurriculumCatalog catalog) {
         this.evidence = evidence;
         this.userSkills = userSkills;
         this.prerequisites = prerequisites;
+        this.catalog = catalog;
+    }
+
+    /**
+     * 이 사용자의 <b>활성 Skill 전체</b> 상태. 계약: contracts/skill-map.schema.json.
+     *
+     * <p><b>손대지 않은 Skill 도 담는다.</b> 아직 Evidence 가 없는 Skill 이 목록에서
+     * 빠지면 "무엇을 모르는가" 가 보이지 않는다 - 이 제품이 답해야 하는 질문이 그것이다.
+     *
+     * <p><b>캐시를 읽지 않고 Evidence 에서 다시 계산한다.</b> 저장된 user_skills 행은
+     * 캐시이고 정본이 아니다(ADR-0009). 읽기 경로가 캐시를 그대로 내보내면, 캐시가
+     * 어긋났을 때 화면이 그 어긋난 값을 사실로 보여준다.
+     *
+     * <p>선수 관계 판정에 쓰는 mastery 도 방금 계산한 것들로 채운다. 캐시에서 가져오면
+     * 한 응답 안에 두 시점이 섞인다.
+     */
+    @Transactional(readOnly = true)
+    public List<SkillState> statesOf(Long userId) {
+        List<String> codes = catalog.skillCodes().stream().sorted().toList();
+
+        Map<String, SkillState> fromEvidence = new java.util.LinkedHashMap<>();
+        Map<String, Double> masteries = new HashMap<>();
+        for (String code : codes) {
+            SkillState state = MasteryCalculator.recompute(evidence.load(userId, code), code);
+            fromEvidence.put(code, state);
+            masteries.put(code, state.mastery());
+        }
+
+        List<SkillState> states = new java.util.ArrayList<>();
+        for (String code : codes) {
+            SkillState state = fromEvidence.get(code);
+            // Evidence 만으로는 LOCKED / READY 를 알 수 없다. 그 둘은 선수 관계에서 나온다.
+            states.add(new SkillState(code, state.scores(), state.mastery(),
+                    state.confidence(), state.evidenceCount(),
+                    prerequisites.resolve(code, state.status(), masteries)));
+        }
+        return states;
     }
 
     /**
