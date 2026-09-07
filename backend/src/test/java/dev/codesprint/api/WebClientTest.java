@@ -165,15 +165,21 @@ class WebClientTest {
     }
 
     /**
-     * 줄 전체가 주석인 줄을 뺀다.
+     * 주석을 뺀다.
      *
      * <p>규칙은 <b>코드</b>에 대한 것이다. 이 파일의 주석은 왜 화면이 판단하지 않는지를
      * 설명하느라 그 단어들을 쓰므로, 그대로 검사하면 설명을 지워야 통과하게 된다.
-     * 줄 끝 주석과 문자열 안의 {@code //} 는 다루지 않는다 - 지금 파일에 없고,
+     *
+     * <p>처음에는 {@code //} 로 시작하는 줄만 뺐는데, {@code /** ... *}{@code /} 블록의
+     * {@code * mastery} 가 "연산자 뒤의 점수" 로 잡혔다 - <b>주석을 지우려고 만든 것이
+     * 주석에 걸린 셈이다.</b> 블록 주석도 함께 뺀다.
+     *
+     * <p>문자열 안의 {@code //} 나 {@code /*} 는 다루지 않는다 - 지금 파일에 없고,
      * 흉내를 늘리면 검사보다 흉내가 먼저 틀린다.
      */
     private static String withoutComments(String script) {
-        return script.lines()
+        String withoutBlocks = script.replaceAll("(?s)/\\*.*?\\*/", "");
+        return withoutBlocks.lines()
                 .filter(line -> !line.strip().startsWith("//"))
                 .collect(java.util.stream.Collectors.joining("\n"));
     }
@@ -269,17 +275,58 @@ class WebClientTest {
         assertThat(codes).isSorted();
     }
 
+    /**
+     * 화면이 스스로 판단하면 나타나는 모양들.
+     *
+     * <p><b>보여주는 것과 만드는 것은 다르다.</b> 처음에는 {@code mastery} 라는 낱말을
+     * 금지했는데, 그 값을 화면에 <b>표시</b>하기 시작하자 걸렸다 - 규칙이 잘못된
+     * 것이었다. 서버가 정한 값을 옮겨 적는 것은 이 경계를 넘지 않는다.
+     *
+     * <p>그래서 <b>계산과 선택</b>만 막는다.
+     *
+     * <ul>
+     *   <li>점수에 산술을 하거나 임계값과 비교한다 - 그 순간 화면이 두 번째 산식이 된다
+     *   <li>액션 · 확정 상태를 문자열로 들고 있다 - 무엇을 할지 화면이 고르기 시작한 것이다
+     * </ul>
+     */
+    private static final String[] FORBIDDEN = {
+        "(mastery|confidence)\\s*[<>]=?",
+        "(mastery|confidence)\\s*[-+*/]",
+        "[-+*/]\\s*(mastery|confidence)",
+        "MICRO_DRILL", "CHANGE_SKILL", "RETRY_VARIANT", "REVIEW_CONCEPT",
+        "CONFIRMED", "PROBABLE",
+    };
+
     @Test
     @DisplayName("화면은 판정도 점수도 만들지 않는다")
     void theClientDoesNotDecide() throws Exception {
-        // 경계는 프롬프트가 아니라 검사로 지킨다(ADR-0001). 화면이 mastery 를 계산하거나
-        // 다음 행동을 고르기 시작하면, 서버가 정한 것과 화면이 보여주는 것이 갈린다.
+        // 경계는 프롬프트가 아니라 검사로 지킨다(ADR-0001). 화면이 점수를 계산하거나
+        // 다음 행동을 고르기 시작하면, 서버가 정한 것과 화면이 보여주는 것이 갈린다 -
+        // 그리고 사용자가 보는 쪽이 이긴다.
         String script = withoutComments(read("app.js"));
-        for (String forbidden : new String[] {"mastery", "confidence *=", "MICRO_DRILL",
-                "CHANGE_SKILL", "RETRY_VARIANT", "CONFIRMED", "PROBABLE"}) {
+        for (String forbidden : FORBIDDEN) {
             assertThat(Pattern.compile(forbidden).matcher(script).find())
                     .as("화면이 %s 를 스스로 다룬다 - 그 판단은 서버 몫이다", forbidden)
                     .isFalse();
         }
+    }
+
+    @Test
+    @DisplayName("이 검사가 계산은 잡고 표시는 놓아준다")
+    void theRuleCatchesComputationNotDisplay() {
+        // 규칙을 낱말 금지에서 계산 금지로 바꿨으므로, 그것이 여전히 일하는지 본다.
+        // 잡지 못하는 검사를 두면 경계가 있다고 믿는 것만 남는다.
+        String computing = "const level = mastery * 0.6 + confidence * 0.4;\n"
+                + "if (mastery >= 0.9) { pick(\"MICRO_DRILL\"); }";
+        String displaying = "cell.textContent = state.mastery === null "
+                + "? \"-\" : state.mastery.toFixed(2);\n"
+                + "status.textContent = state.status;";
+
+        assertThat(java.util.Arrays.stream(FORBIDDEN)
+                .anyMatch(rule -> Pattern.compile(rule).matcher(computing).find()))
+                .as("계산하는 코드를 잡아야 한다").isTrue();
+        assertThat(java.util.Arrays.stream(FORBIDDEN)
+                .anyMatch(rule -> Pattern.compile(rule).matcher(displaying).find()))
+                .as("보여주기만 하는 코드는 잡으면 안 된다").isFalse();
     }
 }
