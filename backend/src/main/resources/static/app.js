@@ -136,14 +136,25 @@ async function openProblem(code) {
   $("statementBody").hidden = false;
   $("submitButton").disabled = false;
   setSourceCode("");
-  clearResult("제출하면 여기에 판정과 다음 행동이 나온다.");
+  // 문제를 옮기는 것은 진짜로 그만 보는 것이다. 여기서는 놓는다.
+  cancelActivePolling();
+  resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
+  $("footNote").textContent = "";
   openedAt = Date.now();
 }
 
-function clearResult(note) {
-  // 다른 문제로 옮기면 이전 제출의 결과를 더 보지 않는다. 그 폴링도 버린다 -
-  // activeSubmissionId 가 달라지면 그쪽 루프가 스스로 멈춘다.
+/**
+ * 보고 있던 제출을 놓는다. 그 폴링은 다음 응답에서 스스로 멈춘다.
+ *
+ * <b>결과 영역을 지우는 것과 따로 둔다.</b> 하나로 묶었더니 새 제출이 거절됐을 때도
+ * 이미 관찰을 그만둔 뒤였다 - 앞 제출은 실제로 채점되고 있는데 그것을 기다리는
+ * 폴러가 사라졌고, 제출 이력 화면이 없어 다시 볼 방법도 없었다.
+ */
+function cancelActivePolling() {
   activeSubmissionId = null;
+}
+
+function resetResultUi(note) {
   const state = $("state");
   state.textContent = "";
   state.className = "meta";
@@ -161,7 +172,9 @@ async function submit() {
   }
   const button = $("submitButton");
   button.disabled = true;
-  clearResult("제출하는 중…");
+  // **접수되기 전에는 화면을 건드리지 않는다.** 거절될 수 있고, 그때 앞 제출은
+  // 그대로 채점되고 있다. 진행 상황은 버튼 옆에 적는다.
+  $("footNote").textContent = "제출하는 중…";
 
   const startedAt = Date.now();
   try {
@@ -182,18 +195,23 @@ async function submit() {
     });
     if (!response.ok) {
       // 서버가 거절한 이유를 그대로 보여준다. "제출 실패" 로 덮으면 무엇이
-      // 잘못됐는지 알 수 없다.
-      $("submitNote").textContent = `제출이 거절됐다 (${response.status}): `
+      // 잘못됐는지 알 수 없다. 앞 제출의 폴링은 건드리지 않는다.
+      $("footNote").textContent = `제출이 거절됐다 (${response.status}): `
           + (await response.text());
       return;
     }
     const accepted = await response.json();
+    // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
+    cancelActivePolling();
+    resetResultUi("채점 중…");
+    $("footNote").textContent = "";
     // **접수된 순간 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
     await waitForResult(accepted.submissionId, startedAt);
   } catch (error) {
-    $("submitNote").textContent = `제출하지 못했다: ${error.message}`;
+    // 네트워크가 끊긴 경우도 접수되지 않은 것이다. 앞 제출은 그대로 둔다.
+    $("footNote").textContent = `제출하지 못했다: ${error.message}`;
   } finally {
     button.disabled = false;
   }
