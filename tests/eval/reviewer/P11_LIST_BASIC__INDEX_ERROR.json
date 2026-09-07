@@ -1,0 +1,26 @@
+{
+  "problemCode": "P11_LIST_BASIC",
+  "problemTitle": "리스트를 만들고 인덱스로 다루기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\n\nimport sys\n\ndata = sys.stdin.read().split()\nn = int(data[0])\nvalues = [int(x) for x in data[1:1 + n]]\n\nat = 1 + n\nq = int(data[at])\nat += 1\nfor _ in range(q):\n    command = data[at]\n    if command == \"get\":\n        print(values[int(data[at + 1]) - 1])\n        at += 2\n    else:\n        values[int(data[at + 1]) - 1] = int(data[at + 2])\n        at += 3\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      4,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      3
+    ]
+  },
+  "probes": {}
+}

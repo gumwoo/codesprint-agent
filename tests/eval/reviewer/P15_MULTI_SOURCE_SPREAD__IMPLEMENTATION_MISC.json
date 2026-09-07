@@ -1,0 +1,29 @@
+{
+  "problemCode": "P15_MULTI_SOURCE_SPREAD",
+  "problemTitle": "여러 곳에서 퍼져나가는 데 걸리는 시간",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BFS_VISITED_MANAGEMENT",
+    "BFS_BASIC",
+    "GRID_BOUNDARY_CHECK"
+  ],
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\ndata = sys.stdin.read().split()\nn, m = int(data[0]), int(data[1])\ng = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n\nq = deque()\nfor x in range(n):\n    for y in range(m):\n        if g[x][y] == 1:\n            q.append((x, y))\n\nstep = 0\nwhile q:\n    moved = False\n    for _ in range(len(q)):\n        x, y = q.popleft()\n        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n            nx, ny = x + dx, y + dy\n            if 0 <= nx < n and 0 <= ny < m and g[nx][ny] == 0:\n                g[nx][ny] = 1\n                q.append((nx, ny))\n                moved = True\n    if moved:\n        step += 1\n\nprint(step)\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 4,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      5,
+      6
+    ],
+    "failedCaseIds": [
+      4
+    ]
+  },
+  "probes": {}
+}

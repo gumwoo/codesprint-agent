@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P13_EDGE_CELLS
+title: 이웃이 모두 있는 칸 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 400
+referenceComplexity: "O(N*M)"
+
+statement: |
+  첫 줄에 격자의 크기 N M 이 주어진다.
+  이어지는 N 개의 줄에 0 과 1 로 이루어진 격자가 주어진다.
+
+  값이 1 인 칸 중, 상하좌우 네 이웃이 **전부 격자 안에 있고 전부 1 인** 칸의 개수를 출력한다.
+  격자 밖은 이웃으로 치지 않는다.
+
+skills:
+  - code: GRID_BOUNDARY_CHECK
+    role: PRIMARY
+    weight: 0.7
+  - code: GRID_COORDINATE
+    role: SECONDARY
+    weight: 0.3
+
+commonMistakes:
+  - BOUNDARY_CHECK
+  - INDEX_ERROR
+  - IMPLEMENTATION_MISC
+
+# 경계를 검사하지 않는다. Python 의 음수 인덱싱 때문에 반대쪽 끝을 이웃으로 본다.
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: WRONG_ANSWER

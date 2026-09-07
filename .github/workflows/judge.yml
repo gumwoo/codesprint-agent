@@ -12,6 +12,9 @@ on:
     paths:
       - 'judge/**'
       - 'problems/**'
+      # 평가 케이스가 실제 채점과 같은지 여기서 본다(ADR-0016). 그 파일만 바뀌어도
+      # 돌아야 한다.
+      - 'tests/**'
       - 'contracts/**'
       - 'requirements-dev.txt'
       # Worker 는 백엔드의 마이그레이션으로 스키마를 만든다. 큐 테이블이 바뀌면

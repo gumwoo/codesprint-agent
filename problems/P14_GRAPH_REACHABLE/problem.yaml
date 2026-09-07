@@ -1,0 +1,35 @@
+# 정본 형식: contracts/problem.schema.json
+# Skill / Mistake 참조는 curriculum/ 에 실재해야 하며 CI 가 검증한다.
+
+code: P14_GRAPH_REACHABLE
+title: 그래프에서 도달 가능한 정점 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 400
+referenceComplexity: "O(V+E)"
+
+statement: |
+  첫 줄에 정점 수 N 과 간선 수 E 가 주어진다. 정점 번호는 1 부터 N 까지다.
+  이어지는 E 개의 줄에 간선의 양 끝 U V 가 주어진다. 간선에 방향은 없다.
+
+  1 번 정점에서 시작해 도달할 수 있는 정점의 개수를 출력한다. 1 번 자신을 포함한다.
+
+skills:
+  - code: BFS_BASIC
+    role: PRIMARY
+    weight: 0.6
+  - code: PYTHON_DEQUE_BASIC
+    role: SECONDARY
+    weight: 0.4
+
+commonMistakes:
+  - NO_VISITED
+  - INPUT_PARSE
+  - IMPLEMENTATION_MISC
+
+# 간선을 한 방향으로만 넣는다. 방향 없는 그래프인데 절반만 따라간다.
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
