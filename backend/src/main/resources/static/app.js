@@ -204,6 +204,23 @@ async function showSkills() {
  * 보여준다(ADR-0018). 화면이 선수 그래프를 다시 걸으면 서버가 정한 순서와 갈리고,
  * 사용자가 보는 쪽이 이긴다.
  */
+/**
+ * 사용자가 바뀌었다. <b>보고 있는 것 전부</b>를 그 사람 것으로 다시 읽는다.
+ *
+ * <p>한 곳에 모아 둔 이유가 있다. 처음에는 사용자를 만드는 쪽과 id 를 직접 고치는
+ * 쪽이 따로 처리했는데, 만드는 쪽에만 Skill 표 갱신을 넣어 두어서 <b>id 를 직접
+ * 고치면 진단은 새 사용자 것이고 Skill 표는 이전 사용자 것</b>으로 남았다.
+ * 늦게 온 응답을 막는 것(stillCurrent)과는 다른 문제다 - 그쪽은 덮어쓰기를 막고,
+ * 이쪽은 아예 다시 읽지 않는 것이다.
+ */
+function switchedUser() {
+  remember($("userId").value);
+  refreshDiagnostic();
+  if (!$("skillsBody").hidden) {
+    showSkills();
+  }
+}
+
 /** 이 응답이 아직 화면에 쓸 것인가. 그 사이 사용자가 바뀌었으면 버린다. */
 function stillCurrent(userId) {
   return Number($("userId").value) === userId;
@@ -548,14 +565,9 @@ async function createUser() {
   }
   const created = await response.json();
   $("userId").value = created.userId;
-  remember(created.userId);
 
-  // 값을 코드로 바꾸면 change 가 뜨지 않는다. 다시 읽지 않으면 패널이 **이전
-  // 사용자의 진단**을 계속 보여주고, 새 사용자가 이미 절반 확인된 것처럼 보인다.
-  refreshDiagnostic();
-  if (!$("skillsBody").hidden) {
-    showSkills();
-  }
+  // 값을 코드로 바꾸면 change 가 뜨지 않는다. 직접 부른다.
+  switchedUser();
 }
 
 // 브라우저에만 기억한다. 서버에는 세션이 없다 - 있는 척하면 인증이 붙었을 때
@@ -608,10 +620,7 @@ function attachGutter() {
 attachEditor();
 attachGutter();
 $("createUser").addEventListener("click", createUser);
-$("userId").addEventListener("change", () => {
-  remember($("userId").value);
-  refreshDiagnostic();
-});
+$("userId").addEventListener("change", switchedUser);
 $("toProblems").addEventListener("click", showPicker);
 $("tabProblem").addEventListener("click", () => {
   // 열어 둔 문제가 있으면 그리로, 없으면 목록으로 돌아간다.
