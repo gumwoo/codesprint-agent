@@ -29,6 +29,48 @@ let currentProblem = null;
 // 풀이 시간의 기준. 문제를 연 순간부터 잰다 - 서버는 알 방법이 없다.
 let openedAt = Date.now();
 
+// **지금 화면이 보고 있는 제출.** 이것이 없으면 두 폴링이 같은 자리에 쓴다 -
+// A 를 내고 곧바로 B 를 내면, 늦게 도착한 A 가 B 의 결과를 덮어 사용자는 B 를
+// 냈는데 A 의 판정을 본다. 반대로 폴링 중에 다른 문제를 열면 결과가 갈 곳을 잃는다.
+let activeSubmissionId = null;
+
+let editor = null;
+
+function sourceCode() {
+  return editor ? editor.getValue() : $("sourceCode").value;
+}
+
+function setSourceCode(value) {
+  if (editor) {
+    editor.setValue(value);
+  } else {
+    $("sourceCode").value = value;
+  }
+}
+
+/**
+ * CodeMirror 가 왔으면 붙이고, 안 왔으면 textarea 로 남는다.
+ *
+ * CDN 이 막혔거나 오프라인이면 스크립트가 오지 않는다. 그때 화면이 안 뜨는 것은
+ * 받아들일 수 없다 - 에디터는 편의지 이 화면의 목적이 아니다.
+ */
+function attachEditor() {
+  if (typeof window.CodeMirror !== "function") {
+    $("footNote").textContent =
+        "코드 편집기를 불러오지 못했다. 평범한 입력창으로 계속 쓸 수 있다.";
+    return;
+  }
+  editor = window.CodeMirror.fromTextArea($("sourceCode"), {
+    mode: "python",
+    theme: "material-darker",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    // Tab 으로 들여쓰고 싶지 포커스를 옮기고 싶지 않다.
+    extraKeys: { Tab: (cm) => cm.execCommand("indentMore") },
+  });
+}
+
 async function getJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -55,13 +97,22 @@ async function loadProblems() {
   }
 }
 
+function showPicker() {
+  $("picker").hidden = false;
+  $("statementBody").hidden = true;
+  $("crumbProblem").textContent = "고르는 중";
+  $("problemMeta").textContent = "";
+  $("submitButton").disabled = true;
+}
+
 async function openProblem(code) {
   currentProblem = await getJson(`/api/problems/${code}`);
-  $("problemTitle").textContent = `${currentProblem.code} · ${currentProblem.title}`;
+  $("problemTitle").textContent = currentProblem.title;
+  $("crumbProblem").textContent = currentProblem.code;
   $("problemMeta").textContent =
-      `${currentProblem.kind} · 시간 ${currentProblem.timeLimitMs}ms · `
-      + `메모리 ${currentProblem.memoryLimitMb}MB · `
-      + `기대 풀이 ${text(currentProblem.expectedSolveSeconds)}초`;
+      `${currentProblem.kind} · ${currentProblem.timeLimitMs}ms · `
+      + `${currentProblem.memoryLimitMb}MB · 기대 `
+      + `${text(currentProblem.expectedSolveSeconds)}초`;
   $("statement").textContent = currentProblem.statement;
 
   const samples = $("samples");
@@ -71,20 +122,37 @@ async function openProblem(code) {
   currentProblem.samples.forEach((sample, index) => {
     const block = document.createElement("div");
     block.className = "sample";
-    block.innerHTML = `<h4>예시 ${index + 1}</h4>`;
+    const title = document.createElement("h4");
+    title.textContent = `예시 ${index + 1}`;
     const input = document.createElement("pre");
     input.textContent = sample.input;
     const output = document.createElement("pre");
     output.textContent = sample.expectedOutput;
-    block.append(input, output);
+    block.append(title, input, output);
     samples.append(block);
   });
 
+  $("picker").hidden = true;
+  $("statementBody").hidden = false;
+  $("submitButton").disabled = false;
+  setSourceCode("");
+  clearResult("제출하면 여기에 판정과 다음 행동이 나온다.");
   openedAt = Date.now();
-  $("workspace").hidden = false;
-  $("result").hidden = true;
-  $("submitNote").textContent = "";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function clearResult(note) {
+  // 다른 문제로 옮기면 이전 제출의 결과를 더 보지 않는다. 그 폴링도 버린다 -
+  // activeSubmissionId 가 달라지면 그쪽 루프가 스스로 멈춘다.
+  activeSubmissionId = null;
+  const state = $("state");
+  state.textContent = "";
+  state.className = "meta";
+  $("submitNote").textContent = note;
+  $("submitNote").hidden = false;
+  $("judge").replaceChildren();
+  $("review").replaceChildren();
+  $("nextAction").replaceChildren();
+  $("goNext").hidden = true;
 }
 
 async function submit() {
@@ -93,7 +161,7 @@ async function submit() {
   }
   const button = $("submitButton");
   button.disabled = true;
-  $("submitNote").textContent = "제출하는 중…";
+  clearResult("제출하는 중…");
 
   const startedAt = Date.now();
   try {
@@ -103,7 +171,7 @@ async function submit() {
       body: JSON.stringify({
         userId: Number($("userId").value),
         language: "PYTHON",
-        sourceCode: $("sourceCode").value,
+        sourceCode: sourceCode(),
         // 화면은 힌트 사용량을 신고하지 않는다. 서버도 0 / false 만 받는다 -
         // 힌트가 생기면 서버가 내주면서 기록하고, 제출은 그 기록을 쓴다.
         hintLevel: 0,
@@ -120,10 +188,8 @@ async function submit() {
       return;
     }
     const accepted = await response.json();
-    $("submitNote").textContent = "";
     // **접수된 순간 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
-    // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다 -
-    // 버튼이 하나뿐이라 다른 문제로 옮겨도 제출할 수 없게 된다.
+    // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
     await waitForResult(accepted.submissionId, startedAt);
   } catch (error) {
@@ -134,16 +200,17 @@ async function submit() {
 }
 
 async function waitForResult(submissionId, startedAt) {
-  $("result").hidden = false;
-  $("goNext").hidden = true;
-  $("state").textContent = "채점 중…";
-  $("judge").replaceChildren();
-  $("review").replaceChildren();
-  $("nextAction").replaceChildren();
+  activeSubmissionId = submissionId;
+  $("submitNote").textContent = "채점 중…";
+  $("state").textContent = "채점 중";
 
   let warned = false;
   for (;;) {
     const view = await getJson(`/api/submissions/${submissionId}`);
+    // 화면이 다른 것을 보고 있으면 이 폴링은 버린다. 계속 돌 이유도 없다.
+    if (activeSubmissionId !== submissionId) {
+      return;
+    }
     if (view.state !== "PENDING") {
       render(submissionId, view);
       return;
@@ -154,7 +221,7 @@ async function waitForResult(submissionId, startedAt) {
       warned = true;
       // Worker 가 떠 있지 않으면 여기 온다. 그것은 사용자 잘못이 아니므로
       // 무엇을 확인해야 하는지 알려준다. 기다리는 것 자체는 계속한다.
-      $("state").textContent =
+      $("submitNote").textContent =
           "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
           + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
     }
@@ -165,7 +232,12 @@ async function waitForResult(submissionId, startedAt) {
 
 function render(submissionId, view) {
   const result = view.result;
-  $("state").textContent = `판정 ${result.judge.status}`;
+  const passed = result.judge.status === "ACCEPTED";
+
+  $("submitNote").hidden = true;
+  const state = $("state");
+  state.textContent = result.judge.status;
+  state.className = passed ? "meta verdict-ok" : "meta verdict-bad";
 
   const judge = $("judge");
   judge.replaceChildren();
@@ -192,31 +264,35 @@ function render(submissionId, view) {
   // 분석은 없을 수 있다. Reviewer 를 부르지 않았거나, 불렀는데 못 쓰는 답이
   // 왔거나(ADR-0014). 사용자가 할 수 있는 일이 같으므로 구분해 보여주지 않는다.
   const review = $("review");
+  review.replaceChildren();
   if (result.review) {
-    review.innerHTML = "<h3>오답 원인 분석</h3>";
+    review.append(heading("오답 원인"));
     const line = document.createElement("p");
+    line.className = "what";
     line.textContent = `${result.review.primaryMistake} · ${result.review.status}`
         + ` (confidence ${result.review.confidence})`;
-    const why = document.createElement("p");
-    why.className = "note";
-    why.textContent = result.review.explanation;
-    review.append(line, why);
+    review.append(line, note(result.review.explanation));
   }
 
   const action = $("nextAction");
-  action.innerHTML = "<h3>다음</h3>";
+  action.replaceChildren();
+  action.append(heading("다음"));
   const what = document.createElement("p");
+  what.className = "what";
   what.textContent = result.nextAction.targetSkill
       ? `${result.nextAction.type} · ${result.nextAction.targetSkill}`
       : result.nextAction.type;
-  const why = document.createElement("p");
-  why.className = "note";
-  why.textContent = result.nextAction.reason;
-  action.append(what, why);
+  action.append(what, note(result.nextAction.reason));
 
   const goNext = $("goNext");
   goNext.hidden = false;
   goNext.onclick = () => goToNextProblem(submissionId);
+}
+
+function heading(label) {
+  const h = document.createElement("h3");
+  h.textContent = label;
+  return h;
 }
 
 async function goToNextProblem(submissionId) {
@@ -250,7 +326,7 @@ async function createUser() {
     body: JSON.stringify({ nickname: "로컬 사용자" }),
   });
   if (!response.ok) {
-    $("submitNote").textContent = `사용자를 만들지 못했다 (${response.status})`;
+    $("footNote").textContent = `사용자를 만들지 못했다 (${response.status})`;
     return;
   }
   const created = await response.json();
@@ -279,10 +355,39 @@ function restore() {
   }
 }
 
+/** 가운데 핸들로 좌우 너비를 조절한다. */
+function attachGutter() {
+  const split = document.querySelector(".split");
+  const gutter = $("gutter");
+  let dragging = false;
+
+  gutter.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    gutter.setPointerCapture(event.pointerId);
+  });
+  gutter.addEventListener("pointerup", () => {
+    dragging = false;
+  });
+  gutter.addEventListener("pointermove", (event) => {
+    if (!dragging) {
+      return;
+    }
+    // 양쪽 다 너무 좁아지지 않게 막는다. 좁은 쪽이 쓸모없어지면 나누는 의미가 없다.
+    const ratio = Math.min(0.72, Math.max(0.2, event.clientX / split.clientWidth));
+    document.documentElement.style.setProperty("--left", `${ratio * 100}%`);
+    if (editor) {
+      editor.refresh();
+    }
+  });
+}
+
+attachEditor();
+attachGutter();
 $("createUser").addEventListener("click", createUser);
 $("userId").addEventListener("change", () => remember($("userId").value));
-restore();
+$("toProblems").addEventListener("click", showPicker);
 $("submitButton").addEventListener("click", submit);
+restore();
 loadProblems().catch((error) => {
   $("problemList").textContent = `문제 목록을 불러오지 못했다: ${error.message}`;
 });
