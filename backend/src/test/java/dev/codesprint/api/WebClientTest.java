@@ -203,6 +203,50 @@ class WebClientTest {
     }
 
     @Test
+    @DisplayName("바깥에서 가져오는 것은 버전이 고정돼 있고 integrity 가 붙어 있다")
+    void externalAssetsArePinned() throws Exception {
+        // 빌드가 없으므로 lock 파일도 없다. 버전을 적어 두지 않으면 CDN 이 바꾸는
+        // 대로 화면이 바뀌고, integrity 가 없으면 그 바뀐 것을 그대로 실행한다.
+        Matcher matcher = Pattern.compile("(?:src|href)=\"(https://[^\"]+)\"([^>]*)>")
+                .matcher(read("index.html"));
+        int found = 0;
+        while (matcher.find()) {
+            found++;
+            String url = matcher.group(1);
+            String attributes = matcher.group(2);
+            assertThat(url)
+                    .as("%s: 버전이 고정돼 있지 않다 (latest 나 범위 지정)", url)
+                    .matches(".*/\\d+\\.\\d+\\.\\d+/.*");
+            assertThat(attributes)
+                    .as("%s: integrity 가 없다", url)
+                    .contains("integrity=\"sha384-");
+            assertThat(attributes)
+                    .as("%s: integrity 를 검사하려면 crossorigin 이 필요하다", url)
+                    .contains("crossorigin=");
+        }
+        assertThat(found).as("바깥에서 가져오는 것이 하나도 없다 - 정규식이 깨졌다")
+                .isPositive();
+    }
+
+    @Test
+    @DisplayName("편집기를 못 가져와도 코드를 쓸 자리가 남는다")
+    void theEditorIsOptional() throws Exception {
+        // CDN 이 막혔거나 오프라인이면 CodeMirror 가 오지 않는다. 그때 화면이 안
+        // 뜨는 것은 받아들일 수 없다 - 편집기는 편의지 이 화면의 목적이 아니다.
+        String script = read("app.js");
+
+        assertThat(script)
+                .as("CodeMirror 가 없을 때를 다루지 않는다")
+                .contains("typeof window.CodeMirror");
+        assertThat(script)
+                .as("편집기가 없으면 textarea 에서 읽어야 한다")
+                .contains("editor ? editor.getValue() : $(\"sourceCode\").value");
+        assertThat(read("index.html"))
+                .as("textarea 자체가 없으면 대안이 없다")
+                .contains("id=\"sourceCode\"");
+    }
+
+    @Test
     @DisplayName("문제 목록이 계약을 지킨다")
     void problemListMatchesContract() throws Exception {
         String json = mvc.perform(get("/api/problems"))

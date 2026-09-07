@@ -1,149 +1,301 @@
-/* 슬라이스 1 화면. 프레임워크 없이 이 파일 하나로 둔다(ADR-0017). */
+/* 슬라이스 1 화면. 프레임워크 없이 이 파일 하나로 둔다(ADR-0017).
+ *
+ * 그림자를 쓰지 않는다. 영역은 1px 경계와 배경 명도로만 나눈다 - 코딩테스트
+ * 화면은 장식이 아니라 밀도가 필요하다. 색은 강조색 하나(파랑)와 판정을
+ * 구분하는 초록/빨강뿐이다. */
 
 :root {
-  --ink: #16181d;
-  --muted: #6b7280;
-  --line: #e5e7eb;
-  --accent: #1f6feb;
-  --warn: #b42318;
-  --bg: #ffffff;
-  --panel: #f7f8fa;
+  --bg: #171a1f;          /* 바깥 */
+  --panel: #1c2027;       /* 패널 */
+  --raise: #222731;       /* 패널 안에서 한 단계 올라온 것 */
+  --line: #2b313b;
+  --ink: #dfe3ea;
+  --muted: #8b93a1;
+  --accent: #3b82f6;
+  --ok: #4ade80;
+  --bad: #f87171;
+  --mono: "JetBrains Mono", "D2Coding", Consolas, monospace;
+
+  --topbar: 44px;
+  --actions: 52px;
+  --left: 44%;            /* 가운데 핸들을 끌면 바뀐다 */
 }
 
 * { box-sizing: border-box; }
 
+html, body { height: 100%; }
+
 body {
-  margin: 0 auto;
-  padding: 24px 20px 64px;
-  max-width: 860px;
-  font: 15px/1.6 -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font: 14px/1.6 -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
   color: var(--ink);
   background: var(--bg);
+  overflow: hidden;
 }
 
-h1 { font-size: 22px; margin: 0 0 4px; }
-h2 { font-size: 17px; margin: 28px 0 8px; }
-h3 { font-size: 15px; margin: 20px 0 6px; }
-h4 { font-size: 13px; margin: 0 0 4px; color: var(--muted); }
-
-.sub, .note, .meta {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.note { margin: 4px 0; }
-
-header {
+/* -- 상단 -- */
+.topbar {
+  flex: 0 0 var(--topbar);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--panel);
   border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
-}
-
-.user {
-  display: block;
-  margin-top: 12px;
   font-size: 13px;
 }
 
-.user input { width: 72px; margin: 0 8px; }
+.crumbs { display: flex; align-items: center; gap: 8px; }
+.crumbs .sep { color: var(--muted); }
+.crumbs .current { font-weight: 600; }
 
-.field {
-  display: block;
-  margin: 8px 0;
-  font-size: 13px;
+.who {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
 }
 
-input, select, textarea, button {
-  font: inherit;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px 8px;
-  background: var(--bg);
-  color: inherit;
+.who input {
+  width: 60px;
+  margin-left: 6px;
 }
 
-textarea {
-  width: 100%;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 13px;
-  tab-size: 4;
+/* -- 2단 -- */
+.split {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: var(--left) 6px 1fr;
+  min-height: 0;
 }
 
-button {
-  cursor: pointer;
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--bg);
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
 }
 
-button:hover { background: #eef4ff; }
-button:disabled { opacity: .5; cursor: default; }
+.pane.left { border-right: 1px solid var(--line); }
 
-#submitButton, #goNext {
-  margin-top: 10px;
-  padding: 8px 18px;
-  color: var(--bg);
+.pane-head {
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--raise);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.result-head { border-top: 1px solid var(--line); }
+
+.tab {
+  position: relative;
+  padding: 9px 0;
+  font-weight: 600;
+}
+
+.tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
   background: var(--accent);
 }
 
-#problemList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.file { font-family: var(--mono); }
+.meta, .note { color: var(--muted); font-size: 12px; }
+.meta { margin-left: auto; }
+
+.pane-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 14px;
+  min-height: 0;
 }
+
+.pane-body.result { flex: 0 0 34%; }
+
+/* 가운데 핸들. 프로그래머스의 그 grip 처럼 잡을 곳을 표시한다. */
+.gutter {
+  cursor: col-resize;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  position: relative;
+}
+
+.gutter::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 3px;
+  height: 28px;
+  margin-top: -14px;
+  border-left: 1px solid var(--muted);
+  border-right: 1px solid var(--muted);
+  opacity: .5;
+}
+
+.gutter:hover::after { opacity: 1; }
+
+/* -- 문제 -- */
+h2 { font-size: 15px; margin: 0 0 10px; }
+h4 { font-size: 12px; margin: 0 0 4px; color: var(--muted); }
+
+.statement {
+  margin: 0 0 14px;
+  font: inherit;
+  white-space: pre-wrap;
+  line-height: 1.75;
+}
+
+#problemList { list-style: none; padding: 0; margin: 10px 0 0; }
 
 #problemList li {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
-  padding: 4px 0;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
 }
 
 #problemList button {
   border: none;
-  padding: 4px 0;
+  background: none;
+  padding: 0;
+  color: var(--ink);
   text-align: left;
+  cursor: pointer;
 }
 
-.tag { color: var(--muted); font-size: 12px; }
+#problemList button:hover { color: var(--accent); }
 
-pre {
-  margin: 0;
-  padding: 10px 12px;
-  background: var(--panel);
-  border-radius: 6px;
-  overflow-x: auto;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
-}
-
-.statement { line-height: 1.7; }
+.tag { margin-left: auto; color: var(--muted); font-size: 11px; font-family: var(--mono); }
 
 .sample {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   margin: 8px 0;
 }
 
 .sample h4 { grid-column: 1 / -1; }
 
-.stderr {
-  grid-column: 1 / -1;
-  margin-top: 10px;
-  color: var(--warn);
-  background: #fff5f5;
+pre {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: pre-wrap;
 }
 
+.statement { background: none; border: none; padding: 0; font-size: 14px; }
+
+/* -- 에디터 -- */
+.editor { flex: 1 1 auto; min-height: 0; position: relative; }
+
+.editor textarea,
+.editor .CodeMirror {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  margin: 0;
+  padding: 10px 12px;
+  resize: none;
+  background: #212121;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+.editor .CodeMirror { padding: 0; }
+
+/* -- 결과 -- */
 dl {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 2px 16px;
-  margin: 8px 0;
-  font-size: 14px;
+  gap: 2px 14px;
+  margin: 0 0 10px;
+  font-size: 13px;
 }
 
 dt { color: var(--muted); }
-dd { margin: 0; }
+dd { margin: 0; font-family: var(--mono); }
 
-#result { border-top: 1px solid var(--line); margin-top: 28px; }
+dl pre { grid-column: 1 / -1; margin-top: 8px; }
+
+.stderr { color: var(--bad); }
+
+.verdict-ok { color: var(--ok); font-weight: 600; }
+.verdict-bad { color: var(--bad); font-weight: 600; }
+
+#review h3, #nextAction h3 {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 12px 0 4px;
+  font-weight: 600;
+}
+
+#nextAction .what { font-family: var(--mono); }
+
+/* -- 하단 -- */
+.actions {
+  flex: 0 0 var(--actions);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.grow { flex: 1 1 auto; }
+
+input, textarea, button {
+  font: inherit;
+  color: inherit;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+button { cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
+
+.link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+}
+
+.link:hover { color: var(--accent); border: none; }
+
+.ghost { font-size: 13px; }
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  padding: 7px 16px;
+}
+
+.primary:hover:not(:disabled) { background: #2f74e0; border-color: #2f74e0; }

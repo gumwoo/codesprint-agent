@@ -22,12 +22,60 @@ const POLL_INTERVAL_MS = 1000;
 const POLL_SLOW_AFTER_MS = 120000;
 const POLL_SLOW_INTERVAL_MS = 5000;
 
+// 조회가 몇 번 연속으로 실패해야 사용자에게 알리는가.
+//
+// 한 번 실패했다고 관찰을 그만두지 않는다. 서버를 재시작하는 동안에도 job 은 큐에
+// 남아 있고, 돌아오면 결과가 온다 - 여기서 포기하면 접수된 제출을 화면이 놓친다.
+const UNREACHABLE_AFTER = 3;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
 let currentProblem = null;
 // 풀이 시간의 기준. 문제를 연 순간부터 잰다 - 서버는 알 방법이 없다.
 let openedAt = Date.now();
+
+// **지금 화면이 보고 있는 제출.** 이것이 없으면 두 폴링이 같은 자리에 쓴다 -
+// A 를 내고 곧바로 B 를 내면, 늦게 도착한 A 가 B 의 결과를 덮어 사용자는 B 를
+// 냈는데 A 의 판정을 본다. 반대로 폴링 중에 다른 문제를 열면 결과가 갈 곳을 잃는다.
+let activeSubmissionId = null;
+
+let editor = null;
+
+function sourceCode() {
+  return editor ? editor.getValue() : $("sourceCode").value;
+}
+
+function setSourceCode(value) {
+  if (editor) {
+    editor.setValue(value);
+  } else {
+    $("sourceCode").value = value;
+  }
+}
+
+/**
+ * CodeMirror 가 왔으면 붙이고, 안 왔으면 textarea 로 남는다.
+ *
+ * CDN 이 막혔거나 오프라인이면 스크립트가 오지 않는다. 그때 화면이 안 뜨는 것은
+ * 받아들일 수 없다 - 에디터는 편의지 이 화면의 목적이 아니다.
+ */
+function attachEditor() {
+  if (typeof window.CodeMirror !== "function") {
+    $("footNote").textContent =
+        "코드 편집기를 불러오지 못했다. 평범한 입력창으로 계속 쓸 수 있다.";
+    return;
+  }
+  editor = window.CodeMirror.fromTextArea($("sourceCode"), {
+    mode: "python",
+    theme: "material-darker",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    // Tab 으로 들여쓰고 싶지 포커스를 옮기고 싶지 않다.
+    extraKeys: { Tab: (cm) => cm.execCommand("indentMore") },
+  });
+}
 
 async function getJson(url) {
   const response = await fetch(url);
@@ -55,13 +103,22 @@ async function loadProblems() {
   }
 }
 
+function showPicker() {
+  $("picker").hidden = false;
+  $("statementBody").hidden = true;
+  $("crumbProblem").textContent = "고르는 중";
+  $("problemMeta").textContent = "";
+  $("submitButton").disabled = true;
+}
+
 async function openProblem(code) {
   currentProblem = await getJson(`/api/problems/${code}`);
-  $("problemTitle").textContent = `${currentProblem.code} · ${currentProblem.title}`;
+  $("problemTitle").textContent = currentProblem.title;
+  $("crumbProblem").textContent = currentProblem.code;
   $("problemMeta").textContent =
-      `${currentProblem.kind} · 시간 ${currentProblem.timeLimitMs}ms · `
-      + `메모리 ${currentProblem.memoryLimitMb}MB · `
-      + `기대 풀이 ${text(currentProblem.expectedSolveSeconds)}초`;
+      `${currentProblem.kind} · ${currentProblem.timeLimitMs}ms · `
+      + `${currentProblem.memoryLimitMb}MB · 기대 `
+      + `${text(currentProblem.expectedSolveSeconds)}초`;
   $("statement").textContent = currentProblem.statement;
 
   const samples = $("samples");
@@ -71,20 +128,48 @@ async function openProblem(code) {
   currentProblem.samples.forEach((sample, index) => {
     const block = document.createElement("div");
     block.className = "sample";
-    block.innerHTML = `<h4>예시 ${index + 1}</h4>`;
+    const title = document.createElement("h4");
+    title.textContent = `예시 ${index + 1}`;
     const input = document.createElement("pre");
     input.textContent = sample.input;
     const output = document.createElement("pre");
     output.textContent = sample.expectedOutput;
-    block.append(input, output);
+    block.append(title, input, output);
     samples.append(block);
   });
 
+  $("picker").hidden = true;
+  $("statementBody").hidden = false;
+  $("submitButton").disabled = false;
+  setSourceCode("");
+  // 문제를 옮기는 것은 진짜로 그만 보는 것이다. 여기서는 놓는다.
+  cancelActivePolling();
+  resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
+  $("footNote").textContent = "";
   openedAt = Date.now();
-  $("workspace").hidden = false;
-  $("result").hidden = true;
-  $("submitNote").textContent = "";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/**
+ * 보고 있던 제출을 놓는다. 그 폴링은 다음 응답에서 스스로 멈춘다.
+ *
+ * <b>결과 영역을 지우는 것과 따로 둔다.</b> 하나로 묶었더니 새 제출이 거절됐을 때도
+ * 이미 관찰을 그만둔 뒤였다 - 앞 제출은 실제로 채점되고 있는데 그것을 기다리는
+ * 폴러가 사라졌고, 제출 이력 화면이 없어 다시 볼 방법도 없었다.
+ */
+function cancelActivePolling() {
+  activeSubmissionId = null;
+}
+
+function resetResultUi(note) {
+  const state = $("state");
+  state.textContent = "";
+  state.className = "meta";
+  $("submitNote").textContent = note;
+  $("submitNote").hidden = false;
+  $("judge").replaceChildren();
+  $("review").replaceChildren();
+  $("nextAction").replaceChildren();
+  $("goNext").hidden = true;
 }
 
 async function submit() {
@@ -93,9 +178,15 @@ async function submit() {
   }
   const button = $("submitButton");
   button.disabled = true;
-  $("submitNote").textContent = "제출하는 중…";
+  // **접수되기 전에는 화면을 건드리지 않는다.** 거절될 수 있고, 그때 앞 제출은
+  // 그대로 채점되고 있다. 진행 상황은 버튼 옆에 적는다.
+  $("footNote").textContent = "제출하는 중…";
 
   const startedAt = Date.now();
+  // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
+  // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
+  // 루프가 끝나 접수된 제출을 화면이 놓친다.
+  let accepted;
   try {
     const response = await fetch(`/api/problems/${currentProblem.code}/submit`, {
       method: "POST",
@@ -103,7 +194,7 @@ async function submit() {
       body: JSON.stringify({
         userId: Number($("userId").value),
         language: "PYTHON",
-        sourceCode: $("sourceCode").value,
+        sourceCode: sourceCode(),
         // 화면은 힌트 사용량을 신고하지 않는다. 서버도 0 / false 만 받는다 -
         // 힌트가 생기면 서버가 내주면서 기록하고, 제출은 그 기록을 쓴다.
         hintLevel: 0,
@@ -114,37 +205,70 @@ async function submit() {
     });
     if (!response.ok) {
       // 서버가 거절한 이유를 그대로 보여준다. "제출 실패" 로 덮으면 무엇이
-      // 잘못됐는지 알 수 없다.
-      $("submitNote").textContent = `제출이 거절됐다 (${response.status}): `
+      // 잘못됐는지 알 수 없다. 앞 제출의 폴링은 건드리지 않는다.
+      $("footNote").textContent = `제출이 거절됐다 (${response.status}): `
           + (await response.text());
       return;
     }
-    const accepted = await response.json();
-    $("submitNote").textContent = "";
-    // **접수된 순간 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
-    // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다 -
-    // 버튼이 하나뿐이라 다른 문제로 옮겨도 제출할 수 없게 된다.
-    button.disabled = false;
-    await waitForResult(accepted.submissionId, startedAt);
+    accepted = await response.json();
   } catch (error) {
-    $("submitNote").textContent = `제출하지 못했다: ${error.message}`;
+    // 여기까지 못 왔으면 접수되지 않은 것이다. 앞 제출은 그대로 둔다.
+    $("footNote").textContent = `제출하지 못했다: ${error.message}`;
+    return;
   } finally {
+    // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
+    // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
   }
+
+  // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
+  cancelActivePolling();
+  resetResultUi("채점 중…");
+  $("footNote").textContent = "";
+  await waitForResult(accepted.submissionId, startedAt);
 }
 
 async function waitForResult(submissionId, startedAt) {
-  $("result").hidden = false;
-  $("goNext").hidden = true;
-  $("state").textContent = "채점 중…";
-  $("judge").replaceChildren();
-  $("review").replaceChildren();
-  $("nextAction").replaceChildren();
+  activeSubmissionId = submissionId;
+  $("submitNote").textContent = "채점 중…";
+  $("state").textContent = "채점 중";
 
   let warned = false;
+  let failures = 0;
   for (;;) {
-    const view = await getJson(`/api/submissions/${submissionId}`);
-    if (view.state !== "PENDING") {
+    let view = null;
+    let failure = null;
+    try {
+      view = await getJson(`/api/submissions/${submissionId}`);
+    } catch (error) {
+      failure = error;
+    }
+
+    // **화면을 만지기 전에 확인한다.** 기다리는 동안 다른 제출이 접수됐을 수 있고,
+    // 그러면 이 폴러는 남의 화면에 쓰는 것이 된다 - 실제로 그랬다. 버려진 폴러가
+    // "결과를 가져오지 못하고 있다" 를 새 제출의 화면에 남겼다.
+    //
+    // 루프 맨 앞에서만 보면 부족하다. await 는 여기서 일어난다.
+    if (activeSubmissionId !== submissionId) {
+      return;
+    }
+
+    if (failure) {
+      // **한 번 실패했다고 포기하지 않는다.** 서버를 재시작하는 동안에도 job 은
+      // 큐에 남아 있고, 돌아오면 결과가 온다.
+      failures += 1;
+      if (failures >= UNREACHABLE_AFTER) {
+        $("submitNote").textContent =
+            `결과를 가져오지 못하고 있다 (${failure.message}). 제출은 접수됐으므로 `
+            + "서버가 돌아오면 여기에 나타난다.";
+      }
+    } else if (failures) {
+      // 돌아왔다. 알리던 문구를 원래대로 되돌린다.
+      failures = 0;
+      $("submitNote").textContent = warned ? slowNote() : "채점 중…";
+    }
+
+    if (view && view.state !== "PENDING") {
       render(submissionId, view);
       return;
     }
@@ -154,18 +278,30 @@ async function waitForResult(submissionId, startedAt) {
       warned = true;
       // Worker 가 떠 있지 않으면 여기 온다. 그것은 사용자 잘못이 아니므로
       // 무엇을 확인해야 하는지 알려준다. 기다리는 것 자체는 계속한다.
-      $("state").textContent =
-          "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
-          + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
+      if (!failures) {
+        $("submitNote").textContent = slowNote();
+      }
     }
+    // 서버가 답하지 않는 동안에는 천천히 두드린다.
+    const slowly = warned || failures >= UNREACHABLE_AFTER;
     await new Promise((resolve) => setTimeout(
-        resolve, warned ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
+        resolve, slowly ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
   }
+}
+
+function slowNote() {
+  return "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
+      + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
 }
 
 function render(submissionId, view) {
   const result = view.result;
-  $("state").textContent = `판정 ${result.judge.status}`;
+  const passed = result.judge.status === "ACCEPTED";
+
+  $("submitNote").hidden = true;
+  const state = $("state");
+  state.textContent = result.judge.status;
+  state.className = passed ? "meta verdict-ok" : "meta verdict-bad";
 
   const judge = $("judge");
   judge.replaceChildren();
@@ -192,31 +328,35 @@ function render(submissionId, view) {
   // 분석은 없을 수 있다. Reviewer 를 부르지 않았거나, 불렀는데 못 쓰는 답이
   // 왔거나(ADR-0014). 사용자가 할 수 있는 일이 같으므로 구분해 보여주지 않는다.
   const review = $("review");
+  review.replaceChildren();
   if (result.review) {
-    review.innerHTML = "<h3>오답 원인 분석</h3>";
+    review.append(heading("오답 원인"));
     const line = document.createElement("p");
+    line.className = "what";
     line.textContent = `${result.review.primaryMistake} · ${result.review.status}`
         + ` (confidence ${result.review.confidence})`;
-    const why = document.createElement("p");
-    why.className = "note";
-    why.textContent = result.review.explanation;
-    review.append(line, why);
+    review.append(line, note(result.review.explanation));
   }
 
   const action = $("nextAction");
-  action.innerHTML = "<h3>다음</h3>";
+  action.replaceChildren();
+  action.append(heading("다음"));
   const what = document.createElement("p");
+  what.className = "what";
   what.textContent = result.nextAction.targetSkill
       ? `${result.nextAction.type} · ${result.nextAction.targetSkill}`
       : result.nextAction.type;
-  const why = document.createElement("p");
-  why.className = "note";
-  why.textContent = result.nextAction.reason;
-  action.append(what, why);
+  action.append(what, note(result.nextAction.reason));
 
   const goNext = $("goNext");
   goNext.hidden = false;
   goNext.onclick = () => goToNextProblem(submissionId);
+}
+
+function heading(label) {
+  const h = document.createElement("h3");
+  h.textContent = label;
+  return h;
 }
 
 async function goToNextProblem(submissionId) {
@@ -250,7 +390,7 @@ async function createUser() {
     body: JSON.stringify({ nickname: "로컬 사용자" }),
   });
   if (!response.ok) {
-    $("submitNote").textContent = `사용자를 만들지 못했다 (${response.status})`;
+    $("footNote").textContent = `사용자를 만들지 못했다 (${response.status})`;
     return;
   }
   const created = await response.json();
@@ -279,10 +419,39 @@ function restore() {
   }
 }
 
+/** 가운데 핸들로 좌우 너비를 조절한다. */
+function attachGutter() {
+  const split = document.querySelector(".split");
+  const gutter = $("gutter");
+  let dragging = false;
+
+  gutter.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    gutter.setPointerCapture(event.pointerId);
+  });
+  gutter.addEventListener("pointerup", () => {
+    dragging = false;
+  });
+  gutter.addEventListener("pointermove", (event) => {
+    if (!dragging) {
+      return;
+    }
+    // 양쪽 다 너무 좁아지지 않게 막는다. 좁은 쪽이 쓸모없어지면 나누는 의미가 없다.
+    const ratio = Math.min(0.72, Math.max(0.2, event.clientX / split.clientWidth));
+    document.documentElement.style.setProperty("--left", `${ratio * 100}%`);
+    if (editor) {
+      editor.refresh();
+    }
+  });
+}
+
+attachEditor();
+attachGutter();
 $("createUser").addEventListener("click", createUser);
 $("userId").addEventListener("change", () => remember($("userId").value));
-restore();
+$("toProblems").addEventListener("click", showPicker);
 $("submitButton").addEventListener("click", submit);
+restore();
 loadProblems().catch((error) => {
   $("problemList").textContent = `문제 목록을 불러오지 못했다: ${error.message}`;
 });
