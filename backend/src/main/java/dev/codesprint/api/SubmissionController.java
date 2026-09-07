@@ -52,7 +52,11 @@ public class SubmissionController {
      * @param language 슬라이스 1 은 {@code PYTHON} 만 받는다. 다른 값은 400 이다 -
      *     Worker 가 무엇을 받든 Python 으로 돌리므로, 받아두면 language 와 실제 판정이
      *     어긋난 기록이 남는다.
-     * @param hintLevel 0~6. 같은 AC 라도 이 값에 따라 독립 풀이 점수가 갈린다.
+     * @param hintLevel <b>0 만 받는다.</b> 힌트 기능이 없으므로 쓴 적 없는 도움을
+     *     신고할 수 없다. 필드를 지우지 않는 이유는 계약을 바꾸지 않기 위해서다 -
+     *     0 이 아닌 값이 오면 400 으로 거절한다.
+     * @param solutionViewed <b>false 만 받는다.</b> 위와 같은 이유이며, Evidence 는
+     *     이 값을 힌트 최고 단계보다 위로 친다.
      * @param solveSeconds 재지 않았으면 null 이다. 0 이나 음수는 400 - speed 를 기대
      *     시간 대비 <b>비율</b>로 매기므로 음수 시간이 오히려 최고 점수를 받는다.
      */
@@ -162,6 +166,12 @@ public class SubmissionController {
         return review == null ? null : new ReviewView(review.primaryMistake(),
                 review.secondaryMistakes(), review.confidence(), review.status(),
                 review.explanation());
+    }
+
+    @ExceptionHandler(SubmissionIntakeService.SelfReportedHintUsage.class)
+    public ResponseEntity<Map<String, String>> selfReportedHintUsage(
+            SubmissionIntakeService.SelfReportedHintUsage e) {
+        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
     }
 
     @ExceptionHandler(SubmissionIntakeService.UnsupportedLanguage.class)

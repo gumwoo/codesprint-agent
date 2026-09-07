@@ -62,6 +62,31 @@ public class SubmissionIntakeService {
             Integer solveSeconds) {
     }
 
+    /**
+     * 힌트를 쓴 적이 있다고 <b>스스로 신고한</b> 제출. 400 이다.
+     *
+     * <p>힌트 기능이 없다. 그런데 Evidence 는 {@code hintLevel} 과
+     * {@code solutionViewed} 로 독립 풀이 여부와 점수를 가른다 - 해설을 봤다고 하면
+     * 힌트 최고 단계(5)보다 위인 6 으로 친다.
+     *
+     * <p>즉 <b>존재하지 않는 도움의 사용량을 사용자가 신고하고, 그 신고로 mastery 가
+     * 깎였다.</b> 아무도 확인할 수 없는 값이다.
+     *
+     * <p>받아 놓고 무시하지 않는다. 무시하면 API 를 쓰는 쪽은 그 값이 적용됐다고 믿는다.
+     *
+     * <p>힌트 기능이 생기면 이 제한은 사라진다. 다만 그때도 <b>클라이언트가 신고하지
+     * 않는다</b> - 서버가 힌트를 내주면서 기록하고, 제출 시점에 그 기록에서 단계를
+     * 읽는다. LLM 이 힌트 내용을 만들어도 "몇 단계를 봤는가" 는 관측이다(ADR-0001).
+     */
+    public static class SelfReportedHintUsage extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public SelfReportedHintUsage(String message) {
+            super(message);
+        }
+    }
+
     /** 아직 지원하지 않는 언어. 사용자 입력 문제이므로 400 이다. */
     public static class UnsupportedLanguage extends RuntimeException {
 
@@ -92,6 +117,13 @@ public class SubmissionIntakeService {
         if (!SUPPORTED_LANGUAGE.equalsIgnoreCase(request.language())) {
             throw new UnsupportedLanguage(
                     "아직 " + SUPPORTED_LANGUAGE + " 만 채점한다: " + request.language());
+        }
+        if (request.hintLevel() != 0 || request.solutionViewed()) {
+            throw new SelfReportedHintUsage(
+                    "힌트 기능이 아직 없다. 쓴 적 없는 도움을 신고할 수 없으므로 "
+                            + "hintLevel 은 0, solutionViewed 는 false 여야 한다 "
+                            + "(받은 값: hintLevel=" + request.hintLevel()
+                            + ", solutionViewed=" + request.solutionViewed() + ")");
         }
         ProblemDefinition problem = catalog.find(request.problemCode());
         if (problem == null) {

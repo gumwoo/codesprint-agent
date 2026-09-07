@@ -147,6 +147,24 @@ class ProblemDeliveryTest {
         return submitAndJudge(problemCode, judgeStatus, 0, false);
     }
 
+    /**
+     * 제출한 뒤 힌트 사용량을 <b>DB 에 직접 적는다.</b>
+     *
+     * <p>API 로는 넣을 수 없다 - 힌트 기능이 없어 자기신고를 거절한다(PR #19).
+     * 그런데 "힌트를 많이 쓴 AC 는 독립 풀이가 아니다" 는 규칙 자체는 그대로 살아
+     * 있어야 한다. 힌트가 생기면 서버가 그 값을 채우고, 이 규칙이 그때 쓰인다.
+     *
+     * <p>그래서 입력 경로는 막힌 채로 두고 규칙만 확인한다. 이 우회를 테스트에 두는
+     * 이유가 그것이다 - 프로덕션 경로를 열어 두면 막은 의미가 없다.
+     */
+    private long submitJudgeAndRecordHints(String problemCode, String judgeStatus,
+            int hintLevel, boolean solutionViewed) throws Exception {
+        long submissionId = submitAndJudge(problemCode, judgeStatus);
+        jdbc.update("UPDATE submissions SET hint_level = ?, solution_viewed = ? WHERE id = ?",
+                hintLevel, solutionViewed, submissionId);
+        return submissionId;
+    }
+
     private long submitAndJudge(String problemCode, String judgeStatus, int hintLevel,
             boolean solutionViewed) throws Exception {
         String body = """
@@ -291,7 +309,7 @@ class ProblemDeliveryTest {
         // 힌트 4단계 이상은 독립 풀이로 세지 않는다(Addendum 22). Evidence 쪽은
         // 이미 그렇게 세는데 문제 선택에서만 "AC 한 번" 으로 단순화하면, 힌트로
         // 맞힌 문제가 후보에서 영영 빠진다 - 그 사람은 아직 혼자 못 푼다.
-        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED", 4, false);
+        submitJudgeAndRecordHints("P03_CONNECTED_COMPONENT", "ACCEPTED", 4, false);
 
         assertThat(retryVariantPick())
                 .as("아직 혼자 푼 것이 아니므로 다시 준다")
@@ -301,7 +319,7 @@ class ProblemDeliveryTest {
     @Test
     @DisplayName("풀이를 보고 맞힌 것도 아직 푼 것이 아니다")
     void acceptanceAfterViewingTheSolutionCountsAsUnsolved() throws Exception {
-        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED", 0, true);
+        submitJudgeAndRecordHints("P03_CONNECTED_COMPONENT", "ACCEPTED", 0, true);
 
         assertThat(retryVariantPick()).isEqualTo("P03_CONNECTED_COMPONENT");
     }

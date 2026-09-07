@@ -104,8 +104,10 @@ async function submit() {
         userId: Number($("userId").value),
         language: "PYTHON",
         sourceCode: $("sourceCode").value,
-        hintLevel: Number($("hintLevel").value),
-        solutionViewed: $("solutionViewed").checked,
+        // 화면은 힌트 사용량을 신고하지 않는다. 서버도 0 / false 만 받는다 -
+        // 힌트가 생기면 서버가 내주면서 기록하고, 제출은 그 기록을 쓴다.
+        hintLevel: 0,
+        solutionViewed: false,
         // 풀이 시간은 화면이 잰다. 서버가 알 방법이 없다.
         solveSeconds: Math.max(1, Math.round((Date.now() - openedAt) / 1000)),
       }),
@@ -119,6 +121,10 @@ async function submit() {
     }
     const accepted = await response.json();
     $("submitNote").textContent = "";
+    // **접수된 순간 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
+    // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다 -
+    // 버튼이 하나뿐이라 다른 문제로 옮겨도 제출할 수 없게 된다.
+    button.disabled = false;
     await waitForResult(accepted.submissionId, startedAt);
   } catch (error) {
     $("submitNote").textContent = `제출하지 못했다: ${error.message}`;
