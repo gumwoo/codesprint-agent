@@ -214,6 +214,12 @@ async function showSkills() {
  * 이쪽은 아예 다시 읽지 않는 것이다.
  */
 function switchedUser() {
+  // **보고 있는 것 전부**에는 채점 결과도 들어간다. 판정 · 분석 · 다음 행동은 전부
+  // 그 사용자에 대한 것이라, 남겨 두면 새 사용자의 화면에 남의 결과가 붙어 있다.
+  // 폴링도 끊는다 - 살려 두면 이전 사용자의 결과가 **나중에 도착해서** 그려진다.
+  cancelActivePolling();
+  resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
+
   remember($("userId").value);
   refreshDiagnostic();
   if (!$("skillsBody").hidden) {
@@ -345,6 +351,9 @@ async function submit() {
   $("footNote").textContent = "제출하는 중…";
 
   const startedAt = Date.now();
+  // 누구의 제출인지 여기서 고정한다. 응답을 기다리는 동안 사용자가 바뀔 수 있고,
+  // 그때 body 와 화면이 다른 사람을 가리키면 안 된다.
+  const submittingUserId = Number($("userId").value);
   // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
   // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
   // 루프가 끝나 접수된 제출을 화면이 놓친다.
@@ -354,7 +363,7 @@ async function submit() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: Number($("userId").value),
+        userId: submittingUserId,
         language: "PYTHON",
         sourceCode: sourceCode(),
         // 화면은 힌트 사용량을 신고하지 않는다. 서버도 0 / false 만 받는다 -
@@ -381,6 +390,14 @@ async function submit() {
     // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
+  }
+
+  // **접수된 뒤에 사용자가 바뀌었으면 이 결과는 이 화면 것이 아니다.** 제출은
+  // 그대로 접수됐으므로 실패로 말하지 않는다 - 다만 지금 화면에 붙이지 않는다.
+  if (!stillCurrent(submittingUserId)) {
+    $("footNote").textContent =
+        `사용자 ${submittingUserId} 의 제출은 접수됐다. 화면은 지금 사용자 것만 보여준다.`;
+    return;
   }
 
   // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
