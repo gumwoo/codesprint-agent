@@ -51,11 +51,11 @@ public class SubmissionRow {
     @Column(name = "failed_case_id")
     private Integer failedCaseId;
 
-    /** 같은 AC 라도 이 값에 따라 독립 풀이 점수가 갈린다(Addendum 11). */
     /** sanitize 된 표준 에러. 채점이 남긴 것을 그대로 옮긴다(ADR-0013). */
     @Column(columnDefinition = "text")
     private String stderr;
 
+    /** 같은 AC 라도 이 값에 따라 독립 풀이 점수가 갈린다(Addendum 11). */
     @Column(name = "hint_level", nullable = false)
     private int hintLevel;
 

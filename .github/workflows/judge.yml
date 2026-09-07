@@ -70,6 +70,12 @@ jobs:
       # ⚠️ 러너가 Docker-in-Docker 가 아니라 호스트 Docker 를 쓰므로, 여기서 도는
       #    컨테이너는 로컬과 같은 격리 옵션을 받는다. 러너 자체의 네트워크 정책에
       #    기대지 않는다 - 기대면 로컬에서만 뚫려 있어도 CI 는 초록불이 된다.
+      # sanitize 규칙은 Docker 없이 함수만 불러 형태별로 본다. 실제 컨테이너를 띄우는
+      # 아래 검사는 대표 traceback 하나만 보므로, 정규식이 다루는 형태 하나만
+      # 확인하게 된다 - 실제로 그 구멍으로 예외 메시지의 경로가 새고 있었다.
+      - name: stderr sanitize 규칙
+        run: python judge/tests/test_sanitize.py
+
       - name: judge & sandbox tests
         run: python judge/tests/test_judge.py
 

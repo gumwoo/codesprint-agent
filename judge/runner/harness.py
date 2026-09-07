@@ -41,15 +41,53 @@ SOLUTION = pathlib.Path("/job/solution.py")
 STDOUT_LIMIT = 1024 * 1024
 STDERR_LIMIT = 256 * 1024
 
-# stderr 에서 지워야 하는 것들. Host 경로가 사용자에게 노출되면 안 된다(Addendum 63).
+# traceback 의 `File "..."` 은 파일명만 남긴다.
 _PATH_NOISE = re.compile(r'File "([^"]*/)?([^"/]+)"')
+
+# 그 형태가 아닌 자리의 **우리 쪽 경로**도 가린다.
+#
+# 처음에는 위 정규식 하나였는데, 그것은 traceback 의 그 줄만 다룬다. 예외 메시지가
+# 경로를 문자열로 담으면 그대로 나갔다 - 사용자가 open('/job/job.json') 한 줄만 써도
+# 마운트 구조가 보인다.
+#
+#     FileNotFoundError: [Errno 2] No such file or directory: '/job/job.json'
+#     PermissionError: [Errno 13] Permission denied: '/opt/judge/harness.py'
+#     print(os.getcwd(), file=sys.stderr)  ->  /job
+#
+# 정답표는 애초에 컨테이너 안에 없지만(ADR-0006), 마운트 위치와 하네스 자리를
+# 알려 줄 이유도 없다.
+#
+# **표준 라이브러리 경로(/usr/lib/python3.12/...)는 건드리지 않는다.** 그것은 우리
+# 구조가 아니라 파이썬 배포판의 것이고, 지우면 실제 오류를 읽기 어려워진다.
+_OUR_PATHS = (
+    ("/job", "<제출>"),
+    ("/opt/judge", "<채점기>"),
+    ("/tmp", "<임시>"),
+)
+# 긴 것부터 대조한다 - /opt/judge 가 /opt 로 먼저 잘리면 안 된다.
+#
+# 경로가 **거기서 시작할 때만** 바꾼다. `/job.json` 처럼 이름만 겹치는 파일까지
+# 건드리면 사용자가 무엇을 열려 했는지 알 수 없게 된다.
+_OUR_PATH_NOISE = re.compile(
+    "("
+    + "|".join(re.escape(prefix)
+               for prefix, _ in sorted(_OUR_PATHS, key=lambda pair: -len(pair[0])))
+    + r")(?=/|\s|['\"]|$)",
+    re.MULTILINE,
+)
+_REPLACEMENT = dict(_OUR_PATHS)
 
 
 def sanitize_stderr(text: str) -> str | None:
-    """traceback 의 경로를 파일명만 남기고 잘라낸다."""
+    """사용자에게 보여도 되는 형태로 다듬는다. 정본: Addendum 63.
+
+    **이 값은 화면까지 간다.** 그래서 지우는 것과 남기는 것이 둘 다 중요하다 -
+    경로를 지우다 파일명과 줄 번호까지 지우면 사용자가 어디를 고쳐야 하는지 알 수 없다.
+    """
     if not text:
         return None
     cleaned = _PATH_NOISE.sub(lambda m: f'File "{m.group(2)}"', text)
+    cleaned = _OUR_PATH_NOISE.sub(lambda m: _REPLACEMENT[m.group(1)], cleaned)
     if len(cleaned) > STDERR_LIMIT:
         cleaned = cleaned[:STDERR_LIMIT] + "\n... (생략됨)"
     return cleaned
