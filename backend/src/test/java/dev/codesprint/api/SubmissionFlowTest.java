@@ -117,6 +117,14 @@ class SubmissionFlowTest {
                 "flow-" + System.nanoTime() + "@codesprint.dev", "흐름테스트")).id();
     }
 
+    /** 힌트 사용량을 스스로 신고하는 제출. 지금은 거절돼야 한다. */
+    private String bodyReporting(int hintLevel, boolean solutionViewed) {
+        return """
+                {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
+                 "hintLevel": %d, "solutionViewed": %s, "solveSeconds": 120}
+                """.formatted(userId, hintLevel, solutionViewed);
+    }
+
     private String requestBody(int hintLevel) {
         return """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
@@ -361,6 +369,45 @@ class SubmissionFlowTest {
 
         assertThat(status).isEqualTo(400);
         assertThat(jobs.count()).as("큐에 들어가지 않는다").isEqualTo(before);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "hintLevel={0} solutionViewed={1}")
+    @org.junit.jupiter.params.provider.CsvSource({"1, false", "5, false", "0, true"})
+    @DisplayName("힌트 사용량 자기신고는 400 이고 큐에 넣지 않는다")
+    void selfReportedHintUsageIsRejected(int hintLevel, boolean solutionViewed)
+            throws Exception {
+        // 힌트 기능이 없다. 그런데 Evidence 는 이 값으로 독립 풀이 여부를 가른다 -
+        // 해설을 봤다고 하면 힌트 최고 단계(5)보다 위인 6 으로 친다. 즉 존재하지
+        // 않는 도움의 사용량을 신고받아 mastery 를 깎고 있었다.
+        //
+        // 받아 놓고 0 으로 덮어쓰지 않는다. 그러면 API 를 쓰는 쪽은 그 값이
+        // 적용됐다고 믿는다.
+        long before = jobs.count();
+        int status = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyReporting(hintLevel, solutionViewed)))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).isEqualTo(400);
+        assertThat(jobs.count()).as("큐에 들어가지 않는다").isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("신고하지 않은 제출은 힌트 없이 푼 것으로 남는다")
+    void submissionsWithoutSelfReportAreRecordedAsUnaided() throws Exception {
+        // 입력을 막았다고 컬럼과 산식을 지우지 않는다. 힌트가 생기면 서버가 그
+        // 값을 채우고, 그때 Evidence 매핑이 그대로 쓰인다(ADR-0010 의 golden 이
+        // 그 매핑을 고정하고 있다).
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+                .get("submissionId").asLong();
+
+        assertThat(jdbc.queryForObject(
+                "SELECT hint_level FROM submissions WHERE id = ?", Integer.class, submissionId))
+                .isZero();
+        assertThat(jdbc.queryForObject(
+                "SELECT solution_viewed FROM submissions WHERE id = ?",
+                Boolean.class, submissionId))
+                .isFalse();
     }
 
     @org.junit.jupiter.params.ParameterizedTest(name = "solveSeconds={0}")
