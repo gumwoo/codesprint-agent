@@ -22,6 +22,12 @@ const POLL_INTERVAL_MS = 1000;
 const POLL_SLOW_AFTER_MS = 120000;
 const POLL_SLOW_INTERVAL_MS = 5000;
 
+// 조회가 몇 번 연속으로 실패해야 사용자에게 알리는가.
+//
+// 한 번 실패했다고 관찰을 그만두지 않는다. 서버를 재시작하는 동안에도 job 은 큐에
+// 남아 있고, 돌아오면 결과가 온다 - 여기서 포기하면 접수된 제출을 화면이 놓친다.
+const UNREACHABLE_AFTER = 3;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -177,6 +183,10 @@ async function submit() {
   $("footNote").textContent = "제출하는 중…";
 
   const startedAt = Date.now();
+  // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
+  // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
+  // 루프가 끝나 접수된 제출을 화면이 놓친다.
+  let accepted;
   try {
     const response = await fetch(`/api/problems/${currentProblem.code}/submit`, {
       method: "POST",
@@ -200,21 +210,22 @@ async function submit() {
           + (await response.text());
       return;
     }
-    const accepted = await response.json();
-    // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
-    cancelActivePolling();
-    resetResultUi("채점 중…");
-    $("footNote").textContent = "";
-    // **접수된 순간 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
+    accepted = await response.json();
+  } catch (error) {
+    // 여기까지 못 왔으면 접수되지 않은 것이다. 앞 제출은 그대로 둔다.
+    $("footNote").textContent = `제출하지 못했다: ${error.message}`;
+    return;
+  } finally {
+    // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
-    await waitForResult(accepted.submissionId, startedAt);
-  } catch (error) {
-    // 네트워크가 끊긴 경우도 접수되지 않은 것이다. 앞 제출은 그대로 둔다.
-    $("footNote").textContent = `제출하지 못했다: ${error.message}`;
-  } finally {
-    button.disabled = false;
   }
+
+  // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
+  cancelActivePolling();
+  resetResultUi("채점 중…");
+  $("footNote").textContent = "";
+  await waitForResult(accepted.submissionId, startedAt);
 }
 
 async function waitForResult(submissionId, startedAt) {
@@ -223,13 +234,32 @@ async function waitForResult(submissionId, startedAt) {
   $("state").textContent = "채점 중";
 
   let warned = false;
+  let failures = 0;
   for (;;) {
-    const view = await getJson(`/api/submissions/${submissionId}`);
+    let view = null;
+    try {
+      view = await getJson(`/api/submissions/${submissionId}`);
+      if (failures) {
+        // 돌아왔다. 알리던 문구를 원래대로 되돌린다.
+        failures = 0;
+        $("submitNote").textContent = warned ? slowNote() : "채점 중…";
+      }
+    } catch (error) {
+      // **한 번 실패했다고 포기하지 않는다.** 서버를 재시작하는 동안에도 job 은
+      // 큐에 남아 있고, 돌아오면 결과가 온다.
+      failures += 1;
+      if (failures >= UNREACHABLE_AFTER) {
+        $("submitNote").textContent =
+            `결과를 가져오지 못하고 있다 (${error.message}). 제출은 접수됐으므로 `
+            + "서버가 돌아오면 여기에 나타난다.";
+      }
+    }
+
     // 화면이 다른 것을 보고 있으면 이 폴링은 버린다. 계속 돌 이유도 없다.
     if (activeSubmissionId !== submissionId) {
       return;
     }
-    if (view.state !== "PENDING") {
+    if (view && view.state !== "PENDING") {
       render(submissionId, view);
       return;
     }
@@ -239,13 +269,20 @@ async function waitForResult(submissionId, startedAt) {
       warned = true;
       // Worker 가 떠 있지 않으면 여기 온다. 그것은 사용자 잘못이 아니므로
       // 무엇을 확인해야 하는지 알려준다. 기다리는 것 자체는 계속한다.
-      $("submitNote").textContent =
-          "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
-          + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
+      if (!failures) {
+        $("submitNote").textContent = slowNote();
+      }
     }
+    // 서버가 답하지 않는 동안에는 천천히 두드린다.
+    const slowly = warned || failures >= UNREACHABLE_AFTER;
     await new Promise((resolve) => setTimeout(
-        resolve, warned ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
+        resolve, slowly ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
   }
+}
+
+function slowNote() {
+  return "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
+      + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
 }
 
 function render(submissionId, view) {
