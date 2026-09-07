@@ -73,6 +73,18 @@ class WebClientTest {
     /** 화면이 쓰는 fetch 대상. 템플릿 리터럴의 `${...}` 는 경로 변수로 바꿔 본다. */
     private static final Pattern API_CALL = Pattern.compile("[\"`](/api/[^\"`\\s]*)");
 
+    /** {@code fetch(url, { method: "POST" })} 의 그 자리. 없으면 GET 이다. */
+    private static final Pattern METHOD = Pattern.compile("method:\\s*\"([A-Z]+)\"");
+
+    /** 부르는 곳 하나. <b>경로만으로는 부족하다</b> - 같은 경로에 GET 과 POST 가 따로 있다. */
+    private record Call(String method, String path) {
+
+        @Override
+        public String toString() {
+            return method + " " + path;
+        }
+    }
+
     @Autowired
     private WebApplicationContext context;
 
@@ -96,20 +108,29 @@ class WebClientTest {
     }
 
     @Test
-    @DisplayName("화면이 부르는 API 가 전부 실재한다")
+    @DisplayName("화면이 부르는 API 가 method 까지 실재한다")
     void everyCalledEndpointExists() throws Exception {
-        Set<String> mapped = new LinkedHashSet<>();
-        handlerMapping.getHandlerMethods().keySet().stream()
-                .map(RequestMappingInfo::getPathPatternsCondition)
-                .filter(java.util.Objects::nonNull)
-                .forEach(condition -> condition.getPatterns()
-                        .forEach(pattern -> mapped.add(normalise(pattern.getPatternString()))));
+        Set<Call> mapped = new LinkedHashSet<>();
+        handlerMapping.getHandlerMethods().keySet().forEach(info -> {
+            var paths = info.getPathPatternsCondition();
+            if (paths == null) {
+                return;
+            }
+            var methods = info.getMethodsCondition().getMethods();
+            paths.getPatterns().forEach(pattern -> {
+                String path = normalise(pattern.getPatternString());
+                if (methods.isEmpty()) {
+                    // method 를 안 건 매핑은 아무 method 나 받는다.
+                    for (String any : new String[] {"GET", "POST", "PUT", "PATCH", "DELETE"}) {
+                        mapped.add(new Call(any, path));
+                    }
+                } else {
+                    methods.forEach(method -> mapped.add(new Call(method.name(), path)));
+                }
+            });
+        });
 
-        Set<String> called = new LinkedHashSet<>();
-        Matcher matcher = API_CALL.matcher(read("app.js"));
-        while (matcher.find()) {
-            called.add(normalise(matcher.group(1)));
-        }
+        Set<Call> called = callsIn(read("app.js"));
 
         assertThat(called).as("화면이 API 를 하나도 부르지 않는다 - 정규식이 깨졌다")
                 .isNotEmpty();
@@ -117,6 +138,30 @@ class WebClientTest {
         assertThat(called)
                 .as("화면이 없는 엔드포인트를 부른다. 실재하는 것: %s", mapped)
                 .isSubsetOf(mapped);
+    }
+
+    /**
+     * 화면이 부르는 (method, 경로) 들.
+     *
+     * <p><b>경로만 보면 부족하다.</b> {@code /api/users} 는 POST 만 있는데 GET 으로 불러도
+     * 경로는 맞으므로 통과한다 - 눌러 보면 405 다.
+     *
+     * <p>method 는 {@code fetch(url, {...})} 의 두 번째 인자에서 읽는다. 없으면 GET 이다
+     * (fetch 의 기본값). 다음 {@code /api/} 가 나오기 전까지만 찾아, 뒤에 오는 다른
+     * 호출의 method 를 잘못 집지 않게 한다.
+     */
+    private static Set<Call> callsIn(String script) {
+        Set<Call> calls = new LinkedHashSet<>();
+        Matcher matcher = API_CALL.matcher(script);
+        while (matcher.find()) {
+            int from = matcher.end();
+            int next = script.indexOf("/api/", from);
+            String window = script.substring(from, next < 0 ? script.length() : next);
+            Matcher method = METHOD.matcher(window);
+            calls.add(new Call(method.find() ? method.group(1) : "GET",
+                    normalise(matcher.group(1))));
+        }
+        return calls;
     }
 
     /**
