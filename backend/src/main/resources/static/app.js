@@ -9,9 +9,18 @@
 "use strict";
 
 const POLL_INTERVAL_MS = 1000;
-// 채점이 끝나기를 기다리는 한도. 넘으면 **성공도 실패도 아니라고 말한다** -
-// 조용히 멈추면 사용자는 화면이 죽은 것인지 채점이 느린 것인지 알 수 없다.
-const POLL_TIMEOUT_MS = 120000;
+
+// 오래 걸린다고 **관찰을 포기하지 않는다.**
+//
+// 처음에는 2분 한도를 두고 넘으면 멈췄는데, 서버는 그보다 훨씬 오래 걸릴 수 있다 -
+// 재시도까지 세면 최악이 14분쯤 된다(Worker 의 timeout · backoff · MAX_ATTEMPTS 와
+// Reviewer timeout 을 합쳐서). 그 숫자를 화면에 옮겨 적으면 UI 가 Worker 내부값에
+// 묶이고, 그 값이 바뀔 때마다 또 갈린다.
+//
+// job 은 큐에 살아 있는데 화면이 임의의 시간 때문에 포기할 이유가 없다. 대신
+// **오래 걸린다고 말해 주고** 폴링 간격을 늘린다 - 기다리는 것과 방치하는 것은 다르다.
+const POLL_SLOW_AFTER_MS = 120000;
+const POLL_SLOW_INTERVAL_MS = 5000;
 
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
@@ -126,17 +135,26 @@ async function waitForResult(submissionId, startedAt) {
   $("review").replaceChildren();
   $("nextAction").replaceChildren();
 
-  while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
+  let warned = false;
+  for (;;) {
     const view = await getJson(`/api/submissions/${submissionId}`);
     if (view.state !== "PENDING") {
       render(submissionId, view);
       return;
     }
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+
+    const waited = Date.now() - startedAt;
+    if (!warned && waited >= POLL_SLOW_AFTER_MS) {
+      warned = true;
+      // Worker 가 떠 있지 않으면 여기 온다. 그것은 사용자 잘못이 아니므로
+      // 무엇을 확인해야 하는지 알려준다. 기다리는 것 자체는 계속한다.
+      $("state").textContent =
+          "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
+          + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
+    }
+    await new Promise((resolve) => setTimeout(
+        resolve, warned ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
   }
-  // Worker 가 떠 있지 않으면 여기 온다. 그것은 사용자 잘못이 아니다.
-  $("state").textContent =
-      "채점이 끝나지 않았다. Judge Worker 가 떠 있는지 확인한다 - 제출은 큐에 남아 있다.";
 }
 
 function render(submissionId, view) {
