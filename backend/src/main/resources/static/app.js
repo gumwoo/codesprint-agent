@@ -219,6 +219,8 @@ function switchedUser() {
   // 폴링도 끊는다 - 살려 두면 이전 사용자의 결과가 **나중에 도착해서** 그려진다.
   cancelActivePolling();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
+  // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
+  $("footNote").textContent = "";
 
   remember($("userId").value);
   refreshDiagnostic();
@@ -227,9 +229,22 @@ function switchedUser() {
   }
 }
 
-/** 이 응답이 아직 화면에 쓸 것인가. 그 사이 사용자가 바뀌었으면 버린다. */
+/**
+ * 이 응답이 아직 화면에 쓸 것인가. 그 사이 사용자가 바뀌었으면 버린다.
+ *
+ * <p><b>규칙: 지금 화면의 사용자와 관계없는 비동기 결과는 화면에 아무것도 쓰지
+ * 않는다.</b> 아무것도 다. 남의 것이라는 안내조차 쓰지 않는다 - 그러려면 다른
+ * 사용자의 id 를 화면에 적어야 하고, 인증이 붙으면 그건 남의 정보다.
+ */
 function stillCurrent(userId) {
   return Number($("userId").value) === userId;
+}
+
+/** 이 사용자의 진행 상황을 버튼 옆에 적는다. 화면이 넘어갔으면 적지 않는다. */
+function reportTo(userId, message) {
+  if (stillCurrent(userId)) {
+    $("footNote").textContent = message;
+  }
 }
 
 async function refreshDiagnostic() {
@@ -377,14 +392,14 @@ async function submit() {
     if (!response.ok) {
       // 서버가 거절한 이유를 그대로 보여준다. "제출 실패" 로 덮으면 무엇이
       // 잘못됐는지 알 수 없다. 앞 제출의 폴링은 건드리지 않는다.
-      $("footNote").textContent = `제출이 거절됐다 (${response.status}): `
-          + (await response.text());
+      reportTo(submittingUserId, `제출이 거절됐다 (${response.status}): `
+          + (await response.text()));
       return;
     }
     accepted = await response.json();
   } catch (error) {
     // 여기까지 못 왔으면 접수되지 않은 것이다. 앞 제출은 그대로 둔다.
-    $("footNote").textContent = `제출하지 못했다: ${error.message}`;
+    reportTo(submittingUserId, `제출하지 못했다: ${error.message}`);
     return;
   } finally {
     // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
@@ -392,11 +407,9 @@ async function submit() {
     button.disabled = false;
   }
 
-  // **접수된 뒤에 사용자가 바뀌었으면 이 결과는 이 화면 것이 아니다.** 제출은
-  // 그대로 접수됐으므로 실패로 말하지 않는다 - 다만 지금 화면에 붙이지 않는다.
+  // 접수된 뒤에 사용자가 바뀌었으면 이 제출은 이 화면 것이 아니다. 서버에서는
+  // 그대로 채점되고, 그 사용자로 돌아오면 Skill 상태에 반영돼 있다.
   if (!stillCurrent(submittingUserId)) {
-    $("footNote").textContent =
-        `사용자 ${submittingUserId} 의 제출은 접수됐다. 화면은 지금 사용자 것만 보여준다.`;
     return;
   }
 
