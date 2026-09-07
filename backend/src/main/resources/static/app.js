@@ -237,28 +237,37 @@ async function waitForResult(submissionId, startedAt) {
   let failures = 0;
   for (;;) {
     let view = null;
+    let failure = null;
     try {
       view = await getJson(`/api/submissions/${submissionId}`);
-      if (failures) {
-        // 돌아왔다. 알리던 문구를 원래대로 되돌린다.
-        failures = 0;
-        $("submitNote").textContent = warned ? slowNote() : "채점 중…";
-      }
     } catch (error) {
+      failure = error;
+    }
+
+    // **화면을 만지기 전에 확인한다.** 기다리는 동안 다른 제출이 접수됐을 수 있고,
+    // 그러면 이 폴러는 남의 화면에 쓰는 것이 된다 - 실제로 그랬다. 버려진 폴러가
+    // "결과를 가져오지 못하고 있다" 를 새 제출의 화면에 남겼다.
+    //
+    // 루프 맨 앞에서만 보면 부족하다. await 는 여기서 일어난다.
+    if (activeSubmissionId !== submissionId) {
+      return;
+    }
+
+    if (failure) {
       // **한 번 실패했다고 포기하지 않는다.** 서버를 재시작하는 동안에도 job 은
       // 큐에 남아 있고, 돌아오면 결과가 온다.
       failures += 1;
       if (failures >= UNREACHABLE_AFTER) {
         $("submitNote").textContent =
-            `결과를 가져오지 못하고 있다 (${error.message}). 제출은 접수됐으므로 `
+            `결과를 가져오지 못하고 있다 (${failure.message}). 제출은 접수됐으므로 `
             + "서버가 돌아오면 여기에 나타난다.";
       }
+    } else if (failures) {
+      // 돌아왔다. 알리던 문구를 원래대로 되돌린다.
+      failures = 0;
+      $("submitNote").textContent = warned ? slowNote() : "채점 중…";
     }
 
-    // 화면이 다른 것을 보고 있으면 이 폴링은 버린다. 계속 돌 이유도 없다.
-    if (activeSubmissionId !== submissionId) {
-      return;
-    }
     if (view && view.state !== "PENDING") {
       render(submissionId, view);
       return;
