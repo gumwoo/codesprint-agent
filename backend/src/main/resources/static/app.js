@@ -104,11 +104,88 @@ async function loadProblems() {
 }
 
 function showPicker() {
-  $("picker").hidden = false;
-  $("statementBody").hidden = true;
+  showLeft("picker");
   $("crumbProblem").textContent = "고르는 중";
   $("problemMeta").textContent = "";
   $("submitButton").disabled = true;
+}
+
+/** 왼쪽 패널에서 하나만 보인다. 탭 표시도 같이 옮긴다. */
+function showLeft(bodyId) {
+  for (const id of ["picker", "statementBody", "skillsBody"]) {
+    $(id).hidden = id !== bodyId;
+  }
+  $("tabSkills").classList.toggle("active", bodyId === "skillsBody");
+  $("tabProblem").classList.toggle("active", bodyId !== "skillsBody");
+}
+
+/**
+ * 내 Skill 상태.
+ *
+ * **여기서 아무것도 계산하지 않는다.** mastery 도 status 도 서버가 정한 것을 옮긴다
+ * (ADR-0001). 화면이 다시 조합하기 시작하면 서버가 정한 것과 갈리고, 사용자가 보는
+ * 쪽이 이긴다.
+ */
+async function showSkills() {
+  showLeft("skillsBody");
+  const userId = Number($("userId").value);
+  const rows = $("skillRows");
+  if (!userId) {
+    $("skillsNote").textContent = "사용자를 먼저 만든다.";
+    rows.replaceChildren();
+    return;
+  }
+
+  try {
+    const [catalog, map] = await Promise.all([
+      getJson("/api/skills"),
+      getJson(`/api/users/${userId}/skills`),
+    ]);
+    // 이름과 선수 관계는 커리큘럼에서, 점수는 상태에서 온다. 둘을 code 로 잇는다.
+    const defined = new Map(catalog.skills.map((skill) => [skill.code, skill]));
+
+    rows.replaceChildren();
+    for (const state of map.skills) {
+      const skill = defined.get(state.skillCode) || {};
+      const tr = document.createElement("tr");
+
+      const name = document.createElement("td");
+      const title = document.createElement("div");
+      title.textContent = skill.name || state.skillCode;
+      const code = document.createElement("div");
+      code.className = "code what";
+      code.textContent = state.skillCode;
+      name.append(title, code);
+
+      const status = document.createElement("td");
+      status.textContent = state.status;
+      status.className = `st-${state.status}`;
+      if (state.status === "LOCKED" && (skill.requires || []).length) {
+        const why = document.createElement("div");
+        why.className = "what";
+        // 왜 잠겼는지 말해 준다. 잠긴 것만 보여주면 사용자가 할 수 있는 일이 없다.
+        why.textContent = "먼저: " + skill.requires.map((r) => r.skillCode).join(", ");
+        status.append(why);
+      }
+
+      const mastery = document.createElement("td");
+      mastery.className = "num";
+      // null 은 "아직 안 봤다" 다. 0 으로 적으면 "보았고 못한다" 가 된다.
+      mastery.textContent = state.mastery === null ? "–" : state.mastery.toFixed(2);
+
+      const evidence = document.createElement("td");
+      evidence.className = "num";
+      evidence.textContent = state.evidenceCount;
+
+      tr.append(name, status, mastery, evidence);
+      rows.append(tr);
+    }
+    $("skillsNote").textContent =
+        "제출할 때마다 다시 계산된다. – 는 아직 근거가 없다는 뜻이고 0 과 다르다.";
+  } catch (error) {
+    $("skillsNote").textContent = `상태를 불러오지 못했다: ${error.message}`;
+    rows.replaceChildren();
+  }
 }
 
 async function openProblem(code) {
@@ -138,8 +215,7 @@ async function openProblem(code) {
     samples.append(block);
   });
 
-  $("picker").hidden = true;
-  $("statementBody").hidden = false;
+  showLeft("statementBody");
   $("submitButton").disabled = false;
   setSourceCode("");
   // 문제를 옮기는 것은 진짜로 그만 보는 것이다. 여기서는 놓는다.
@@ -351,6 +427,12 @@ function render(submissionId, view) {
   const goNext = $("goNext");
   goNext.hidden = false;
   goNext.onclick = () => goToNextProblem(submissionId);
+
+  // 채점이 반영되면 Skill 상태가 달라진다. 그 화면을 보고 있었다면 다시 읽는다 -
+  // 옛 값을 그대로 두면 방금 푼 것이 반영되지 않은 것처럼 보인다.
+  if (!$("skillsBody").hidden) {
+    showSkills();
+  }
 }
 
 function heading(label) {
@@ -450,6 +532,11 @@ attachGutter();
 $("createUser").addEventListener("click", createUser);
 $("userId").addEventListener("change", () => remember($("userId").value));
 $("toProblems").addEventListener("click", showPicker);
+$("tabProblem").addEventListener("click", () => {
+  // 열어 둔 문제가 있으면 그리로, 없으면 목록으로 돌아간다.
+  showLeft(currentProblem ? "statementBody" : "picker");
+});
+$("tabSkills").addEventListener("click", showSkills);
 $("submitButton").addEventListener("click", submit);
 restore();
 loadProblems().catch((error) => {

@@ -299,3 +299,49 @@ button:disabled { opacity: .45; cursor: default; }
 }
 
 .primary:hover:not(:disabled) { background: #2f74e0; border-color: #2f74e0; }
+
+/* -- 내 Skill -- */
+.pane-head .tab {
+  border: none;
+  background: none;
+  border-radius: 0;
+  padding: 9px 0;
+  color: var(--muted);
+}
+
+.pane-head .tab:hover { color: var(--ink); }
+.pane-head .tab.active { color: var(--ink); }
+
+table.skills {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.skills th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+table.skills td {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: baseline;
+}
+
+table.skills .num { text-align: right; font-family: var(--mono); }
+table.skills .code { font-family: var(--mono); font-size: 12px; }
+table.skills .what { color: var(--muted); font-size: 11px; }
+
+/* 상태는 색으로도 구분한다. 다만 **색만으로 구분하지 않는다** - 글자가 이미 상태를
+   말하고 있고, 색은 훑을 때 눈이 먼저 가라고 있는 것이다. */
+.st-LOCKED { color: var(--muted); }
+.st-UNASSESSED { color: var(--muted); }
+.st-READY { color: var(--accent); }
+.st-LEARNING, .st-PRACTICING { color: var(--ink); }
+.st-MASTERED { color: var(--ok); }
+.st-WEAKENED, .st-REVIEW_DUE { color: var(--bad); }
