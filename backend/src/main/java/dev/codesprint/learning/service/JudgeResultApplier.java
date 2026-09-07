@@ -168,7 +168,8 @@ public class JudgeResultApplier {
             ProblemDefinition problem) {
 
         submission.applyJudgement(judged.status().name(), judged.passed(), judged.total(),
-                judged.executionMs(), judged.memoryKb(), judged.failedCaseId());
+                judged.executionMs(), judged.memoryKb(), judged.failedCaseId(),
+                judged.stderr());
 
         // 문제를 모르면 Skill 도 모른다. 그래도 **끝내야 한다.**
         //

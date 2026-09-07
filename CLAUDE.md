@@ -72,6 +72,15 @@ python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 
 ## 샌드박스를 건드릴 때
 
+**하네스를 고쳤으면 이미지를 다시 굽는다.** `judge/runner/harness.py` 는 이미지에
+구워지므로(ADR-0005) 파일만 되돌리면 실제로 도는 것은 그대로다 - 실험하다 소스를
+복원하고 이미지를 두면, 다음 채점이 조용히 옛 하네스로 돈다.
+
+```bash
+docker build -q -t codesprint-judge:py312 -f judge/Dockerfile .
+```
+
+
 `judge/run_submission.py`의 `DOCKER_LIMITS` / `MOUNT_MODE`에서 옵션을 빼면
 `judge/tests/test_judge.py`가 실패한다. 각 옵션이 무엇을 막는지 주석으로 적혀 있으니
 지우기 전에 읽는다. 새 제한을 추가하면 **그것을 뚫으려는 격리 케이스도 함께** 넣는다.

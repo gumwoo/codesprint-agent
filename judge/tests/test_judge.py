@@ -409,6 +409,29 @@ def main() -> int:
         print(f"[O] 진단 예산 -> 예산 500ms 에서 {len(limited['cases'])}개, "
               f"기본 예산에서 {len(full['cases'])}개 실행, 판정은 그대로")
 
+    print("\n== stderr sanitize (Addendum 63) ==")
+    # 이 값은 이제 화면까지 간다(PR #21). 컨테이너 안의 절대 경로가 그대로 나가면
+    # 마운트 위치와 하네스 구조가 사용자에게 보인다 - 사용자가 고칠 수 있는 정보도
+    # 아니고, 우리 쪽 구조를 알려 주는 것뿐이다.
+    crash = judge((FIXTURES / "sol-runtime-error.py").read_text(encoding="utf-8"))
+    stderr = crash.get("stderr") or ""
+    if not stderr.strip():
+        failed += 1
+        print("[X] stderr: RUNTIME_ERROR 인데 stderr 가 비어 있다 - 원인을 알 수 없다")
+    else:
+        leaked = [path for path in ("/job/", "/opt/", "/tmp/", "/usr/") if path in stderr]
+        if leaked:
+            failed += 1
+            print(f"[X] stderr: 컨테이너 경로가 그대로 나간다 {leaked}")
+            print(f"    {stderr.strip().splitlines()[:3]}")
+        elif "solution.py" not in stderr:
+            # 경로를 지우다 파일명까지 지우면 어느 줄인지 짚을 수 없다.
+            failed += 1
+            print(f"[X] stderr: 파일명이 남지 않았다 - {stderr.strip().splitlines()[:2]}")
+        else:
+            print(f"[O] stderr -> 경로 없이 파일명만 남는다 "
+                  f"({stderr.strip().splitlines()[-1][:50]})")
+
     print("\n== 격리 (Addendum 87) ==")
     for name, code, why in ISOLATION:
         result = judge(code)
@@ -511,7 +534,7 @@ def main() -> int:
         return 1
     print(f"\n[OK] 판정 {len(VERDICTS)}건 · 실패의 모양 {len(PROFILE)}건 · "
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
-          f"컨테이너 회수 · status 8종 커버 — 모두 통과")
+          f"컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 
 
