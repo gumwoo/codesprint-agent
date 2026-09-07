@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/diagnostic-step.schema.json",
+  "title": "DiagnosticStep",
+  "description": "초기 진단의 현재 단계. **진단은 문제를 고르는 순서일 뿐이고 점수를 만들지 않는다**(ADR-0018) - 여기에 mastery 나 수준 추정치가 없는 이유다. 푼 결과는 평소 제출과 같은 길로 Evidence 가 되고, 진행 상태는 그 Evidence 에서 다시 나온다. 그래서 세션 id 도 없다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "userId",
+    "done",
+    "targetSkill",
+    "problem",
+    "assessed",
+    "total",
+    "reason"
+  ],
+  "properties": {
+    "userId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "done": {
+      "type": "boolean",
+      "description": "모든 Skill 이 평가됐거나 함의됐다. 문제 수 상한이 아니라 그래프가 덮였는지로 정한다(PRD §88)."
+    },
+    "targetSkill": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "description": "지금 확인하려는 Skill. 끝났으면 null 이다. **생략하지 않는다** - 생략은 '모른다', null 은 '확인했고 없다'."
+    },
+    "problem": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "title",
+        "statement",
+        "timeLimitMs",
+        "memoryLimitMb"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^P[0-9]{2}_[A-Z0-9_]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeLimitMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memoryLimitMb": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "지금 풀 문제. 끝났거나 그 Skill 을 물어볼 NORMAL 문제가 없으면 null 이다. **Test Case 와 정답은 들어가지 않는다.**"
+    },
+    "assessed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "평가됐거나 함의된 Skill 수."
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "활성 Skill 수. assessed 와 함께 주어 **화면이 남은 개수를 계산하지 않게 한다**(ADR-0001)."
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "왜 이것을 묻는가 / 왜 끝났는가. 화면과 감사 로그가 같이 읽는다."
+    }
+  }
+}
