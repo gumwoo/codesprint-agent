@@ -105,6 +105,7 @@ async function loadProblems() {
 
 function showPicker() {
   showLeft("picker");
+  refreshDiagnostic();
   $("crumbProblem").textContent = "고르는 중";
   $("problemMeta").textContent = "";
   $("submitButton").disabled = true;
@@ -143,6 +144,11 @@ async function showSkills() {
     ]);
     // 이름과 선수 관계는 커리큘럼에서, 점수는 상태에서 온다. 둘을 code 로 잇는다.
     const defined = new Map(catalog.skills.map((skill) => [skill.code, skill]));
+
+    // 진단과 같은 이유로, 쓰기 전에 확인한다. 사용자가 바뀌면 이 답은 남의 것이다.
+    if (!stillCurrent(userId)) {
+      return;
+    }
 
     rows.replaceChildren();
     for (const state of map.skills) {
@@ -183,9 +189,72 @@ async function showSkills() {
     $("skillsNote").textContent =
         "제출할 때마다 다시 계산된다. – 는 아직 근거가 없다는 뜻이고 0 과 다르다.";
   } catch (error) {
+    if (!stillCurrent(userId)) {
+      return;
+    }
     $("skillsNote").textContent = `상태를 불러오지 못했다: ${error.message}`;
     rows.replaceChildren();
   }
+}
+
+/**
+ * 초기 진단.
+ *
+ * **여기서 무엇을 물을지 고르지 않는다.** 서버가 정한 Skill 과 문제를 그대로
+ * 보여준다(ADR-0018). 화면이 선수 그래프를 다시 걸으면 서버가 정한 순서와 갈리고,
+ * 사용자가 보는 쪽이 이긴다.
+ */
+/** 이 응답이 아직 화면에 쓸 것인가. 그 사이 사용자가 바뀌었으면 버린다. */
+function stillCurrent(userId) {
+  return Number($("userId").value) === userId;
+}
+
+async function refreshDiagnostic() {
+  const box = $("diagnostic");
+  const userId = Number($("userId").value);
+  if (!userId) {
+    box.hidden = true;
+    return;
+  }
+
+  let step;
+  try {
+    step = await getJson(`/api/users/${userId}/diagnostic`);
+  } catch (error) {
+    if (!stillCurrent(userId)) {
+      return;
+    }
+    // 진단을 못 읽어도 문제 목록은 그대로 쓸 수 있다. 조용히 감추지 않고 말해 준다.
+    box.hidden = false;
+    box.classList.add("done");
+    $("diagProgress").textContent = "";
+    $("diagReason").textContent = `진단을 불러오지 못했다: ${error.message}`;
+    return;
+  }
+
+  // **응답을 받은 뒤, 화면에 쓰기 전에** 확인한다. 사용자를 새로 만들면 두 요청이
+  // 겹치고, 늦게 온 옛 사용자의 답이 새 사용자의 화면을 덮어쓴다 - 실제로 그렇게
+  // 아무것도 안 한 사용자에게 "1 / 8 확인됨" 이 떴다.
+  if (!stillCurrent(userId)) {
+    return;
+  }
+
+  box.hidden = false;
+  box.classList.toggle("done", step.done || !step.problem);
+  $("diagProgress").textContent = `${step.assessed} / ${step.total}`;
+  // 끝났을 때도 **서버가 준 이유**를 쓴다. 화면이 "끝났다" 만 말하면, Skill 지도에
+  // mastery 없이 남아 있는 Skill 이 모순처럼 보인다 - 재 본 것과 묻지 않기로 한 것을
+  // 구분해 주는 문장이 서버에서 온다.
+  $("diagReason").textContent = step.done
+      ? `진단이 끝났다 — ${step.reason}. 여기서부터는 제출할 때마다 다음 할 일을 정해서 준다.`
+      : step.reason;
+
+  if (step.done || !step.problem) {
+    return;
+  }
+  const button = $("diagStart");
+  button.textContent = `${step.targetSkill} 확인하기 — ${step.problem.code}`;
+  button.onclick = () => openProblem(step.problem.code);
 }
 
 async function openProblem(code) {
@@ -433,6 +502,8 @@ function render(submissionId, view) {
   if (!$("skillsBody").hidden) {
     showSkills();
   }
+  // 진단도 같이 움직인다 - 방금 낸 것이 다음 질문을 바꾼다.
+  refreshDiagnostic();
 }
 
 function heading(label) {
@@ -478,6 +549,13 @@ async function createUser() {
   const created = await response.json();
   $("userId").value = created.userId;
   remember(created.userId);
+
+  // 값을 코드로 바꾸면 change 가 뜨지 않는다. 다시 읽지 않으면 패널이 **이전
+  // 사용자의 진단**을 계속 보여주고, 새 사용자가 이미 절반 확인된 것처럼 보인다.
+  refreshDiagnostic();
+  if (!$("skillsBody").hidden) {
+    showSkills();
+  }
 }
 
 // 브라우저에만 기억한다. 서버에는 세션이 없다 - 있는 척하면 인증이 붙었을 때
@@ -530,7 +608,10 @@ function attachGutter() {
 attachEditor();
 attachGutter();
 $("createUser").addEventListener("click", createUser);
-$("userId").addEventListener("change", () => remember($("userId").value));
+$("userId").addEventListener("change", () => {
+  remember($("userId").value);
+  refreshDiagnostic();
+});
 $("toProblems").addEventListener("click", showPicker);
 $("tabProblem").addEventListener("click", () => {
   // 열어 둔 문제가 있으면 그리로, 없으면 목록으로 돌아간다.
@@ -539,6 +620,7 @@ $("tabProblem").addEventListener("click", () => {
 $("tabSkills").addEventListener("click", showSkills);
 $("submitButton").addEventListener("click", submit);
 restore();
+refreshDiagnostic();
 loadProblems().catch((error) => {
   $("problemList").textContent = `문제 목록을 불러오지 못했다: ${error.message}`;
 });
