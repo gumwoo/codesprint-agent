@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -177,6 +179,85 @@ class WebClientTest {
      * <p>문자열 안의 {@code //} 나 {@code /*} 는 다루지 않는다 - 지금 파일에 없고,
      * 흉내를 늘리면 검사보다 흉내가 먼저 틀린다.
      */
+    /**
+     * 표를 받지 않아도 되는 함수들. <b>이유가 붙지 않은 항목은 두지 않는다.</b>
+     *
+     * <p>목록이 길어지면 규칙이 아니라 예외가 코드를 지배한다.
+     */
+    private static final Map<String, String> UNGUARDED = Map.of(
+            "getJson", "원시 함수다. 화면에 아무것도 쓰지 않는다",
+            "waitForResult", "관찰 구간이라 activeSubmissionId 가 주인이다",
+            "waitForRun", "관찰 구간이라 activeRunId 가 주인이다",
+            "createUser", "사용자를 만드는 것이지 화면 조각을 그리는 것이 아니다");
+
+    /** 함수 이름 -> 본문. 다음 최상위 function 선언 전까지를 한 덩어리로 본다. */
+    private static Map<String, String> functionsIn(String script) {
+        Map<String, String> bodies = new java.util.LinkedHashMap<>();
+        Matcher declaration = Pattern.compile(
+                "(?m)^(?:async\\s+)?function\\s+([A-Za-z0-9_$]+)\\s*\\(").matcher(script);
+
+        List<String> names = new java.util.ArrayList<>();
+        List<Integer> starts = new java.util.ArrayList<>();
+        while (declaration.find()) {
+            names.add(declaration.group(1));
+            starts.add(declaration.start());
+        }
+        for (int i = 0; i < names.size(); i++) {
+            int end = i + 1 < starts.size() ? starts.get(i + 1) : script.length();
+            bodies.put(names.get(i), script.substring(starts.get(i), end));
+        }
+        return bodies;
+    }
+
+    @Test
+    @DisplayName("네트워크를 기다린 뒤 화면을 그리는 함수는 표를 받는다")
+    void everyAsyncViewClaimsOwnership() throws Exception {
+        // **이 파일에서 지금까지 나온 결함은 전부 한 종류였다** - 늦게 온 응답이 최신
+        // 화면을 덮는다. 다섯 번 나왔고 다섯 번 다 사람이 잡았다.
+        //
+        // 표를 받지 않은 함수는 그 결함을 가질 수 있다. 표를 받았는지까지만 본다 -
+        // 어디서 묻는지는 정적으로 확인할 수 없고, 그 한계는 ADR-0023 에 적었다.
+        Map<String, String> functions = functionsIn(withoutComments(read("app.js")));
+        assertThat(functions).as("함수를 하나도 못 찾았다면 이 검사는 아무것도 안 한다")
+                .isNotEmpty();
+
+        List<String> unguarded = new java.util.ArrayList<>();
+        for (Map.Entry<String, String> function : functions.entrySet()) {
+            if (UNGUARDED.containsKey(function.getKey())) {
+                continue;
+            }
+            boolean awaitsNetwork = function.getValue().contains("await getJson(")
+                    || function.getValue().contains("await fetch(");
+            if (awaitsNetwork && !function.getValue().contains("claimView(")) {
+                unguarded.add(function.getKey());
+            }
+        }
+
+        assertThat(unguarded)
+                .as("네트워크를 기다린 뒤 화면을 그리면서 claimView 로 표를 받지 않는다")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("이 검사가 표를 받지 않은 함수를 실제로 잡는다")
+    void theOwnershipRuleCatchesAnUnguardedFunction() {
+        // 잡지 못하는 검사를 두면 경계가 있다고 믿는 것만 남는다.
+        String guarded = "async function a() {\n"
+                + "  const mine = claimView('a');\n"
+                + "  const view = await getJson('/x');\n"
+                + "  if (!mine()) { return; }\n"
+                + "}\n";
+        String unguarded = "async function b() {\n"
+                + "  const view = await getJson('/x');\n"
+                + "  $('n').textContent = view.v;\n"
+                + "}\n";
+
+        Map<String, String> both = functionsIn(guarded + unguarded);
+        assertThat(both.keySet()).containsExactly("a", "b");
+        assertThat(both.get("a").contains("claimView(")).as("표를 받은 함수").isTrue();
+        assertThat(both.get("b").contains("claimView(")).as("받지 않은 함수").isFalse();
+    }
+
     private static String withoutComments(String script) {
         String withoutBlocks = script.replaceAll("(?s)/\\*.*?\\*/", "");
         return withoutBlocks.lines()

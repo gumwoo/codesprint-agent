@@ -37,32 +37,21 @@ const UNREACHABLE_AFTER = 3;
 let activeRunId = null;
 
 /**
- * 마지막으로 **시작된** 요청의 번호. 실행과 제출을 따로 센다.
+ * 접수(제출·실행)는 조회와 규칙이 다르다.
  *
- * `activeRunId` / `activeSubmissionId` 는 202 를 받은 뒤에야 정해지므로, 그
- * **전에** 문제나 사용자가 바뀌거나 다른 요청이 시작되면 막을 것이 없다. 늦게
- * 도착한 202 가 남의 화면에서 폴링을 시작한다.
+ * 조회는 claimView 하나로 끝나지만, 접수에는 **두 구간**이 있다.
  *
- * <b>쓰는 곳은 202 를 받은 직후 한 번뿐이다.</b> 진행 중이던 관찰의 생존 조건에는
- * 넣지 않는다 - 넣으면 새 요청을 누른 순간 앞의 관찰이 끊기고, 그 새 요청이
- * 거절되면 앞 결과를 다시 볼 방법이 없다. 실제로 그렇게 넣었다가 되돌렸다.
+ *   요청 구간   POST 를 보내고 202 를 기다린다      claimView 로 지킨다
+ *   관찰 구간   채점이 끝날 때까지 결과를 지켜본다   activeRunId / activeSubmissionId
  *
- * <p>진행 중이던 관찰은 <b>누군가 실제로 인수할 때</b> 끝난다 - 202 를 받은 쪽이
- * {@code dropActive*} 로 자리를 넘겨받는다. 문제나 사용자가 바뀌는 경우는
- * {@code cancelActive*} 가 번호를 올리고 자리도 함께 비운다.
+ * **두 구간을 한 표로 묶을 수 없다.** 새 요청을 시작할 때 앞의 *요청*은 버려도 되지만
+ * 앞의 *관찰*은 살려야 한다 - 새 요청이 거절되면 앞 결과를 다시 볼 방법이 없다.
+ * 실제로 그렇게 묶었다가 되돌렸다(PR #25).
+ *
+ * 그래서 관찰의 주인은 따로 둔다. 인수인계는 202 를 받은 쪽이 dropActive* 로 하고,
+ * 문제나 사용자가 바뀌면 cancelActive* 가 자리를 비운다.
  */
-let latestRunStart = 0;
-let latestSubmitStart = 0;
 
-/**
- * 마지막으로 시작된 복습 조회.
- *
- * <p>사용자가 바뀌지 않아도 오래된 응답은 버려야 한다. 복습 조회는 목록을 열 때도,
- * 채점이 반영될 때도 불리므로 <b>같은 사용자의 요청 둘이 겹친다.</b> 늦게 온
- * {@code due=true} 가 최신 화면을 덮으면 이미 밀린 일정에 "지금 복습하기" 버튼이
- * 되살아나고, 그것을 누른 제출은 복습으로 세어지지 않는다.
- */
-let latestReviewRefresh = 0;
 
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
@@ -122,7 +111,11 @@ async function getJson(url) {
 }
 
 async function loadProblems() {
+  const mine = claimView("problemList");
   const data = await getJson("/api/problems");
+  if (!mine()) {
+    return;
+  }
   const list = $("problemList");
   list.replaceChildren();
   for (const problem of data.problems) {
@@ -146,7 +139,7 @@ async function loadProblems() {
  * 본다 - {@code statementBody} 가 보이는지로 보면 "내 Skill" 탭을 열어 둔 채 요청이
  * 끝났을 때 잠긴 채로 남는다. 그 탭은 버튼을 잠근 적이 없는데도.
  *
- * <p>번호(latestRunStart 등)만으로는 부족하다. 목록으로 돌아가는 것은 요청을
+ * <p>표(claimView)만으로는 부족하다. 목록으로 돌아가는 것은 요청을
  * 무효화하지 않으므로 - 접수된 채점은 그대로 관찰한다 - 번호가 그대로다.
  */
 function onAProblemScreen() {
@@ -182,6 +175,7 @@ function showLeft(bodyId) {
 async function showSkills() {
   showLeft("skillsBody");
   const userId = Number($("userId").value);
+  const mine = claimView("skills");
   const rows = $("skillRows");
   if (!userId) {
     $("skillsNote").textContent = "사용자를 먼저 만든다.";
@@ -197,8 +191,8 @@ async function showSkills() {
     // 이름과 선수 관계는 커리큘럼에서, 점수는 상태에서 온다. 둘을 code 로 잇는다.
     const defined = new Map(catalog.skills.map((skill) => [skill.code, skill]));
 
-    // 진단과 같은 이유로, 쓰기 전에 확인한다. 사용자가 바뀌면 이 답은 남의 것이다.
-    if (!stillCurrent(userId)) {
+    // 진단과 같은 이유로, 쓰기 전에 확인한다.
+    if (!mine()) {
       return;
     }
 
@@ -241,7 +235,7 @@ async function showSkills() {
     $("skillsNote").textContent =
         "제출할 때마다 다시 계산된다. – 는 아직 근거가 없다는 뜻이고 0 과 다르다.";
   } catch (error) {
-    if (!stillCurrent(userId)) {
+    if (!mine()) {
       return;
     }
     $("skillsNote").textContent = `상태를 불러오지 못했다: ${error.message}`;
@@ -283,6 +277,43 @@ function switchedUser() {
   }
 }
 
+// -- 화면 조각의 소유권 ------------------------------------------------
+//
+// **이 파일에서 지금까지 나온 결함은 전부 한 종류였다** - 늦게 온 응답이 최신
+// 화면을 덮는다. 다섯 번 나왔고 다섯 번 다 리뷰에서 잡혔다.
+//
+// 원인은 "확인" 이 둘로 나뉘어 있었다는 것이다. 사용자가 바뀌었는가, 그리고 더
+// 새 요청이 있는가. 따로 두면 **한쪽만 확인하는 코드**를 쓰게 된다 - 실제로
+// 복습·진단·Skill 표가 전부 앞엣것만 보고 있었다.
+//
+// 그래서 하나로 묶는다. 시작할 때 표를 받고, 화면에 쓰기 전에 그 표로 묻는다.
+// 반쪽만 묻는 것이 불가능해진다.
+
+/** 화면 조각별로 마지막에 표를 가져간 사람. */
+const viewOwners = {};
+
+/**
+ * 이 화면 조각을 지금부터 내가 그린다. **앞의 요청은 여기서 무효가 된다.**
+ *
+ * 조각마다 따로 센다 - 복습 조회가 진단을 무효화하면 관계없는 두 화면이 엮인다.
+ *
+ * @return 아직 내 것인지 묻는 함수. **화면에 쓰기 전에 부른다.**
+ */
+function claimView(name) {
+  const token = (viewOwners[name] = (viewOwners[name] || 0) + 1);
+  const userId = Number($("userId").value);
+  return () => viewOwners[name] === token && Number($("userId").value) === userId;
+}
+
+/**
+ * 진행 중인 것을 무효화한다. 화면이 다른 것을 보게 됐을 때 쓴다.
+ *
+ * claimView 와 달리 새 주인을 세우지 않는다 - 아무도 그리지 않는 상태다.
+ */
+function invalidateView(name) {
+  viewOwners[name] = (viewOwners[name] || 0) + 1;
+}
+
 /**
  * 이 응답이 아직 화면에 쓸 것인가. 그 사이 사용자가 바뀌었으면 버린다.
  *
@@ -321,7 +352,7 @@ function when(isoText) {
 async function refreshReviews() {
   const card = $("reviewCard");
   const userId = Number($("userId").value);
-  const started = ++latestReviewRefresh;
+  const mine = claimView("reviews");
   if (!userId) {
     card.hidden = true;
     return;
@@ -333,13 +364,12 @@ async function refreshReviews() {
   } catch (error) {
     // **여기에도 확인이 필요하다.** 오래된 요청이 늦게 실패하면서 최신 카드를
     // 조용히 감추면, 복습이 잡혀 있는데 없는 것으로 보인다.
-    if (started === latestReviewRefresh && stillCurrent(userId)) {
+    if (mine()) {
       card.hidden = true;
     }
     return;
   }
-  // 화면에 쓰기 전에 확인한다. 사용자가 그대로여도 더 새 조회가 이미 그렸을 수 있다.
-  if (started !== latestReviewRefresh || !stillCurrent(userId)) {
+  if (!mine()) {
     return;
   }
 
@@ -380,6 +410,7 @@ async function refreshReviews() {
 async function refreshDiagnostic() {
   const box = $("diagnostic");
   const userId = Number($("userId").value);
+  const mine = claimView("diagnostic");
   if (!userId) {
     box.hidden = true;
     return;
@@ -389,7 +420,7 @@ async function refreshDiagnostic() {
   try {
     step = await getJson(`/api/users/${userId}/diagnostic`);
   } catch (error) {
-    if (!stillCurrent(userId)) {
+    if (!mine()) {
       return;
     }
     // 진단을 못 읽어도 문제 목록은 그대로 쓸 수 있다. 조용히 감추지 않고 말해 준다.
@@ -403,7 +434,7 @@ async function refreshDiagnostic() {
   // **응답을 받은 뒤, 화면에 쓰기 전에** 확인한다. 사용자를 새로 만들면 두 요청이
   // 겹치고, 늦게 온 옛 사용자의 답이 새 사용자의 화면을 덮어쓴다 - 실제로 그렇게
   // 아무것도 안 한 사용자에게 "1 / 8 확인됨" 이 떴다.
-  if (!stillCurrent(userId)) {
+  if (!mine()) {
     return;
   }
 
@@ -426,7 +457,14 @@ async function refreshDiagnostic() {
 }
 
 async function openProblem(code) {
-  currentProblem = await getJson(`/api/problems/${code}`);
+  // **문제를 빠르게 두 번 고르면 늦게 온 응답이 이긴다.** 마지막에 누른 것이
+  // 아니라 먼저 누른 문제가 열린다 - 이 검사가 그것을 찾았다(ADR-0023).
+  const mine = claimView("problem");
+  const opened = await getJson(`/api/problems/${code}`);
+  if (!mine()) {
+    return;
+  }
+  currentProblem = opened;
   $("problemTitle").textContent = currentProblem.title;
   $("crumbProblem").textContent = currentProblem.code;
   $("problemMeta").textContent =
@@ -474,7 +512,7 @@ async function openProblem(code) {
  * 폴러가 사라졌고, 제출 이력 화면이 없어 다시 볼 방법도 없었다.
  */
 function cancelActivePolling() {
-  latestSubmitStart += 1;
+  invalidateView("submit");
   activeSubmissionId = null;
 }
 
@@ -509,10 +547,9 @@ async function submit() {
   // 누구의 제출인지 여기서 고정한다. 응답을 기다리는 동안 사용자가 바뀔 수 있고,
   // 그때 body 와 화면이 다른 사람을 가리키면 안 된다.
   const submittingUserId = Number($("userId").value);
-  // 어느 문제의 제출인지도 함께 고정한다. 실행과 같은 구멍이 여기에도 있었다 -
-  // 202 를 기다리는 동안 다른 문제를 열면, 그 제출의 판정과 다음 행동이
-  // **다른 문제의 화면에** 나타난다.
-  const started = ++latestSubmitStart;
+  // 요청 구간을 지킨다. 202 를 기다리는 동안 다른 문제를 열거나 사용자를 바꾸면
+  // 그 제출의 판정과 다음 행동이 **다른 화면에** 나타난다.
+  const mine = claimView("submit");
   // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
   // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
   // 루프가 끝나 접수된 제출을 화면이 놓친다.
@@ -551,14 +588,14 @@ async function submit() {
     //
     // 다만 내 번호일 때만 푼다 - 문제 목록으로 돌아가 잠긴 버튼을 늦게 끝난
     // 요청이 다시 열면, 열어 둔 문제가 없는데 제출할 수 있게 된다.
-    if (started === latestSubmitStart && onAProblemScreen()) {
+    if (mine() && onAProblemScreen()) {
       button.disabled = false;
     }
   }
 
   // 접수된 뒤에 화면이 옮겨 갔으면 이 제출은 이 화면 것이 아니다. 서버에서는
   // 그대로 채점되고, 그 사용자로 돌아오면 Skill 상태에 반영돼 있다.
-  if (started !== latestSubmitStart || !stillCurrent(submittingUserId)) {
+  if (!mine()) {
     return;
   }
 
@@ -584,9 +621,9 @@ async function runSamples() {
   }
   const button = $("runButton");
   const runningUserId = Number($("userId").value);
-  // **POST 를 보내기 전에 번호를 잡는다.** 202 를 기다리는 동안 문제나 사용자가
+  // **POST 를 보내기 전에 표를 받는다.** 202 를 기다리는 동안 문제나 사용자가
   // 바뀌거나 다른 실행이 시작될 수 있고, 그때 이 응답은 남의 화면 것이 된다.
-  const started = ++latestRunStart;
+  const mine = claimView("run");
   button.disabled = true;
   reportTo(runningUserId, "실행하는 중…");
 
@@ -616,12 +653,12 @@ async function runSamples() {
     //
     // **내 번호일 때만 푼다.** 문제 목록으로 돌아가 버튼이 잠긴 뒤에 늦게 끝난
     // 요청이 그것을 다시 열면, 열어 둔 문제가 없는데 실행할 수 있게 된다.
-    if (started === latestRunStart && onAProblemScreen()) {
+    if (mine() && onAProblemScreen()) {
       button.disabled = false;
     }
   }
 
-  if (started !== latestRunStart || !stillCurrent(runningUserId)) {
+  if (!mine()) {
     return;
   }
   // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
@@ -633,7 +670,7 @@ async function runSamples() {
 function cancelActiveRun() {
   // 진행 중인 POST 도 함께 버린다. 번호를 올려 두면 그 요청의 202 가 뒤늦게
   // 도착해도 자기 번호가 이미 지났음을 알고 물러난다.
-  latestRunStart += 1;
+  invalidateView("run");
   dropActiveRun();
 }
 
@@ -897,12 +934,19 @@ function heading(label) {
 }
 
 async function goToNextProblem(submissionId) {
+  const mine = claimView("nextProblem");
   const response = await fetch(`/api/submissions/${submissionId}/next-problem`);
+  if (!mine()) {
+    return;
+  }
   if (!response.ok) {
     $("nextAction").append(note("줄 문제를 아직 고르지 못했다."));
     return;
   }
   const next = await response.json();
+  if (!mine()) {
+    return;
+  }
   if (!next.problem) {
     // 문제가 없는 것과 아직 정해지지 않은 것은 다르다. 서버가 이유를 준다.
     $("nextAction").append(note(next.reason));
