@@ -54,6 +54,16 @@ let activeRunId = null;
 let latestRunStart = 0;
 let latestSubmitStart = 0;
 
+/**
+ * 마지막으로 시작된 복습 조회.
+ *
+ * <p>사용자가 바뀌지 않아도 오래된 응답은 버려야 한다. 복습 조회는 목록을 열 때도,
+ * 채점이 반영될 때도 불리므로 <b>같은 사용자의 요청 둘이 겹친다.</b> 늦게 온
+ * {@code due=true} 가 최신 화면을 덮으면 이미 밀린 일정에 "지금 복습하기" 버튼이
+ * 되살아나고, 그것을 누른 제출은 복습으로 세어지지 않는다.
+ */
+let latestReviewRefresh = 0;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -311,6 +321,7 @@ function when(isoText) {
 async function refreshReviews() {
   const card = $("reviewCard");
   const userId = Number($("userId").value);
+  const started = ++latestReviewRefresh;
   if (!userId) {
     card.hidden = true;
     return;
@@ -320,10 +331,15 @@ async function refreshReviews() {
   try {
     view = await getJson(`/api/users/${userId}/reviews`);
   } catch (error) {
-    card.hidden = true;
+    // **여기에도 확인이 필요하다.** 오래된 요청이 늦게 실패하면서 최신 카드를
+    // 조용히 감추면, 복습이 잡혀 있는데 없는 것으로 보인다.
+    if (started === latestReviewRefresh && stillCurrent(userId)) {
+      card.hidden = true;
+    }
     return;
   }
-  if (!stillCurrent(userId)) {
+  // 화면에 쓰기 전에 확인한다. 사용자가 그대로여도 더 새 조회가 이미 그렸을 수 있다.
+  if (started !== latestReviewRefresh || !stillCurrent(userId)) {
     return;
   }
 
