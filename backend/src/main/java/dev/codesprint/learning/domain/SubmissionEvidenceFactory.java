@@ -81,10 +81,12 @@ public final class SubmissionEvidenceFactory {
     }
 
     /**
-     * 복습 제출 하나. 정본: Addendum §16, ADR-0021.
+     * 복습 제출 하나. 정본: Addendum §16.
      *
-     * @param daysSinceLast 직전 관측으로부터 지난 날. <b>서버가 일정에서 계산한다</b> -
-     *     클라이언트가 신고하지 않는다. 신고받으면 사용자가 자기 retention 을 정한다.
+     * @param daysSinceLast 직전 관측으로부터 지난 날. <b>클라이언트가 신고하지 않는다</b> -
+     *     신고받으면 사용자가 자기 retention 을 정한다. 지금은 이 값을 만드는 런타임
+     *     경로가 없다. 복습 일정이 붙을 때 서버가 그 일정에서 계산하며, 그때 0 이
+     *     들어올 수 없다는 것도 일정 쪽에서 보장한다 - 여기서는 음수만 막는다.
      * @param succeeded 복습에서 독립적으로 통과했는가. Judge 판정에서 그대로 나온다.
      */
     public record ReviewSubmission(

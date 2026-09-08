@@ -43,7 +43,7 @@
         "daysSinceLast": {
           "type": "integer",
           "minimum": 0,
-          "description": "직전 관측으로부터 지난 날. **서버가 일정에서 계산한다** - 클라이언트가 신고하지 않는다(ADR-0021)."
+          "description": "직전 관측으로부터 지난 날. **클라이언트가 신고하지 않는다** - 신고받으면 사용자가 자기 retention 을 정한다. 이 값을 만드는 런타임 경로는 복습 일정이 붙을 때 생긴다."
         },
         "succeeded": {
           "type": "boolean",
