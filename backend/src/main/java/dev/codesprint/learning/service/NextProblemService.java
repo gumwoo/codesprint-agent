@@ -75,13 +75,25 @@ public class NextProblemService {
             // 것이라, 아직 재 보지도 않은 Skill 의 수준을 재지 못한다.
             case DIAGNOSTIC_PROBE -> pick(userId, targetSkill, "NORMAL",
                     justAttemptedProblemId, "초기 진단이 아직 확인하지 않은 Skill");
+            // 복습은 **종류를 가리지 않는다**(ADR-0021). kind: REVIEW 가 있으면 그것을
+            // 주지만, 없는 Skill 이 일곱이라 종류를 요구하면 그쪽은 영원히 복습할 수
+            // 없다 - 갈 곳 없는 액션을 또 만드는 셈이다.
+            case REVIEW_DUE -> {
+                Selection curated = pick(userId, targetSkill, "REVIEW",
+                        justAttemptedProblemId, "예약된 복습");
+                yield curated.problemCode() != null ? curated
+                        : pick(userId, targetSkill, "NORMAL",
+                                justAttemptedProblemId, "예약된 복습 - 이 Skill 의 일반 문제로 확인한다");
+            }
             case RETRY_VARIANT -> pick(userId, targetSkill, "NORMAL",
                     justAttemptedProblemId, "같은 Skill 의 다른 문제로 연습한다");
 
             // 문제를 주지 않는 행동들. 각각 이유가 다르므로 뭉뚱그리지 않는다.
             case CONTINUE -> none("같은 문제를 이어서 푼다 - 새 문제를 고르지 않는다");
             case REVIEW_CONCEPT -> none("개념 자료가 아직 없다 - 문제로 대체하지 않는다");
-            case SCHEDULE_REVIEW -> none("복습 일정이 아직 없다");
+            // 일정은 서비스가 이미 저장했다. 지금 줄 문제는 없다 - 간격 복습은
+            // 시간이 지나야 의미가 있고, 바로 다시 풀게 하면 그건 복습이 아니다.
+            case SCHEDULE_REVIEW -> none("복습을 예약했다 - 간격이 지난 뒤에 다시 확인한다");
             case UNLOCK_NEXT -> none("다음 Skill 을 고르는 규칙이 아직 없다");
             default -> none("이 행동을 문제로 옮기는 규칙이 아직 없다: " + action);
         };

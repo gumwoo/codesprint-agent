@@ -18,6 +18,7 @@ import dev.codesprint.learning.domain.NextAction;
 import dev.codesprint.learning.domain.SkillState;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory.Submission;
+import dev.codesprint.learning.persistence.ReviewScheduleRow;
 import dev.codesprint.learning.persistence.SubmissionRepository;
 import dev.codesprint.learning.persistence.SubmissionRow;
 import dev.codesprint.learning.persistence.UserSkillRepository;
@@ -73,11 +74,13 @@ public class JudgeResultApplier {
     private final ReviewService reviews;
     private final NextProblemService nextProblem;
     private final DiagnosticService diagnostic;
+    private final ReviewScheduleService reviewSchedules;
 
     public JudgeResultApplier(ProblemCatalog catalog, EvidenceStore evidenceStore,
             MasteryService mastery, DecisionEngine decisions, SubmissionRepository submissions,
             UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews,
-            NextProblemService nextProblem, DiagnosticService diagnostic) {
+            NextProblemService nextProblem, DiagnosticService diagnostic,
+            ReviewScheduleService reviewSchedules) {
         this.catalog = catalog;
         this.evidenceStore = evidenceStore;
         this.mastery = mastery;
@@ -85,9 +88,10 @@ public class JudgeResultApplier {
         this.submissions = submissions;
         this.userSkills = userSkills;
         this.jobs = jobs;
-        this.reviews = reviews;
+        this.reviewSchedules = reviewSchedules;
         this.nextProblem = nextProblem;
         this.diagnostic = diagnostic;
+        this.reviews = reviews;
     }
 
     /**
@@ -202,7 +206,22 @@ public class JudgeResultApplier {
                 ? Instant.now() : submission.submittedAt();
         String occurredAt = occurred.truncatedTo(ChronoUnit.SECONDS).toString();
 
+        // **이 제출이 예약된 복습인가.** 문제 종류가 아니라 일정이 정한다(ADR-0021).
+        // 만기된 일정이 PRIMARY Skill 에 걸려 있을 때만 복습이다.
+        ReviewScheduleRow dueReview =
+                reviewSchedules.dueFor(userId, primarySkill).orElse(null);
+
         for (SkillLink link : problem.skills()) {
+            if (dueReview != null && link.skillCode().equals(primarySkill)) {
+                // PRIMARY 만 복습으로 센다. 곁다리로 걸린 Skill 은 이 복습이 겨냥한
+                // 것이 아니고, 그 Skill 의 일정은 따로 돈다.
+                //
+                // **둘 다 만들지 않는다.** evidenceId 가 (제출, Skill) 로 정해지므로
+                // 하나만 남는데, 어느 쪽이 남는지가 순서에 달리면 안 된다.
+                applyReview(userId, dueReview, sourceEventId, occurredAt, occurred,
+                        judged.status(), submission);
+                continue;
+            }
             Evidence evidence = SubmissionEvidenceFactory.fromSubmission(new Submission(
                     sourceEventId,
                     link.skillCode(),
@@ -276,9 +295,19 @@ public class JudgeResultApplier {
                 judged.status(),
                 confirmedMistake,
                 consecutiveFailures(userId, submission.problemId()),
-                false,  // 복습 성공 기록은 복습 일정이 붙어야 생긴다
+                reviewSchedules.isScheduled(userId, primarySkill),
                 mastery.masteriesOf(userId),
-                pendingDiagnosticSkill(userId)));
+                pendingDiagnosticSkill(userId),
+                // 방금 이 제출로 복습을 끝냈다면 그 일정은 더 이상 만기가 아니다 -
+                // 위에서 다음 간격으로 밀어 두었으므로 여기서 다시 걸리지 않는다.
+                reviewSchedules.nextDue(userId)
+                        .map(ReviewScheduleRow::skillCode).orElse(null)));
+
+        // 결정이 "복습을 예약하라" 면 여기서 잡는다. **이미 있으면 그대로 둔다** -
+        // 제출마다 새로 잡으면 30일까지 올라간 간격이 매번 1일로 되돌아간다.
+        if (action.type() == ActionType.SCHEDULE_REVIEW) {
+            reviewSchedules.scheduleIfAbsent(userId, primarySkill, occurred);
+        }
 
         // 다음에 풀 문제도 지금 고정한다. 조회할 때 고르면 그 사이 다른 제출이
         // 바꿔 놓은 상태를 보게 되어 같은 제출이 다른 문제를 가리킨다.
@@ -364,6 +393,26 @@ public class JudgeResultApplier {
     }
 
     /** 드릴의 관측은 좁다 - alpha 와 confidence 가중치가 모두 작다(Addendum §9, §18). */
+    /**
+     * 복습 제출을 Evidence 로 옮기고 다음 간격을 잡는다.
+     *
+     * <p>성공은 <b>독립적으로</b> 통과한 것만이다. 힌트를 보고 맞힌 것을 복습 성공으로
+     * 세면 "시간이 지나도 혼자 되는가" 를 재지 못한다 - 지금은 힌트 기능이 없어
+     * 판정만 보면 되지만, 생기면 여기가 그 조건을 지켜야 한다.
+     */
+    private void applyReview(Long userId, ReviewScheduleRow schedule, String sourceEventId,
+            String occurredAt, Instant occurred, JudgeStatus status, SubmissionRow submission) {
+
+        boolean succeeded = status == JudgeStatus.ACCEPTED
+                && SubmissionEvidenceFactory.isIndependentAttempt(
+                        status, submission.hintLevel(), submission.solutionViewed());
+
+        int daysSince = reviewSchedules.complete(schedule, succeeded, occurred);
+        evidenceStore.saveIfAbsent(userId, SubmissionEvidenceFactory.fromReview(
+                new SubmissionEvidenceFactory.ReviewSubmission(
+                        sourceEventId, schedule.skillCode(), daysSince, succeeded, occurredAt)));
+    }
+
     private static EvidenceType evidenceTypeOf(ProblemDefinition problem) {
         return "MICRO_DRILL".equals(problem.kind())
                 ? EvidenceType.MICRO_DRILL_RESULT
