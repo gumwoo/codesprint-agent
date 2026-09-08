@@ -1,6 +1,7 @@
 package dev.codesprint.learning.service;
 
 import dev.codesprint.learning.domain.DiagnosticPlanner;
+import dev.codesprint.learning.domain.SkillState;
 import dev.codesprint.learning.domain.DiagnosticPlanner.Plan;
 import dev.codesprint.problem.ProblemCatalog;
 import dev.codesprint.problem.ProblemCatalog.ProblemDefinition;
@@ -45,7 +46,18 @@ public class DiagnosticService {
 
     @Transactional(readOnly = true)
     public Step nextStep(Long userId) {
-        Plan plan = planner.plan(mastery.statesOf(userId));
+        return nextStep(mastery.statesOf(userId));
+    }
+
+    /**
+     * 이미 계산한 상태로 묻는다.
+     *
+     * <p>상태 재계산은 활성 Skill 수만큼 조회를 낸다(ADR-0009). 한 번의 결과 반영에서
+     * 진단과 다음 Skill 선택이 각각 다시 계산하면 그 비용이 두 배가 되고, 더 나쁘게는
+     * <b>한 응답 안에서 서로 다른 시점의 상태를 보게 된다.</b>
+     */
+    public Step nextStep(List<SkillState> states) {
+        Plan plan = planner.plan(states);
         int total = plan.resolved().size() + plan.remaining().size();
 
         if (plan.done()) {
