@@ -1,0 +1,38 @@
+{
+  "name": "review-30-days",
+  "description": "30일 뒤. 1.00 - 표의 마지막 칸이다.",
+  "input": {
+    "sourceEventId": "submission:9",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "daysSinceLast": 30,
+    "succeeded": true,
+    "occurredAt": "2026-09-05T10:00:00Z"
+  },
+  "expected": {
+    "evidenceId": "ev_fb10d9d38aaef4c521ba4f62",
+    "sourceEventId": "submission:9",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "REVIEW_RESULT",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.3,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": null,
+      "independent": 0.85,
+      "retention": 1.0,
+      "speed": null
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": null,
+      "judgeStatus": null,
+      "hintLevel": null,
+      "solutionViewed": null,
+      "independentAttempt": true,
+      "reviewSucceeded": true,
+      "daysSinceLast": 30,
+      "verdict": null
+    }
+  }
+}

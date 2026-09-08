@@ -24,6 +24,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GOLDEN = ROOT / "tests" / "golden" / "evidence"
+REVIEW_GOLDEN = ROOT / "tests" / "golden" / "evidence-review"
 sys.path.insert(0, str(ROOT))
 
 from learning import evidence as ev  # noqa: E402
@@ -38,6 +39,13 @@ SKILL_EVIDENCE = _schema("skill-evidence.schema.json")
 VALIDATOR = Draft202012Validator(
     CASE_SCHEMA,
     resolver=RefResolver(base_uri=CASE_SCHEMA["$id"], referrer=CASE_SCHEMA,
+                         store={SKILL_EVIDENCE["$id"]: SKILL_EVIDENCE}),
+)
+
+REVIEW_CASE_SCHEMA = _schema("review-evidence-golden.schema.json")
+REVIEW_VALIDATOR = Draft202012Validator(
+    REVIEW_CASE_SCHEMA,
+    resolver=RefResolver(base_uri=REVIEW_CASE_SCHEMA["$id"], referrer=REVIEW_CASE_SCHEMA,
                          store={SKILL_EVIDENCE["$id"]: SKILL_EVIDENCE}),
 )
 
@@ -111,6 +119,48 @@ CASES: list[tuple[str, str, dict]] = [
 ]
 
 
+# 복습 매핑(Addendum 16). **제출 매핑과 나눠 둔다** - 고정하는 것이 다르다.
+REVIEW_BASE = {
+    "sourceEventId": "submission:9",
+    "skillCode": SKILL,
+    "daysSinceLast": 1,
+    "succeeded": True,
+    "occurredAt": "2026-09-05T10:00:00Z",
+}
+
+# 간격마다 관측값이 다르므로 **구간 경계를 전부** 둔다. 하나만 고정하면 표를
+# 잘못 옮겨도 그 한 칸만 맞으면 통과한다.
+REVIEW_CASES: list[tuple[str, str, dict]] = [
+    ("review-1-day", "1일 뒤 독립 AC. retention 0.75.", {"daysSinceLast": 1}),
+    ("review-3-days", "3일 뒤. 0.82.", {"daysSinceLast": 3}),
+    ("review-7-days", "7일 뒤. 0.90.", {"daysSinceLast": 7}),
+    ("review-14-days", "14일 뒤. 0.95.", {"daysSinceLast": 14}),
+    ("review-30-days", "30일 뒤. 1.00 - 표의 마지막 칸이다.", {"daysSinceLast": 30}),
+    ("review-60-days", "표를 넘어가도 마지막 칸에 머문다. 더 늘려 주지 않는다.",
+     {"daysSinceLast": 60}),
+    ("review-between-intervals",
+     "구간 사이는 **아래쪽** 값을 쓴다. 5일은 3일 칸(0.82)이다.",
+     {"daysSinceLast": 5}),
+    ("review-failed",
+     "복습 실패는 간격과 무관하게 0.35 이고, 독립 풀이도 0.30 으로 떨어진다.",
+     {"daysSinceLast": 30, "succeeded": False}),
+]
+
+
+def build_review(name: str, description: str, overrides: dict) -> dict:
+    args = dict(REVIEW_BASE)
+    args.update(overrides)
+    result = ev.from_review(
+        source_event_id=args["sourceEventId"],
+        skill_code=args["skillCode"],
+        days_since_last=args["daysSinceLast"],
+        succeeded=args["succeeded"],
+        occurred_at=args["occurredAt"],
+    )
+    return {"name": name, "description": description, "input": args,
+            "expected": result.to_dict()}
+
+
 def build(name: str, description: str, overrides: dict) -> dict:
     args = dict(BASE)
     args.update(overrides)
@@ -138,28 +188,25 @@ def build(name: str, description: str, overrides: dict) -> dict:
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--write", action="store_true", help="golden 을 다시 생성한다")
-    args = parser.parse_args()
-
-    GOLDEN.mkdir(parents=True, exist_ok=True)
+def run_group(label, directory, validator, cases, builder, write: bool) -> int:
+    """한 묶음을 생성하거나 검증한다. 실패 건수를 돌려준다."""
+    directory.mkdir(parents=True, exist_ok=True)
     failed = 0
     names = set()
 
-    for name, description, overrides in CASES:
-        case = build(name, description, overrides)
-        errs = [f"{list(e.path)}: {e.message}" for e in VALIDATOR.iter_errors(case)]
+    for name, description, overrides in cases:
+        case = builder(name, description, overrides)
+        errs = [f"{list(e.path)}: {e.message}" for e in validator.iter_errors(case)]
         if errs:
             failed += 1
             print(f"[X] {name}: golden 계약 위반 {errs[:2]}")
             continue
         names.add(name)
 
-        path = GOLDEN / f"{name}.json"
+        path = directory / f"{name}.json"
         payload = json.dumps(case, ensure_ascii=False, indent=2) + "\n"
 
-        if args.write:
+        if write:
             path.write_text(payload, encoding="utf-8", newline="")
             continue
         if not path.exists():
@@ -179,19 +226,35 @@ def main() -> int:
             continue
         print(f"[O] {name}")
 
-    for path in sorted(GOLDEN.glob("*.json")):
+    # 남은 파일도 본다. 케이스를 지웠는데 golden 이 남아 있으면, 그 파일은 아무
+    # 매핑도 고정하지 않으면서 통과한다.
+    for path in sorted(directory.glob("*.json")):
         if path.stem not in names:
             failed += 1
-            print(f"[X] {path.name}: CASES 에 없는 golden 파일이 남아 있다")
+            print(f"[X] {path.name}: {label} 케이스 목록에 없는 golden 파일이 남아 있다")
+
+    print(f"[{'OK' if not failed else 'FAIL'}] {label} {len(names)}건")
+    return failed
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--write", action="store_true", help="golden 을 다시 생성한다")
+    args = parser.parse_args()
+
+    failed = run_group("제출 -> Evidence", GOLDEN, VALIDATOR, CASES, build, args.write)
+    print()
+    failed += run_group("복습 -> Evidence", REVIEW_GOLDEN, REVIEW_VALIDATOR,
+                        REVIEW_CASES, build_review, args.write)
 
     if args.write:
-        print(f"\n[OK] evidence golden {len(names)}건 생성")
+        print("\n[OK] golden 을 다시 만들었다")
         return 0
     if failed:
         print(f"\n[FAIL] {failed}건 - 매핑을 의도적으로 바꿨다면 --write 로 갱신하고,")
         print("       무엇이 왜 달라졌는지 커밋 메시지에 남긴다")
         return 1
-    print(f"\n[OK] evidence golden {len(names)}건이 현재 매핑과 일치한다")
+    print("\n[OK] evidence golden 이 현재 매핑과 일치한다")
     return 0
 
 

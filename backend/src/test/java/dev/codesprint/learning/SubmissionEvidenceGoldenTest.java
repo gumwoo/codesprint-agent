@@ -62,7 +62,58 @@ class SubmissionEvidenceGoldenTest {
         JsonNode golden = MAPPER.readTree(Files.readString(goldenFile));
         String hint = goldenFile.getFileName() + " — " + golden.get("description").asText();
 
-        Evidence actual = SubmissionEvidenceFactory.fromSubmission(readInput(golden.get("input")));
+        assertMatches(
+                SubmissionEvidenceFactory.fromSubmission(readInput(golden.get("input"))),
+                golden, hint);
+    }
+
+    static Path reviewGoldenDir() {
+        return Path.of(System.getProperty("codesprint.repoRoot"),
+                "tests", "golden", "evidence-review");
+    }
+
+    static Stream<Path> reviewGoldenCases() throws IOException {
+        try (var files = Files.list(reviewGoldenDir())) {
+            List<Path> cases = files.filter(p -> p.toString().endsWith(".json")).sorted().toList();
+            if (cases.isEmpty()) {
+                throw new IllegalStateException("복습 golden 이 하나도 없다: " + reviewGoldenDir());
+            }
+            return cases.stream();
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("reviewGoldenCases")
+    @DisplayName("복습 매핑도 Python oracle 과 같은 Evidence 를 만든다")
+    void reviewMatchesPythonOracle(Path goldenFile) throws IOException {
+        // 이 매핑만 reviewSucceeded 를 채우고, 그 값이 MASTERED 의 네 번째 조건이다.
+        // 여기가 갈리면 "숙달했다" 의 뜻이 두 구현에서 달라진다.
+        JsonNode golden = MAPPER.readTree(Files.readString(goldenFile));
+        String hint = goldenFile.getFileName() + " — " + golden.get("description").asText();
+        JsonNode input = golden.get("input");
+
+        assertMatches(SubmissionEvidenceFactory.fromReview(
+                new SubmissionEvidenceFactory.ReviewSubmission(
+                        input.get("sourceEventId").asText(),
+                        input.get("skillCode").asText(),
+                        input.get("daysSinceLast").asInt(),
+                        input.get("succeeded").asBoolean(),
+                        input.get("occurredAt").asText())),
+                golden, hint);
+    }
+
+    @Test
+    @DisplayName("복습 golden 이 비어 있으면 이 테스트는 아무것도 검증하지 못한다")
+    void reviewGoldenSetIsNotEmpty() throws IOException {
+        try (var files = Files.list(reviewGoldenDir())) {
+            assertThat(files.filter(p -> p.toString().endsWith(".json")).count())
+                    .as("복습 golden fixture 개수")
+                    .isGreaterThanOrEqualTo(6);
+        }
+    }
+
+    /** 두 매핑이 같은 것을 비교한다. 한쪽만 느슨해지지 않게 한 곳에 둔다. */
+    private static void assertMatches(Evidence actual, JsonNode golden, String hint) {
         JsonNode expected = golden.get("expected");
 
         // null 은 "이 Skill 에 아무것도 기록하지 않는다" 다. 관측값이 전부 null 인
@@ -116,10 +167,21 @@ class SubmissionEvidenceGoldenTest {
                 .isEqualTo(text(context, "problemCode"));
         assertThat(actual.context().judgeStatus()).as(hint + " / context.judgeStatus")
                 .isEqualTo(text(context, "judgeStatus"));
+        // **null 을 0 / false 로 읽지 않는다.** asInt() 는 null 에서 0 을 주므로,
+        // 그대로 두면 "힌트를 안 썼다" 와 "힌트라는 개념이 없다" 가 같아진다 -
+        // 복습 Evidence 가 정확히 그 경우다.
         assertThat(actual.context().hintLevel()).as(hint + " / context.hintLevel")
-                .isEqualTo(context.get("hintLevel").asInt());
+                .isEqualTo(context.get("hintLevel").isNull()
+                        ? null : context.get("hintLevel").asInt());
         assertThat(actual.context().solutionViewed()).as(hint + " / context.solutionViewed")
-                .isEqualTo(context.get("solutionViewed").asBoolean());
+                .isEqualTo(context.get("solutionViewed").isNull()
+                        ? null : context.get("solutionViewed").asBoolean());
+        assertThat(actual.context().reviewSucceeded()).as(hint + " / context.reviewSucceeded")
+                .isEqualTo(context.get("reviewSucceeded").isNull()
+                        ? null : context.get("reviewSucceeded").asBoolean());
+        assertThat(actual.context().daysSinceLast()).as(hint + " / context.daysSinceLast")
+                .isEqualTo(context.get("daysSinceLast").isNull()
+                        ? null : context.get("daysSinceLast").asInt());
         // 이 값이 틀리면 MASTERED 인 사용자가 힌트를 다 보고 틀렸을 때 WEAKENED 로
         // 떨어진다 - 독립 풀이를 시도한 적이 없는데도.
         assertThat(actual.context().independentAttempt())
