@@ -129,6 +129,20 @@ async function loadProblems() {
   }
 }
 
+/**
+ * 지금 버튼이 살아 있어도 되는 화면인가.
+ *
+ * <p>버튼을 잠그는 곳은 {@link showPicker} 하나뿐이다. 그래서 <b>목록이 보이는지</b>만
+ * 본다 - {@code statementBody} 가 보이는지로 보면 "내 Skill" 탭을 열어 둔 채 요청이
+ * 끝났을 때 잠긴 채로 남는다. 그 탭은 버튼을 잠근 적이 없는데도.
+ *
+ * <p>번호(latestRunStart 등)만으로는 부족하다. 목록으로 돌아가는 것은 요청을
+ * 무효화하지 않으므로 - 접수된 채점은 그대로 관찰한다 - 번호가 그대로다.
+ */
+function onAProblemScreen() {
+  return $("picker").hidden;
+}
+
 function showPicker() {
   showLeft("picker");
   refreshDiagnostic();
@@ -449,7 +463,7 @@ async function submit() {
     //
     // 다만 내 번호일 때만 푼다 - 문제 목록으로 돌아가 잠긴 버튼을 늦게 끝난
     // 요청이 다시 열면, 열어 둔 문제가 없는데 제출할 수 있게 된다.
-    if (started === latestSubmitStart) {
+    if (started === latestSubmitStart && onAProblemScreen()) {
       button.disabled = false;
     }
   }
@@ -514,7 +528,7 @@ async function runSamples() {
     //
     // **내 번호일 때만 푼다.** 문제 목록으로 돌아가 버튼이 잠긴 뒤에 늦게 끝난
     // 요청이 그것을 다시 열면, 열어 둔 문제가 없는데 실행할 수 있게 된다.
-    if (started === latestRunStart) {
+    if (started === latestRunStart && onAProblemScreen()) {
       button.disabled = false;
     }
   }
