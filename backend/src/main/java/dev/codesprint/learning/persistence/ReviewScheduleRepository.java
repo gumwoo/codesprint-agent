@@ -31,6 +31,8 @@ public interface ReviewScheduleRepository extends JpaRepository<ReviewScheduleRo
 
     Optional<ReviewScheduleRow> findByClaimedSubmissionId(Long submissionId);
 
+    List<ReviewScheduleRow> findByUserIdOrderByDueAtAsc(Long userId);
+
     /**
      * 만기된 복습을 <b>이 제출이 가져간다.</b> 가져간 쪽만 1 을 받는다.
      *

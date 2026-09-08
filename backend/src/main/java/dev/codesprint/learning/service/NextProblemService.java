@@ -78,13 +78,7 @@ public class NextProblemService {
             // 복습은 **종류를 가리지 않는다**(ADR-0021). kind: REVIEW 가 있으면 그것을
             // 주지만, 없는 Skill 이 일곱이라 종류를 요구하면 그쪽은 영원히 복습할 수
             // 없다 - 갈 곳 없는 액션을 또 만드는 셈이다.
-            case REVIEW_DUE -> {
-                Selection curated = pick(userId, targetSkill, "REVIEW",
-                        justAttemptedProblemId, "예약된 복습");
-                yield curated.problemCode() != null ? curated
-                        : pick(userId, targetSkill, "NORMAL",
-                                justAttemptedProblemId, "예약된 복습 - 이 Skill 의 일반 문제로 확인한다");
-            }
+            case REVIEW_DUE -> forReview(userId, targetSkill, justAttemptedProblemId);
             case RETRY_VARIANT -> pick(userId, targetSkill, "NORMAL",
                     justAttemptedProblemId, "같은 Skill 의 다른 문제로 연습한다");
 
@@ -121,6 +115,21 @@ public class NextProblemService {
                 submission.nextProblemCode() == null
                         ? null : catalog.find(submission.nextProblemCode()),
                 submission.nextProblemReason()));
+    }
+
+    /**
+     * 만기된 복습으로 줄 문제.
+     *
+     * <p>복습 진입점(화면의 복습 카드)과 결과 패널의 {@code REVIEW_DUE} 가 <b>같은 것을
+     * 가리켜야 한다.</b> 규칙을 두 곳에 적으면 어느 쪽을 눌렀느냐에 따라 다른 문제가
+     * 나오고, 사용자는 그중 하나만 복습으로 세어지는 이유를 알 수 없다.
+     */
+    public Selection forReview(Long userId, String skillCode, Long justAttemptedProblemId) {
+        Selection curated = pick(userId, skillCode, "REVIEW",
+                justAttemptedProblemId, "예약된 복습");
+        return curated.problemCode() != null ? curated
+                : pick(userId, skillCode, "NORMAL", justAttemptedProblemId,
+                        "예약된 복습 - 이 Skill 의 일반 문제로 확인한다");
     }
 
     private Selection pick(Long userId, String skillCode, String kind,

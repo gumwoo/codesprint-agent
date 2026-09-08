@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/reviews.schema.json",
+  "title": "Reviews",
+  "description": "GET /api/users/{id}/reviews 의 응답. 예약된 간격 복습이다(PRD §79, ADR-0021). **만기 여부를 화면이 계산하지 않는다** - 서버가 due 를 정해서 내려준다. 시각 비교를 브라우저에 맡기면 그쪽 시계가 학습 기록을 정하게 된다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "userId",
+    "now",
+    "reviews"
+  ],
+  "properties": {
+    "userId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "now": {
+      "type": "string",
+      "pattern": "(Z|[+-][0-9]{2}:[0-9]{2})$",
+      "description": "서버가 본 현재 시각. dueAt 을 사람이 읽을 때의 기준이며, **판정에 쓰라고 주는 값이 아니다** - 그건 due 가 이미 말했다."
+    },
+    "reviews": {
+      "type": "array",
+      "description": "만기가 먼저 온다. 화면이 정렬하지 않는다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "skillCode",
+          "dueAt",
+          "due",
+          "intervalDays",
+          "problem"
+        ],
+        "properties": {
+          "skillCode": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "dueAt": {
+            "type": "string",
+            "pattern": "(Z|[+-][0-9]{2}:[0-9]{2})$"
+          },
+          "due": {
+            "type": "boolean",
+            "description": "지금 복습할 차례인가. 이미 다른 제출이 가져간 복습은 false 다 - 진행 중인 것을 또 하라고 하지 않는다."
+          },
+          "intervalDays": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "problem": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "title"
+            ],
+            "description": "만기일 때 풀 문제. 아니면 null 이다 - **생략하지 않는다.** 만기가 아닌데 문제를 주면 사용자는 지금 풀어도 되는 것으로 읽고, 그 제출은 복습으로 세어지지 않는다.",
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^P[0-9]{2}_[A-Z0-9_]+$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
