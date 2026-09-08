@@ -14,12 +14,17 @@ public interface ReviewScheduleRepository extends JpaRepository<ReviewScheduleRo
     Optional<ReviewScheduleRow> findByUserIdAndSkillCode(Long userId, String skillCode);
 
     /**
-     * 지금 만기인 일정들. <b>가장 오래 밀린 것부터</b> 준다 — 여러 개가 밀리면 오래된
-     * 쪽이 잊혔을 가능성이 크다.
+     * 지금 만기이고 <b>아직 아무도 가져가지 않은</b> 일정들. 가장 오래 밀린 것부터
+     * 준다 — 여러 개가 밀리면 오래된 쪽이 잊혔을 가능성이 크다.
+     *
+     * <p>가져간 것을 빼지 않으면, 채점을 기다리는 동안 <b>같은 복습을 또 하라는
+     * 액션이 나간다.</b> 그 안내를 따라 낸 제출은 claim 에 실패해 평범한 제출이 되므로,
+     * 화면이 말한 것과 실제로 기록되는 것이 어긋난다.
      */
     @Query("""
             select s from ReviewScheduleRow s
             where s.userId = :userId and s.dueAt <= :now
+              and s.claimedSubmissionId is null
             order by s.dueAt asc
             """)
     List<ReviewScheduleRow> dueFor(@Param("userId") Long userId, @Param("now") Instant now);

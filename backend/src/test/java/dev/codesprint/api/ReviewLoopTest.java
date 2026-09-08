@@ -388,6 +388,29 @@ class ReviewLoopTest {
     }
 
     @Test
+    @DisplayName("진행 중인 복습을 또 하라고 하지 않는다")
+    void aClaimedReviewIsNotOfferedAgain() throws Exception {
+        // 복습을 낸 뒤 채점을 기다리는 동안 다른 제출의 결과가 먼저 반영될 수 있다.
+        // 그때 이미 가져간 일정을 또 만기로 내보내면, 사용자는 진행 중인 복습을
+        // 또 하라는 안내를 받는다 - 그리고 그 안내를 따라 낸 제출은 claim 에
+        // 실패해 평범한 제출이 되므로, 화면이 말한 것과 기록되는 것이 어긋난다.
+        reachTheThreshold();
+        clock.advance(Duration.ofDays(2));
+
+        long review = submit("P09_BFS_VARIANT_A");   // 복습을 가져간다
+        assertThat(schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow()
+                .claimedSubmissionId()).isEqualTo(review);
+
+        // 그 사이 다른 Skill 의 제출이 먼저 끝난다.
+        long other = submit("P12_GRID_COORDINATE");
+        judge(other, "WRONG_ANSWER");
+        poller.applyFinishedJobs();
+
+        assertThat(nextAction(other).get("type").asText())
+                .as("복습은 이미 진행 중이다").isNotEqualTo("REVIEW_DUE");
+    }
+
+    @Test
     @DisplayName("복습에 성공하면 MASTERED 에 도달한다")
     void aSuccessfulReviewReachesMastered() throws Exception {
         // **이 경로가 이 PR 의 존재 이유다.** 그전까지 reviewSucceeded 를 만드는
