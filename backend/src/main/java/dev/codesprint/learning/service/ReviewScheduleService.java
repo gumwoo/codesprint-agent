@@ -68,6 +68,38 @@ public class ReviewScheduleService {
     }
 
     /**
+     * 만기된 복습을 이 제출이 가져간다. <b>제출 시점에 부른다.</b>
+     *
+     * <p>반영 시점에 정하면 <b>채점 완료 순서가 학습 결과를 바꾼다.</b> Poller 는 끝난
+     * job 만 가져가므로, 먼저 낸 A 가 아직 채점 중이고 뒤에 낸 B 가 먼저 끝나면 B 가
+     * 복습을 가져간다 — 사용자는 같은 순서로 냈는데 Worker 사정에 따라 mastery 와
+     * 간격이 달라진다.
+     *
+     * @return 가져갔으면 true
+     */
+    @Transactional
+    public boolean claim(Long userId, String skillCode, Long submissionId, Instant submittedAt) {
+        return schedules.claimForReview(userId, skillCode, submissionId, submittedAt) == 1;
+    }
+
+    /** 이 제출이 가져간 복습. 없으면 비어 있다. */
+    @Transactional(readOnly = true)
+    public Optional<ReviewScheduleRow> claimedBy(Long submissionId) {
+        return schedules.findByClaimedSubmissionId(submissionId);
+    }
+
+    /**
+     * 가져간 복습을 되돌린다. 채점이 우리 잘못으로 끝났을 때 쓴다.
+     *
+     * <p>풀어 주지 않으면 그 사용자는 <b>다시는 이 Skill 을 복습할 수 없다</b>.
+     */
+    @Transactional
+    public void release(ReviewScheduleRow schedule) {
+        schedule.releaseClaim();
+        schedules.save(schedule);
+    }
+
+    /**
      * 이 제출이 복습인가. 만기된 일정이 그 Skill 에 있을 때만 그렇다.
      *
      * <p><b>기준 시각은 제출 시각이다.</b> 처리 시각으로 보면 안 된다 - 채점이 큐에서

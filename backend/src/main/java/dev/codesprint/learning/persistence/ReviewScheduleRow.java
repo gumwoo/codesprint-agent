@@ -42,6 +42,15 @@ public class ReviewScheduleRow {
     @Column(name = "interval_days", nullable = false)
     private int intervalDays;
 
+    /**
+     * 이 복습을 가져간 제출. 아무도 안 가져갔으면 null 이다.
+     *
+     * <p><b>제출 시점에 박는다.</b> 반영 시점에 정하면 채점 완료 순서가 학습 결과를
+     * 바꾼다 - 먼저 낸 제출이 아직 채점 중일 때 뒤의 제출이 복습을 가져간다.
+     */
+    @Column(name = "claimed_submission_id")
+    private Long claimedSubmissionId;
+
     @Column(name = "updated_at", insertable = false)
     private Instant updatedAt;
 
@@ -99,6 +108,20 @@ public class ReviewScheduleRow {
         return (int) Math.max(0, days);
     }
 
+    public Long claimedSubmissionId() {
+        return claimedSubmissionId;
+    }
+
+    /**
+     * 복습 기회를 되돌린다. 채점이 우리 잘못으로 끝났을 때 쓴다.
+     *
+     * <p>풀어 주지 않으면 그 사용자는 <b>다시는 이 Skill 을 복습할 수 없다</b> -
+     * 일정은 잡혀 있는데 이미 가져간 것으로 남는다.
+     */
+    public void releaseClaim() {
+        this.claimedSubmissionId = null;
+    }
+
     /**
      * 복습을 마쳤다. 성공하면 간격이 늘고 실패하면 줄어든다(PRD §79).
      *
@@ -106,6 +129,8 @@ public class ReviewScheduleRow {
      * 간격 복습이 되고, retention 이 "시간이 지나도 되는가" 를 재지 못한다.
      */
     public void completed(boolean succeeded, Instant now) {
+        // 가져간 자리를 비운다. 다음 만기에 다른 제출이 가져갈 수 있어야 한다.
+        this.claimedSubmissionId = null;
         int index = indexOf(intervalDays);
         int next = succeeded
                 ? Math.min(index + 1, INTERVALS.length - 1)

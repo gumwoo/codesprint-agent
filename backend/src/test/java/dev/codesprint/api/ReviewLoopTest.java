@@ -146,40 +146,33 @@ class ReviewLoopTest {
 
     /** 제출하고 채점 결과까지 반영한다. 제출 시각은 지금 시계다. */
     private long solve(String problemCode, String judgeStatus) throws Exception {
-        return solve(problemCode, judgeStatus, clock.instant());
+        long submissionId = submit(problemCode);
+        judge(submissionId, judgeStatus);
+        poller.applyFinishedJobs();
+        return submissionId;
     }
 
-    /**
-     * 제출 시각과 처리 시각을 <b>따로</b> 준다.
-     *
-     * <p>채점은 큐를 지나므로 그 둘이 같지 않다. 실제로 다를 수 있다는 것을 테스트가
-     * 표현할 수 있어야 만기 경계를 확인할 수 있다.
-     */
-    private long solve(String problemCode, String judgeStatus, java.time.Instant submittedAt)
-            throws Exception {
+    /** 접수만 한다. 채점은 따로 끝낸다 - 실제 흐름이 그렇다(ADR-0013). */
+    private long submit(String problemCode) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
                  "hintLevel": 0, "solutionViewed": false, "solveSeconds": 90}
                 """.formatted(userId);
-        long submissionId = MAPPER.readTree(
+        return MAPPER.readTree(
                 mvc.perform(post("/api/problems/{code}/submit", problemCode)
                                 .contentType(MediaType.APPLICATION_JSON).content(body))
                         .andReturn().getResponse().getContentAsString())
                 .get("submissionId").asLong();
+    }
 
+    /** Worker 가 끝낸 것처럼 결과를 큐에 쓴다. */
+    private void judge(long submissionId, String judgeStatus) {
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
         jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
                 """
                 {"status": "%s", "passed": 6, "total": 6, "executionMs": 90,
                  "memoryKb": 20480, "failedCaseId": null, "stderr": null, "cases": []}
                 """.formatted(judgeStatus), job.id());
-
-        // 제출 시각도 시계를 따라야 한다. 그러지 않으면 daysSinceLast 가 실제 시각과
-        // 테스트 시각 사이에서 계산되어 아무 의미가 없다.
-        jdbc.update("UPDATE submissions SET submitted_at = ? WHERE id = ?",
-                java.sql.Timestamp.from(submittedAt), submissionId);
-        poller.applyFinishedJobs();
-        return submissionId;
     }
 
     private JsonNode nextAction(long submissionId) throws Exception {
@@ -310,10 +303,15 @@ class ReviewLoopTest {
         ReviewScheduleRow before =
                 schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow();
 
-        Instant justBeforeDue = before.dueAt().minus(Duration.ofMinutes(1));
-        clock.advance(Duration.ofDays(2));          // 처리 시각은 만기를 지났다
+        // 만기 1분 전에 낸다.
+        clock.advance(Duration.between(clock.instant(),
+                before.dueAt().minus(Duration.ofMinutes(1))));
+        long submissionId = submit("P09_BFS_VARIANT_A");
 
-        solve("P09_BFS_VARIANT_A", "ACCEPTED", justBeforeDue);
+        // 채점은 만기를 지나서 끝난다. 큐가 밀리면 실제로 이렇게 된다.
+        clock.advance(Duration.ofDays(2));
+        judge(submissionId, "ACCEPTED");
+        poller.applyFinishedJobs();
 
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM skill_evidence WHERE user_id = ? "
@@ -357,6 +355,36 @@ class ReviewLoopTest {
                 "SELECT count(*) FROM skill_evidence WHERE user_id = ? "
                         + "AND evidence_type = 'REVIEW_RESULT'", Long.class, userId))
                 .as("복습 기회가 사라지지 않았다").isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("복습을 가져가는 것은 제출 순서지 채점 순서가 아니다")
+    void theEarlierSubmissionOwnsTheReview() throws Exception {
+        // **Poller 는 끝난 job 만 가져간다.** 먼저 낸 A 가 아직 채점 중이고 뒤에 낸 B 가
+        // 먼저 끝나면, 반영 시점에 복습을 정하는 구조에서는 B 가 복습을 가로챈다 -
+        // 사용자는 같은 순서로 냈는데 Worker 사정에 따라 mastery 와 간격이 달라진다.
+        reachTheThreshold();
+        clock.advance(Duration.ofDays(2));
+
+        long a = submit("P09_BFS_VARIANT_A");
+        clock.advance(Duration.ofMinutes(1));
+        long b = submit("P10_BFS_REVIEW");
+
+        // B 가 먼저 끝난다.
+        judge(b, "WRONG_ANSWER");
+        poller.applyFinishedJobs();
+        // 그 다음 A 가 끝난다.
+        judge(a, "ACCEPTED");
+        poller.applyFinishedJobs();
+
+        assertThat(jdbc.queryForObject(
+                "SELECT source_event_id FROM skill_evidence WHERE user_id = ? "
+                        + "AND evidence_type = 'REVIEW_RESULT'", String.class, userId))
+                .as("먼저 낸 A 가 복습이다").isEqualTo("submission:" + a);
+        assertThat(schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow()
+                .intervalDays())
+                .as("A 가 성공했으므로 간격이 늘어야 한다 - B 의 실패가 아니다")
+                .isEqualTo(3);
     }
 
     @Test

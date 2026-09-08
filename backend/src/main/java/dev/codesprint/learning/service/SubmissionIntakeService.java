@@ -41,15 +41,17 @@ public class SubmissionIntakeService {
     private final ProblemRepository problems;
     private final SubmissionRepository submissions;
     private final JudgeJobRepository jobs;
+    private final ReviewScheduleService reviewSchedules;
 
     public SubmissionIntakeService(ProblemCatalog catalog, UserRepository users,
             ProblemRepository problems, SubmissionRepository submissions,
-            JudgeJobRepository jobs) {
+            JudgeJobRepository jobs, ReviewScheduleService reviewSchedules) {
         this.catalog = catalog;
         this.users = users;
         this.problems = problems;
         this.submissions = submissions;
         this.jobs = jobs;
+        this.reviewSchedules = reviewSchedules;
     }
 
     public record Request(
@@ -138,7 +140,16 @@ public class SubmissionIntakeService {
         SubmissionRow submission = submissions.save(new SubmissionRow(
                 request.userId(), problemRow.id(), SUPPORTED_LANGUAGE,
                 JudgeStatus.QUEUED.name(), request.hintLevel(), request.solutionViewed(),
-                request.solveSeconds()));
+                request.solveSeconds(),
+                // 제출 시각을 여기서 박는다. 복습 만기를 이 값으로 판정하므로
+                // (ADR-0021) 시계가 하나여야 한다.
+                reviewSchedules.now()));
+
+        // **만기된 복습을 여기서 가져간다**(ADR-0021). 반영 시점이 아니라 제출 시점이다 -
+        // 뒤에 낸 제출이 먼저 채점됐다고 복습을 가로채면, 같은 순서로 낸 사용자의
+        // mastery 가 Worker 사정에 따라 달라진다.
+        reviewSchedules.claim(request.userId(), problem.primarySkill(), submission.id(),
+                submission.submittedAt());
 
         jobs.save(new JudgeJobRow(submission.id(), problem.code(), SUPPORTED_LANGUAGE,
                 request.sourceCode()));

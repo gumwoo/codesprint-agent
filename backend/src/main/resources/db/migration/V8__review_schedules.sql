@@ -36,6 +36,15 @@ CREATE TABLE review_schedules (
     CONSTRAINT review_schedules_due_after_observed CHECK (due_at > last_observed_at)
 );
 
+-- **어느 제출이 이 복습을 가져갔는가.** 제출 시점에 박는다.
+--
+-- 반영 시점에 정하면 채점 완료 순서가 학습 결과를 바꾼다. Poller 는 끝난 job 만
+-- 가져가므로, 먼저 낸 A 가 아직 채점 중이고 뒤에 낸 B 가 먼저 끝나면 B 가 복습을
+-- 가져간다 - 사용자는 같은 순서로 냈는데 Worker 사정에 따라 mastery 와 간격이
+-- 달라진다.
+ALTER TABLE review_schedules
+    ADD COLUMN claimed_submission_id BIGINT REFERENCES submissions (id);
+
 -- "지금 만기인 것" 을 매 제출 반영마다 찾는다.
 CREATE INDEX review_schedules_due ON review_schedules (user_id, due_at);
 

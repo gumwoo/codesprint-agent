@@ -65,7 +65,14 @@ public class SubmissionRow {
     @Column(name = "solve_seconds")
     private Integer solveSeconds;
 
-    @Column(name = "submitted_at", insertable = false, updatable = false)
+    /**
+     * 제출 시각. <b>애플리케이션이 정한다.</b>
+     *
+     * <p>DB 기본값에 맡기면 시계가 둘이 된다 - 복습 만기를 이 값으로 판정하는데
+     * (ADR-0021), 그 시각을 테스트가 옮길 수 없으면 간격 복습을 검증할 방법이 없다.
+     * 컬럼의 DEFAULT 는 이 값을 넣지 않는 경로가 생겼을 때의 마지막 방어선으로 남는다.
+     */
+    @Column(name = "submitted_at", updatable = false)
     private Instant submittedAt;
 
     // 결정 결과. 채점이 요청 밖으로 나가면서 사용자가 나중에 다시 물어보게 됐는데,
@@ -89,7 +96,9 @@ public class SubmissionRow {
     }
 
     public SubmissionRow(Long userId, Long problemId, String language, String status,
-            int hintLevel, boolean solutionViewed, Integer solveSeconds) {
+            int hintLevel, boolean solutionViewed, Integer solveSeconds,
+            Instant submittedAt) {
+        this.submittedAt = submittedAt;
         this.userId = userId;
         this.problemId = problemId;
         this.language = language;

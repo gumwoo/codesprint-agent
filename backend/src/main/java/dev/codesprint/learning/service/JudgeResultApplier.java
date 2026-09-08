@@ -217,9 +217,18 @@ public class JudgeResultApplier {
         // 아니다 - 그대로 두면 **우리 하네스가 죽었다는 이유로 복습이 실패로 기록되고
         // 간격이 줄어든다.** 일반 제출 경로는 producesEvidence() 로 이미 그것을 막고
         // 있었는데, 복습 경로만 그 검사를 우회하고 있었다.
-        ReviewScheduleRow dueReview = judged.status().producesEvidence()
-                ? reviewSchedules.dueFor(userId, primarySkill, occurred).orElse(null)
-                : null;
+        // **이 제출이 복습을 가져갔는가.** 그 자리는 제출 시점에 이미 정해졌다 -
+        // 여기서 다시 고르면 채점 완료 순서가 학습 결과를 바꾼다.
+        ReviewScheduleRow claimed = reviewSchedules.claimedBy(submission.id()).orElse(null);
+
+        // Evidence 를 만들지 않는 판정에서는 복습을 소비하지 않고 자리를 되돌린다.
+        // SYSTEM_ERROR 는 우리 잘못이고 COMPILE_ERROR 는 알고리즘 Skill 의 실패가
+        // 아니다 - 되돌리지 않으면 그 사용자는 다시는 이 Skill 을 복습할 수 없다.
+        if (claimed != null && !judged.status().producesEvidence()) {
+            reviewSchedules.release(claimed);
+            claimed = null;
+        }
+        ReviewScheduleRow dueReview = claimed;
 
         for (SkillLink link : problem.skills()) {
             if (dueReview != null && link.skillCode().equals(primarySkill)) {
