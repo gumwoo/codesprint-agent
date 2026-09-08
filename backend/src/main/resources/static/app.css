@@ -363,3 +363,33 @@ table.skills .what { color: var(--muted); font-size: 11px; }
 .diagnostic .note { margin: 0 0 10px; }
 .diagnostic button { width: 100%; }
 .diagnostic.done button { display: none; }
+
+/* -- 제출 전 실행 -- */
+table.runcases {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+table.runcases th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+table.runcases td {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+table.runcases pre {
+  margin: 0;
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

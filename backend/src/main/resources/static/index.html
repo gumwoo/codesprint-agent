@@ -119,6 +119,11 @@
   <span class="note" id="footNote"></span>
   <div class="grow"></div>
   <button id="goNext" type="button" class="ghost" hidden>다음 문제로</button>
+  <!--
+    실행은 제출이 아니다(ADR-0020). 공개 예제만 돌고 점수도 다음 행동도 만들지
+    않는다 - 버튼도 그렇게 보이게 둔다.
+  -->
+  <button id="runButton" type="button" class="ghost" disabled>예제로 실행</button>
   <button id="submitButton" type="button" class="primary" disabled>제출 후 채점하기</button>
 </footer>
 

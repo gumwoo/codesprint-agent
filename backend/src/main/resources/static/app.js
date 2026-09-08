@@ -109,6 +109,7 @@ function showPicker() {
   $("crumbProblem").textContent = "고르는 중";
   $("problemMeta").textContent = "";
   $("submitButton").disabled = true;
+  $("runButton").disabled = true;
 }
 
 /** 왼쪽 패널에서 하나만 보인다. 탭 표시도 같이 옮긴다. */
@@ -324,6 +325,7 @@ async function openProblem(code) {
 
   showLeft("statementBody");
   $("submitButton").disabled = false;
+  $("runButton").disabled = false;
   setSourceCode("");
   // 문제를 옮기는 것은 진짜로 그만 보는 것이다. 여기서는 놓는다.
   cancelActivePolling();
@@ -418,6 +420,124 @@ async function submit() {
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
   await waitForResult(accepted.submissionId, startedAt);
+}
+
+/**
+ * 제출 전 실행. **제출이 아니다**(ADR-0020).
+ *
+ * 공개 예제만 돌고 Evidence 도 mastery 도 다음 행동도 만들지 않는다. 그래서 결과를
+ * 그 자리에 보여주고 버린다 - 판정 패널의 상태(state)를 건드리지 않는다.
+ */
+async function runSamples() {
+  if (!currentProblem) {
+    return;
+  }
+  const button = $("runButton");
+  const runningUserId = Number($("userId").value);
+  button.disabled = true;
+  reportTo(runningUserId, "실행하는 중…");
+
+  let accepted;
+  try {
+    const response = await fetch(`/api/problems/${currentProblem.code}/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: runningUserId,
+        language: "PYTHON",
+        sourceCode: sourceCode(),
+      }),
+    });
+    if (!response.ok) {
+      reportTo(runningUserId, `실행이 거절됐다 (${response.status}): `
+          + (await response.text()));
+      return;
+    }
+    accepted = await response.json();
+  } catch (error) {
+    reportTo(runningUserId, `실행하지 못했다: ${error.message}`);
+    return;
+  } finally {
+    button.disabled = false;
+  }
+
+  if (!stillCurrent(runningUserId)) {
+    return;
+  }
+  await waitForRun(accepted.runId, runningUserId);
+}
+
+/** 실행 결과를 기다린다. 제출 폴링과 섞이지 않게 따로 둔다. */
+async function waitForRun(runId, runningUserId) {
+  const box = $("review");
+  for (let tries = 0; tries < 300; tries += 1) {
+    let view = null;
+    try {
+      view = await getJson(`/api/runs/${runId}?userId=${runningUserId}`);
+    } catch (error) {
+      if (!stillCurrent(runningUserId)) {
+        return;
+      }
+      reportTo(runningUserId, `실행 결과를 가져오지 못했다: ${error.message}`);
+      return;
+    }
+    if (!stillCurrent(runningUserId)) {
+      return;
+    }
+
+    if (view.status === "DONE" || view.status === "FAILED") {
+      reportTo(runningUserId, "");
+      renderRun(view, box);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  reportTo(runningUserId, "실행이 오래 걸리고 있다.");
+}
+
+function renderRun(view, box) {
+  box.replaceChildren();
+  if (!view.judged) {
+    box.append(heading("실행"), note(view.failureReason || "실행하지 못했다."));
+    return;
+  }
+  const judged = view.judged;
+  box.append(heading("실행 — 공개 예제"));
+  box.append(note(`${judged.passed} / ${judged.total} 통과 · 점수에 반영되지 않는다`));
+
+  const table = document.createElement("table");
+  table.className = "runcases";
+  const head = document.createElement("tr");
+  for (const label of ["입력", "기대", "실제", "결과"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    head.append(th);
+  }
+  table.append(head);
+
+  for (const item of judged.cases) {
+    const tr = document.createElement("tr");
+    for (const value of [item.input, item.expectedOutput, item.stdout]) {
+      const td = document.createElement("td");
+      const pre = document.createElement("pre");
+      pre.textContent = value;
+      td.append(pre);
+      tr.append(td);
+    }
+    const status = document.createElement("td");
+    status.textContent = item.status;
+    tr.append(status);
+    table.append(tr);
+  }
+  box.append(table);
+
+  if (judged.stderr) {
+    box.append(heading("stderr"));
+    const pre = document.createElement("pre");
+    pre.className = "statement";
+    pre.textContent = judged.stderr;
+    box.append(pre);
+  }
 }
 
 async function waitForResult(submissionId, startedAt) {
@@ -658,6 +778,7 @@ $("tabProblem").addEventListener("click", () => {
 });
 $("tabSkills").addEventListener("click", showSkills);
 $("submitButton").addEventListener("click", submit);
+$("runButton").addEventListener("click", runSamples);
 restore();
 refreshDiagnostic();
 loadProblems().catch((error) => {
