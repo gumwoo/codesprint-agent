@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/review-evidence-golden.schema.json",
+  "title": "ReviewEvidenceGoldenCase",
+  "description": "복습 제출 하나를 Evidence 로 옮기는 매핑(Addendum §16)을 한 건씩 고정한다. 제출 매핑(evidence-golden)과 나눈 이유는 **고정하는 것이 다르기 때문이다** - 이쪽은 '며칠 뒤에도 되는가' 이고, 입력이 판정·힌트가 아니라 간격과 성공 여부다. 한 스키마에 둘을 담으면 어느 필드가 어느 분기의 것인지 required 로 말할 수 없다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "description",
+    "input",
+    "expected"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "from_review 의 인자. 모든 키가 required 다 - 생략은 '모른다', null 은 '확인했고 없었다'.",
+      "required": [
+        "sourceEventId",
+        "skillCode",
+        "daysSinceLast",
+        "succeeded",
+        "occurredAt"
+      ],
+      "properties": {
+        "sourceEventId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skillCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "daysSinceLast": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "직전 관측으로부터 지난 날. **클라이언트가 신고하지 않는다** - 신고받으면 사용자가 자기 retention 을 정한다. 이 값을 만드는 런타임 경로는 복습 일정이 붙을 때 생긴다."
+        },
+        "succeeded": {
+          "type": "boolean",
+          "description": "복습에서 독립적으로 통과했는가. Judge 판정에서 그대로 나온다."
+        },
+        "occurredAt": {
+          "type": "string",
+          "pattern": "(Z|[+-][0-9]{2}:[0-9]{2})$"
+        }
+      }
+    },
+    "expected": {
+      "description": "null 이면 이 Skill 에 아무것도 기록하지 않는다는 뜻이다. COMPILE_ERROR 가 그렇다(Addendum 12) - 문법 오류를 알고리즘 Skill 의 penalty 로 쓰지 않는다. '관측값이 전부 null 인 Evidence' 와 다르다.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "https://codesprint.dev/contracts/skill-evidence.schema.json"
+        }
+      ]
+    }
+  }
+}

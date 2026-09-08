@@ -1,0 +1,38 @@
+{
+  "name": "review-failed",
+  "description": "복습 실패는 간격과 무관하게 0.35 이고, 독립 풀이도 0.30 으로 떨어진다.",
+  "input": {
+    "sourceEventId": "submission:9",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "daysSinceLast": 30,
+    "succeeded": false,
+    "occurredAt": "2026-09-05T10:00:00Z"
+  },
+  "expected": {
+    "evidenceId": "ev_fb10d9d38aaef4c521ba4f62",
+    "sourceEventId": "submission:9",
+    "skillCode": "BFS_GRID_TRAVERSAL",
+    "evidenceType": "REVIEW_RESULT",
+    "occurredAt": "2026-09-05T10:00:00Z",
+    "weight": 1.3,
+    "observed": {
+      "concept": null,
+      "recognition": null,
+      "implementation": null,
+      "independent": 0.3,
+      "retention": 0.35,
+      "speed": null
+    },
+    "sourceConfidence": 1.0,
+    "context": {
+      "problemCode": null,
+      "judgeStatus": null,
+      "hintLevel": null,
+      "solutionViewed": null,
+      "independentAttempt": true,
+      "reviewSucceeded": false,
+      "daysSinceLast": 30,
+      "verdict": null
+    }
+  }
+}

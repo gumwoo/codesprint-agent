@@ -164,9 +164,17 @@ Mastery 는 두 번 구현돼 있다 — `learning/`(Python oracle, 실행 가�
 #    python tools/gen_evidence_golden.py --write
 ```
 
-golden 이 둘인 이유는 고정하는 것이 다르기 때문이다. `tests/golden/` 은 **이미
-만들어진 Evidence 로부터의 계산**을, `tests/golden/evidence/` 는 **제출을 Evidence 로
-옮기는 매핑**을 고정한다. 앞단이 갈리면 계산이 아무리 정확해도 다른 값이 나온다.
+golden 이 여럿인 이유는 고정하는 것이 다르기 때문이다.
+
+| | 무엇을 고정하는가 |
+| --- | --- |
+| `tests/golden/` | 이미 만들어진 Evidence 로부터의 **계산** |
+| `tests/golden/evidence/` | **제출**을 Evidence 로 옮기는 매핑 |
+| `tests/golden/evidence-review/` | **복습**을 Evidence 로 옮기는 매핑(간격과 성공 여부) |
+
+앞단이 갈리면 계산이 아무리 정확해도 다른 값이 나온다. 복습을 따로 둔 것은 입력이
+다르기 때문이다 — 판정과 힌트가 아니라 간격과 성공 여부다. 한 스키마에 담으면 어느
+필드가 어느 분기의 것인지 required 로 말할 수 없다.
 
 한쪽만 고치면 CI 가 막는다. golden 재생성은 기본 동작이 아니라 `--write` 를 붙여야 한다 —
 값이 조용히 따라 바뀌면 golden 이 아무것도 고정하지 못한다.

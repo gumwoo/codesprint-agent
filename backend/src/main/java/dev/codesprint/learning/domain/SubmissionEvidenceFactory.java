@@ -81,6 +81,89 @@ public final class SubmissionEvidenceFactory {
     }
 
     /**
+     * 복습 제출 하나. 정본: Addendum §16.
+     *
+     * @param daysSinceLast 직전 관측으로부터 지난 날. <b>클라이언트가 신고하지 않는다</b> -
+     *     신고받으면 사용자가 자기 retention 을 정한다. 지금은 이 값을 만드는 런타임
+     *     경로가 없다. 복습 일정이 붙을 때 서버가 그 일정에서 계산하며, 그때 0 이
+     *     들어올 수 없다는 것도 일정 쪽에서 보장한다 - 여기서는 음수만 막는다.
+     * @param succeeded 복습에서 독립적으로 통과했는가. Judge 판정에서 그대로 나온다.
+     */
+    public record ReviewSubmission(
+            String sourceEventId,
+            String skillCode,
+            int daysSinceLast,
+            boolean succeeded,
+            String occurredAt) {
+    }
+
+    /** Addendum §16. 복습 간격별 성공 시 retention 관측값. */
+    private static final int[] RETENTION_DAYS = {1, 3, 7, 14, 30};
+    private static final double[] RETENTION_BY_DAYS = {0.75, 0.82, 0.90, 0.95, 1.00};
+
+    /** 복습 실패. 0.25~0.45 구간의 중앙이다. */
+    private static final double RETENTION_FAIL = 0.35;
+
+    private static final double REVIEW_INDEPENDENT_OK = 0.85;
+    private static final double REVIEW_INDEPENDENT_FAIL = 0.30;
+
+    /**
+     * 며칠 뒤에도 되는가. <b>오래 지나서도 성공하면 더 높다.</b>
+     *
+     * <p>구간 사이는 아래쪽 값을 쓴다 - 5일은 3일 칸이다. 표를 넘어가도 마지막 칸에
+     * 머문다. 기다린 만큼 더 주지 않는다.
+     */
+    public static double retentionScore(int daysSinceLast, boolean succeeded) {
+        if (!succeeded) {
+            return RETENTION_FAIL;
+        }
+        double value = RETENTION_BY_DAYS[0];
+        for (int i = 0; i < RETENTION_DAYS.length; i++) {
+            if (daysSinceLast >= RETENTION_DAYS[i]) {
+                value = RETENTION_BY_DAYS[i];
+            }
+        }
+        return value;
+    }
+
+    /**
+     * 복습 제출을 Evidence 로 옮긴다.
+     *
+     * <p><b>제출 매핑과 다른 함수인 이유가 있다.</b> 복습은 판정과 힌트가 아니라
+     * <b>간격과 성공 여부</b>를 본다. 같은 함수에 담으면 어느 인자가 어느 분기의
+     * 것인지 말할 수 없고, 힌트를 신고하지 않는 규칙(PR #19)이 흐려진다.
+     *
+     * <p>여기서 만든 Evidence 만 {@code reviewSucceeded} 를 채우고, 그 값이
+     * {@code MASTERED} 의 네 번째 조건이다(Addendum §22).
+     */
+    public static Evidence fromReview(ReviewSubmission review) {
+        if (review.daysSinceLast() < 0) {
+            // 간격이 음수면 시계가 거꾸로 간 것이다. Evidence 는 append-only 라
+            // 저장한 뒤에는 되돌릴 수 없으므로 여기서 막는다.
+            throw new IllegalArgumentException(
+                    "daysSinceLast 는 음수일 수 없다: " + review.daysSinceLast());
+        }
+        Evidence.parseInstant(review.occurredAt());
+
+        Map<Dimension, Double> observed = new EnumMap<>(Dimension.class);
+        observed.put(Dimension.RETENTION,
+                retentionScore(review.daysSinceLast(), review.succeeded()));
+        observed.put(Dimension.INDEPENDENT,
+                review.succeeded() ? REVIEW_INDEPENDENT_OK : REVIEW_INDEPENDENT_FAIL);
+
+        return new Evidence(
+                review.sourceEventId(),
+                review.skillCode(),
+                EvidenceType.REVIEW_RESULT,
+                Evidence.parseInstant(review.occurredAt()),
+                EvidenceType.REVIEW_RESULT.confidenceWeight(),
+                observed,
+                1.0,  // Judge 결과는 결정론적이다
+                new EvidenceContext(null, null, null, null, true,
+                        review.succeeded(), review.daysSinceLast(), null));
+    }
+
+    /**
      * (원천 이벤트, Skill) 에서 결정론적으로 만든다.
      *
      * <p>무작위 id 를 쓰면 같은 Evidence 를 두 번 만들 때 서로 다른 id 가 붙어 재계산
