@@ -100,7 +100,7 @@ def claim(conn) -> dict | None:
               FROM claimed
              WHERE j.id = claimed.id
          RETURNING j.id, j.submission_id, j.problem_code, j.language,
-                   j.source_code, j.attempts
+                   j.source_code, j.attempts, j.kind
             """,
             (MAX_ATTEMPTS, LEASE_SECONDS),
         )
@@ -115,6 +115,7 @@ def claim(conn) -> dict | None:
         "language": row[3],
         "sourceCode": row[4],
         "attempts": row[5],
+        "kind": row[6],
     }
 
 
@@ -262,10 +263,16 @@ def run_job(job: dict) -> tuple[dict | None, str | None]:
         # 사용자 코드다. 읽지 않고 그대로 넘긴다.
         solution.write_text(job["sourceCode"], encoding="utf-8")
 
+        # 제출 전 실행은 **공개 case 만** 돈다(ADR-0020). 숨은 case 를 돌리면
+        # 사용자는 제출하지 않고도 채점 결과를 얻는다 - 그건 실행이 아니라 제출이다.
+        command = [sys.executable, str(ROOT / "judge" / "run_submission.py"),
+                   str(solution), str(cases)]
+        if job.get("kind") == "RUN":
+            command.append("--samples-only")
+
         try:
             proc = subprocess.run(
-                [sys.executable, str(ROOT / "judge" / "run_submission.py"),
-                 str(solution), str(cases)],
+                command,
                 capture_output=True, text=True, encoding="utf-8", errors="replace",
                 timeout=WORKER_TIMEOUT_SECONDS,
             )
