@@ -243,6 +243,24 @@ class RunTest {
     }
 
     @Test
+    @DisplayName("빠뜨린 값은 400 이다")
+    void missingFieldsAreRejected() throws Exception {
+        // 검증이 없으면 null 이 서비스까지 내려가 500 이 나간다. 사용자 입력
+        // 문제를 서버 잘못으로 보고하면, 무엇이 진짜 장애인지 구분할 수 없다.
+        for (String body : new String[] {
+                "{\"language\": \"PYTHON\", \"sourceCode\": \"print(1)\"}",
+                "{\"userId\": %d, \"sourceCode\": \"print(1)\"}".formatted(userId),
+                "{\"userId\": %d, \"language\": \"PYTHON\"}".formatted(userId)}) {
+
+            assertThat(mvc.perform(post("/api/problems/{code}/run", "P02_GRID_TRAVERSAL")
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andReturn().getResponse().getStatus())
+                    .as(body)
+                    .isEqualTo(400);
+        }
+    }
+
+    @Test
     @DisplayName("제출 job 을 실행으로 읽을 수 없다")
     void aSubmitJobIsNotARun() throws Exception {
         String body = """

@@ -2,6 +2,9 @@ package dev.codesprint.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import dev.codesprint.learning.service.RunService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,7 +35,14 @@ public class RunController {
         this.runs = runs;
     }
 
-    public record RunRequest(Long userId, String language, String sourceCode) {
+    /**
+     * 제출과 같은 것을 검증한다. 검증이 없으면 null 이 서비스까지 내려가
+     * NullPointerException 이 500 으로 나간다 - 사용자 입력 문제는 400 이어야 한다.
+     */
+    public record RunRequest(
+            @NotNull Long userId,
+            @NotBlank String language,
+            @NotBlank String sourceCode) {
     }
 
     public record AcceptedResponse(long runId) {
@@ -49,7 +59,7 @@ public class RunController {
     /** 접수하고 큐에 넣는다. 채점과 같은 Worker 가 가져간다(ADR-0013). */
     @PostMapping("/problems/{code}/run")
     public ResponseEntity<AcceptedResponse> run(@PathVariable String code,
-            @RequestBody RunRequest request) {
+            @Valid @RequestBody RunRequest request) {
 
         long runId = runs.accept(new RunService.Request(
                 request.userId(), code, request.language(), request.sourceCode()));

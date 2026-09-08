@@ -28,6 +28,14 @@ const POLL_SLOW_INTERVAL_MS = 5000;
 // 남아 있고, 돌아오면 결과가 온다 - 여기서 포기하면 접수된 제출을 화면이 놓친다.
 const UNREACHABLE_AFTER = 3;
 
+/**
+ * 화면이 지금 보고 있는 실행. 제출의 activeSubmissionId 와 같은 역할이다.
+ *
+ * 없으면 먼저 낸 실행이 나중에 끝나면서 뒤에 낸 결과를 덮는다 - 코드를 고쳐
+ * 다시 돌렸는데 이전 코드의 출력이 나타난다.
+ */
+let activeRunId = null;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -219,6 +227,7 @@ function switchedUser() {
   // 그 사용자에 대한 것이라, 남겨 두면 새 사용자의 화면에 남의 결과가 붙어 있다.
   // 폴링도 끊는다 - 살려 두면 이전 사용자의 결과가 **나중에 도착해서** 그려진다.
   cancelActivePolling();
+  cancelActiveRun();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
   // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
   $("footNote").textContent = "";
@@ -328,7 +337,10 @@ async function openProblem(code) {
   $("runButton").disabled = false;
   setSourceCode("");
   // 문제를 옮기는 것은 진짜로 그만 보는 것이다. 여기서는 놓는다.
+  // 실행도 함께 놓는다 - P01 에서 돌린 결과가 P02 로 넘어간 뒤 나타나면
+  // 그 출력이 지금 문제의 것으로 읽힌다.
   cancelActivePolling();
+  cancelActiveRun();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
   $("footNote").textContent = "";
   openedAt = Date.now();
@@ -416,7 +428,10 @@ async function submit() {
   }
 
   // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
+  // 실행도 놓는다 - 답을 낸 뒤에 시험 삼아 돌린 결과가 뒤늦게 나타나면,
+  // 사용자는 그것을 이번 제출의 결과로 읽는다.
   cancelActivePolling();
+  cancelActiveRun();
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
   await waitForResult(accepted.submissionId, startedAt);
@@ -458,41 +473,80 @@ async function runSamples() {
     reportTo(runningUserId, `실행하지 못했다: ${error.message}`);
     return;
   } finally {
+    // 접수 시도가 끝나면 버튼을 푼다. 제출과 같은 이유다 - 관찰은 한도 없이
+    // 이어지므로, 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
   }
 
   if (!stillCurrent(runningUserId)) {
     return;
   }
+  // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
+  cancelActiveRun();
   await waitForRun(accepted.runId, runningUserId);
 }
 
-/** 실행 결과를 기다린다. 제출 폴링과 섞이지 않게 따로 둔다. */
+/** 보고 있던 실행을 놓는다. 그 폴러는 다음 응답에서 스스로 멈춘다. */
+function cancelActiveRun() {
+  activeRunId = null;
+  $("runOutput").replaceChildren();
+}
+
+/**
+ * 실행 결과를 기다린다.
+ *
+ * <b>제출 폴링과 같은 규칙을 쓴다.</b> 처음에는 5분 뒤 포기하고 GET 한 번 실패하면
+ * 끝냈는데, 같은 큐와 같은 Worker 를 쓰면서 실행에만 다른 규칙을 둘 이유가 없다 -
+ * job 은 큐에 남아 있고, 서버가 잠깐 내려갔다고 사라지지 않는다.
+ */
 async function waitForRun(runId, runningUserId) {
-  const box = $("review");
-  for (let tries = 0; tries < 300; tries += 1) {
+  activeRunId = runId;
+  const box = $("runOutput");
+  box.replaceChildren();
+  box.append(note("실행 중…"));
+
+  const startedAt = Date.now();
+  let warned = false;
+  let failures = 0;
+  for (;;) {
     let view = null;
+    let failure = null;
     try {
       view = await getJson(`/api/runs/${runId}?userId=${runningUserId}`);
     } catch (error) {
-      if (!stillCurrent(runningUserId)) {
-        return;
-      }
-      reportTo(runningUserId, `실행 결과를 가져오지 못했다: ${error.message}`);
-      return;
+      failure = error;
     }
-    if (!stillCurrent(runningUserId)) {
+
+    // **화면을 만지기 전에 확인한다.** 기다리는 동안 다른 실행이 접수됐거나,
+    // 문제나 사용자가 바뀌었을 수 있다. 그러면 이 폴러는 남의 화면에 쓰는 것이 된다.
+    if (activeRunId !== runId || !stillCurrent(runningUserId)) {
       return;
     }
 
-    if (view.status === "DONE" || view.status === "FAILED") {
-      reportTo(runningUserId, "");
-      renderRun(view, box);
-      return;
+    if (failure) {
+      // 한 번 실패했다고 포기하지 않는다. 접수된 실행은 사라지지 않는다.
+      failures += 1;
+      if (failures >= UNREACHABLE_AFTER) {
+        box.replaceChildren(note(`실행 결과를 가져오지 못하고 있다: ${failure.message}`));
+      }
+    } else {
+      failures = 0;
+      if (view.status === "DONE" || view.status === "FAILED") {
+        reportTo(runningUserId, "");
+        renderRun(view, box);
+        return;
+      }
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const waited = Date.now() - startedAt;
+    if (!warned && waited >= POLL_SLOW_AFTER_MS) {
+      warned = true;
+      box.replaceChildren(note("실행이 오래 걸리고 있다. 계속 기다린다."));
+    }
+    const slowly = warned || failures >= UNREACHABLE_AFTER;
+    await new Promise((resolve) => setTimeout(
+        resolve, slowly ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
   }
-  reportTo(runningUserId, "실행이 오래 걸리고 있다.");
 }
 
 function renderRun(view, box) {
