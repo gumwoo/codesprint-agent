@@ -28,6 +28,32 @@ const POLL_SLOW_INTERVAL_MS = 5000;
 // 남아 있고, 돌아오면 결과가 온다 - 여기서 포기하면 접수된 제출을 화면이 놓친다.
 const UNREACHABLE_AFTER = 3;
 
+/**
+ * 화면이 지금 보고 있는 실행. 제출의 activeSubmissionId 와 같은 역할이다.
+ *
+ * 없으면 먼저 낸 실행이 나중에 끝나면서 뒤에 낸 결과를 덮는다 - 코드를 고쳐
+ * 다시 돌렸는데 이전 코드의 출력이 나타난다.
+ */
+let activeRunId = null;
+
+/**
+ * 마지막으로 **시작된** 요청의 번호. 실행과 제출을 따로 센다.
+ *
+ * `activeRunId` / `activeSubmissionId` 는 202 를 받은 뒤에야 정해지므로, 그
+ * **전에** 문제나 사용자가 바뀌거나 다른 요청이 시작되면 막을 것이 없다. 늦게
+ * 도착한 202 가 남의 화면에서 폴링을 시작한다.
+ *
+ * <b>쓰는 곳은 202 를 받은 직후 한 번뿐이다.</b> 진행 중이던 관찰의 생존 조건에는
+ * 넣지 않는다 - 넣으면 새 요청을 누른 순간 앞의 관찰이 끊기고, 그 새 요청이
+ * 거절되면 앞 결과를 다시 볼 방법이 없다. 실제로 그렇게 넣었다가 되돌렸다.
+ *
+ * <p>진행 중이던 관찰은 <b>누군가 실제로 인수할 때</b> 끝난다 - 202 를 받은 쪽이
+ * {@code dropActive*} 로 자리를 넘겨받는다. 문제나 사용자가 바뀌는 경우는
+ * {@code cancelActive*} 가 번호를 올리고 자리도 함께 비운다.
+ */
+let latestRunStart = 0;
+let latestSubmitStart = 0;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -103,12 +129,27 @@ async function loadProblems() {
   }
 }
 
+/**
+ * 지금 버튼이 살아 있어도 되는 화면인가.
+ *
+ * <p>버튼을 잠그는 곳은 {@link showPicker} 하나뿐이다. 그래서 <b>목록이 보이는지</b>만
+ * 본다 - {@code statementBody} 가 보이는지로 보면 "내 Skill" 탭을 열어 둔 채 요청이
+ * 끝났을 때 잠긴 채로 남는다. 그 탭은 버튼을 잠근 적이 없는데도.
+ *
+ * <p>번호(latestRunStart 등)만으로는 부족하다. 목록으로 돌아가는 것은 요청을
+ * 무효화하지 않으므로 - 접수된 채점은 그대로 관찰한다 - 번호가 그대로다.
+ */
+function onAProblemScreen() {
+  return $("picker").hidden;
+}
+
 function showPicker() {
   showLeft("picker");
   refreshDiagnostic();
   $("crumbProblem").textContent = "고르는 중";
   $("problemMeta").textContent = "";
   $("submitButton").disabled = true;
+  $("runButton").disabled = true;
 }
 
 /** 왼쪽 패널에서 하나만 보인다. 탭 표시도 같이 옮긴다. */
@@ -218,6 +259,7 @@ function switchedUser() {
   // 그 사용자에 대한 것이라, 남겨 두면 새 사용자의 화면에 남의 결과가 붙어 있다.
   // 폴링도 끊는다 - 살려 두면 이전 사용자의 결과가 **나중에 도착해서** 그려진다.
   cancelActivePolling();
+  cancelActiveRun();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
   // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
   $("footNote").textContent = "";
@@ -324,9 +366,13 @@ async function openProblem(code) {
 
   showLeft("statementBody");
   $("submitButton").disabled = false;
+  $("runButton").disabled = false;
   setSourceCode("");
   // 문제를 옮기는 것은 진짜로 그만 보는 것이다. 여기서는 놓는다.
+  // 실행도 함께 놓는다 - P01 에서 돌린 결과가 P02 로 넘어간 뒤 나타나면
+  // 그 출력이 지금 문제의 것으로 읽힌다.
   cancelActivePolling();
+  cancelActiveRun();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
   $("footNote").textContent = "";
   openedAt = Date.now();
@@ -340,6 +386,12 @@ async function openProblem(code) {
  * 폴러가 사라졌고, 제출 이력 화면이 없어 다시 볼 방법도 없었다.
  */
 function cancelActivePolling() {
+  latestSubmitStart += 1;
+  activeSubmissionId = null;
+}
+
+/** 인수인계용. 번호는 올리지 않는다 - {@link cancelActiveRun} 의 설명과 같다. */
+function dropActiveSubmission() {
   activeSubmissionId = null;
 }
 
@@ -369,6 +421,10 @@ async function submit() {
   // 누구의 제출인지 여기서 고정한다. 응답을 기다리는 동안 사용자가 바뀔 수 있고,
   // 그때 body 와 화면이 다른 사람을 가리키면 안 된다.
   const submittingUserId = Number($("userId").value);
+  // 어느 문제의 제출인지도 함께 고정한다. 실행과 같은 구멍이 여기에도 있었다 -
+  // 202 를 기다리는 동안 다른 문제를 열면, 그 제출의 판정과 다음 행동이
+  // **다른 문제의 화면에** 나타난다.
+  const started = ++latestSubmitStart;
   // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
   // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
   // 루프가 끝나 접수된 제출을 화면이 놓친다.
@@ -404,20 +460,210 @@ async function submit() {
   } finally {
     // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
-    button.disabled = false;
+    //
+    // 다만 내 번호일 때만 푼다 - 문제 목록으로 돌아가 잠긴 버튼을 늦게 끝난
+    // 요청이 다시 열면, 열어 둔 문제가 없는데 제출할 수 있게 된다.
+    if (started === latestSubmitStart && onAProblemScreen()) {
+      button.disabled = false;
+    }
   }
 
-  // 접수된 뒤에 사용자가 바뀌었으면 이 제출은 이 화면 것이 아니다. 서버에서는
+  // 접수된 뒤에 화면이 옮겨 갔으면 이 제출은 이 화면 것이 아니다. 서버에서는
   // 그대로 채점되고, 그 사용자로 돌아오면 Skill 상태에 반영돼 있다.
-  if (!stillCurrent(submittingUserId)) {
+  if (started !== latestSubmitStart || !stillCurrent(submittingUserId)) {
     return;
   }
 
   // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
-  cancelActivePolling();
+  // 실행도 놓는다 - 답을 낸 뒤에 시험 삼아 돌린 결과가 뒤늦게 나타나면,
+  // 사용자는 그것을 이번 제출의 결과로 읽는다.
+  dropActiveSubmission();
+  cancelActiveRun();
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
   await waitForResult(accepted.submissionId, startedAt);
+}
+
+/**
+ * 제출 전 실행. **제출이 아니다**(ADR-0020).
+ *
+ * 공개 예제만 돌고 Evidence 도 mastery 도 다음 행동도 만들지 않는다. 그래서 결과를
+ * 그 자리에 보여주고 버린다 - 판정 패널의 상태(state)를 건드리지 않는다.
+ */
+async function runSamples() {
+  if (!currentProblem) {
+    return;
+  }
+  const button = $("runButton");
+  const runningUserId = Number($("userId").value);
+  // **POST 를 보내기 전에 번호를 잡는다.** 202 를 기다리는 동안 문제나 사용자가
+  // 바뀌거나 다른 실행이 시작될 수 있고, 그때 이 응답은 남의 화면 것이 된다.
+  const started = ++latestRunStart;
+  button.disabled = true;
+  reportTo(runningUserId, "실행하는 중…");
+
+  let accepted;
+  try {
+    const response = await fetch(`/api/problems/${currentProblem.code}/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: runningUserId,
+        language: "PYTHON",
+        sourceCode: sourceCode(),
+      }),
+    });
+    if (!response.ok) {
+      reportTo(runningUserId, `실행이 거절됐다 (${response.status}): `
+          + (await response.text()));
+      return;
+    }
+    accepted = await response.json();
+  } catch (error) {
+    reportTo(runningUserId, `실행하지 못했다: ${error.message}`);
+    return;
+  } finally {
+    // 접수 시도가 끝나면 버튼을 푼다. 제출과 같은 이유다 - 관찰은 한도 없이
+    // 이어지므로, 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
+    //
+    // **내 번호일 때만 푼다.** 문제 목록으로 돌아가 버튼이 잠긴 뒤에 늦게 끝난
+    // 요청이 그것을 다시 열면, 열어 둔 문제가 없는데 실행할 수 있게 된다.
+    if (started === latestRunStart && onAProblemScreen()) {
+      button.disabled = false;
+    }
+  }
+
+  if (started !== latestRunStart || !stillCurrent(runningUserId)) {
+    return;
+  }
+  // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
+  dropActiveRun();
+  await waitForRun(accepted.runId, runningUserId);
+}
+
+/** 보고 있던 실행을 놓는다. 그 폴러는 다음 응답에서 스스로 멈춘다. */
+function cancelActiveRun() {
+  // 진행 중인 POST 도 함께 버린다. 번호를 올려 두면 그 요청의 202 가 뒤늦게
+  // 도착해도 자기 번호가 이미 지났음을 알고 물러난다.
+  latestRunStart += 1;
+  dropActiveRun();
+}
+
+/**
+ * 보고 있던 실행만 놓는다. <b>번호는 올리지 않는다</b> - 인수인계할 때 쓰며,
+ * 올리면 인수받으려는 요청 자신의 번호가 무효가 된다.
+ */
+function dropActiveRun() {
+  activeRunId = null;
+  $("runOutput").replaceChildren();
+}
+
+/**
+ * 실행 결과를 기다린다.
+ *
+ * <b>제출 폴링과 같은 규칙을 쓴다.</b> 처음에는 5분 뒤 포기하고 GET 한 번 실패하면
+ * 끝냈는데, 같은 큐와 같은 Worker 를 쓰면서 실행에만 다른 규칙을 둘 이유가 없다 -
+ * job 은 큐에 남아 있고, 서버가 잠깐 내려갔다고 사라지지 않는다.
+ */
+async function waitForRun(runId, runningUserId) {
+  activeRunId = runId;
+  const box = $("runOutput");
+  box.replaceChildren();
+  box.append(note("실행 중…"));
+
+  const startedAt = Date.now();
+  let warned = false;
+  let failures = 0;
+  for (;;) {
+    let view = null;
+    let failure = null;
+    try {
+      view = await getJson(`/api/runs/${runId}?userId=${runningUserId}`);
+    } catch (error) {
+      failure = error;
+    }
+
+    // **화면을 만지기 전에 확인한다.** 기다리는 동안 다른 실행이 접수됐거나,
+    // 문제나 사용자가 바뀌었을 수 있다. 그러면 이 폴러는 남의 화면에 쓰는 것이 된다.
+    // **번호는 여기서 보지 않는다.** 번호는 202 이전의 요청을 거르는 용도이고,
+    // 이미 접수된 관찰의 생존 조건에 넣으면 새 실행을 누른 순간 앞의 관찰이
+    // 끊긴다 - 그 새 실행이 거절되면 앞 결과를 다시 볼 방법이 없다.
+    //
+    // 인수인계는 202 를 받은 쪽이 dropActiveRun() 으로 한다. 문제나 사용자가
+    // 바뀌면 cancelActiveRun() 이 activeRunId 를 비우므로 그쪽도 여기서 걸린다.
+    if (activeRunId !== runId || !stillCurrent(runningUserId)) {
+      return;
+    }
+
+    if (failure) {
+      // 한 번 실패했다고 포기하지 않는다. 접수된 실행은 사라지지 않는다.
+      failures += 1;
+      if (failures >= UNREACHABLE_AFTER) {
+        box.replaceChildren(note(`실행 결과를 가져오지 못하고 있다: ${failure.message}`));
+      }
+    } else {
+      failures = 0;
+      if (view.status === "DONE" || view.status === "FAILED") {
+        reportTo(runningUserId, "");
+        renderRun(view, box);
+        return;
+      }
+    }
+
+    const waited = Date.now() - startedAt;
+    if (!warned && waited >= POLL_SLOW_AFTER_MS) {
+      warned = true;
+      box.replaceChildren(note("실행이 오래 걸리고 있다. 계속 기다린다."));
+    }
+    const slowly = warned || failures >= UNREACHABLE_AFTER;
+    await new Promise((resolve) => setTimeout(
+        resolve, slowly ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
+  }
+}
+
+function renderRun(view, box) {
+  box.replaceChildren();
+  if (!view.judged) {
+    box.append(heading("실행"), note(view.failureReason || "실행하지 못했다."));
+    return;
+  }
+  const judged = view.judged;
+  box.append(heading("실행 — 공개 예제"));
+  box.append(note(`${judged.passed} / ${judged.total} 통과 · 점수에 반영되지 않는다`));
+
+  const table = document.createElement("table");
+  table.className = "runcases";
+  const head = document.createElement("tr");
+  for (const label of ["입력", "기대", "실제", "결과"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    head.append(th);
+  }
+  table.append(head);
+
+  for (const item of judged.cases) {
+    const tr = document.createElement("tr");
+    for (const value of [item.input, item.expectedOutput, item.stdout]) {
+      const td = document.createElement("td");
+      const pre = document.createElement("pre");
+      pre.textContent = value;
+      td.append(pre);
+      tr.append(td);
+    }
+    const status = document.createElement("td");
+    status.textContent = item.status;
+    tr.append(status);
+    table.append(tr);
+  }
+  box.append(table);
+
+  if (judged.stderr) {
+    box.append(heading("stderr"));
+    const pre = document.createElement("pre");
+    pre.className = "statement";
+    pre.textContent = judged.stderr;
+    box.append(pre);
+  }
 }
 
 async function waitForResult(submissionId, startedAt) {
@@ -441,6 +687,8 @@ async function waitForResult(submissionId, startedAt) {
     // "결과를 가져오지 못하고 있다" 를 새 제출의 화면에 남겼다.
     //
     // 루프 맨 앞에서만 보면 부족하다. await 는 여기서 일어난다.
+    // 실행과 같은 이유로 번호를 보지 않는다. 새 제출을 눌렀다가 거절됐을 때
+    // 앞 제출의 관찰이 끊기면 안 된다 - 앞의 것은 그대로 채점되고 있다.
     if (activeSubmissionId !== submissionId) {
       return;
     }
@@ -658,6 +906,7 @@ $("tabProblem").addEventListener("click", () => {
 });
 $("tabSkills").addEventListener("click", showSkills);
 $("submitButton").addEventListener("click", submit);
+$("runButton").addEventListener("click", runSamples);
 restore();
 refreshDiagnostic();
 loadProblems().catch((error) => {

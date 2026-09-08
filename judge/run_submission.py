@@ -118,7 +118,8 @@ def _force_remove(name: str) -> None:
     )
 
 
-def _run_protocol(proc: subprocess.Popen, job: dict, total: int) -> dict:
+def _run_protocol(proc: subprocess.Popen, job: dict, total: int,
+                  samples_only: bool = False) -> dict:
     """하네스와 NDJSON 을 주고받으며 채점한다.
 
     한 번에 한 case 씩, 보내고 받는다. 양쪽이 번갈아 읽고 쓰므로 파이프가 막히지 않는다.
@@ -174,14 +175,18 @@ def _run_protocol(proc: subprocess.Popen, job: dict, total: int) -> dict:
         if outcome == "OK":
             # 비교는 신뢰 경계 바깥에서 한다 (ADR-0006).
             if normalize(reply.get("stdout", "")) == normalize(case.get("expectedOutput", "")):
-                results.append({"id": case["id"], "status": "ACCEPTED", "executionMs": elapsed})
+                results.append(with_output(
+                    {"id": case["id"], "status": "ACCEPTED", "executionMs": elapsed},
+                    case, reply, samples_only))
                 passed += 1
                 continue
             status, stderr = "WRONG_ANSWER", None
         else:
             status, stderr = outcome, reply.get("stderr")
 
-        results.append({"id": case["id"], "status": status, "executionMs": elapsed})
+        results.append(with_output(
+            {"id": case["id"], "status": status, "executionMs": elapsed},
+            case, reply, samples_only))
         if first_failure is None:
             # 판정과 failedCaseId 는 **첫** 실패가 정한다. 뒤의 case 를 더 돌려도
             # 이 값은 바뀌지 않는다 - Reviewer 에게 주는 근거가 흔들리면 안 된다.
@@ -212,12 +217,44 @@ def _run_protocol(proc: subprocess.Popen, job: dict, total: int) -> dict:
     }
 
 
-def run(solution: pathlib.Path, job_path: pathlib.Path) -> dict:
+def with_output(entry: dict, case: dict, reply: dict, samples_only: bool) -> dict:
+    """공개 case 일 때만 입력 · 기대 · 실제를 함께 싣는다.
+
+    제출 채점에서는 붙이지 않는다 - 판정에 필요하지 않고, 그 결과는 그대로
+    저장돼 남는다. 실행은 그 자리에서 보고 버리는 것이다.
+    """
+    if not samples_only:
+        return entry
+    return entry | {
+        "input": case.get("input", ""),
+        "expectedOutput": case.get("expectedOutput", ""),
+        "stdout": reply.get("stdout", ""),
+        "stderr": reply.get("stderr"),
+    }
+
+
+def run(solution: pathlib.Path, job_path: pathlib.Path,
+        samples_only: bool = False) -> dict:
     try:
         job = json.loads(job_path.read_text(encoding="utf-8"))
         cases = job.get("cases") or []
     except Exception as e:
         return system_error(f"job 을 읽지 못했다: {type(e).__name__}")
+
+    if samples_only:
+        # 제출 전 실행(ADR-0020). **공개 case 만 돌리고, 그때만 stdout 을 돌려준다.**
+        #
+        # 두 가지를 한 플래그로 묶은 것은 실수가 아니다. 나누면 "숨은 case 에서
+        # 출력을 돌려주는" 조합이 만들어질 수 있고, 그때 사용자는 자기 프로그램의
+        # 출력을 통해 숨은 입력의 성질을 되짚을 수 있다. 조합 자체를 없앤다.
+        cases = [case for case in cases if not case.get("hidden")]
+        if not cases:
+            return system_error("공개 Test Case 가 없다")
+        # **거른 결과를 job 에 되돌려 넣는다.** 아래에서 job 을 그대로 넘기므로,
+        # 지역 변수만 걸러 두면 필터가 아무 일도 하지 않는다 - 실제로 그랬고,
+        # 하네스를 직접 돌려 보고서야 알았다.
+        job["cases"] = cases
+
     if not cases:
         return system_error("Test Case 가 없다")
     total = len(cases)
@@ -266,7 +303,7 @@ def run(solution: pathlib.Path, job_path: pathlib.Path) -> dict:
         timer = threading.Timer(SUBMISSION_HARD_TIMEOUT_S, watchdog)
         timer.start()
         try:
-            result = _run_protocol(proc, job, total)
+            result = _run_protocol(proc, job, total, samples_only)
         except (BrokenPipeError, OSError) as e:
             result = system_error(f"하네스와의 통신이 끊겼다: {type(e).__name__}", total)
         finally:
@@ -296,6 +333,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="제출 하나를 샌드박스에서 채점한다")
     parser.add_argument("solution", type=pathlib.Path)
     parser.add_argument("job", type=pathlib.Path)
+    parser.add_argument("--samples-only", action="store_true",
+                        help="공개 case 만 돌리고 출력을 함께 돌려준다 (제출 전 실행)")
     args = parser.parse_args()
 
     for path in (args.solution, args.job):
@@ -303,7 +342,8 @@ def main() -> int:
             print(json.dumps(system_error(f"파일이 없다: {path.name}"), ensure_ascii=False))
             return 1
 
-    print(json.dumps(run(args.solution, args.job), ensure_ascii=False, indent=2))
+    print(json.dumps(run(args.solution, args.job, args.samples_only),
+                     ensure_ascii=False, indent=2))
     return 0
 
 

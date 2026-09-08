@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/run-result.schema.json",
+  "title": "RunResult",
+  "description": "GET /api/runs/{id} 의 응답. **제출이 아니다**(ADR-0020) - Evidence 도 mastery 도 다음 행동도 만들지 않으므로 nextAction 이 여기 없다. 공개 case 만 돌며, 그래서 입력과 기대 출력을 함께 보여줘도 된다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "problemCode",
+    "status",
+    "judged",
+    "failureReason"
+  ],
+  "properties": {
+    "runId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "problemCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "QUEUED",
+        "RUNNING",
+        "DONE",
+        "FAILED"
+      ],
+      "description": "큐에서의 상태다. DONE 은 '실행이 끝났다'이며 '정답이다'가 아니다."
+    },
+    "judged": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "passed",
+        "total",
+        "executionMs",
+        "memoryKb",
+        "failedCaseId",
+        "stderr",
+        "cases"
+      ],
+      "description": "아직 안 끝났으면 null 이다. 생략이 아니라 null 로 명시한다.",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "executionMs": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "memoryKb": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "failedCaseId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "stderr": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cases": {
+          "type": "array",
+          "description": "공개 case 마다 하나씩. **입력과 기대 출력이 들어 있다** - 이미 문제 본문에 있는 값이라 새로 드러나는 것이 없다. 숨은 case 는 애초에 돌지 않는다.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "status",
+              "executionMs",
+              "input",
+              "expectedOutput",
+              "stdout",
+              "stderr"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string"
+              },
+              "executionMs": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "input": {
+                "type": "string"
+              },
+              "expectedOutput": {
+                "type": "string"
+              },
+              "stdout": {
+                "type": "string"
+              },
+              "stderr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "failureReason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "실행 자체가 불가능했던 이유. 성공했으면 null."
+    }
+  }
+}

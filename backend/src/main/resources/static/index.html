@@ -107,6 +107,11 @@
       <span class="meta" id="state"></span>
     </div>
     <div class="pane-body result">
+      <!--
+        실행 결과는 판정과 **다른 자리**를 쓴다. 같은 자리에 쓰면 무엇이 채점이고
+        무엇이 시험 삼아 돌려 본 것인지 화면에서 구분되지 않는다(ADR-0020).
+      -->
+      <div id="runOutput"></div>
       <p class="note" id="submitNote">제출하면 여기에 판정과 다음 행동이 나온다.</p>
       <dl id="judge"></dl>
       <div id="review"></div>
@@ -119,6 +124,11 @@
   <span class="note" id="footNote"></span>
   <div class="grow"></div>
   <button id="goNext" type="button" class="ghost" hidden>다음 문제로</button>
+  <!--
+    실행은 제출이 아니다(ADR-0020). 공개 예제만 돌고 점수도 다음 행동도 만들지
+    않는다 - 버튼도 그렇게 보이게 둔다.
+  -->
+  <button id="runButton" type="button" class="ghost" disabled>예제로 실행</button>
   <button id="submitButton" type="button" class="primary" disabled>제출 후 채점하기</button>
 </footer>
 

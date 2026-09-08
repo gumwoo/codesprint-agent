@@ -231,6 +231,52 @@ def judge_with_job(code: str, job: dict) -> dict:
         return run_submission.run(base / "solution.py", base / "job.json")
 
 
+def judge_samples_only(code: str, job: dict) -> dict:
+    """공개 case 만 돌린다 (제출 전 실행, ADR-0020)."""
+    with tempfile.TemporaryDirectory() as d:
+        base = pathlib.Path(d)
+        (base / "solution.py").write_text(code, encoding="utf-8", newline="")
+        (base / "job.json").write_text(
+            json.dumps(job, ensure_ascii=False), encoding="utf-8", newline="")
+        return run_submission.run(base / "solution.py", base / "job.json",
+                                  samples_only=True)
+
+
+def check_samples_only() -> list[str]:
+    """제출 전 실행이 숨은 case 를 돌리지 않는가.
+
+    **대조군이 있다.** 같은 job 을 플래그 없이 돌렸을 때 숨은 case 가 실제로
+    돌아야 한다 - 그러지 않으면 이 검사는 "원래 하나뿐인 job" 을 보고 통과한다.
+    """
+    problems = []
+    job = {
+        "cases": [
+            {"id": 1, "input": "1\n", "expectedOutput": "1\n"},
+            {"id": 2, "input": "2\n", "expectedOutput": "2\n", "hidden": True},
+            {"id": 3, "input": "3\n", "expectedOutput": "3\n", "hidden": True},
+        ]
+    }
+    code = "import sys\nprint(sys.stdin.read().strip())\n"
+
+    run_only = judge_samples_only(code, job)
+    if run_only["total"] != 1:
+        problems.append(f"공개 case 는 1개인데 {run_only['total']}개를 돌렸다")
+    if [c["id"] for c in run_only["cases"]] != [1]:
+        problems.append(f"숨은 case 가 돌았다: {[c['id'] for c in run_only['cases']]}")
+
+    # 출력은 공개 case 에서만 돌려준다. 나눠 두면 "숨은 case 의 출력" 조합이 생긴다.
+    if "stdout" not in run_only["cases"][0]:
+        problems.append("실행인데 출력이 없다 - 그러면 돌려 볼 이유가 없다")
+
+    # 대조군: 플래그가 없으면 전부 돈다.
+    full = judge_with_job(code, job)
+    if full["total"] != 3:
+        problems.append(f"[대조군 실패] 제출 채점이 3개를 돌려야 하는데 {full['total']}개다")
+    if any("stdout" in c for c in full["cases"]):
+        problems.append("[대조군 실패] 제출 채점 결과에 출력이 실려 있다")
+    return problems
+
+
 def _judge_containers() -> set[str]:
     """지금 살아 있는 채점 컨테이너 이름들."""
     proc = subprocess.run(
@@ -307,6 +353,14 @@ def main() -> int:
             return 1
 
     failed = 0
+
+    print("== 제출 전 실행 ==")
+    samples = check_samples_only()
+    for problem in samples:
+        print(f"[X] {problem}")
+    failed += len(samples)
+    if not samples:
+        print("[O] 공개 case 만 돌고, 출력은 그때만 실린다")
 
     print("== 판정 ==")
     for name, expected, needs_case in VERDICTS:
