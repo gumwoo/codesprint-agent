@@ -279,6 +279,62 @@ class DiagnosticTest {
     }
 
     @Test
+    @DisplayName("진단이 끝날 때까지 매 단계 두 화면이 일치한다")
+    void thePanelsAgreeAtEveryStep() throws Exception {
+        // 한 단계만 보면 놓친다. 진단은 그래프를 내려가면서 **선수가 없는 뿌리 Skill**
+        // 에도 닿는데, 그 Skill 에는 막힌 선수가 없어서 선수 조건 규칙이 아예 돌지
+        // 않는다 - 진단이 개입할 자리도 같이 사라진다.
+        for (int step = 0; step < 10; step++) {
+            JsonNode diagnostic = step();
+            if (diagnostic.get("done").asBoolean()) {
+                return;
+            }
+            String problemCode = diagnostic.get("problem").get("code").asText();
+            String expected = diagnostic.get("targetSkill").asText();
+
+            long submissionId = solve(problemCode, "WRONG_ANSWER", 0, 6);
+
+            JsonNode after = step();
+            if (after.get("done").asBoolean()) {
+                return;
+            }
+            JsonNode next = MAPPER.readTree(
+                    mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                            .andReturn().getResponse().getContentAsString());
+
+            assertThat(next.get("problem").get("code").asText())
+                    .as("%s 을(를) 낸 뒤 - 진단은 %s 를 가리킨다",
+                            expected, after.get("problem").get("code").asText())
+                    .isEqualTo(after.get("problem").get("code").asText());
+        }
+        throw new AssertionError("진단이 10 단계 안에 끝나지 않았다");
+    }
+
+    @Test
+    @DisplayName("막힌 선수가 없는 Skill 을 풀어도 두 화면이 갈리지 않는다")
+    void thePanelsAgreeEvenWithoutABlockedPrerequisite() throws Exception {
+        // 문제는 목록에서 직접 고를 수도 있다. 진단이 BFS_SHORTEST_PATH 를 가리키는
+        // 동안 사용자가 뿌리 Skill 인 PYTHON_DEQUE_BASIC 문제를 골라 틀리면,
+        // **그 Skill 에는 막힌 선수가 없어서** 선수 조건 규칙이 아예 돌지 않는다 -
+        // 진단이 개입할 자리도 같이 사라진다.
+        JsonNode before = step();
+        assertThat(before.get("done").asBoolean()).isFalse();
+
+        long submissionId = solve("P01_QUEUE_BASIC", "WRONG_ANSWER", 0, 6);
+
+        JsonNode diagnostic = step();
+        assertThat(diagnostic.get("done").asBoolean()).as("아직 진단 중이다").isFalse();
+
+        JsonNode next = MAPPER.readTree(
+                mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                        .andReturn().getResponse().getContentAsString());
+
+        assertThat(next.get("problem").get("code").asText())
+                .as("결과 패널과 진단 카드가 같은 문제를 가리켜야 한다")
+                .isEqualTo(diagnostic.get("problem").get("code").asText());
+    }
+
+    @Test
     @DisplayName("없는 사용자는 404 다")
     void unknownUserIsNotFound() throws Exception {
         assertThat(mvc.perform(get("/api/users/{id}/diagnostic", 999999L))

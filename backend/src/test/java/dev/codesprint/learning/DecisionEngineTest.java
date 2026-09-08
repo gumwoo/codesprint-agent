@@ -443,14 +443,15 @@ class DecisionEngineTest {
         }
 
         @Test
-        @DisplayName("선수 조건을 채웠으면 진단이 끼어들지 않는다")
-        void theDiagnosticOnlyReplacesThePrerequisiteRule() {
-            // **진단은 선수 조건 규칙만 대체한다.** 둘이 같은 질문("어느 Skill 로
-            // 갈 것인가")에 답하기 때문이다. 다른 질문에 답하는 규칙 - 확정된 실수의
-            // 드릴, 3회 실패의 개념 복습 - 은 그대로 둔다.
+        @DisplayName("막힌 선수가 없어도 진단이 이동을 소유한다")
+        void theDiagnosticOwnsTheMoveEvenWithoutABlocker() {
+            // **처음에는 이 자리를 선수 조건 분기 안에 두었고, 틀렸다.**
             //
-            // 처음에는 모든 규칙보다 앞에 두었는데, 신규 사용자는 전부 진단 중이라
-            // 그것들이 전부 덮였다. 테스트 10개가 그것을 잡았다.
+            // 막힌 선수가 없는 Skill - 뿌리 Skill 이나 선수를 이미 채운 Skill - 을
+            // 풀면 그 분기가 아예 돌지 않는다. 그러면 결과 패널은 RETRY_VARIANT 를,
+            // 진단 카드는 다른 Skill 을 가리켜 #24 가 없애려던 그 불일치가 되살아난다.
+            // 실제로 P01(뿌리 Skill) 을 틀리자 결과 패널은 **다음 문제를 아예 주지
+            // 못했다** - 그 Skill 의 문제가 하나뿐이라 RETRY_VARIANT 가 갈 곳이 없었다.
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH",
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
@@ -460,7 +461,8 @@ class DecisionEngineTest {
                     Map.of("BFS_GRID_TRAVERSAL", 0.95),   // 막힌 선수가 없다
                     "BFS_BASIC"));
 
-            assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
+            assertThat(action.type()).isEqualTo(ActionType.DIAGNOSTIC_PROBE);
+            assertThat(action.targetSkill()).isEqualTo("BFS_BASIC");
         }
 
         @Test

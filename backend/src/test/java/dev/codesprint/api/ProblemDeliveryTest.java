@@ -288,6 +288,11 @@ class ProblemDeliveryTest {
      * @return 추천된 문제 code
      */
     private String retryVariantPick() throws Exception {
+        // 진단 중에는 다음 Skill 이동을 진단이 소유한다(ADR-0019). 여기서 보려는 것은
+        // 그 뒤의 문제 선택이므로, 먼저 진단을 끝낸다 - P05 를 통과하면 그래프가
+        // 한 번에 덮인다.
+        submitAndJudge("P05_SHORTEST_PATH", "ACCEPTED");
+
         submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
         long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
 
