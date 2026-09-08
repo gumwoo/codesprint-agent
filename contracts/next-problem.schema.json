@@ -26,6 +26,7 @@
         "REVIEW_CONCEPT",
         "RETRY_VARIANT",
         "CHANGE_SKILL",
+        "DIAGNOSTIC_PROBE",
         "UNLOCK_NEXT",
         "SCHEDULE_REVIEW",
         "MOCK_TEST",

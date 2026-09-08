@@ -311,16 +311,25 @@ class SubmissionFlowTest {
     }
 
     @Test
-    @DisplayName("선수 조건을 못 채운 Skill 은 첫 실패에서 선수 Skill 로 보낸다")
+    @DisplayName("준비되지 않은 Skill 을 첫 실패에서 붙들고 있지 않는다")
     void firstFailureOnLockedSkillRedirects() throws Exception {
+        // 사용자가 준비되지 않은 문제에서 반복 실패하면 그 실패가 Evidence 로 쌓여
+        // mastery 를 끌어내린다. 그래서 다른 Skill 로 보낸다.
+        //
+        // **어느 Skill 인지는 국면에 따라 다르다**(ADR-0019). 진단 중이면 진단이,
+        // 끝났으면 선수 조건 규칙이 정한다. 여기서 확인하는 것은 <b>붙들고 있지
+        // 않는다</b>는 것이고, 어느 규칙이 이기는지는 DecisionEngineTest 가 본다.
         long submissionId = accept("P05_SHORTEST_PATH", requestBody(0))
                 .get("submissionId").asLong();
         workerFinishes(submissionId, judged("WRONG_ANSWER", 0, 5));
         poller.applyFinishedJobs();
 
         JsonNode action = statusOf(submissionId).get("result").get("nextAction");
-        assertThat(action.get("type").asText()).isEqualTo("CHANGE_SKILL");
+        assertThat(action.get("type").asText())
+                .isIn("DIAGNOSTIC_PROBE", "CHANGE_SKILL");
         assertThat(action.get("targetSkill").asText()).isNotBlank();
+        assertThat(action.get("targetSkill").asText())
+                .as("같은 Skill 로 되돌리지 않는다").isNotEqualTo("BFS_SHORTEST_PATH");
     }
 
     @Test

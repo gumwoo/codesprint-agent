@@ -59,7 +59,8 @@ class DecisionEngineTest {
         return engine.decide(new DecisionEngine.Context(
                 SKILL, state, Math.max(0, state.evidenceCount() - 1),
                 judgeStatus, mistake, attempts, reviewCompleted,
-                allPrerequisitesMet()));
+                allPrerequisitesMet(),
+                null));
     }
 
     @Nested
@@ -257,7 +258,7 @@ class DecisionEngineTest {
                             SkillStatus.UNASSESSED),
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of()));
+                    Map.of(), null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -277,7 +278,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.LOCKED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -293,7 +294,7 @@ class DecisionEngineTest {
                             SkillStatus.READY),
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of("BFS_GRID_TRAVERSAL", 0.30)));
+                    Map.of("BFS_GRID_TRAVERSAL", 0.30), null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
         }
@@ -310,7 +311,7 @@ class DecisionEngineTest {
                     state(0.55, 0.40, SkillStatus.PRACTICING),
                     4,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of()));
+                    Map.of(), null));
 
             assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
         }
@@ -331,7 +332,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_GRID_TRAVERSAL", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, masteries));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, masteries, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill())
@@ -355,7 +356,7 @@ class DecisionEngineTest {
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH", afterThisSubmission,
                     0,                                   // 제출 전에는 하나도 없었다
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -370,7 +371,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 1,
                             SkillStatus.LEARNING),
                     2,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of()))
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("priorEvidenceCount");
         }
@@ -385,7 +386,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.SYSTEM_ERROR, null, 1, false, Map.of()));
+                    JudgeStatus.SYSTEM_ERROR, null, 1, false, Map.of(), null));
 
             assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
         }
@@ -399,9 +400,103 @@ class DecisionEngineTest {
                             SkillStatus.UNASSESSED),
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of("BFS_GRID_TRAVERSAL", 0.95)));
+                    Map.of("BFS_GRID_TRAVERSAL", 0.95), null));
 
             assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
+        }
+    }
+
+    @Nested
+    @DisplayName("초기 진단 중일 때 (ADR-0019)")
+    class DuringDiagnostic {
+
+        private NextAction decideWithDiagnostic(JudgeStatus status, String diagnosticSkill) {
+            return engine.decide(new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH",
+                    new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
+                            SkillStatus.UNASSESSED),
+                    0,
+                    status, null, 1, false,
+                    Map.of(),                 // 선수 조건은 하나도 못 채웠다
+                    diagnosticSkill));
+        }
+
+        @Test
+        @DisplayName("진단이 선수 조건 규칙을 이긴다")
+        void theDiagnosticWinsOverPrerequisites() {
+            // **이것이 이 규칙의 존재 이유다.** 진단 중에는 거의 모든 Skill 이 선수
+            // 미충족이라, 뒤에 두면 선수 규칙이 항상 이기고 진단은 아무 데도 못 간다.
+            // 실제로 화면 두 곳이 서로 다른 문제를 가리켰다.
+            NextAction action = decideWithDiagnostic(JudgeStatus.WRONG_ANSWER, "BFS_BASIC");
+
+            assertThat(action.type()).isEqualTo(ActionType.DIAGNOSTIC_PROBE);
+            assertThat(action.targetSkill()).isEqualTo("BFS_BASIC");
+        }
+
+        @Test
+        @DisplayName("정답이어도 진단이 안 끝났으면 진단이 정한다")
+        void evenOnSuccess() {
+            // 진단은 학습에 앞서는 단계다. 맞혔다고 학습 루프로 넘어가는 것이 아니라,
+            // 아직 모르는 칸이 남아 있으면 그것을 마저 채운다.
+            NextAction action = decideWithDiagnostic(JudgeStatus.ACCEPTED, "BFS_BASIC");
+            assertThat(action.type()).isEqualTo(ActionType.DIAGNOSTIC_PROBE);
+        }
+
+        @Test
+        @DisplayName("막힌 선수가 없어도 진단이 이동을 소유한다")
+        void theDiagnosticOwnsTheMoveEvenWithoutABlocker() {
+            // **처음에는 이 자리를 선수 조건 분기 안에 두었고, 틀렸다.**
+            //
+            // 막힌 선수가 없는 Skill - 뿌리 Skill 이나 선수를 이미 채운 Skill - 을
+            // 풀면 그 분기가 아예 돌지 않는다. 그러면 결과 패널은 RETRY_VARIANT 를,
+            // 진단 카드는 다른 Skill 을 가리켜 #24 가 없애려던 그 불일치가 되살아난다.
+            // 실제로 P01(뿌리 Skill) 을 틀리자 결과 패널은 **다음 문제를 아예 주지
+            // 못했다** - 그 Skill 의 문제가 하나뿐이라 RETRY_VARIANT 가 갈 곳이 없었다.
+            NextAction action = engine.decide(new DecisionEngine.Context(
+                    "BFS_SHORTEST_PATH",
+                    new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
+                            SkillStatus.UNASSESSED),
+                    0,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    Map.of("BFS_GRID_TRAVERSAL", 0.95),   // 막힌 선수가 없다
+                    "BFS_BASIC"));
+
+            assertThat(action.type()).isEqualTo(ActionType.DIAGNOSTIC_PROBE);
+            assertThat(action.targetSkill()).isEqualTo("BFS_BASIC");
+        }
+
+        @Test
+        @DisplayName("확정된 실수의 드릴은 진단보다 우선한다")
+        void aConfirmedMistakeStillDrills() {
+            // 실수는 이미 관측된 구체적인 결함이다. 아직 재 보지 않은 Skill 보다
+            // 먼저 다룰 값이 있다 - 그리고 그것 자체가 "어디서부터" 의 답이기도 하다.
+            NextAction action = engine.decide(new DecisionEngine.Context(
+                    SKILL,
+                    state(0.60, 0.50, SkillStatus.PRACTICING),
+                    4,
+                    JudgeStatus.WRONG_ANSWER, "BOUNDARY_CHECK", 1, false,
+                    allPrerequisitesMet(),
+                    "BFS_BASIC"));
+
+            assertThat(action.type()).isEqualTo(ActionType.MICRO_DRILL);
+            assertThat(action.targetSkill()).isEqualTo("GRID_BOUNDARY_CHECK");
+        }
+
+        @Test
+        @DisplayName("채점 실패에서도 개입하지 않는다")
+        void systemErrorIsLeftAlone() {
+            NextAction action = decideWithDiagnostic(JudgeStatus.SYSTEM_ERROR, "BFS_BASIC");
+            assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
+        }
+
+        @Test
+        @DisplayName("진단이 끝나면 평소 규칙이 그대로 돈다")
+        void afterTheDiagnosticNothingChanges() {
+            // 넘겨주는 이벤트가 따로 없다. 입력이 null 이 되면 규칙 한 줄을 건너뛴다.
+            NextAction action = decideWithDiagnostic(JudgeStatus.WRONG_ANSWER, null);
+
+            assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
+            assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
         }
     }
 

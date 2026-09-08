@@ -43,6 +43,9 @@ public class DecisionEngine {
      * @param sameProblemAttempts 이 문제를 몇 번째 시도하는가 (이번 제출 포함).
      * @param reviewCompleted 이 Skill 에 복습 성공 기록이 있는가.
      * @param masteries 다른 Skill 들의 mastery. 선수 조건 판정에 쓴다.
+     * @param diagnosticSkill 초기 진단이 다음에 확인하려는 Skill. 진단이 끝났거나
+     *     물어볼 문제가 없으면 null 이다. <b>생략하지 않는다</b> - 진단은 결정에
+     *     참여하는 입력이므로, 값을 빠뜨리면 "진단 밖" 과 "안 물어봤다" 가 같아진다.
      */
     public record Context(
             String skillCode,
@@ -52,7 +55,8 @@ public class DecisionEngine {
             String confirmedMistake,
             int sameProblemAttempts,
             boolean reviewCompleted,
-            Map<String, Double> masteries) {
+            Map<String, Double> masteries,
+            String diagnosticSkill) {
 
         public Context {
             if (priorEvidenceCount < 0) {
@@ -93,6 +97,35 @@ public class DecisionEngine {
             return NextAction.of(ActionType.CONTINUE, "채점 실패 - 사용자 잘못이 아니다");
         }
 
+        // 문법 오류도 이 자리다. 고쳐서 다시 내면 되는 상황이라 어디로도 보내지 않는다.
+        // 아래 선수 조건 규칙보다 먼저 와야 한다 - 뒤에 두면 컴파일이 깨졌다는 이유로
+        // 다른 Skill 로 튄다. Reviewer 도 부르지 않고(ADR-0004) 확정된 Mistake 도 없다.
+        if (context.judgeStatus() == JudgeStatus.COMPILE_ERROR) {
+            return NextAction.of(ActionType.CONTINUE, "문법 오류 - 같은 문제를 고쳐 다시 낸다");
+        }
+
+        // 1. 이 Skill 안에서 **즉시 교정할 구체적인 근거**가 있으면 그것이 먼저다.
+        //
+        // 확정된 실수와 반복 실패는 이미 관측된 것이라, 아직 재 보지 않은 Skill 을
+        // 채우는 것보다 값이 크다. 그리고 그것 자체가 "어디서부터" 의 답이기도 하다.
+        if (context.judgeStatus() != JudgeStatus.ACCEPTED) {
+            NextAction inSkill = correctInPlace(context);
+            if (inSkill != null) {
+                return inSkill;
+            }
+        }
+
+        // 2. 진단이 안 끝났으면 **다음 Skill 로의 이동은 진단이 소유한다**(ADR-0019).
+        //
+        // 선수 조건 분기 안에 두었더니 부족했다. 막힌 선수가 없는 Skill - 뿌리 Skill
+        // 이나 선수를 이미 채운 Skill - 을 풀면 그 분기가 아예 돌지 않아, 결과 패널은
+        // RETRY_VARIANT 를, 진단 카드는 다른 Skill 을 가리켰다. 심지어 그 Skill 의
+        // 문제가 하나뿐이면 결과 패널은 **다음 문제를 아예 주지 못했다.**
+        if (context.diagnosticSkill() != null) {
+            return NextAction.targeting(ActionType.DIAGNOSTIC_PROBE, context.diagnosticSkill(),
+                    "초기 진단 - " + context.diagnosticSkill() + " 을(를) 아직 확인하지 않았다");
+        }
+
         // 0. 아직 배우기 시작하지 않은 Skill 이면 선수 조건을 먼저 본다.
         //
         // Addendum §43 에는 없는 분기다. 그 pseudocode 는 "이미 이 Skill 을 하고 있다" 를
@@ -123,14 +156,8 @@ public class DecisionEngine {
 
         return switch (context.judgeStatus()) {
             case ACCEPTED -> onAccepted(context);
-
-            // COMPILE_ERROR 와 SYSTEM_ERROR 에서는 Reviewer 를 부르지 않는다(ADR-0004).
-            // 확정된 Mistake 도 없으므로 드릴로 보낼 근거가 없다.
-            //
-            // 문법 오류는 고쳐 다시 내면 되는 상황이다. 다른 문제로 보내면 흐름이 끊긴다.
-            case COMPILE_ERROR ->
-                    NextAction.of(ActionType.CONTINUE, "문법 오류 - 같은 문제를 고쳐 다시 낸다");
-            default -> onFailure(context);
+            default -> NextAction.targeting(ActionType.RETRY_VARIANT, context.skillCode(),
+                    "구현 연습이 더 필요하다");
         };
     }
 
@@ -172,7 +199,13 @@ public class DecisionEngine {
     }
 
     /** Addendum §43 의 실패 분기. */
-    private NextAction onFailure(Context context) {
+    /**
+     * 이 Skill 안에서 즉시 교정할 근거. 없으면 null 이다.
+     *
+     * <p>여기 있는 것들은 진단보다 우선한다 - 이미 관측된 구체적인 결함이라,
+     * 아직 재 보지 않은 Skill 을 채우는 것보다 먼저 다룰 값이 있다(ADR-0019).
+     */
+    private NextAction correctInPlace(Context context) {
         // 확정된 Mistake 가 자동 드릴 대상이면 거기로 보낸다.
         //
         // 대상 Skill 을 여기 하드코딩하지 않는다. curriculum/mistakes.yaml 의
@@ -194,7 +227,6 @@ public class DecisionEngine {
                     "같은 문제 " + context.sameProblemAttempts() + "회 실패 - 개념부터 다시 본다");
         }
 
-        return NextAction.targeting(ActionType.RETRY_VARIANT, context.skillCode(),
-                "구현 연습이 더 필요하다");
+        return null;
     }
 }

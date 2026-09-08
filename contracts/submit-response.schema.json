@@ -202,6 +202,7 @@
             "REVIEW_CONCEPT",
             "RETRY_VARIANT",
             "CHANGE_SKILL",
+            "DIAGNOSTIC_PROBE",
             "UNLOCK_NEXT",
             "SCHEDULE_REVIEW",
             "MOCK_TEST",
@@ -213,7 +214,7 @@
             "string",
             "null"
           ],
-          "description": "MICRO_DRILL / CHANGE_SKILL 처럼 대상이 있는 액션에서만 채운다. 없으면 null 을 명시한다."
+          "description": "MICRO_DRILL / CHANGE_SKILL / DIAGNOSTIC_PROBE 처럼 대상이 있는 액션에서만 채운다. 없으면 null 을 명시한다."
         },
         "reason": {
           "type": [
