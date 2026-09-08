@@ -60,7 +60,7 @@ class DecisionEngineTest {
                 SKILL, state, Math.max(0, state.evidenceCount() - 1),
                 judgeStatus, mistake, attempts, reviewCompleted,
                 allPrerequisitesMet(),
-                null));
+                null, null));
     }
 
     @Nested
@@ -258,7 +258,7 @@ class DecisionEngineTest {
                             SkillStatus.UNASSESSED),
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of(), null));
+                    Map.of(), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -278,7 +278,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.LOCKED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -294,7 +294,7 @@ class DecisionEngineTest {
                             SkillStatus.READY),
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of("BFS_GRID_TRAVERSAL", 0.30), null));
+                    Map.of("BFS_GRID_TRAVERSAL", 0.30), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
         }
@@ -311,7 +311,7 @@ class DecisionEngineTest {
                     state(0.55, 0.40, SkillStatus.PRACTICING),
                     4,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of(), null));
+                    Map.of(), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
         }
@@ -332,7 +332,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_GRID_TRAVERSAL", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, masteries, null));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, masteries, null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill())
@@ -356,7 +356,7 @@ class DecisionEngineTest {
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH", afterThisSubmission,
                     0,                                   // 제출 전에는 하나도 없었다
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -371,7 +371,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 1,
                             SkillStatus.LEARNING),
                     2,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null))
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("priorEvidenceCount");
         }
@@ -386,7 +386,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.SYSTEM_ERROR, null, 1, false, Map.of(), null));
+                    JudgeStatus.SYSTEM_ERROR, null, 1, false, Map.of(), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
         }
@@ -400,7 +400,7 @@ class DecisionEngineTest {
                             SkillStatus.UNASSESSED),
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
-                    Map.of("BFS_GRID_TRAVERSAL", 0.95), null));
+                    Map.of("BFS_GRID_TRAVERSAL", 0.95), null, null));
 
             assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
         }
@@ -418,7 +418,7 @@ class DecisionEngineTest {
                     0,
                     status, null, 1, false,
                     Map.of(),                 // 선수 조건은 하나도 못 채웠다
-                    diagnosticSkill));
+                    diagnosticSkill, null));
         }
 
         @Test
@@ -459,7 +459,7 @@ class DecisionEngineTest {
                     0,
                     JudgeStatus.WRONG_ANSWER, null, 1, false,
                     Map.of("BFS_GRID_TRAVERSAL", 0.95),   // 막힌 선수가 없다
-                    "BFS_BASIC"));
+                    "BFS_BASIC", null));
 
             assertThat(action.type()).isEqualTo(ActionType.DIAGNOSTIC_PROBE);
             assertThat(action.targetSkill()).isEqualTo("BFS_BASIC");
@@ -476,7 +476,7 @@ class DecisionEngineTest {
                     4,
                     JudgeStatus.WRONG_ANSWER, "BOUNDARY_CHECK", 1, false,
                     allPrerequisitesMet(),
-                    "BFS_BASIC"));
+                    "BFS_BASIC", null));
 
             assertThat(action.type()).isEqualTo(ActionType.MICRO_DRILL);
             assertThat(action.targetSkill()).isEqualTo("GRID_BOUNDARY_CHECK");

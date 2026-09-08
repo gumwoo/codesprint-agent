@@ -28,7 +28,15 @@ public enum ActionType {
      */
     DIAGNOSTIC_PROBE,
     UNLOCK_NEXT,
+    /** 점수가 문턱을 넘었으나 복습 기록이 없다. 일정을 잡는다(PRD §79). */
     SCHEDULE_REVIEW,
+    /**
+     * 예약된 복습이 만기다. 지금 그 Skill 을 다시 확인한다(ADR-0021).
+     *
+     * <p>{@code SCHEDULE_REVIEW}("예약한다")와 다른 것이라 값을 따로 둔다. 섞으면
+     * 나중에 "이 제출이 예약된 복습이었는가" 를 이력에서 되읽을 수 없다.
+     */
+    REVIEW_DUE,
     MOCK_TEST,
     END_SESSION
 }

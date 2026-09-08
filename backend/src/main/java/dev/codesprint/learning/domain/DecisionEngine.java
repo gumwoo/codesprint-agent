@@ -41,11 +41,15 @@ public class DecisionEngine {
      *     시점에는 이번 실패가 이미 1개로 세어져 있다. 그 값으로 판단하면 선수 조건을
      *     못 채운 Skill 이 첫 제출에서 바로 선수 검사를 통과해버린다.
      * @param sameProblemAttempts 이 문제를 몇 번째 시도하는가 (이번 제출 포함).
-     * @param reviewCompleted 이 Skill 에 복습 성공 기록이 있는가.
+     * @param reviewScheduled 이 Skill 에 복습 일정이 이미 잡혀 있는가.
+     *     <b>"복습에 성공했는가" 가 아니다</b> - 그 판정은 MasteryCalculator 가
+     *     Evidence 로 한다. 여기서 필요한 것은 "또 잡을 것인가" 뿐이다.
      * @param masteries 다른 Skill 들의 mastery. 선수 조건 판정에 쓴다.
      * @param diagnosticSkill 초기 진단이 다음에 확인하려는 Skill. 진단이 끝났거나
      *     물어볼 문제가 없으면 null 이다. <b>생략하지 않는다</b> - 진단은 결정에
      *     참여하는 입력이므로, 값을 빠뜨리면 "진단 밖" 과 "안 물어봤다" 가 같아진다.
+     * @param dueReviewSkill 만기된 복습이 걸려 있는 Skill. 없으면 null 이다.
+     *     <b>만기인지는 일정이 정한다</b>(ADR-0021) - 문제 종류가 아니다.
      */
     public record Context(
             String skillCode,
@@ -54,9 +58,10 @@ public class DecisionEngine {
             JudgeStatus judgeStatus,
             String confirmedMistake,
             int sameProblemAttempts,
-            boolean reviewCompleted,
+            boolean reviewScheduled,
             Map<String, Double> masteries,
-            String diagnosticSkill) {
+            String diagnosticSkill,
+            String dueReviewSkill) {
 
         public Context {
             if (priorEvidenceCount < 0) {
@@ -126,6 +131,19 @@ public class DecisionEngine {
                     "초기 진단 - " + context.diagnosticSkill() + " 을(를) 아직 확인하지 않았다");
         }
 
+        // 2. 만기된 복습이 있으면 그리로 보낸다(ADR-0021).
+        //
+        // 진단보다 뒤다. 진단은 "아무것도 모르는 상태" 를 메우는 일이고, 복습이 잡혀
+        // 있다는 것은 이미 그 Skill 을 충분히 했다는 뜻이라 급하지 않다.
+        //
+        // 선수 조건보다는 앞이다. 복습 대상은 이미 배운 Skill 이라 선수 조건에
+        // 걸리지 않지만, 지금 푸는 **다른** Skill 이 막혀 있을 수 있다 - 그때
+        // 막힌 선수로 보내면 잊혀 가는 Skill 을 그대로 둔다.
+        if (context.dueReviewSkill() != null) {
+            return NextAction.targeting(ActionType.REVIEW_DUE, context.dueReviewSkill(),
+                    "복습 만기 - " + context.dueReviewSkill() + " 이(가) 아직 되는지 본다");
+        }
+
         // 0. 아직 배우기 시작하지 않은 Skill 이면 선수 조건을 먼저 본다.
         //
         // Addendum §43 에는 없는 분기다. 그 pseudocode 는 "이미 이 Skill 을 하고 있다" 를
@@ -188,9 +206,9 @@ public class DecisionEngine {
                 && mastery >= MasteryCalculator.MASTERY_THRESHOLD
                 && state.confidence() >= MasteryCalculator.CONFIDENCE_THRESHOLD;
 
-        if (strongScores && !context.reviewCompleted()) {
+        if (strongScores && !context.reviewScheduled()) {
             return NextAction.of(ActionType.SCHEDULE_REVIEW,
-                    "점수는 문턱을 넘었으나 복습 성공 기록이 없다");
+                    "점수는 문턱을 넘었으나 복습이 잡혀 있지 않다");
         }
 
         return NextAction.of(ActionType.CONTINUE,

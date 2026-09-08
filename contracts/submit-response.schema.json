@@ -203,6 +203,7 @@
             "RETRY_VARIANT",
             "CHANGE_SKILL",
             "DIAGNOSTIC_PROBE",
+            "REVIEW_DUE",
             "UNLOCK_NEXT",
             "SCHEDULE_REVIEW",
             "MOCK_TEST",
