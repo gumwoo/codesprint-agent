@@ -43,9 +43,13 @@ let activeRunId = null;
  * **전에** 문제나 사용자가 바뀌거나 다른 요청이 시작되면 막을 것이 없다. 늦게
  * 도착한 202 가 남의 화면에서 폴링을 시작한다.
  *
- * <b>시작할 때 이전 것을 무효화하지 않는다.</b> 무효화하면 새 요청이 거절됐을 때
- * 앞 요청의 관찰까지 끊긴다 - 앞의 것은 그대로 채점되고 있는데도. 대신 번호를
- * 올려 두고, **인수인계는 202 를 받은 쪽만** 한다.
+ * <b>쓰는 곳은 202 를 받은 직후 한 번뿐이다.</b> 진행 중이던 관찰의 생존 조건에는
+ * 넣지 않는다 - 넣으면 새 요청을 누른 순간 앞의 관찰이 끊기고, 그 새 요청이
+ * 거절되면 앞 결과를 다시 볼 방법이 없다. 실제로 그렇게 넣었다가 되돌렸다.
+ *
+ * <p>진행 중이던 관찰은 <b>누군가 실제로 인수할 때</b> 끝난다 - 202 를 받은 쪽이
+ * {@code dropActive*} 로 자리를 넘겨받는다. 문제나 사용자가 바뀌는 경우는
+ * {@code cancelActive*} 가 번호를 올리고 자리도 함께 비운다.
  */
 let latestRunStart = 0;
 let latestSubmitStart = 0;
@@ -463,7 +467,7 @@ async function submit() {
   cancelActiveRun();
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
-  await waitForResult(accepted.submissionId, startedAt, started);
+  await waitForResult(accepted.submissionId, startedAt);
 }
 
 /**
@@ -520,7 +524,7 @@ async function runSamples() {
   }
   // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
   dropActiveRun();
-  await waitForRun(accepted.runId, runningUserId, started);
+  await waitForRun(accepted.runId, runningUserId);
 }
 
 /** 보고 있던 실행을 놓는다. 그 폴러는 다음 응답에서 스스로 멈춘다. */
@@ -547,7 +551,7 @@ function dropActiveRun() {
  * 끝냈는데, 같은 큐와 같은 Worker 를 쓰면서 실행에만 다른 규칙을 둘 이유가 없다 -
  * job 은 큐에 남아 있고, 서버가 잠깐 내려갔다고 사라지지 않는다.
  */
-async function waitForRun(runId, runningUserId, started) {
+async function waitForRun(runId, runningUserId) {
   activeRunId = runId;
   const box = $("runOutput");
   box.replaceChildren();
@@ -567,8 +571,13 @@ async function waitForRun(runId, runningUserId, started) {
 
     // **화면을 만지기 전에 확인한다.** 기다리는 동안 다른 실행이 접수됐거나,
     // 문제나 사용자가 바뀌었을 수 있다. 그러면 이 폴러는 남의 화면에 쓰는 것이 된다.
-    if (activeRunId !== runId || started !== latestRunStart
-        || !stillCurrent(runningUserId)) {
+    // **번호는 여기서 보지 않는다.** 번호는 202 이전의 요청을 거르는 용도이고,
+    // 이미 접수된 관찰의 생존 조건에 넣으면 새 실행을 누른 순간 앞의 관찰이
+    // 끊긴다 - 그 새 실행이 거절되면 앞 결과를 다시 볼 방법이 없다.
+    //
+    // 인수인계는 202 를 받은 쪽이 dropActiveRun() 으로 한다. 문제나 사용자가
+    // 바뀌면 cancelActiveRun() 이 activeRunId 를 비우므로 그쪽도 여기서 걸린다.
+    if (activeRunId !== runId || !stillCurrent(runningUserId)) {
       return;
     }
 
@@ -643,7 +652,7 @@ function renderRun(view, box) {
   }
 }
 
-async function waitForResult(submissionId, startedAt, started) {
+async function waitForResult(submissionId, startedAt) {
   activeSubmissionId = submissionId;
   $("submitNote").textContent = "채점 중…";
   $("state").textContent = "채점 중";
@@ -664,7 +673,9 @@ async function waitForResult(submissionId, startedAt, started) {
     // "결과를 가져오지 못하고 있다" 를 새 제출의 화면에 남겼다.
     //
     // 루프 맨 앞에서만 보면 부족하다. await 는 여기서 일어난다.
-    if (activeSubmissionId !== submissionId || started !== latestSubmitStart) {
+    // 실행과 같은 이유로 번호를 보지 않는다. 새 제출을 눌렀다가 거절됐을 때
+    // 앞 제출의 관찰이 끊기면 안 된다 - 앞의 것은 그대로 채점되고 있다.
+    if (activeSubmissionId !== submissionId) {
       return;
     }
 
