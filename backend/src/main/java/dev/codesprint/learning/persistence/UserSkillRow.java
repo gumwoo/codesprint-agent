@@ -95,6 +95,18 @@ public class UserSkillRow {
         this.recomputedAt = recomputedAt;
     }
 
+    /**
+     * 다음 복습 시각을 캐시에 반영한다. <b>정본은 {@code review_schedules} 다</b>(ADR-0021).
+     *
+     * <p>{@code user_skills} 자체가 파생 캐시이므로(ADR-0009) 여기 복사본이 있는 것은
+     * 이상하지 않다 — 다만 <b>여기를 보고 판단하지 않는다.</b> 만기 여부는 일정이 정한다.
+     *
+     * <p>재계산({@link #replaceWith})은 이 값을 건드리지 않는다. 일정이 바뀔 때만 따라간다.
+     */
+    public void followSchedule(Instant nextReviewAt) {
+        this.nextReviewAt = nextReviewAt;
+    }
+
     public String skillCode() {
         return skillCode;
     }

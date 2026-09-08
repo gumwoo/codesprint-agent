@@ -1,6 +1,7 @@
 package dev.codesprint.learning.service;
 
 import dev.codesprint.learning.persistence.ReviewScheduleRepository;
+import dev.codesprint.learning.persistence.UserSkillRepository;
 import dev.codesprint.learning.persistence.ReviewScheduleRow;
 import java.time.Clock;
 import java.time.Instant;
@@ -24,11 +25,29 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReviewScheduleService {
 
     private final ReviewScheduleRepository schedules;
+    private final UserSkillRepository userSkills;
     private final Clock clock;
 
-    public ReviewScheduleService(ReviewScheduleRepository schedules, Clock clock) {
+    public ReviewScheduleService(ReviewScheduleRepository schedules,
+            UserSkillRepository userSkills, Clock clock) {
         this.schedules = schedules;
+        this.userSkills = userSkills;
         this.clock = clock;
+    }
+
+    /**
+     * 캐시의 {@code next_review_at} 을 일정에 맞춘다.
+     *
+     * <p>그 컬럼은 정본 스키마(Addendum §76)에 있는데 아무도 채우지 않고 있었다.
+     * <b>비어 있는 채로 두면 그 자리를 읽는 다음 사람이 "복습이 없다" 로 읽는다.</b>
+     * 정본은 {@code review_schedules} 이고 여기는 그 사본이다(ADR-0009).
+     */
+    private void mirrorToCache(Long userId, String skillCode, Instant dueAt) {
+        userSkills.findByUserIdAndSkillCode(userId, skillCode)
+                .ifPresent(row -> {
+                    row.followSchedule(dueAt);
+                    userSkills.save(row);
+                });
     }
 
     public Instant now() {
@@ -44,9 +63,11 @@ public class ReviewScheduleService {
      */
     @Transactional
     public ReviewScheduleRow scheduleIfAbsent(Long userId, String skillCode, Instant observedAt) {
-        return schedules.findByUserIdAndSkillCode(userId, skillCode)
+        ReviewScheduleRow schedule = schedules.findByUserIdAndSkillCode(userId, skillCode)
                 .orElseGet(() -> schedules.save(
                         new ReviewScheduleRow(userId, skillCode, observedAt)));
+        mirrorToCache(userId, skillCode, schedule.dueAt());
+        return schedule;
     }
 
     /** 지금 만기인 일정들. 없으면 빈 목록이다. */
@@ -59,6 +80,12 @@ public class ReviewScheduleService {
     @Transactional(readOnly = true)
     public boolean isScheduled(Long userId, String skillCode) {
         return schedules.findByUserIdAndSkillCode(userId, skillCode).isPresent();
+    }
+
+    /** 이 사용자의 일정 전부. 만기가 먼저 온다 - 화면이 정렬하지 않게 한다. */
+    @Transactional(readOnly = true)
+    public List<ReviewScheduleRow> all(Long userId) {
+        return schedules.findByUserIdOrderByDueAtAsc(userId);
     }
 
     /** 지금 만기인 것 중 하나. Decision Engine 이 입력으로 받는다. */
@@ -109,6 +136,7 @@ public class ReviewScheduleService {
         int daysSince = schedule.daysSince(at);
         schedule.completed(succeeded, at);
         schedules.save(schedule);
+        mirrorToCache(schedule.userId(), schedule.skillCode(), schedule.dueAt());
         return daysSince;
     }
 }

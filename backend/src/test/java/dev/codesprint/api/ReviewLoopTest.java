@@ -175,6 +175,11 @@ class ReviewLoopTest {
                 """.formatted(judgeStatus), job.id());
     }
 
+    private JsonNode reviews() throws Exception {
+        return MAPPER.readTree(mvc.perform(get("/api/users/{id}/reviews", userId))
+                .andReturn().getResponse().getContentAsString());
+    }
+
     private JsonNode nextAction(long submissionId) throws Exception {
         return MAPPER.readTree(mvc.perform(get("/api/submissions/{id}", submissionId))
                 .andReturn().getResponse().getContentAsString())
@@ -408,6 +413,76 @@ class ReviewLoopTest {
 
         assertThat(nextAction(other).get("type").asText())
                 .as("복습은 이미 진행 중이다").isNotEqualTo("REVIEW_DUE");
+    }
+
+    @Test
+    @DisplayName("복습이 잡히면 제출하지 않아도 보인다")
+    void aScheduledReviewIsVisibleWithoutSubmitting() throws Exception {
+        // **간격 복습은 "다시 왔을 때" 가 전부인 기능이다.** 그전에는 아무 문제나 하나
+        // 내야 결과 패널에서 알 수 있었고, 그 사이 아무 문제나 풀면 그것이 복습을
+        // 가져갔다.
+        reachTheThreshold();
+
+        JsonNode before = reviews();
+        assertThat(before.get("reviews")).hasSize(1);
+        assertThat(before.get("reviews").get(0).get("due").asBoolean())
+                .as("아직 때가 아니다").isFalse();
+        assertThat(before.get("reviews").get(0).get("problem").isNull())
+                .as("만기가 아니면 문제를 주지 않는다 - 주면 지금 풀어도 되는 것으로 읽는다")
+                .isTrue();
+
+        clock.advance(Duration.ofDays(2));
+
+        JsonNode after = reviews().get("reviews").get(0);
+        assertThat(after.get("due").asBoolean()).isTrue();
+        assertThat(after.get("problem").get("code").asText())
+                .as("풀 문제까지 준다").startsWith("P");
+        assertThat(after.get("skillCode").asText()).isEqualTo(SKILL);
+    }
+
+    @Test
+    @DisplayName("진행 중인 복습은 만기로 보이지 않는다")
+    void aClaimedReviewIsNotShownAsDue() throws Exception {
+        reachTheThreshold();
+        clock.advance(Duration.ofDays(2));
+        assertThat(reviews().get("reviews").get(0).get("due").asBoolean()).isTrue();
+
+        submit("P09_BFS_VARIANT_A");   // 복습을 가져간다
+
+        assertThat(reviews().get("reviews").get(0).get("due").asBoolean())
+                .as("이미 진행 중이다").isFalse();
+    }
+
+    @Test
+    @DisplayName("복습 진입점과 다음 행동이 같은 문제를 가리킨다")
+    void theEntryPointAgreesWithTheDecision() throws Exception {
+        // 규칙을 두 곳에 적으면 어느 쪽을 눌렀느냐에 따라 다른 문제가 나오고,
+        // 사용자는 그중 하나만 복습으로 세어지는 이유를 알 수 없다.
+        reachTheThreshold();
+        clock.advance(Duration.ofDays(2));
+
+        String fromCard = reviews().get("reviews").get(0).get("problem").get("code").asText();
+
+        long other = solve("P12_GRID_COORDINATE", "WRONG_ANSWER");
+        JsonNode next = MAPPER.readTree(
+                mvc.perform(get("/api/submissions/{id}/next-problem", other))
+                        .andReturn().getResponse().getContentAsString());
+
+        assertThat(next.get("action").asText()).isEqualTo("REVIEW_DUE");
+        assertThat(next.get("problem").get("code").asText()).isEqualTo(fromCard);
+    }
+
+    @Test
+    @DisplayName("캐시의 다음 복습 시각이 일정을 따라간다")
+    void theCacheColumnFollowsTheSchedule() throws Exception {
+        // next_review_at 은 정본 스키마(Addendum §76)에 있는데 아무도 채우지 않고
+        // 있었다. 비어 있으면 그 자리를 읽는 다음 사람이 "복습이 없다" 로 읽는다.
+        reachTheThreshold();
+
+        assertThat(jdbc.queryForObject(
+                "SELECT next_review_at FROM user_skills WHERE user_id = ? AND skill_code = ?",
+                java.sql.Timestamp.class, userId, SKILL))
+                .as("일정이 잡히면 캐시도 따라간다").isNotNull();
     }
 
     @Test

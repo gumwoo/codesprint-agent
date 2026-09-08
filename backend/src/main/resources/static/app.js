@@ -54,6 +54,16 @@ let activeRunId = null;
 let latestRunStart = 0;
 let latestSubmitStart = 0;
 
+/**
+ * 마지막으로 시작된 복습 조회.
+ *
+ * <p>사용자가 바뀌지 않아도 오래된 응답은 버려야 한다. 복습 조회는 목록을 열 때도,
+ * 채점이 반영될 때도 불리므로 <b>같은 사용자의 요청 둘이 겹친다.</b> 늦게 온
+ * {@code due=true} 가 최신 화면을 덮으면 이미 밀린 일정에 "지금 복습하기" 버튼이
+ * 되살아나고, 그것을 누른 제출은 복습으로 세어지지 않는다.
+ */
+let latestReviewRefresh = 0;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -146,6 +156,7 @@ function onAProblemScreen() {
 function showPicker() {
   showLeft("picker");
   refreshDiagnostic();
+  refreshReviews();
   $("crumbProblem").textContent = "고르는 중";
   $("problemMeta").textContent = "";
   $("submitButton").disabled = true;
@@ -266,6 +277,7 @@ function switchedUser() {
 
   remember($("userId").value);
   refreshDiagnostic();
+  refreshReviews();
   if (!$("skillsBody").hidden) {
     showSkills();
   }
@@ -287,6 +299,82 @@ function reportTo(userId, message) {
   if (stillCurrent(userId)) {
     $("footNote").textContent = message;
   }
+}
+
+/**
+ * 예약된 복습.
+ *
+ * **만기 여부를 여기서 정하지 않는다.** 서버가 `due` 를 내려준다 - 시각 비교를
+ * 브라우저에서 하면 그쪽 시계가 학습 기록을 정하게 된다(ADR-0021).
+ */
+/**
+ * 시각을 사람이 읽는 형태로. <b>표시만이다.</b>
+ *
+ * 브라우저의 지역 시간을 쓰는 것은 읽으라고 주는 값이기 때문이고, **만기 판단은
+ * 여전히 서버의 `due` 다** - 브라우저 시계가 학습 기록을 정하면 안 된다(ADR-0021).
+ */
+function when(isoText) {
+  const at = new Date(isoText);
+  return Number.isNaN(at.getTime()) ? isoText : at.toLocaleString();
+}
+
+async function refreshReviews() {
+  const card = $("reviewCard");
+  const userId = Number($("userId").value);
+  const started = ++latestReviewRefresh;
+  if (!userId) {
+    card.hidden = true;
+    return;
+  }
+
+  let view;
+  try {
+    view = await getJson(`/api/users/${userId}/reviews`);
+  } catch (error) {
+    // **여기에도 확인이 필요하다.** 오래된 요청이 늦게 실패하면서 최신 카드를
+    // 조용히 감추면, 복습이 잡혀 있는데 없는 것으로 보인다.
+    if (started === latestReviewRefresh && stillCurrent(userId)) {
+      card.hidden = true;
+    }
+    return;
+  }
+  // 화면에 쓰기 전에 확인한다. 사용자가 그대로여도 더 새 조회가 이미 그렸을 수 있다.
+  if (started !== latestReviewRefresh || !stillCurrent(userId)) {
+    return;
+  }
+
+  if (!view.reviews.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+
+  const due = view.reviews.filter((review) => review.due);
+  const button = $("reviewStart");
+  if (!due.length) {
+    // 잡혀 있지만 아직 때가 아니다. **간격이 지나야 의미가 있다** - 지금 풀면
+    // 그건 복습이 아니라 그냥 한 번 더 푸는 것이다.
+    const next = view.reviews[0];
+    card.classList.add("done");
+    $("reviewWhen").textContent = `${next.intervalDays}일 간격`;
+    $("reviewNote").textContent = `${next.skillCode} — 다음 복습 ${when(next.dueAt)}`;
+    return;
+  }
+
+  card.classList.remove("done");
+  const first = due[0];
+  $("reviewWhen").textContent = due.length > 1 ? `${due.length}개 밀림` : "지금";
+  $("reviewNote").textContent =
+      `${first.skillCode} — 시간이 지난 뒤에도 되는지 확인한다`;
+
+  if (!first.problem) {
+    // 줄 문제가 없다. 조용히 감추면 사용자는 복습이 없는 것으로 읽는다.
+    card.classList.add("done");
+    $("reviewNote").textContent = `${first.skillCode} — 줄 복습 문제가 없다`;
+    return;
+  }
+  button.textContent = `${first.skillCode} 복습하기 — ${first.problem.code}`;
+  button.onclick = () => openProblem(first.problem.code);
 }
 
 async function refreshDiagnostic() {
@@ -797,8 +885,9 @@ function render(submissionId, view) {
   if (!$("skillsBody").hidden) {
     showSkills();
   }
-  // 진단도 같이 움직인다 - 방금 낸 것이 다음 질문을 바꾼다.
+  // 진단과 복습도 같이 움직인다 - 방금 낸 것이 다음 질문과 일정을 바꾼다.
   refreshDiagnostic();
+  refreshReviews();
 }
 
 function heading(label) {
@@ -909,6 +998,7 @@ $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);
 restore();
 refreshDiagnostic();
+refreshReviews();
 loadProblems().catch((error) => {
   $("problemList").textContent = `문제 목록을 불러오지 못했다: ${error.message}`;
 });
