@@ -62,6 +62,19 @@
         <button type="button" id="diagStart"></button>
       </div>
 
+      <!--
+        예약된 복습. 간격 복습은 "다시 왔을 때" 가 전부인데, 그전에는 아무 문제나
+        하나 내야 결과 패널에서 알 수 있었다(ADR-0021).
+      -->
+      <div class="diagnostic" id="reviewCard" hidden>
+        <div class="diag-head">
+          <b>복습</b>
+          <span class="what" id="reviewWhen"></span>
+        </div>
+        <p class="note" id="reviewNote"></p>
+        <button type="button" id="reviewStart"></button>
+      </div>
+
       <p class="note">
         직접 골라도 된다. 그 뒤로는 <b>다음에 무엇을 할지 시스템이 정한다.</b>
       </p>
