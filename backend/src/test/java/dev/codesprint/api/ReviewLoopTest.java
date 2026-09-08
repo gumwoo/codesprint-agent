@@ -144,8 +144,19 @@ class ReviewLoopTest {
                 "review-" + System.nanoTime() + "@codesprint.dev", "복습테스트")).id();
     }
 
-    /** 제출하고 채점 결과까지 반영한다. */
+    /** 제출하고 채점 결과까지 반영한다. 제출 시각은 지금 시계다. */
     private long solve(String problemCode, String judgeStatus) throws Exception {
+        return solve(problemCode, judgeStatus, clock.instant());
+    }
+
+    /**
+     * 제출 시각과 처리 시각을 <b>따로</b> 준다.
+     *
+     * <p>채점은 큐를 지나므로 그 둘이 같지 않다. 실제로 다를 수 있다는 것을 테스트가
+     * 표현할 수 있어야 만기 경계를 확인할 수 있다.
+     */
+    private long solve(String problemCode, String judgeStatus, java.time.Instant submittedAt)
+            throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
                  "hintLevel": 0, "solutionViewed": false, "solveSeconds": 90}
@@ -166,7 +177,7 @@ class ReviewLoopTest {
         // 제출 시각도 시계를 따라야 한다. 그러지 않으면 daysSinceLast 가 실제 시각과
         // 테스트 시각 사이에서 계산되어 아무 의미가 없다.
         jdbc.update("UPDATE submissions SET submitted_at = ? WHERE id = ?",
-                java.sql.Timestamp.from(clock.instant()), submissionId);
+                java.sql.Timestamp.from(submittedAt), submissionId);
         poller.applyFinishedJobs();
         return submissionId;
     }
@@ -287,6 +298,65 @@ class ReviewLoopTest {
         solve("P09_BFS_VARIANT_A", "WRONG_ANSWER");
         assertThat(schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow()
                 .intervalDays()).as("바닥은 1일이다").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("만기 직전에 낸 제출은 늦게 반영돼도 복습이 아니다")
+    void aSubmissionMadeBeforeTheDueDateIsNotAReview() throws Exception {
+        // 채점은 큐를 지나므로 제출 시각과 처리 시각이 다르다. 처리 시각으로 판정하면
+        // **만기 전에 낸 제출이 복습이 된다** - 그리고 daysSinceLast 는 제출 시각으로
+        // 재므로 분류와 계산의 기준이 서로 달라진다.
+        reachTheThreshold();
+        ReviewScheduleRow before =
+                schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow();
+
+        Instant justBeforeDue = before.dueAt().minus(Duration.ofMinutes(1));
+        clock.advance(Duration.ofDays(2));          // 처리 시각은 만기를 지났다
+
+        solve("P09_BFS_VARIANT_A", "ACCEPTED", justBeforeDue);
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM skill_evidence WHERE user_id = ? "
+                        + "AND evidence_type = 'REVIEW_RESULT'", Long.class, userId))
+                .as("만기 전 제출이다").isZero();
+        ReviewScheduleRow after =
+                schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow();
+        assertThat(after.dueAt()).as("일정이 소비되면 안 된다").isEqualTo(before.dueAt());
+    }
+
+    @Test
+    @DisplayName("우리 잘못이나 문법 오류로는 복습이 실패하지 않는다")
+    void ourFailuresDoNotConsumeTheReview() throws Exception {
+        // 일반 제출은 producesEvidence() 로 이미 이것을 막고 있었는데, 복습 경로만
+        // 그 검사를 우회했다. 그대로 두면 **하네스가 죽었다는 이유로 복습이 실패로
+        // 기록되고 간격이 줄어든다** - 사용자는 아무것도 하지 않았는데.
+        reachTheThreshold();
+        clock.advance(Duration.ofDays(2));
+        ReviewScheduleRow before =
+                schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow();
+
+        for (String status : new String[] {"SYSTEM_ERROR", "COMPILE_ERROR"}) {
+            solve("P09_BFS_VARIANT_A", status);
+
+            assertThat(jdbc.queryForObject(
+                    "SELECT count(*) FROM skill_evidence WHERE user_id = ? "
+                            + "AND evidence_type = 'REVIEW_RESULT'", Long.class, userId))
+                    .as(status + " 로는 복습 Evidence 를 만들지 않는다").isZero();
+
+            ReviewScheduleRow after =
+                    schedules.findByUserIdAndSkillCode(userId, SKILL).orElseThrow();
+            assertThat(after.intervalDays()).as(status + " 로 간격이 줄면 안 된다")
+                    .isEqualTo(before.intervalDays());
+            assertThat(after.dueAt()).as(status + " 로 일정이 밀리면 안 된다")
+                    .isEqualTo(before.dueAt());
+        }
+
+        // 그리고 그 뒤에 제대로 풀면 복습은 여전히 살아 있다.
+        solve("P09_BFS_VARIANT_A", "ACCEPTED");
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM skill_evidence WHERE user_id = ? "
+                        + "AND evidence_type = 'REVIEW_RESULT'", Long.class, userId))
+                .as("복습 기회가 사라지지 않았다").isEqualTo(1L);
     }
 
     @Test

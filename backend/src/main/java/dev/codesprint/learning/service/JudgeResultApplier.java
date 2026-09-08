@@ -208,8 +208,18 @@ public class JudgeResultApplier {
 
         // **이 제출이 예약된 복습인가.** 문제 종류가 아니라 일정이 정한다(ADR-0021).
         // 만기된 일정이 PRIMARY Skill 에 걸려 있을 때만 복습이다.
-        ReviewScheduleRow dueReview =
-                reviewSchedules.dueFor(userId, primarySkill).orElse(null);
+        //
+        // 기준 시각은 **제출 시각**이다. 처리 시각으로 보면 채점이 밀리는 동안 만기가
+        // 지났을 때 만기 전에 낸 제출이 복습이 된다.
+        //
+        // 그리고 Evidence 를 만들지 않는 판정에서는 복습도 건드리지 않는다.
+        // SYSTEM_ERROR 는 우리 잘못이고 COMPILE_ERROR 는 알고리즘 Skill 의 실패가
+        // 아니다 - 그대로 두면 **우리 하네스가 죽었다는 이유로 복습이 실패로 기록되고
+        // 간격이 줄어든다.** 일반 제출 경로는 producesEvidence() 로 이미 그것을 막고
+        // 있었는데, 복습 경로만 그 검사를 우회하고 있었다.
+        ReviewScheduleRow dueReview = judged.status().producesEvidence()
+                ? reviewSchedules.dueFor(userId, primarySkill, occurred).orElse(null)
+                : null;
 
         for (SkillLink link : problem.skills()) {
             if (dueReview != null && link.skillCode().equals(primarySkill)) {

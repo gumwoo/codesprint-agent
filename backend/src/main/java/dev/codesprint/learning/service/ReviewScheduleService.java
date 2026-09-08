@@ -70,12 +70,25 @@ public class ReviewScheduleService {
     /**
      * 이 제출이 복습인가. 만기된 일정이 그 Skill 에 있을 때만 그렇다.
      *
+     * <p><b>기준 시각은 제출 시각이다.</b> 처리 시각으로 보면 안 된다 - 채점이 큐에서
+     * 밀리는 동안 만기가 지나면, 만기 전에 낸 제출이 복습이 된다.
+     *
+     * <pre>
+     *   만기   10:00
+     *   제출   09:59   아직 복습이 아니다
+     *   반영   10:01   여기서 now() 를 보면 복습이 되어 버린다
+     * </pre>
+     *
+     * <p>그리고 {@code daysSinceLast} 는 제출 시각으로 재므로, 처리 시각으로 판정하면
+     * <b>분류와 계산의 기준이 서로 달라진다.</b>
+     *
+     * @param at 제출 시각
      * @return 복습이면 그 일정. 아니면 비어 있다.
      */
     @Transactional(readOnly = true)
-    public Optional<ReviewScheduleRow> dueFor(Long userId, String skillCode) {
+    public Optional<ReviewScheduleRow> dueFor(Long userId, String skillCode, Instant at) {
         return schedules.findByUserIdAndSkillCode(userId, skillCode)
-                .filter(schedule -> schedule.isDue(now()));
+                .filter(schedule -> schedule.isDue(at));
     }
 
     /**
