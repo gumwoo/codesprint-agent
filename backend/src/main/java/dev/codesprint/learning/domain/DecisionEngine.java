@@ -50,6 +50,9 @@ public class DecisionEngine {
      *     참여하는 입력이므로, 값을 빠뜨리면 "진단 밖" 과 "안 물어봤다" 가 같아진다.
      * @param dueReviewSkill 만기된 복습이 걸려 있는 Skill. 없으면 null 이다.
      *     <b>만기인지는 일정이 정한다</b>(ADR-0021) - 문제 종류가 아니다.
+     * @param unlockedSkill 이 Skill 을 숙달했을 때 다음으로 갈 Skill(ADR-0022).
+     *     커리큘럼에 남은 것이 없으면 null 이다. <b>숙달하지 않았어도 채워서 들어온다</b> -
+     *     쓸지 말지는 여기서 정한다.
      */
     public record Context(
             String skillCode,
@@ -61,7 +64,8 @@ public class DecisionEngine {
             boolean reviewScheduled,
             Map<String, Double> masteries,
             String diagnosticSkill,
-            String dueReviewSkill) {
+            String dueReviewSkill,
+            String unlockedSkill) {
 
         public Context {
             if (priorEvidenceCount < 0) {
@@ -195,8 +199,15 @@ public class DecisionEngine {
         SkillState state = context.state();
 
         if (state.status() == SkillStatus.MASTERED) {
-            return NextAction.of(ActionType.UNLOCK_NEXT,
-                    "MASTERED - Addendum 22 의 네 조건을 모두 채웠다");
+            // **갈 곳을 함께 준다**(ADR-0022). 대상 없는 UNLOCK_NEXT 는 "다음으로
+            // 넘어가라" 고만 말하고 어디로 가는지는 말하지 않는 액션이었다.
+            if (context.unlockedSkill() == null) {
+                return NextAction.of(ActionType.END_SESSION,
+                        "커리큘럼에 남은 Skill 이 없다 - 슬라이스를 다 마쳤다");
+            }
+            return NextAction.targeting(ActionType.UNLOCK_NEXT, context.unlockedSkill(),
+                    "MASTERED - Addendum 22 의 네 조건을 모두 채웠다. 다음은 "
+                            + context.unlockedSkill());
         }
 
         // 점수는 충분한데 MASTERED 가 아닌 가장 흔한 이유가 "복습을 아직 안 했다" 다.

@@ -94,7 +94,11 @@ public class NextProblemService {
             // 일정은 서비스가 이미 저장했다. 지금 줄 문제는 없다 - 간격 복습은
             // 시간이 지나야 의미가 있고, 바로 다시 풀게 하면 그건 복습이 아니다.
             case SCHEDULE_REVIEW -> none("복습을 예약했다 - 간격이 지난 뒤에 다시 확인한다");
-            case UNLOCK_NEXT -> none("다음 Skill 을 고르는 규칙이 아직 없다");
+            // 새로 여는 Skill 이므로 일반 문제다. 드릴은 이미 배운 것을 좁게 다시
+            // 다루는 것이라, 아직 시작도 안 한 Skill 에 주면 맥락이 없다.
+            case UNLOCK_NEXT -> pick(userId, targetSkill, "NORMAL",
+                    justAttemptedProblemId, "앞 Skill 을 숙달해 열린 Skill");
+            case END_SESSION -> none("커리큘럼에 남은 Skill 이 없다");
             default -> none("이 행동을 문제로 옮기는 규칙이 아직 없다: " + action);
         };
     }

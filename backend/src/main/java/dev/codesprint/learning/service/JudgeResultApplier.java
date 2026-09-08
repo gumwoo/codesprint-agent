@@ -15,6 +15,8 @@ import dev.codesprint.learning.domain.Evidence;
 import dev.codesprint.learning.domain.EvidenceType;
 import dev.codesprint.learning.domain.JudgeStatus;
 import dev.codesprint.learning.domain.NextAction;
+import dev.codesprint.learning.domain.NextSkillSelector;
+import dev.codesprint.learning.domain.SkillState;
 import dev.codesprint.learning.domain.SkillState;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory.Submission;
@@ -75,12 +77,13 @@ public class JudgeResultApplier {
     private final NextProblemService nextProblem;
     private final DiagnosticService diagnostic;
     private final ReviewScheduleService reviewSchedules;
+    private final NextSkillSelector nextSkills;
 
     public JudgeResultApplier(ProblemCatalog catalog, EvidenceStore evidenceStore,
             MasteryService mastery, DecisionEngine decisions, SubmissionRepository submissions,
             UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews,
             NextProblemService nextProblem, DiagnosticService diagnostic,
-            ReviewScheduleService reviewSchedules) {
+            ReviewScheduleService reviewSchedules, NextSkillSelector nextSkills) {
         this.catalog = catalog;
         this.evidenceStore = evidenceStore;
         this.mastery = mastery;
@@ -92,6 +95,7 @@ public class JudgeResultApplier {
         this.nextProblem = nextProblem;
         this.diagnostic = diagnostic;
         this.reviews = reviews;
+        this.nextSkills = nextSkills;
     }
 
     /**
@@ -305,8 +309,12 @@ public class JudgeResultApplier {
             }
         }
 
+        // **상태를 한 번만 계산한다.** 진단과 다음 Skill 선택이 각각 다시 계산하면
+        // 조회가 두 배가 되고, 더 나쁘게는 한 결정 안에서 서로 다른 시점을 보게 된다.
+        //
         // 진단은 **이번 제출을 반영한 뒤** 본다. 앞서 보면 방금 낸 Skill 이 아직
         // 안 재 본 것으로 남아, 같은 Skill 을 다시 물으러 보낸다.
+        List<SkillState> states = mastery.statesOf(userId);
         NextAction action = decisions.decide(new DecisionEngine.Context(
                 primarySkill,
                 primaryState,
@@ -316,11 +324,12 @@ public class JudgeResultApplier {
                 consecutiveFailures(userId, submission.problemId()),
                 reviewSchedules.isScheduled(userId, primarySkill),
                 mastery.masteriesOf(userId),
-                pendingDiagnosticSkill(userId),
+                pendingDiagnosticSkill(states),
                 // 방금 이 제출로 복습을 끝냈다면 그 일정은 더 이상 만기가 아니다 -
                 // 위에서 다음 간격으로 밀어 두었으므로 여기서 다시 걸리지 않는다.
                 reviewSchedules.nextDue(userId)
-                        .map(ReviewScheduleRow::skillCode).orElse(null)));
+                        .map(ReviewScheduleRow::skillCode).orElse(null),
+                nextSkills.after(primarySkill, states).orElse(null)));
 
         // 결정이 "복습을 예약하라" 면 여기서 잡는다. **이미 있으면 그대로 둔다** -
         // 제출마다 새로 잡으면 30일까지 올라간 간격이 매번 1일로 되돌아간다.
@@ -351,8 +360,8 @@ public class JudgeResultApplier {
      * 가리키면 Decision Engine 이 갈 곳 없는 행동을 내고, 사용자는 다음 문제를
      * 못 받는다.
      */
-    private String pendingDiagnosticSkill(Long userId) {
-        DiagnosticService.Step step = diagnostic.nextStep(userId);
+    private String pendingDiagnosticSkill(List<SkillState> states) {
+        DiagnosticService.Step step = diagnostic.nextStep(states);
         return step.done() || step.problem() == null ? null : step.targetSkill();
     }
 

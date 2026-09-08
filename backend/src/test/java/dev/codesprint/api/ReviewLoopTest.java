@@ -432,7 +432,20 @@ class ReviewLoopTest {
                 .as("복습까지 마쳤으면 MASTERED 다")
                 .isEqualTo("MASTERED");
 
-        assertThat(nextAction(submissionId).get("type").asText())
+        JsonNode action = nextAction(submissionId);
+        assertThat(action.get("type").asText())
                 .as("MASTERED 다음은 UNLOCK_NEXT 다").isEqualTo("UNLOCK_NEXT");
+
+        // **갈 곳까지 준다**(ADR-0022). 대상 없는 UNLOCK_NEXT 는 "다음으로 넘어가라" 고만
+        // 말하고 어디로 가는지는 말하지 않는 액션이었다.
+        assertThat(action.get("targetSkill").isNull()).as("대상이 있어야 한다").isFalse();
+        assertThat(action.get("targetSkill").asText()).isNotEqualTo(SKILL);
+
+        JsonNode next = MAPPER.readTree(
+                mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                        .andReturn().getResponse().getContentAsString());
+        assertThat(next.get("problem").isNull())
+                .as("그 Skill 의 문제까지 실제로 나온다").isFalse();
+        assertThat(next.get("problem").get("kind").asText()).isEqualTo("NORMAL");
     }
 }
