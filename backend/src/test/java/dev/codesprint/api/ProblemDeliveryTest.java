@@ -262,13 +262,16 @@ class ProblemDeliveryTest {
     }
 
     @Test
-    @DisplayName("선수 조건 미충족이면 그 Skill 의 일반 문제를 준다")
-    void changeSkillYieldsANormalProblem() throws Exception {
-        // 신규 사용자가 BFS_SHORTEST_PATH 를 틀리면 선수 Skill 로 보낸다.
+    @DisplayName("다른 Skill 로 보낼 때는 그 Skill 의 일반 문제를 준다")
+    void movingToAnotherSkillYieldsANormalProblem() throws Exception {
+        // 신규 사용자가 BFS_SHORTEST_PATH 를 틀리면 다른 Skill 로 보낸다.
+        //
+        // **어느 Skill 인지는 진단이 정한다**(ADR-0019). 신규 사용자는 진단 중이므로
+        // 선수 조건 규칙 대신 진단이 답한다 - 여기서 확인하는 것은 그 뒤의 배달이다.
         long submissionId = submitAndJudge("P05_SHORTEST_PATH", "WRONG_ANSWER");
 
         JsonNode next = nextProblem(submissionId);
-        assertThat(next.get("action").asText()).isEqualTo("CHANGE_SKILL");
+        assertThat(next.get("action").asText()).isEqualTo("DIAGNOSTIC_PROBE");
         assertThat(next.get("problem").get("kind").asText())
                 .as("아직 시작도 안 한 Skill 에 드릴을 주지 않는다")
                 .isEqualTo("NORMAL");

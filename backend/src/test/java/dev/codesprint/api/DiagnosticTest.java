@@ -102,7 +102,7 @@ class DiagnosticTest {
     }
 
     /** 제출하고 채점 결과까지 반영한다. */
-    private void solve(String problemCode, String judgeStatus, int passed, int total)
+    private long solve(String problemCode, String judgeStatus, int passed, int total)
             throws Exception {
 
         String body = """
@@ -122,6 +122,7 @@ class DiagnosticTest {
                  "memoryKb": 20480, "failedCaseId": null, "stderr": null, "cases": []}
                 """.formatted(judgeStatus, passed, total), job.id());
         poller.applyFinishedJobs();
+        return submissionId;
     }
 
     @Test
@@ -213,6 +214,68 @@ class DiagnosticTest {
         // 끝났을 때는 targetSkill 과 problem 이 null 이다. **그 모양도 계약이다** -
         // 생략해 버리면 화면은 "아직 안 정해졌다" 와 구분할 수 없다.
         assertThat(schema.validate(step())).as("끝난 뒤 응답").isEmpty();
+    }
+
+    @Test
+    @DisplayName("진단 중에는 두 화면이 같은 문제를 가리킨다")
+    void theTwoPanelsAgreeWhileDiagnosing() throws Exception {
+        // **이것이 ADR-0019 의 존재 이유다.** 진단 카드와 결과 패널이 각각 다음 문제를
+        // 가리키는데, 서로 다른 것을 가리키면 사용자는 어느 쪽을 눌러야 할지 모른다.
+        // 실제로 진단은 BFS_BASIC 을, 결정은 BFS_GRID_TRAVERSAL 을 가리켰다.
+        JsonNode first = step();
+        long submissionId = solve(first.get("problem").get("code").asText(),
+                "WRONG_ANSWER", 1, 6);
+
+        JsonNode next = MAPPER.readTree(
+                mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                        .andReturn().getResponse().getContentAsString());
+        JsonNode diagnostic = step();
+
+        assertThat(next.get("action").asText()).isEqualTo("DIAGNOSTIC_PROBE");
+        assertThat(next.get("targetSkill").asText())
+                .isEqualTo(diagnostic.get("targetSkill").asText());
+        assertThat(next.get("problem").get("code").asText())
+                .as("두 화면이 같은 문제를 가리킨다")
+                .isEqualTo(diagnostic.get("problem").get("code").asText());
+    }
+
+    @Test
+    @DisplayName("진단이 끝나면 평소 결정으로 돌아온다")
+    void afterTheDiagnosticTheNormalRulesResume() throws Exception {
+        // 한 문제로 그래프가 덮이는 경로다. 그 다음 제출부터는 진단이 개입하지 않는다.
+        solve(step().get("problem").get("code").asText(), "ACCEPTED", 6, 6);
+        assertThat(step().get("done").asBoolean()).isTrue();
+
+        long submissionId = solve("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 1, 6);
+        JsonNode next = MAPPER.readTree(
+                mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                        .andReturn().getResponse().getContentAsString());
+
+        assertThat(next.get("action").asText()).isNotEqualTo("DIAGNOSTIC_PROBE");
+    }
+
+    @Test
+    @DisplayName("진단을 실패로 마치면 선수 조건 규칙이 다시 산다")
+    void thePrerequisiteRuleResumesAfterTheDiagnostic() throws Exception {
+        // **이 커버리지를 일부러 채운다.** 진단이 선수 조건 규칙을 대체하면서
+        // CHANGE_SKILL 이 서비스 수준에서 아무 테스트에도 안 걸리게 됐다 - 도달할 수
+        // 없어진 것이 아니라 도달하기 어려워진 것이라, 그대로 두면 그 경로가 죽어도
+        // 아무도 모른다.
+        //
+        // 통과로 진단을 끝낸다. 함의된 Skill 들은 **Evidence 가 없다** - 진단이
+        // "묻지 않기로" 했을 뿐 재 본 것이 아니다(ADR-0018).
+        solve(step().get("problem").get("code").asText(), "ACCEPTED", 6, 6);
+        assertThat(step().get("done").asBoolean()).as("진단이 끝나야 한다").isTrue();
+
+        // 그래서 그 중 하나를 실제로 풀어 보면 선수 조건이 막혀 있다. 함의는
+        // 진단의 판단이고, 선수 조건은 여전히 진짜 mastery 를 요구한다.
+        long submissionId = solve("P14_GRAPH_REACHABLE", "WRONG_ANSWER", 0, 6);
+        JsonNode next = MAPPER.readTree(
+                mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                        .andReturn().getResponse().getContentAsString());
+
+        assertThat(next.get("action").asText()).isEqualTo("CHANGE_SKILL");
+        assertThat(next.get("problem").get("kind").asText()).isEqualTo("NORMAL");
     }
 
     @Test
