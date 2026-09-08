@@ -345,3 +345,21 @@ table.skills .what { color: var(--muted); font-size: 11px; }
 .st-LEARNING, .st-PRACTICING { color: var(--ink); }
 .st-MASTERED { color: var(--ok); }
 .st-WEAKENED, .st-REVIEW_DUE { color: var(--bad); }
+
+/* -- 초기 진단 -- */
+.diagnostic {
+  border: 1px solid var(--line);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.diag-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.diagnostic .note { margin: 0 0 10px; }
+.diagnostic button { width: 100%; }
+.diagnostic.done button { display: none; }

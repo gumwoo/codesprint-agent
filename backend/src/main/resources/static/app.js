@@ -105,6 +105,7 @@ async function loadProblems() {
 
 function showPicker() {
   showLeft("picker");
+  refreshDiagnostic();
   $("crumbProblem").textContent = "고르는 중";
   $("problemMeta").textContent = "";
   $("submitButton").disabled = true;
@@ -143,6 +144,11 @@ async function showSkills() {
     ]);
     // 이름과 선수 관계는 커리큘럼에서, 점수는 상태에서 온다. 둘을 code 로 잇는다.
     const defined = new Map(catalog.skills.map((skill) => [skill.code, skill]));
+
+    // 진단과 같은 이유로, 쓰기 전에 확인한다. 사용자가 바뀌면 이 답은 남의 것이다.
+    if (!stillCurrent(userId)) {
+      return;
+    }
 
     rows.replaceChildren();
     for (const state of map.skills) {
@@ -183,9 +189,110 @@ async function showSkills() {
     $("skillsNote").textContent =
         "제출할 때마다 다시 계산된다. – 는 아직 근거가 없다는 뜻이고 0 과 다르다.";
   } catch (error) {
+    if (!stillCurrent(userId)) {
+      return;
+    }
     $("skillsNote").textContent = `상태를 불러오지 못했다: ${error.message}`;
     rows.replaceChildren();
   }
+}
+
+/**
+ * 초기 진단.
+ *
+ * **여기서 무엇을 물을지 고르지 않는다.** 서버가 정한 Skill 과 문제를 그대로
+ * 보여준다(ADR-0018). 화면이 선수 그래프를 다시 걸으면 서버가 정한 순서와 갈리고,
+ * 사용자가 보는 쪽이 이긴다.
+ */
+/**
+ * 사용자가 바뀌었다. <b>보고 있는 것 전부</b>를 그 사람 것으로 다시 읽는다.
+ *
+ * <p>한 곳에 모아 둔 이유가 있다. 처음에는 사용자를 만드는 쪽과 id 를 직접 고치는
+ * 쪽이 따로 처리했는데, 만드는 쪽에만 Skill 표 갱신을 넣어 두어서 <b>id 를 직접
+ * 고치면 진단은 새 사용자 것이고 Skill 표는 이전 사용자 것</b>으로 남았다.
+ * 늦게 온 응답을 막는 것(stillCurrent)과는 다른 문제다 - 그쪽은 덮어쓰기를 막고,
+ * 이쪽은 아예 다시 읽지 않는 것이다.
+ */
+function switchedUser() {
+  // **보고 있는 것 전부**에는 채점 결과도 들어간다. 판정 · 분석 · 다음 행동은 전부
+  // 그 사용자에 대한 것이라, 남겨 두면 새 사용자의 화면에 남의 결과가 붙어 있다.
+  // 폴링도 끊는다 - 살려 두면 이전 사용자의 결과가 **나중에 도착해서** 그려진다.
+  cancelActivePolling();
+  resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
+  // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
+  $("footNote").textContent = "";
+
+  remember($("userId").value);
+  refreshDiagnostic();
+  if (!$("skillsBody").hidden) {
+    showSkills();
+  }
+}
+
+/**
+ * 이 응답이 아직 화면에 쓸 것인가. 그 사이 사용자가 바뀌었으면 버린다.
+ *
+ * <p><b>규칙: 지금 화면의 사용자와 관계없는 비동기 결과는 화면에 아무것도 쓰지
+ * 않는다.</b> 아무것도 다. 남의 것이라는 안내조차 쓰지 않는다 - 그러려면 다른
+ * 사용자의 id 를 화면에 적어야 하고, 인증이 붙으면 그건 남의 정보다.
+ */
+function stillCurrent(userId) {
+  return Number($("userId").value) === userId;
+}
+
+/** 이 사용자의 진행 상황을 버튼 옆에 적는다. 화면이 넘어갔으면 적지 않는다. */
+function reportTo(userId, message) {
+  if (stillCurrent(userId)) {
+    $("footNote").textContent = message;
+  }
+}
+
+async function refreshDiagnostic() {
+  const box = $("diagnostic");
+  const userId = Number($("userId").value);
+  if (!userId) {
+    box.hidden = true;
+    return;
+  }
+
+  let step;
+  try {
+    step = await getJson(`/api/users/${userId}/diagnostic`);
+  } catch (error) {
+    if (!stillCurrent(userId)) {
+      return;
+    }
+    // 진단을 못 읽어도 문제 목록은 그대로 쓸 수 있다. 조용히 감추지 않고 말해 준다.
+    box.hidden = false;
+    box.classList.add("done");
+    $("diagProgress").textContent = "";
+    $("diagReason").textContent = `진단을 불러오지 못했다: ${error.message}`;
+    return;
+  }
+
+  // **응답을 받은 뒤, 화면에 쓰기 전에** 확인한다. 사용자를 새로 만들면 두 요청이
+  // 겹치고, 늦게 온 옛 사용자의 답이 새 사용자의 화면을 덮어쓴다 - 실제로 그렇게
+  // 아무것도 안 한 사용자에게 "1 / 8 확인됨" 이 떴다.
+  if (!stillCurrent(userId)) {
+    return;
+  }
+
+  box.hidden = false;
+  box.classList.toggle("done", step.done || !step.problem);
+  $("diagProgress").textContent = `${step.assessed} / ${step.total}`;
+  // 끝났을 때도 **서버가 준 이유**를 쓴다. 화면이 "끝났다" 만 말하면, Skill 지도에
+  // mastery 없이 남아 있는 Skill 이 모순처럼 보인다 - 재 본 것과 묻지 않기로 한 것을
+  // 구분해 주는 문장이 서버에서 온다.
+  $("diagReason").textContent = step.done
+      ? `진단이 끝났다 — ${step.reason}. 여기서부터는 제출할 때마다 다음 할 일을 정해서 준다.`
+      : step.reason;
+
+  if (step.done || !step.problem) {
+    return;
+  }
+  const button = $("diagStart");
+  button.textContent = `${step.targetSkill} 확인하기 — ${step.problem.code}`;
+  button.onclick = () => openProblem(step.problem.code);
 }
 
 async function openProblem(code) {
@@ -259,6 +366,9 @@ async function submit() {
   $("footNote").textContent = "제출하는 중…";
 
   const startedAt = Date.now();
+  // 누구의 제출인지 여기서 고정한다. 응답을 기다리는 동안 사용자가 바뀔 수 있고,
+  // 그때 body 와 화면이 다른 사람을 가리키면 안 된다.
+  const submittingUserId = Number($("userId").value);
   // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
   // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
   // 루프가 끝나 접수된 제출을 화면이 놓친다.
@@ -268,7 +378,7 @@ async function submit() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: Number($("userId").value),
+        userId: submittingUserId,
         language: "PYTHON",
         sourceCode: sourceCode(),
         // 화면은 힌트 사용량을 신고하지 않는다. 서버도 0 / false 만 받는다 -
@@ -282,19 +392,25 @@ async function submit() {
     if (!response.ok) {
       // 서버가 거절한 이유를 그대로 보여준다. "제출 실패" 로 덮으면 무엇이
       // 잘못됐는지 알 수 없다. 앞 제출의 폴링은 건드리지 않는다.
-      $("footNote").textContent = `제출이 거절됐다 (${response.status}): `
-          + (await response.text());
+      reportTo(submittingUserId, `제출이 거절됐다 (${response.status}): `
+          + (await response.text()));
       return;
     }
     accepted = await response.json();
   } catch (error) {
     // 여기까지 못 왔으면 접수되지 않은 것이다. 앞 제출은 그대로 둔다.
-    $("footNote").textContent = `제출하지 못했다: ${error.message}`;
+    reportTo(submittingUserId, `제출하지 못했다: ${error.message}`);
     return;
   } finally {
     // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     button.disabled = false;
+  }
+
+  // 접수된 뒤에 사용자가 바뀌었으면 이 제출은 이 화면 것이 아니다. 서버에서는
+  // 그대로 채점되고, 그 사용자로 돌아오면 Skill 상태에 반영돼 있다.
+  if (!stillCurrent(submittingUserId)) {
+    return;
   }
 
   // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
@@ -433,6 +549,8 @@ function render(submissionId, view) {
   if (!$("skillsBody").hidden) {
     showSkills();
   }
+  // 진단도 같이 움직인다 - 방금 낸 것이 다음 질문을 바꾼다.
+  refreshDiagnostic();
 }
 
 function heading(label) {
@@ -477,7 +595,9 @@ async function createUser() {
   }
   const created = await response.json();
   $("userId").value = created.userId;
-  remember(created.userId);
+
+  // 값을 코드로 바꾸면 change 가 뜨지 않는다. 직접 부른다.
+  switchedUser();
 }
 
 // 브라우저에만 기억한다. 서버에는 세션이 없다 - 있는 척하면 인증이 붙었을 때
@@ -530,7 +650,7 @@ function attachGutter() {
 attachEditor();
 attachGutter();
 $("createUser").addEventListener("click", createUser);
-$("userId").addEventListener("change", () => remember($("userId").value));
+$("userId").addEventListener("change", switchedUser);
 $("toProblems").addEventListener("click", showPicker);
 $("tabProblem").addEventListener("click", () => {
   // 열어 둔 문제가 있으면 그리로, 없으면 목록으로 돌아간다.
@@ -539,6 +659,7 @@ $("tabProblem").addEventListener("click", () => {
 $("tabSkills").addEventListener("click", showSkills);
 $("submitButton").addEventListener("click", submit);
 restore();
+refreshDiagnostic();
 loadProblems().catch((error) => {
   $("problemList").textContent = `문제 목록을 불러오지 못했다: ${error.message}`;
 });
