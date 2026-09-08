@@ -26,6 +26,7 @@ public interface JudgeJobRepository extends JpaRepository<JudgeJobRow, Long> {
     @Query("""
             select j from JudgeJobRow j
             where j.appliedAt is null and j.status in ('DONE', 'FAILED')
+              and j.kind = 'SUBMIT'
             order by j.id asc
             """)
     List<JudgeJobRow> findUnapplied(org.springframework.data.domain.Pageable page);

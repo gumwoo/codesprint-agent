@@ -186,7 +186,9 @@ class WebClientTest {
 
     /** 경로 변수와 템플릿 자리를 같은 모양으로 만든다. {@code /api/problems/{}} 처럼. */
     private static String normalise(String path) {
-        return path
+        // 질의 문자열은 떼어 낸다. ?userId=... 가 붙어도 같은 엔드포인트이며,
+        // 매핑은 경로로만 잡힌다 - 붙은 채로 대조하면 실재하는 것을 없다고 한다.
+        return path.split("[?]", 2)[0]
                 .replaceAll("\\$\\{[^}]*\\}", "{}")
                 .replaceAll("\\{[^}]*\\}", "{}");
     }

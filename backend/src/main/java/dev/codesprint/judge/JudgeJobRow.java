@@ -24,8 +24,23 @@ public class JudgeJobRow {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "submission_id", nullable = false, updatable = false)
+    /**
+     * 이 job 이 채점하는 제출. <b>실행(RUN)이면 null 이다.</b>
+     *
+     * <p>결과를 학습 상태로 되돌리는 경로가 이 값으로만 이어진다. DB CHECK 가
+     * RUN 행에 이 값이 들어가는 것을 막으므로(V7), 실행은 코드가 실수해도
+     * Evidence 가 될 수 없다(ADR-0020).
+     */
+    @Column(name = "submission_id", updatable = false)
     private Long submissionId;
+
+    /** SUBMIT 또는 RUN. */
+    @Column(nullable = false, updatable = false, length = 10)
+    private String kind;
+
+    /** 실행을 낸 사용자. 제출이면 null 이다 - 그쪽은 제출 행이 이미 안다. */
+    @Column(name = "user_id", updatable = false)
+    private Long userId;
 
     @Column(name = "problem_code", nullable = false, updatable = false, length = 100)
     private String problemCode;
@@ -64,9 +79,28 @@ public class JudgeJobRow {
     protected JudgeJobRow() {
     }
 
+    /** 채점할 제출 하나. */
     public JudgeJobRow(Long submissionId, String problemCode, String language,
             String sourceCode) {
+        this(submissionId, null, "SUBMIT", problemCode, language, sourceCode);
+    }
+
+    /**
+     * 제출 전 실행 하나(ADR-0020).
+     *
+     * <p>제출을 가리키지 않는다. 그래서 이 결과는 Evidence 가 되지 않고 mastery 를
+     * 건드리지 않는다 - 코드가 아니라 <b>행 모양</b>이 그것을 막는다.
+     */
+    public static JudgeJobRow forRun(Long userId, String problemCode, String language,
+            String sourceCode) {
+        return new JudgeJobRow(null, userId, "RUN", problemCode, language, sourceCode);
+    }
+
+    private JudgeJobRow(Long submissionId, Long userId, String kind, String problemCode,
+            String language, String sourceCode) {
         this.submissionId = submissionId;
+        this.userId = userId;
+        this.kind = kind;
         this.problemCode = problemCode;
         this.language = language;
         this.sourceCode = sourceCode;
@@ -89,6 +123,14 @@ public class JudgeJobRow {
 
     public Long submissionId() {
         return submissionId;
+    }
+
+    public String kind() {
+        return kind;
+    }
+
+    public Long userId() {
+        return userId;
     }
 
     public String problemCode() {
