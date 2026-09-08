@@ -17,7 +17,6 @@ import dev.codesprint.learning.domain.JudgeStatus;
 import dev.codesprint.learning.domain.NextAction;
 import dev.codesprint.learning.domain.NextSkillSelector;
 import dev.codesprint.learning.domain.SkillState;
-import dev.codesprint.learning.domain.SkillState;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory.Submission;
 import dev.codesprint.learning.persistence.ReviewScheduleRow;
@@ -34,6 +33,7 @@ import dev.codesprint.problem.ProblemCatalog.SkillLink;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -315,6 +315,18 @@ public class JudgeResultApplier {
         // 진단은 **이번 제출을 반영한 뒤** 본다. 앞서 보면 방금 낸 Skill 이 아직
         // 안 재 본 것으로 남아, 같은 Skill 을 다시 물으러 보낸다.
         List<SkillState> states = mastery.statesOf(userId);
+
+        // **선수 조건 판정도 같은 snapshot 을 본다.** masteriesOf() 는 user_skills
+        // 캐시를 읽는데, 그 행은 정본이 아니다(ADR-0009). 방금 재계산한 states 와
+        // 다른 값을 줄 수 있고, 그러면 한 결정 안에서 NextSkillSelector 는 "열렸다",
+        // Decision Engine 은 "아직 막혔다" 를 볼 수 있다.
+        //
+        // Collectors.toMap 을 쓰지 않는다 - mastery 는 null 일 수 있고(아직 평가 전),
+        // 그 구현은 null 값에서 NPE 를 낸다. 여기서 null 은 정상 데이터다.
+        Map<String, Double> masteries = new HashMap<>();
+        for (SkillState state : states) {
+            masteries.put(state.skillCode(), state.mastery());
+        }
         NextAction action = decisions.decide(new DecisionEngine.Context(
                 primarySkill,
                 primaryState,
@@ -323,7 +335,7 @@ public class JudgeResultApplier {
                 confirmedMistake,
                 consecutiveFailures(userId, submission.problemId()),
                 reviewSchedules.isScheduled(userId, primarySkill),
-                mastery.masteriesOf(userId),
+                masteries,
                 pendingDiagnosticSkill(states),
                 // 방금 이 제출로 복습을 끝냈다면 그 일정은 더 이상 만기가 아니다 -
                 // 위에서 다음 간격으로 밀어 두었으므로 여기서 다시 걸리지 않는다.
