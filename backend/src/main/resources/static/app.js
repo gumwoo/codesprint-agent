@@ -36,6 +36,20 @@ const UNREACHABLE_AFTER = 3;
  */
 let activeRunId = null;
 
+/**
+ * 마지막으로 **시작된** 요청의 번호. 실행과 제출을 따로 센다.
+ *
+ * `activeRunId` / `activeSubmissionId` 는 202 를 받은 뒤에야 정해지므로, 그
+ * **전에** 문제나 사용자가 바뀌거나 다른 요청이 시작되면 막을 것이 없다. 늦게
+ * 도착한 202 가 남의 화면에서 폴링을 시작한다.
+ *
+ * <b>시작할 때 이전 것을 무효화하지 않는다.</b> 무효화하면 새 요청이 거절됐을 때
+ * 앞 요청의 관찰까지 끊긴다 - 앞의 것은 그대로 채점되고 있는데도. 대신 번호를
+ * 올려 두고, **인수인계는 202 를 받은 쪽만** 한다.
+ */
+let latestRunStart = 0;
+let latestSubmitStart = 0;
+
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -354,6 +368,12 @@ async function openProblem(code) {
  * 폴러가 사라졌고, 제출 이력 화면이 없어 다시 볼 방법도 없었다.
  */
 function cancelActivePolling() {
+  latestSubmitStart += 1;
+  activeSubmissionId = null;
+}
+
+/** 인수인계용. 번호는 올리지 않는다 - {@link cancelActiveRun} 의 설명과 같다. */
+function dropActiveSubmission() {
   activeSubmissionId = null;
 }
 
@@ -383,6 +403,10 @@ async function submit() {
   // 누구의 제출인지 여기서 고정한다. 응답을 기다리는 동안 사용자가 바뀔 수 있고,
   // 그때 body 와 화면이 다른 사람을 가리키면 안 된다.
   const submittingUserId = Number($("userId").value);
+  // 어느 문제의 제출인지도 함께 고정한다. 실행과 같은 구멍이 여기에도 있었다 -
+  // 202 를 기다리는 동안 다른 문제를 열면, 그 제출의 판정과 다음 행동이
+  // **다른 문제의 화면에** 나타난다.
+  const started = ++latestSubmitStart;
   // **접수와 관찰을 나눠서 다룬다.** 한 try 로 묶으면 폴링이 한 번 실패했을 때도
   // "제출하지 못했다" 가 뜬다 - 제출은 됐는데 문구가 틀리고, 더 나쁘게는 그 자리에서
   // 루프가 끝나 접수된 제출을 화면이 놓친다.
@@ -418,23 +442,28 @@ async function submit() {
   } finally {
     // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
-    button.disabled = false;
+    //
+    // 다만 내 번호일 때만 푼다 - 문제 목록으로 돌아가 잠긴 버튼을 늦게 끝난
+    // 요청이 다시 열면, 열어 둔 문제가 없는데 제출할 수 있게 된다.
+    if (started === latestSubmitStart) {
+      button.disabled = false;
+    }
   }
 
-  // 접수된 뒤에 사용자가 바뀌었으면 이 제출은 이 화면 것이 아니다. 서버에서는
+  // 접수된 뒤에 화면이 옮겨 갔으면 이 제출은 이 화면 것이 아니다. 서버에서는
   // 그대로 채점되고, 그 사용자로 돌아오면 Skill 상태에 반영돼 있다.
-  if (!stillCurrent(submittingUserId)) {
+  if (started !== latestSubmitStart || !stillCurrent(submittingUserId)) {
     return;
   }
 
   // 여기서부터가 화면이 보는 제출이다. 앞의 것은 이제 놓는다.
   // 실행도 놓는다 - 답을 낸 뒤에 시험 삼아 돌린 결과가 뒤늦게 나타나면,
   // 사용자는 그것을 이번 제출의 결과로 읽는다.
-  cancelActivePolling();
+  dropActiveSubmission();
   cancelActiveRun();
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
-  await waitForResult(accepted.submissionId, startedAt);
+  await waitForResult(accepted.submissionId, startedAt, started);
 }
 
 /**
@@ -449,6 +478,9 @@ async function runSamples() {
   }
   const button = $("runButton");
   const runningUserId = Number($("userId").value);
+  // **POST 를 보내기 전에 번호를 잡는다.** 202 를 기다리는 동안 문제나 사용자가
+  // 바뀌거나 다른 실행이 시작될 수 있고, 그때 이 응답은 남의 화면 것이 된다.
+  const started = ++latestRunStart;
   button.disabled = true;
   reportTo(runningUserId, "실행하는 중…");
 
@@ -475,19 +507,35 @@ async function runSamples() {
   } finally {
     // 접수 시도가 끝나면 버튼을 푼다. 제출과 같은 이유다 - 관찰은 한도 없이
     // 이어지므로, 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
-    button.disabled = false;
+    //
+    // **내 번호일 때만 푼다.** 문제 목록으로 돌아가 버튼이 잠긴 뒤에 늦게 끝난
+    // 요청이 그것을 다시 열면, 열어 둔 문제가 없는데 실행할 수 있게 된다.
+    if (started === latestRunStart) {
+      button.disabled = false;
+    }
   }
 
-  if (!stillCurrent(runningUserId)) {
+  if (started !== latestRunStart || !stillCurrent(runningUserId)) {
     return;
   }
   // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
-  cancelActiveRun();
-  await waitForRun(accepted.runId, runningUserId);
+  dropActiveRun();
+  await waitForRun(accepted.runId, runningUserId, started);
 }
 
 /** 보고 있던 실행을 놓는다. 그 폴러는 다음 응답에서 스스로 멈춘다. */
 function cancelActiveRun() {
+  // 진행 중인 POST 도 함께 버린다. 번호를 올려 두면 그 요청의 202 가 뒤늦게
+  // 도착해도 자기 번호가 이미 지났음을 알고 물러난다.
+  latestRunStart += 1;
+  dropActiveRun();
+}
+
+/**
+ * 보고 있던 실행만 놓는다. <b>번호는 올리지 않는다</b> - 인수인계할 때 쓰며,
+ * 올리면 인수받으려는 요청 자신의 번호가 무효가 된다.
+ */
+function dropActiveRun() {
   activeRunId = null;
   $("runOutput").replaceChildren();
 }
@@ -499,7 +547,7 @@ function cancelActiveRun() {
  * 끝냈는데, 같은 큐와 같은 Worker 를 쓰면서 실행에만 다른 규칙을 둘 이유가 없다 -
  * job 은 큐에 남아 있고, 서버가 잠깐 내려갔다고 사라지지 않는다.
  */
-async function waitForRun(runId, runningUserId) {
+async function waitForRun(runId, runningUserId, started) {
   activeRunId = runId;
   const box = $("runOutput");
   box.replaceChildren();
@@ -519,7 +567,8 @@ async function waitForRun(runId, runningUserId) {
 
     // **화면을 만지기 전에 확인한다.** 기다리는 동안 다른 실행이 접수됐거나,
     // 문제나 사용자가 바뀌었을 수 있다. 그러면 이 폴러는 남의 화면에 쓰는 것이 된다.
-    if (activeRunId !== runId || !stillCurrent(runningUserId)) {
+    if (activeRunId !== runId || started !== latestRunStart
+        || !stillCurrent(runningUserId)) {
       return;
     }
 
@@ -594,7 +643,7 @@ function renderRun(view, box) {
   }
 }
 
-async function waitForResult(submissionId, startedAt) {
+async function waitForResult(submissionId, startedAt, started) {
   activeSubmissionId = submissionId;
   $("submitNote").textContent = "채점 중…";
   $("state").textContent = "채점 중";
@@ -615,7 +664,7 @@ async function waitForResult(submissionId, startedAt) {
     // "결과를 가져오지 못하고 있다" 를 새 제출의 화면에 남겼다.
     //
     // 루프 맨 앞에서만 보면 부족하다. await 는 여기서 일어난다.
-    if (activeSubmissionId !== submissionId) {
+    if (activeSubmissionId !== submissionId || started !== latestSubmitStart) {
       return;
     }
 
