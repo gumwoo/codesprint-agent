@@ -71,6 +71,10 @@ public class NextProblemService {
             // 다루는 것이라, 아직 시작도 안 한 Skill 에 주면 맥락이 없다.
             case CHANGE_SKILL -> pick(userId, targetSkill, "NORMAL",
                     justAttemptedProblemId, "선수 Skill 을 먼저 채운다");
+            // 진단은 NORMAL 만 낸다. MICRO_DRILL 은 확정된 실수를 좁게 다시 다루는
+            // 것이라, 아직 재 보지도 않은 Skill 의 수준을 재지 못한다.
+            case DIAGNOSTIC_PROBE -> pick(userId, targetSkill, "NORMAL",
+                    justAttemptedProblemId, "초기 진단이 아직 확인하지 않은 Skill");
             case RETRY_VARIANT -> pick(userId, targetSkill, "NORMAL",
                     justAttemptedProblemId, "같은 Skill 의 다른 문제로 연습한다");
 

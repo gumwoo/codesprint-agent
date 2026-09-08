@@ -72,11 +72,12 @@ public class JudgeResultApplier {
     private final JudgeJobRepository jobs;
     private final ReviewService reviews;
     private final NextProblemService nextProblem;
+    private final DiagnosticService diagnostic;
 
     public JudgeResultApplier(ProblemCatalog catalog, EvidenceStore evidenceStore,
             MasteryService mastery, DecisionEngine decisions, SubmissionRepository submissions,
             UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews,
-            NextProblemService nextProblem) {
+            NextProblemService nextProblem, DiagnosticService diagnostic) {
         this.catalog = catalog;
         this.evidenceStore = evidenceStore;
         this.mastery = mastery;
@@ -86,6 +87,7 @@ public class JudgeResultApplier {
         this.jobs = jobs;
         this.reviews = reviews;
         this.nextProblem = nextProblem;
+        this.diagnostic = diagnostic;
     }
 
     /**
@@ -265,6 +267,8 @@ public class JudgeResultApplier {
             }
         }
 
+        // 진단은 **이번 제출을 반영한 뒤** 본다. 앞서 보면 방금 낸 Skill 이 아직
+        // 안 재 본 것으로 남아, 같은 Skill 을 다시 물으러 보낸다.
         NextAction action = decisions.decide(new DecisionEngine.Context(
                 primarySkill,
                 primaryState,
@@ -273,7 +277,8 @@ public class JudgeResultApplier {
                 confirmedMistake,
                 consecutiveFailures(userId, submission.problemId()),
                 false,  // 복습 성공 기록은 복습 일정이 붙어야 생긴다
-                mastery.masteriesOf(userId)));
+                mastery.masteriesOf(userId),
+                pendingDiagnosticSkill(userId)));
 
         // 다음에 풀 문제도 지금 고정한다. 조회할 때 고르면 그 사이 다른 제출이
         // 바꿔 놓은 상태를 보게 되어 같은 제출이 다른 문제를 가리킨다.
@@ -289,6 +294,18 @@ public class JudgeResultApplier {
         submission.applyNextProblem(selection.problemCode(), selection.reason());
 
         submissions.save(submission);
+    }
+
+    /**
+     * 진단이 아직 확인하지 못한 Skill. 진단이 끝났으면 null 이다.
+     *
+     * <p><b>줄 문제가 있을 때만 돌려준다.</b> 물어볼 NORMAL 문제가 없는 Skill 을
+     * 가리키면 Decision Engine 이 갈 곳 없는 행동을 내고, 사용자는 다음 문제를
+     * 못 받는다.
+     */
+    private String pendingDiagnosticSkill(Long userId) {
+        DiagnosticService.Step step = diagnostic.nextStep(userId);
+        return step.done() || step.problem() == null ? null : step.targetSkill();
     }
 
     /**

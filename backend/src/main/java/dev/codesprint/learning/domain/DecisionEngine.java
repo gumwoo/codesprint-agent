@@ -43,6 +43,9 @@ public class DecisionEngine {
      * @param sameProblemAttempts 이 문제를 몇 번째 시도하는가 (이번 제출 포함).
      * @param reviewCompleted 이 Skill 에 복습 성공 기록이 있는가.
      * @param masteries 다른 Skill 들의 mastery. 선수 조건 판정에 쓴다.
+     * @param diagnosticSkill 초기 진단이 다음에 확인하려는 Skill. 진단이 끝났거나
+     *     물어볼 문제가 없으면 null 이다. <b>생략하지 않는다</b> - 진단은 결정에
+     *     참여하는 입력이므로, 값을 빠뜨리면 "진단 밖" 과 "안 물어봤다" 가 같아진다.
      */
     public record Context(
             String skillCode,
@@ -52,7 +55,8 @@ public class DecisionEngine {
             String confirmedMistake,
             int sameProblemAttempts,
             boolean reviewCompleted,
-            Map<String, Double> masteries) {
+            Map<String, Double> masteries,
+            String diagnosticSkill) {
 
         public Context {
             if (priorEvidenceCount < 0) {
@@ -116,6 +120,22 @@ public class DecisionEngine {
             Optional<String> blocker =
                     prerequisites.nextPrerequisite(context.skillCode(), context.masteries());
             if (blocker.isPresent()) {
+                // 진단이 아직 안 끝났으면 **어느 Skill 로 갈지는 진단이 정한다**(ADR-0019).
+                //
+                // 이 두 규칙은 같은 질문에 답한다 - "어느 Skill 로 갈 것인가". 진단은
+                // 안 재 본 칸을 채우려 하고, 이쪽은 막힌 선수를 채우려 한다. 둘 다
+                // 옳지만 답이 다르고, 그대로 두면 화면 두 곳이 다른 문제를 가리킨다.
+                // 실제로 그랬다 - 진단은 BFS_BASIC 을, 결정은 BFS_GRID_TRAVERSAL 을.
+                //
+                // **여기서만 대체한다.** 처음에는 모든 규칙보다 앞에 두었는데, 신규
+                // 사용자는 전부 진단 중이라 확정된 실수의 드릴도 3회 실패의 개념
+                // 복습도 전부 덮였다. 그것들은 다른 질문에 답하고 있었다.
+                if (context.diagnosticSkill() != null) {
+                    return NextAction.targeting(
+                            ActionType.DIAGNOSTIC_PROBE, context.diagnosticSkill(),
+                            "초기 진단 - " + context.diagnosticSkill()
+                                    + " 을(를) 아직 확인하지 않았다");
+                }
                 return NextAction.targeting(ActionType.CHANGE_SKILL, blocker.get(),
                         "선수 조건 미충족: " + blocker.get() + " 을(를) 먼저 채운다");
             }
