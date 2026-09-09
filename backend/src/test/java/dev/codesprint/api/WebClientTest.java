@@ -187,8 +187,7 @@ class WebClientTest {
     private static final Map<String, String> UNGUARDED = Map.of(
             "getJson", "원시 함수다. 화면에 아무것도 쓰지 않는다",
             "waitForResult", "관찰 구간이라 activeSubmissionId 가 주인이다",
-            "waitForRun", "관찰 구간이라 activeRunId 가 주인이다",
-            "createUser", "사용자를 만드는 것이지 화면 조각을 그리는 것이 아니다");
+            "waitForRun", "관찰 구간이라 activeRunId 가 주인이다");
 
     /** 함수 이름 -> 본문. 다음 최상위 function 선언 전까지를 한 덩어리로 본다. */
     private static Map<String, String> functionsIn(String script) {

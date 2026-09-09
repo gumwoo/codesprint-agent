@@ -147,9 +147,6 @@ function onAProblemScreen() {
 }
 
 function showPicker() {
-  // 목록으로 돌아가는 것은 **문제 화면을 보지 않겠다는 뜻**이다. 진행 중인 이동을
-  // 놓지 않으면, 느리게 오던 문제가 도착해 사용자를 그 문제로 끌고 간다.
-  invalidateView("problem");
   showLeft("picker");
   refreshDiagnostic();
   refreshReviews();
@@ -161,6 +158,12 @@ function showPicker() {
 
 /** 왼쪽 패널에서 하나만 보인다. 탭 표시도 같이 옮긴다. */
 function showLeft(bodyId) {
+  // **문제 화면을 떠나면 진행 중인 이동을 놓는다.** 떠나는 경로마다 따로 적으면
+  // 하나씩 빠뜨린다 - 실제로 목록은 놓았는데 "내 Skill" 탭은 놓지 않아서,
+  // 느리게 오던 문제가 도착해 사용자를 그 문제로 끌고 갔다.
+  if (bodyId !== "statementBody") {
+    invalidateView("problem");
+  }
   for (const id of ["picker", "statementBody", "skillsBody"]) {
     $(id).hidden = id !== bodyId;
   }
@@ -971,16 +974,25 @@ function note(message) {
 // 사용자를 만들 수 있어야 한다. 인증이 없어서 화면이 id 를 직접 보내는데(ADR-0017),
 // 새 DB 에는 그 id 가 하나도 없어 아무것도 시작할 수 없었다.
 async function createUser() {
+  // **여기가 소유권이 가장 큰 변경이다.** 사용자를 바꾸면 화면 전체가 따라간다.
+  // 두 번 누르면 늦게 온 응답이 나중에 만든 사용자를 덮어쓰고, 그 사이 사용자가
+  // id 를 직접 고쳤어도 덮는다.
+  const mine = claimView("user");
   const response = await fetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ nickname: "로컬 사용자" }),
   });
   if (!response.ok) {
-    $("footNote").textContent = `사용자를 만들지 못했다 (${response.status})`;
+    if (mine()) {
+      $("footNote").textContent = `사용자를 만들지 못했다 (${response.status})`;
+    }
     return;
   }
   const created = await response.json();
+  if (!mine()) {
+    return;
+  }
   $("userId").value = created.userId;
 
   // 값을 코드로 바꾸면 change 가 뜨지 않는다. 직접 부른다.
