@@ -147,6 +147,9 @@ function onAProblemScreen() {
 }
 
 function showPicker() {
+  // 목록으로 돌아가는 것은 **문제 화면을 보지 않겠다는 뜻**이다. 진행 중인 이동을
+  // 놓지 않으면, 느리게 오던 문제가 도착해 사용자를 그 문제로 끌고 간다.
+  invalidateView("problem");
   showLeft("picker");
   refreshDiagnostic();
   refreshReviews();
@@ -934,7 +937,10 @@ function heading(label) {
 }
 
 async function goToNextProblem(submissionId) {
-  const mine = claimView("nextProblem");
+  // **문제 화면의 주인은 하나다.** "다음 문제" 도 결국 문제 화면으로 가는 길이라,
+  // 따로 통을 두면 늦게 온 "다음 문제" 가 사용자가 방금 직접 고른 문제를 덮는다 -
+  // 이번 PR 이 openProblem 에서 막은 것과 같은 결함이 이름만 달라 새어 나갔다.
+  const mine = claimView("problem");
   const response = await fetch(`/api/submissions/${submissionId}/next-problem`);
   if (!mine()) {
     return;
