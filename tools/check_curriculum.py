@@ -62,6 +62,7 @@ ALLOWED_SCHEMA_KEYWORDS = {
     # case 성격 태그(PR 12)에서 추가. 같은 Mistake 를 두 번 적어도 의미가 없고,
     # 중복은 대개 편집 실수다.
     "uniqueItems",
+    "allOf", "if", "then", "not",
 }
 
 # LLM 요청 스키마에 절대 나타나면 안 되는 필드명.
@@ -307,7 +308,50 @@ def check_mistakes(mistakes_doc, skills: dict[str, dict]) -> dict[str, dict]:
     return mistakes
 
 
-# -- 5. LLM 계약 경계 ----------------------------------------------------
+# -- 5. Concept 자료 -----------------------------------------------------
+
+
+def check_concepts(concepts_doc, skills: dict[str, dict]) -> dict[str, dict]:
+    """모든 검증된 Skill에 정확히 하나의 완전한 개념 자료가 있는지 검사한다.
+
+    REVIEW_CONCEPT는 Decision Engine이 실제로 내는 행동이다. 자료가 빠지면 사용자를
+    보낼 곳 없는 행동이 되므로 선택 필드로 둘 수 없다.
+    """
+    if not concepts_doc or "concepts" not in concepts_doc:
+        fail("concepts", "concepts 키가 없다")
+        return {}
+
+    concepts: dict[str, dict] = {}
+    required_text = ("title", "summary", "example", "self_check")
+    for concept in concepts_doc["concepts"]:
+        skill_code = concept.get("skill_code")
+        if not skill_code:
+            fail("concepts", "skill_code가 없는 개념 자료가 있다")
+            continue
+        if skill_code in concepts:
+            fail("concepts", f"{skill_code}: 중복된 개념 자료")
+            continue
+        concepts[skill_code] = concept
+
+        if skill_code not in skills:
+            fail("concepts", f"skills.yaml에 없는 Skill의 개념 자료: {skill_code}")
+        for field in required_text:
+            value = concept.get(field)
+            if not isinstance(value, str) or not value.strip():
+                fail("concepts", f"{skill_code}: {field}가 비어 있다")
+        key_points = concept.get("key_points")
+        if (not isinstance(key_points, list) or not key_points
+                or any(not isinstance(point, str) or not point.strip()
+                       for point in key_points)):
+            fail("concepts", f"{skill_code}: key_points는 비어 있지 않은 문자열 목록이어야 한다")
+
+    missing = sorted(set(skills) - set(concepts))
+    if missing:
+        fail("concepts", f"개념 자료가 없는 Skill: {missing}")
+    return concepts
+
+
+# -- 6. LLM 계약 경계 ----------------------------------------------------
 
 
 def property_names(node, acc: set[str]) -> None:
@@ -636,12 +680,14 @@ def main() -> int:
     skills_doc = load_yaml("skills.yaml")
     prereq_doc = load_yaml("prerequisites.yaml")
     mistakes_doc = load_yaml("mistakes.yaml")
+    concepts_doc = load_yaml("concepts.yaml")
 
     domain_codes = check_domains(domains_doc)
     skills = check_skills(skills_doc, domain_codes)
     check_active_domains_have_skills(domains_doc, skills)
     check_prerequisites(prereq_doc, skills)
     mistakes = check_mistakes(mistakes_doc, skills)
+    concepts = check_concepts(concepts_doc, skills)
 
     # 계약 검사는 아래에서 위로 쌓인다.
     #   1단계 규격 자체가 유효한가      (JSON Schema meta-schema)
@@ -665,7 +711,8 @@ def main() -> int:
 
     print(
         f"[OK] 커리큘럼/계약 검사 통과 "
-        f"(도메인 {len(domain_codes)} · Skill {len(skills)} · Mistake {len(mistakes)})"
+        f"(도메인 {len(domain_codes)} · Skill {len(skills)} · Mistake {len(mistakes)} "
+        f"· Concept {len(concepts)})"
     )
     return 0
 

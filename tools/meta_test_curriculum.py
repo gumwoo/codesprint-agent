@@ -95,6 +95,18 @@ def bad_assigned_by(doc):
     doc["mistakes"][0]["assigned_by"] = "SOMEONE"
 
 
+def drop_concept(doc):
+    doc["concepts"] = doc["concepts"][1:]
+
+
+def duplicate_concept(doc):
+    doc["concepts"].append(dict(doc["concepts"][0]))
+
+
+def concept_references_unknown_skill(doc):
+    doc["concepts"][0]["skill_code"] = "GHOST_SKILL"
+
+
 def system_code_leaks_into_llm_enum(doc):
     # SYNTAX_ERROR 를 REVIEWER 로 바꾸면 LLM enum 에 없는 REVIEWER code 가 되어
     # mistake-sync 가 걸린다. 반대 방향(스키마에 SYSTEM code 유입)은 아래 케이스.
@@ -221,6 +233,11 @@ CASES = [
     ("ADR-0004 · assigned_by 가 알 수 없는 값이면", "curriculum/mistakes.yaml", bad_assigned_by, "assigned_by 가"),
     ("ADR-0004 · SYSTEM code 가 REVIEWER 로 바뀌면", "curriculum/mistakes.yaml", system_code_leaks_into_llm_enum, "REVIEWER code"),
     ("ADR-0004 · LLM enum 에 SYSTEM code 가 유입되면", "contracts/reviewer-output.llm.schema.json", llm_enum_gains_system_code, "SYSTEM 이 부여하는 code 가 LLM enum 에 있다"),
+
+    # -- Concept 자료 --
+    ("Skill의 개념 자료가 빠지면", "curriculum/concepts.yaml", drop_concept, "개념 자료가 없는 Skill"),
+    ("한 Skill의 개념 자료가 중복되면", "curriculum/concepts.yaml", duplicate_concept, "중복된 개념 자료"),
+    ("존재하지 않는 Skill의 개념 자료가 생기면", "curriculum/concepts.yaml", concept_references_unknown_skill, "skills.yaml에 없는 Skill의 개념 자료"),
 
     # -- 도메인 레지스트리 --
     ("active 인데 Skill 이 없으면", "curriculum/domains.yaml", domain_active_without_skill, "active 가 true 인데"),

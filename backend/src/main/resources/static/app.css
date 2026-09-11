@@ -253,6 +253,14 @@ dl pre { grid-column: 1 / -1; margin-top: 8px; }
 
 #nextAction .what { font-family: var(--mono); }
 
+.concept-points { padding-left: 20px; line-height: 1.6; }
+.concept-check {
+  padding: 9px 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--raise);
+  line-height: 1.5;
+}
+
 /* -- 하단 -- */
 .actions {
   flex: 0 0 var(--actions);

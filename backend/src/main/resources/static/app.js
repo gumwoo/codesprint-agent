@@ -957,11 +957,46 @@ async function goToNextProblem(submissionId) {
     return;
   }
   if (!next.problem) {
-    // 문제가 없는 것과 아직 정해지지 않은 것은 다르다. 서버가 이유를 준다.
+    // 화면이 action을 해석하지 않는다. 서버가 실제 자료를 주었는지만 본다.
+    // 무엇을 할지 다시 결정하면 ADR-0002의 경계가 화면으로 새어 나온다.
+    if (next.concept) {
+      renderConcept(next.concept);
+      $("goNext").hidden = true;
+      return;
+    }
+    // 자료가 없는 것과 아직 정해지지 않은 것은 다르다. 서버가 이유를 준다.
     $("nextAction").append(note(next.reason));
     return;
   }
   await openProblem(next.problem.code);
+}
+
+function renderConcept(concept) {
+  const action = $("nextAction");
+  action.replaceChildren();
+  action.append(heading(`${concept.skillCode} 개념 복습`));
+
+  const title = document.createElement("p");
+  title.className = "what";
+  title.textContent = concept.title;
+  const summary = document.createElement("p");
+  summary.textContent = concept.summary;
+
+  const points = document.createElement("ul");
+  points.className = "concept-points";
+  for (const point of concept.keyPoints) {
+    const item = document.createElement("li");
+    item.textContent = point;
+    points.append(item);
+  }
+
+  const exampleTitle = heading("예시");
+  const example = document.createElement("pre");
+  example.textContent = concept.example;
+  const check = document.createElement("p");
+  check.className = "concept-check";
+  check.textContent = `스스로 확인: ${concept.selfCheck}`;
+  action.append(title, summary, points, exampleTitle, example, check);
 }
 
 function note(message) {

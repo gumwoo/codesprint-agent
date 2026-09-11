@@ -360,6 +360,27 @@ class ProblemDeliveryTest {
         assertThat(next.get("problem").isNull()).isTrue();
         // 빈 응답으로 두면 "아직 안 끝났다" 와 "줄 문제가 없다" 를 구분할 수 없다.
         assertThat(next.get("reason").asText()).isNotBlank();
+        assertThat(next.get("concept").isNull()).isTrue();
+    }
+
+    @Test
+    @DisplayName("세 번째 연속 실패는 대상 Skill의 개념 자료로 이어진다")
+    void repeatedFailureYieldsTheTargetSkillsConcept() throws Exception {
+        // 진단을 먼저 끝내지 않으면 다음 이동은 진단이 소유한다(ADR-0019).
+        submitAndJudge("P05_SHORTEST_PATH", "ACCEPTED");
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+        submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+        long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
+
+        JsonNode next = nextProblem(submissionId);
+        assertThat(next.get("action").asText()).isEqualTo("REVIEW_CONCEPT");
+        assertThat(next.get("problem").isNull()).isTrue();
+        assertThat(next.get("concept").get("skillCode").asText())
+                .isEqualTo(next.get("targetSkill").asText());
+        assertThat(next.get("concept").get("keyPoints").isEmpty()).isFalse();
+        assertThat(next.get("concept").get("selfCheck").asText()).isNotBlank();
+        assertThat(schema("next-problem.schema.json").validate(next))
+                .as("개념 자료를 포함한 next-problem 계약 위반").isEmpty();
     }
 
     @Test
