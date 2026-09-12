@@ -1,0 +1,55 @@
+name: Browser Races
+
+# 화면의 비동기 소유권 회귀. 정본: ADR-0025.
+#
+# **백엔드를 띄우지 않는다.** 여기서 재현하는 것은 전부 화면 쪽 결함이고,
+# 그것을 결정적으로 재현하려면 응답이 도착하는 순서를 테스트가 쥐고 있어야 한다.
+# 진짜 서버를 쓰면 그 순서가 큐와 DB 사정에 달린다 - 수동 재현에서 두 번 실패했다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      # 화면 파일이 바뀌면 돈다.
+      - 'backend/src/main/resources/static/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e.yml'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  races:
+    name: 화면 비동기 소유권
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: install
+        working-directory: e2e
+        run: npm ci
+
+      # 브라우저는 하나만 받는다. 여기서 보는 것은 렌더링 차이가 아니라
+      # 비동기 순서라, 엔진을 늘려도 잡는 것이 늘지 않는다.
+      - name: install chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: race tests
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-trace
+          path: e2e/test-results/
+          retention-days: 14

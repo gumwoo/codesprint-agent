@@ -1,0 +1,11 @@
+{
+  "name": "codesprint-e2e",
+  "private": true,
+  "description": "화면의 비동기 소유권 회귀 테스트. 정본: docs/adr/0025-browser-race-tests.md",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  }
+}
