@@ -253,6 +253,10 @@ dl pre { grid-column: 1 / -1; margin-top: 8px; }
 
 #nextAction .what { font-family: var(--mono); }
 
+/* 결정 요약 아래에 붙는다. 그 줄과 붙어 보이면 어디까지가 판단이고 어디부터가
+   자료인지 구분되지 않는다. */
+.concept { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+
 .concept-points { padding-left: 20px; line-height: 1.6; }
 .concept-check {
   padding: 9px 10px;

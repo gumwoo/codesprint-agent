@@ -973,8 +973,19 @@ async function goToNextProblem(submissionId) {
 
 function renderConcept(concept) {
   const action = $("nextAction");
-  action.replaceChildren();
-  action.append(heading(`${concept.skillCode} 개념 복습`));
+  // **결정 요약을 지우지 않는다.** 자료는 무엇을 보는지 말하지만, 왜 보는지
+  // ("같은 문제 3회 실패 - 개념부터 다시 본다")는 그 줄에만 있다. 지우면
+  // 사용자는 갑자기 나타난 개념 설명이 자기 실패와 무슨 상관인지 알 수 없다.
+  //
+  // 이미 그린 자료는 걷어낸다 - 두 번 부르면 같은 설명이 두 번 쌓인다.
+  const drawn = action.querySelector(".concept");
+  if (drawn) {
+    drawn.remove();
+  }
+
+  const box = document.createElement("div");
+  box.className = "concept";
+  box.append(heading(`${concept.skillCode} 개념 복습`));
 
   const title = document.createElement("p");
   title.className = "what";
@@ -996,7 +1007,8 @@ function renderConcept(concept) {
   const check = document.createElement("p");
   check.className = "concept-check";
   check.textContent = `스스로 확인: ${concept.selfCheck}`;
-  action.append(title, summary, points, exampleTitle, example, check);
+  box.append(title, summary, points, exampleTitle, example, check);
+  action.append(box);
 }
 
 function note(message) {
