@@ -29,7 +29,8 @@ CURRICULUM = ROOT / "curriculum"
 CONTRACTS = ROOT / "contracts"
 
 DIR_RE = re.compile(r"^P[0-9]{2}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$")
-REQUIRED_FILES = ("problem.yaml", "cases.json", "reference.py", "wrong.py")
+REQUIRED_FILES = ("problem.yaml", "cases.json", "reference.py", "wrong.py",
+                  "hints.yaml")
 # probes/<MISTAKE>.py 는 선택이다 - cases.json 이 그 실수를 겨냥할 때만 요구한다.
 
 failures: list[str] = []
@@ -57,9 +58,12 @@ def main() -> int:
     skills = {s["code"]: s for s in (load(CURRICULUM / "skills.yaml") or {}).get("skills", [])}
     mistakes = {m["code"]: m for m in (load(CURRICULUM / "mistakes.yaml") or {}).get("mistakes", [])}
     problem_schema = Draft202012Validator(load(CONTRACTS / "problem.schema.json"))
+    hints_schema = Draft202012Validator(load(CONTRACTS / "hint-ladder.schema.json"))
     cases_schema = Draft202012Validator(load(CONTRACTS / "test-cases.schema.json"))
 
     seen_codes: set[str] = set()
+    # 사다리 전체가 같은 문제가 있으면 복사해 붙인 것이다.
+    seen_ladders: dict[tuple[str, ...], str] = {}
     control_mistakes: dict[str, list[str]] = {}
     drill_targets: set[str] = set()
     covered_skills: set[str] = set()
@@ -111,6 +115,49 @@ def main() -> int:
                 covered_skills.add(sc)
         if len({s.get("code") for s in entries}) != len(entries):
             fail("skill-map", f"{rel}: 같은 Skill 이 두 번 들어 있다")
+
+        # -- 단계별 힌트 (PRD 73) --
+        #
+        # 힌트 의존도(Addendum 74)는 "몇 단계를 봤는가" 로 mastery 를 가른다.
+        # 그 값이 뜻을 가지려면 사다리가 실제로 사다리여야 한다 - 단계가 빠져
+        # 있거나, 마지막 칸이 곧 정답이면 세는 숫자가 같은 것을 가리키지 않는다.
+        hints_doc = load(d / "hints.yaml")
+        if hints_doc is None:
+            continue
+        for err in hints_schema.iter_errors(hints_doc):
+            fail("hints-schema", f"{rel}{list(err.path)}: {err.message}")
+
+        # 스키마가 이미 말한 뒤에도 **의미 검사는 계속 돈다.** 다만 모양을 믿고
+        # 들어가지 않는다 - 항목이 object 가 아닌데 .get() 을 부르면 예외로
+        # 터지고, 그러면 뒤따르는 검사가 아예 돌지 않아 보고가 잘린다. 한 문제의
+        # 오타가 나머지 14개를 안 본 것으로 만든다.
+        ladder = [h for h in (hints_doc.get("hints") or []) if isinstance(h, dict)]
+        levels = [h.get("level") for h in ladder]
+        if levels != [1, 2, 3, 4, 5]:
+            fail("hints", f"{rel}: 힌트 단계가 1..5 순서가 아니다 ({levels})")
+
+        texts = [str(h.get("text", "")) for h in ladder]
+        if len(set(texts)) != len(texts):
+            fail("hints", f"{rel}: 같은 힌트가 두 단계에 들어 있다")
+
+        key = tuple(texts)
+        if key in seen_ladders:
+            fail("hints", f"{rel}: {seen_ladders[key]} 와 힌트 사다리가 완전히 같다")
+        else:
+            seen_ladders[key] = rel
+
+        # H5 는 의사코드지 정답 코드가 아니다. reference.py 의 줄을 그대로 옮기면
+        # H5 가 곧 H6 이 되어 사다리의 마지막 두 칸이 붙어 버린다 - 그러면
+        # "해설을 봤다" 와 "의사코드를 봤다" 가 같은 값을 받는다.
+        solution_lines = {
+            line.strip() for line in (d / "reference.py").read_text(encoding="utf-8").splitlines()
+            if len(line.strip()) >= 15 and not line.strip().startswith("#")
+        }
+        for text in texts:
+            leaked = [line for line in solution_lines if line in text]
+            if leaked:
+                fail("hints", f"{rel}: 힌트가 reference.py 의 코드를 그대로 담고 있다 "
+                              f"({leaked[0][:40]!r})")
 
         # -- 공개 저장소에는 fixture 만 (ADR-0008) --
         # 이 저장소는 public 이다. CURATED 문제를 넣으면 Hidden Test 와 정답 풀이가

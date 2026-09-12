@@ -11,6 +11,7 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | [concept-view.schema.json](concept-view.schema.json) | [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **개념 복습 자료 응답.** `REVIEW_CONCEPT` 대상 Skill의 검증된 커리큘럼 자료 |
 | [problem.schema.json](problem.schema.json) | [ADR-0007](../docs/adr/0007-problems-are-verified-by-a-wrong-solution.md) | 문제 메타 + Skill 매핑. `problems/<CODE>/problem.yaml` |
 | [test-cases.schema.json](test-cases.schema.json) | Addendum §66 | Test Case 집합. `problems/<CODE>/cases.json` |
+| [hint-ladder.schema.json](hint-ladder.schema.json) | [ADR-0026](../docs/adr/0026-hint-ladder-is-problem-data.md) | 단계별 힌트 H1~H5. `problems/<CODE>/hints.yaml`. **H6 은 들어오지 않는다** - `reference.py` 가 그것이다 |
 | [skill-evidence.schema.json](skill-evidence.schema.json) | [ADR-0009](../docs/adr/0009-mastery-is-recomputed-from-evidence.md) | **학습의 정본.** mastery 는 이것으로부터 재계산된다 |
 | [user-skill.schema.json](user-skill.schema.json) | Addendum §73 | Evidence 로부터 계산된 Skill 상태. 캐시이지 정본이 아니다 |
 | [judge-result.schema.json](judge-result.schema.json) | [ADR-0005](../docs/adr/0005-judge-stops-at-first-failure.md) | **Sandbox Runner 출력.** 결정론적 판정. status enum 은 submit-response 와 동일해야 하며 CI 가 검증한다 |
