@@ -195,6 +195,11 @@ LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않�
 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
 화면도 있다 - **빌드 도구 없이** 정적 파일 셋뿐이다([ADR-0017](docs/adr/0017-the-web-client-has-no-build-step.md)).
 
+같은 문제를 세 번 연속 실패해 `REVIEW_CONCEPT`가 나오면
+`curriculum/concepts.yaml`의 대상 Skill 자료를 보여준다([ADR-0024](docs/adr/0024-review-concept-resolves-to-curriculum-material.md)).
+모든 검증된 Skill은 정확히 하나의 개념 자료를 가져야 하며, 화면은 내용을 만들거나
+행동을 다시 판단하지 않고 서버가 준 자료만 표시한다.
+
 ```bash
 CODESPRINT_REVIEWER_ENABLED=true   # 로컬 Claude CLI 가 있고 로그인돼 있을 때
 ```

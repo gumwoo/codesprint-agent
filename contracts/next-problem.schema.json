@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codesprint.dev/contracts/next-problem.schema.json",
   "title": "NextProblem",
-  "description": "GET /api/submissions/{id}/next-problem 의 응답. 제출 하나가 낸 다음 행동(nextAction)을 실제 문제로 옮긴 것이다. 결정은 Decision Engine 이 이미 내렸고 여기서는 그 대상 Skill 에 맞는 문제를 고를 뿐이다 - 새로 판단하지 않는다(ADR-0002).",
+  "description": "GET /api/submissions/{id}/next-problem 의 응답. 제출 하나가 낸 다음 행동(nextAction)을 실제 문제 또는 개념 자료로 옮긴 것이다. 결정은 Decision Engine 이 이미 내렸고 여기서는 그 대상 Skill 에 맞는 자료를 붙일 뿐이다 - 새로 판단하지 않는다(ADR-0002).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,6 +10,7 @@
     "action",
     "targetSkill",
     "problem",
+    "concept",
     "reason"
   ],
   "properties": {
@@ -53,9 +54,40 @@
         }
       ]
     },
+    "concept": {
+      "description": "개념 복습 자료. REVIEW_CONCEPT에서는 대상 Skill의 자료이고, 다른 행동에서는 null이다.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "https://codesprint.dev/contracts/concept-view.schema.json"
+        }
+      ]
+    },
     "reason": {
       "type": "string",
+      "minLength": 1,
       "description": "왜 이 문제인가, 또는 왜 없는가. 감사 로그다."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "action": { "const": "REVIEW_CONCEPT" } } },
+      "then": {
+        "properties": {
+          "problem": { "type": "null" },
+          "concept": { "$ref": "https://codesprint.dev/contracts/concept-view.schema.json" },
+          "targetSkill": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "action": { "not": { "const": "REVIEW_CONCEPT" } } } },
+      "then": { "properties": { "concept": { "type": "null" } } }
+    }
+  ]
 }

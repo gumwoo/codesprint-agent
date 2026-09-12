@@ -1,0 +1,107 @@
+# Skill별 개념 복습 자료. 모든 검증된 Skill은 정확히 하나의 자료를 가진다.
+concepts:
+  - skill_code: PYTHON_LIST_BASIC
+    title: Python 리스트 순회와 인덱스
+    summary: 리스트는 0부터 시작하며 길이가 n이면 마지막 인덱스는 n-1이다.
+    key_points:
+      - 값과 인덱스 중 무엇이 필요한지 먼저 구분한다.
+      - 인덱스가 필요하면 enumerate를 사용한다.
+      - 빈 리스트와 마지막 원소의 경계를 확인한다.
+    example: |
+      values = [4, 7, 9]
+      for index, value in enumerate(values):
+          print(index, value)
+    self_check: 길이가 n인 리스트의 유효한 인덱스 범위를 말해 보세요.
+
+  - skill_code: PYTHON_DEQUE_BASIC
+    title: 큐와 collections.deque
+    summary: 먼저 들어온 값을 먼저 꺼내는 큐는 deque의 append와 popleft로 구현한다.
+    key_points:
+      - 뒤에 넣을 때 append, 앞에서 꺼낼 때 popleft를 사용한다.
+      - list.pop(0)은 원소 이동 때문에 입력이 커지면 느려진다.
+      - 큐가 빌 때까지 처리하는 종료 조건을 분명히 둔다.
+    example: |
+      from collections import deque
+      queue = deque([start])
+      while queue:
+          current = queue.popleft()
+    self_check: list.pop(0) 대신 deque.popleft를 쓰는 이유를 설명해 보세요.
+
+  - skill_code: GRID_COORDINATE
+    title: 2차원 격자의 좌표 모델
+    summary: 격자는 보통 grid[row][column]으로 접근하며 row는 세로, column은 가로 위치다.
+    key_points:
+      - 행의 개수와 열의 개수를 각각 n과 m으로 구분한다.
+      - 방향 벡터의 첫 값은 행, 둘째 값은 열 변화량으로 일관되게 쓴다.
+      - 정사각형이라고 가정하지 말고 n과 m을 따로 검사한다.
+    example: |
+      for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+          next_row, next_col = row + dr, col + dc
+    self_check: 2행 5열 격자에서 grid[1][4]가 어느 칸인지 설명해 보세요.
+
+  - skill_code: GRID_BOUNDARY_CHECK
+    title: 격자 경계 검사
+    summary: 다음 좌표를 배열에 사용하기 전에 행과 열이 각각 유효 범위에 있는지 확인한다.
+    key_points:
+      - 올바른 조건은 0 <= row < n 그리고 0 <= column < m이다.
+      - Python의 음수 인덱스도 원소를 가리키므로 하한 검사가 필수다.
+      - 경계 검사는 배열 접근보다 먼저 수행한다.
+    example: |
+      if not (0 <= next_row < n and 0 <= next_col < m):
+          continue
+      value = grid[next_row][next_col]
+    self_check: 0 <= row <= n이 잘못된 이유를 설명해 보세요.
+
+  - skill_code: BFS_BASIC
+    title: 너비 우선 탐색의 기본
+    summary: BFS는 큐를 사용해 시작점에서 가까운 정점부터 차례로 방문한다.
+    key_points:
+      - 시작점을 방문 처리한 뒤 큐에 넣는다.
+      - 큐에서 하나를 꺼내 방문하지 않은 이웃을 추가한다.
+      - 각 정점을 한 번만 넣으면 전체 탐색은 O(V+E)다.
+    example: |
+      visited[start] = True
+      queue = deque([start])
+      while queue:
+          current = queue.popleft()
+    self_check: 한 층의 정점들이 어떤 거리 순서를 보장하는지 설명해 보세요.
+
+  - skill_code: BFS_VISITED_MANAGEMENT
+    title: BFS 방문 상태의 기록 시점
+    summary: 정점을 큐에 넣는 순간 방문 처리해야 같은 정점이 여러 번 들어가는 것을 막는다.
+    key_points:
+      - 방문 확인과 기록을 이웃을 발견하는 분기 안에서 함께 수행한다.
+      - 큐에서 꺼낼 때 기록하면 여러 부모가 같은 정점을 중복 삽입할 수 있다.
+      - 다중 시작점 BFS에서는 모든 시작점을 먼저 방문 처리한다.
+    example: |
+      if not visited[next_node]:
+          visited[next_node] = True
+          queue.append(next_node)
+    self_check: 다이아몬드 모양 그래프에서 늦은 방문 처리가 만드는 중복을 추적해 보세요.
+
+  - skill_code: BFS_GRID_TRAVERSAL
+    title: 격자 BFS의 탐색 순서
+    summary: 격자 BFS는 좌표를 정점으로, 상하좌우 이동 가능 관계를 간선으로 본다.
+    key_points:
+      - 시작 칸이 실제로 이동 가능한지 먼저 확인한다.
+      - 다음 좌표마다 경계, 이동 가능 여부, 방문 여부를 검사한다.
+      - 방문 배열에 개수나 거리를 저장해야 하는지 문제 요구를 구분한다.
+    example: |
+      queue = deque([(start_row, start_col)])
+      visited[start_row][start_col] = True
+      while queue:
+          row, col = queue.popleft()
+    self_check: 격자 문제의 정점과 간선이 각각 무엇인지 설명해 보세요.
+
+  - skill_code: BFS_SHORTEST_PATH
+    title: 가중치 없는 그래프의 최단 거리
+    summary: 모든 간선 비용이 같으면 BFS가 처음 발견한 거리가 시작점에서의 최단 거리다.
+    key_points:
+      - 시작점 거리를 0으로 두고 이웃 거리를 현재 거리에 1을 더해 기록한다.
+      - 방문과 거리 기록은 큐에 넣는 순간 함께 수행한다.
+      - 도달하지 못한 정점의 표현값을 출력 요구와 구분한다.
+    example: |
+      distance = [-1] * node_count
+      distance[start] = 0
+      queue = deque([start])
+    self_check: 간선 가중치가 서로 다르면 같은 BFS를 쓸 수 없는 이유를 설명해 보세요.

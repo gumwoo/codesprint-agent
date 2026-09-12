@@ -1,5 +1,7 @@
 package dev.codesprint.learning.service;
 
+import dev.codesprint.curriculum.CurriculumCatalog;
+import dev.codesprint.curriculum.CurriculumCatalog.ConceptDefinition;
 import dev.codesprint.learning.domain.ActionType;
 import dev.codesprint.learning.domain.SubmissionEvidenceFactory;
 import dev.codesprint.learning.persistence.ProblemRepository;
@@ -14,11 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 결정된 다음 행동을 <b>실제 문제</b>로 옮긴다.
+ * 결정된 다음 행동을 <b>실제 학습 자료</b>로 옮긴다.
  *
  * <p><b>여기서 결정하지 않는다.</b> 무엇을 할지는 Decision Engine 이 이미 정했고
  * (ADR-0002) 제출 행에 남아 있다. 이 클래스가 하는 일은 그 행동이 겨냥한 Skill 에
- * 맞는 문제를 고르는 것뿐이다.
+ * 맞는 문제를 고르거나, REVIEW_CONCEPT가 가리키는 정본 자료를 붙일 뿐이다.
  *
  * <p>추천 알고리즘이 아니다. 난이도 조절도, 학습 계획도 여기 없다 - 그것들은 각각
  * 다른 결정이고 다른 규칙을 갖는다. 이 클래스가 커지기 시작하면 Decision Engine 이
@@ -35,12 +37,14 @@ public class NextProblemService {
     private final ProblemCatalog catalog;
     private final SubmissionRepository submissions;
     private final ProblemRepository problems;
+    private final CurriculumCatalog curriculum;
 
     public NextProblemService(ProblemCatalog catalog, SubmissionRepository submissions,
-            ProblemRepository problems) {
+            ProblemRepository problems, CurriculumCatalog curriculum) {
         this.catalog = catalog;
         this.problems = problems;
         this.submissions = submissions;
+        this.curriculum = curriculum;
     }
 
     /**
@@ -51,9 +55,9 @@ public class NextProblemService {
     public record Selection(String problemCode, String reason) {
     }
 
-    /** 조회 응답. 저장된 선택을 읽어 문제 본문을 붙인 것이다. */
+    /** 조회 응답. 저장된 선택을 읽어 문제 또는 개념 자료를 붙인 것이다. */
     public record Resolution(long submissionId, String action, String targetSkill,
-            ProblemDefinition problem, String reason) {
+            ProblemDefinition problem, ConceptDefinition concept, String reason) {
     }
 
     /**
@@ -84,7 +88,7 @@ public class NextProblemService {
 
             // 문제를 주지 않는 행동들. 각각 이유가 다르므로 뭉뚱그리지 않는다.
             case CONTINUE -> none("같은 문제를 이어서 푼다 - 새 문제를 고르지 않는다");
-            case REVIEW_CONCEPT -> none("개념 자료가 아직 없다 - 문제로 대체하지 않는다");
+            case REVIEW_CONCEPT -> none("반복 실패한 Skill의 개념을 다시 확인한다");
             // 일정은 서비스가 이미 저장했다. 지금 줄 문제는 없다 - 간격 복습은
             // 시간이 지나야 의미가 있고, 바로 다시 풀게 하면 그건 복습이 아니다.
             case SCHEDULE_REVIEW -> none("복습을 예약했다 - 간격이 지난 뒤에 다시 확인한다");
@@ -114,7 +118,18 @@ public class NextProblemService {
                 submission.nextActionTarget(),
                 submission.nextProblemCode() == null
                         ? null : catalog.find(submission.nextProblemCode()),
+                ActionType.REVIEW_CONCEPT.name().equals(submission.nextActionType())
+                        ? requiredConcept(submission.nextActionTarget()) : null,
                 submission.nextProblemReason()));
+    }
+
+    private ConceptDefinition requiredConcept(String targetSkill) {
+        ConceptDefinition concept = curriculum.concept(targetSkill);
+        if (concept == null) {
+            throw new IllegalStateException(
+                    "REVIEW_CONCEPT 대상 Skill의 개념 자료가 없다: " + targetSkill);
+        }
+        return concept;
     }
 
     /**

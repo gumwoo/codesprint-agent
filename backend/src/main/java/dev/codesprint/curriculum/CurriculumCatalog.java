@@ -28,11 +28,13 @@ public class CurriculumCatalog {
     private final Map<String, SkillDefinition> skills;
     private final List<Prerequisite> prerequisites;
     private final Map<String, MistakeDefinition> mistakes;
+    private final Map<String, ConceptDefinition> concepts;
 
     public CurriculumCatalog() {
         this.skills = loadSkills();
         this.prerequisites = loadPrerequisites();
         this.mistakes = loadMistakes();
+        this.concepts = loadConcepts();
     }
 
     /** {@code prerequisites.yaml} 한 줄. */
@@ -52,6 +54,11 @@ public class CurriculumCatalog {
      */
     public record MistakeDefinition(String code, boolean autoDrill, String targetSkill,
             String assignedBy) {
+    }
+
+    /** REVIEW_CONCEPT에서 보여 주는 Skill별 정본 자료. */
+    public record ConceptDefinition(String skillCode, String title, String summary,
+            List<String> keyPoints, String example, String selfCheck) {
     }
 
     @SuppressWarnings("unchecked")
@@ -112,6 +119,22 @@ public class CurriculumCatalog {
         return Map.copyOf(loaded);
     }
 
+    @SuppressWarnings("unchecked")
+    private static Map<String, ConceptDefinition> loadConcepts() {
+        Map<String, ConceptDefinition> loaded = new LinkedHashMap<>();
+        for (Map<String, Object> row : read("concepts.yaml", "concepts")) {
+            String skillCode = (String) row.get("skill_code");
+            loaded.put(skillCode, new ConceptDefinition(
+                    skillCode,
+                    (String) row.get("title"),
+                    (String) row.get("summary"),
+                    List.copyOf((List<String>) row.get("key_points")),
+                    (String) row.get("example"),
+                    (String) row.get("self_check")));
+        }
+        return Map.copyOf(loaded);
+    }
+
     public Set<String> skillCodes() {
         return skills.keySet();
     }
@@ -144,5 +167,9 @@ public class CurriculumCatalog {
             return null;
         }
         return definition.targetSkill();
+    }
+
+    public ConceptDefinition concept(String skillCode) {
+        return concepts.get(skillCode);
     }
 }

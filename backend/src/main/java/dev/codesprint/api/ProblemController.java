@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.curriculum.CurriculumCatalog.ConceptDefinition;
 import dev.codesprint.learning.service.NextProblemService;
 import dev.codesprint.problem.ProblemCatalog;
 import dev.codesprint.problem.ProblemCatalog.ProblemDefinition;
@@ -11,8 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 문제 조회와 "다음에 풀 문제".
- * 계약: contracts/problem-view.schema.json, contracts/next-problem.schema.json.
+ * 문제 조회와 다음 학습 자료.
+ * 계약: contracts/problem-view.schema.json, contracts/concept-view.schema.json,
+ * contracts/next-problem.schema.json.
  *
  * <p><b>hidden Test Case 를 내보내지 않는다.</b> 이 저장소의 문제는 파일을 열면 다
  * 보이지만(ADR-0008), 그것은 여기 있는 것이 fixture 이기 때문이지 API 가 그래도
@@ -45,12 +47,18 @@ public class ProblemController {
             List<SkillView> skills, List<SampleView> samples) {
     }
 
+    public record ConceptView(String skillCode, String title, String summary,
+            List<String> keyPoints, String example, String selfCheck) {
+    }
+
     /**
-     * @param problem 고르지 못했으면 null. 왜 없는지는 reason 에 적힌다 - 빈 응답으로
-     *     두면 "아직 안 끝났다" 와 "줄 문제가 없다" 를 구분할 수 없다.
+     * @param problem 다음에 풀 문제. 문제를 요구하지 않는 행동이면 null.
+     * @param concept REVIEW_CONCEPT가 가리키는 자료. 다른 행동이면 null.
+     *     둘 다 없을 수 있으며 왜 없는지는 reason에 적힌다. 빈 응답으로 두면
+     *     "아직 안 끝났다"와 "다음 자료가 없다"를 구분할 수 없다.
      */
     public record NextProblemResponse(long submissionId, String action, String targetSkill,
-            ProblemView problem, String reason) {
+            ProblemView problem, ConceptView concept, String reason) {
     }
 
     /** 목록에 담는 것. 본문과 예시는 없다 - 고르는 화면이지 푸는 화면이 아니다. */
@@ -102,6 +110,7 @@ public class ProblemController {
                         resolution.action(),
                         resolution.targetSkill(),
                         resolution.problem() == null ? null : toView(resolution.problem()),
+                        resolution.concept() == null ? null : toView(resolution.concept()),
                         resolution.reason()))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -124,5 +133,10 @@ public class ProblemController {
                 catalog.samplesOf(problem.code()).stream()
                         .map(sample -> new SampleView(sample.input(), sample.expectedOutput()))
                         .toList());
+    }
+
+    private static ConceptView toView(ConceptDefinition concept) {
+        return new ConceptView(concept.skillCode(), concept.title(), concept.summary(),
+                concept.keyPoints(), concept.example(), concept.selfCheck());
     }
 }

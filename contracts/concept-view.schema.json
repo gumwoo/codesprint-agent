@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/concept-view.schema.json",
+  "title": "ConceptView",
+  "description": "REVIEW_CONCEPT에서 대상 Skill에 대해 제공하는 정본 복습 자료.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skillCode", "title", "summary", "keyPoints", "example", "selfCheck"],
+  "properties": {
+    "skillCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "keyPoints": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "example": { "type": "string", "minLength": 1 },
+    "selfCheck": { "type": "string", "minLength": 1 }
+  }
+}

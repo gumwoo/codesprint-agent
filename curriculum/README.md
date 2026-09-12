@@ -9,6 +9,7 @@ Skill Graph 의 **실행 가능한 정본**이다. 문서가 아니라 CI 가 �
 | [skills.yaml](skills.yaml) | Addendum §31~34 | **검증된 Skill 만.** 첫 슬라이스 8개 |
 | [prerequisites.yaml](prerequisites.yaml) | Addendum §33 | 학습 경로 잠금 해제 조건 |
 | [mistakes.yaml](mistakes.yaml) | Addendum §37, §42 | 오답 taxonomy + 자동 드릴 연결 |
+| [concepts.yaml](concepts.yaml) | ADR-0024 | `REVIEW_CONCEPT`가 제공하는 Skill별 기본 복습 자료 |
 
 ## 왜 domains 와 skills 를 나눴는가
 
@@ -46,6 +47,9 @@ Skill 이 없는데 `active: true` 이거나 그 반대이면 실패한다.
    `REVIEWER` 이면 실패 Test Case 를 근거로 분류되므로, 그 Mistake 가 나타나는
    Judge 상태에 **실패 case 가 특정되는지** 확인해야 한다. 특정되지 않으면
    `failedCaseRefs` 의 minItems: 1 을 만족시킬 수 없다.
+7. **새 Skill은 개념 자료와 함께 승격한다**(ADR-0024).
+   `concepts.yaml`에 같은 `skill_code`의 자료가 정확히 하나 있어야 한다. 자료가 없으면
+   반복 실패 뒤 `REVIEW_CONCEPT`가 사용자를 보낼 곳이 없으므로 CI가 승격을 막는다.
 
 ## 검증
 

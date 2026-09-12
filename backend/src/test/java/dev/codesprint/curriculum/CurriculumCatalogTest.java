@@ -76,4 +76,17 @@ class CurriculumCatalogTest {
         assertThat(catalog.mistake("SYNTAX_ERROR").assignedBy()).isEqualTo("SYSTEM");
         assertThat(catalog.mistake("BOUNDARY_CHECK").assignedBy()).isEqualTo("REVIEWER");
     }
+
+    @Test
+    @DisplayName("Skill의 개념 자료가 빌드 결과에 실린다")
+    void loadsConceptMaterial() {
+        CurriculumCatalog.ConceptDefinition concept =
+                catalog.concept("BFS_GRID_TRAVERSAL");
+
+        assertThat(concept).isNotNull();
+        assertThat(concept.skillCode()).isEqualTo("BFS_GRID_TRAVERSAL");
+        assertThat(concept.keyPoints()).isNotEmpty();
+        assertThat(concept.example()).isNotBlank();
+        assertThat(concept.selfCheck()).isNotBlank();
+    }
 }
