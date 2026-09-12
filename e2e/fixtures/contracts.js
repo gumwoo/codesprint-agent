@@ -24,12 +24,15 @@ for (const file of fs.readdirSync(CONTRACTS).filter((f) => f.endsWith(".json")))
  *
  * 여기 없는 경로는 `UNCONTRACTED` 에 있어야 한다. 둘 다 아니면 실패한다 -
  * 조용히 넘기면 계약 없이 만들어진 stub 이 생기는 줄도 모른다.
+ *
+ * **값으로 `null` 을 두지 않는다.** "계약이 있다" 와 "이유가 있다" 사이에 제3의
+ * 상태를 만들면 그 경로는 두 검사를 모두 비켜 간다 - 실제로 `/run` 이 그랬고,
+ * 그 상태에서는 `UNCONTRACTED` 의 이유를 통째로 지워도 전부 통과했다.
  */
 const BY_PATH = [
   [/^\/api\/submissions\/\d+\/next-problem$/, "next-problem"],
   [/^\/api\/submissions\/\d+$/, "submission-status"],
   [/^\/api\/problems\/[^/]+\/submit$/, "submission-status"],
-  [/^\/api\/problems\/[^/]+\/run$/, null],
   [/^\/api\/problems\/[^/]+$/, "problem-view"],
   [/^\/api\/problems$/, "problem-list"],
   [/^\/api\/runs\/\d+$/, "run-result"],
@@ -71,6 +74,7 @@ async function fulfill(route, body, status = 200) {
   const name = contractFor(url.pathname);
 
   if (name === undefined) {
+    // 규칙은 하나다 - 계약이 있거나, 이유가 있거나.
     const excuse = UNCONTRACTED[url.pathname]
         || UNCONTRACTED[url.pathname.replace(/\/api\/problems\/[^/]+\//, "/api/problems/{code}/")];
     if (!excuse) {
@@ -79,7 +83,7 @@ async function fulfill(route, body, status = 200) {
           + "  contracts/ 에 계약이 있으면 BY_PATH 에 잇고,\n"
           + "  없으면 UNCONTRACTED 에 **이유와 함께** 적는다.");
     }
-  } else if (name !== null) {
+  } else {
     const validate = ajv.getSchema(`https://codesprint.dev/contracts/${name}.schema.json`);
     if (!validate(body)) {
       throw new Error(
