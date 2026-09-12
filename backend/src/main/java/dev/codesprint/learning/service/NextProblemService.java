@@ -119,8 +119,17 @@ public class NextProblemService {
                 submission.nextProblemCode() == null
                         ? null : catalog.find(submission.nextProblemCode()),
                 ActionType.REVIEW_CONCEPT.name().equals(submission.nextActionType())
-                        ? curriculum.concept(submission.nextActionTarget()) : null,
+                        ? requiredConcept(submission.nextActionTarget()) : null,
                 submission.nextProblemReason()));
+    }
+
+    private ConceptDefinition requiredConcept(String targetSkill) {
+        ConceptDefinition concept = curriculum.concept(targetSkill);
+        if (concept == null) {
+            throw new IllegalStateException(
+                    "REVIEW_CONCEPT 대상 Skill의 개념 자료가 없다: " + targetSkill);
+        }
+        return concept;
     }
 
     /**

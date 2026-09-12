@@ -57,6 +57,18 @@ class NextLearningResourceContractTest {
     }
 
     @Test
+    @DisplayName("계약은 REVIEW_CONCEPT의 대상 Skill 형식을 검증한다")
+    void reviewConceptRejectsInvalidTargetSkill() throws Exception {
+        JsonNode body = MAPPER.readTree("""
+                {"submissionId":42,"action":"REVIEW_CONCEPT","targetSkill":"bfs-basic",
+                 "problem":null,"concept":{"skillCode":"BFS_BASIC","title":"t",
+                 "summary":"s","keyPoints":["p"],"example":"e","selfCheck":"c"},
+                 "reason":"개념 복습"}
+                """);
+        assertThat(schema().validate(body)).isNotEmpty();
+    }
+
+    @Test
     @DisplayName("계약은 다른 행동에 끼어든 concept를 거부한다")
     void otherActionsRejectConceptMaterial() throws Exception {
         JsonNode body = MAPPER.readTree("""

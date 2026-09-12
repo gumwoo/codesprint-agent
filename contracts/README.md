@@ -7,6 +7,8 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | --- | --- | --- |
 | [reviewer-output.llm.schema.json](reviewer-output.llm.schema.json) | [ADR-0001](../docs/adr/0001-llm-analyzes-system-decides.md) | **LLM 요청 스키마.** 오답 분석만. 점수·액션 필드 없음 |
 | [submit-response.schema.json](submit-response.schema.json) | Addendum §82 | **API 응답 스키마.** 시스템이 점수와 액션을 채운 최종 결과 |
+| [next-problem.schema.json](next-problem.schema.json) | [ADR-0002](../docs/adr/0002-next-action-decided-by-rule-engine.md), [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **다음 학습 단계 API 응답.** 결정된 액션을 문제 또는 개념 복습 자료로 옮긴 결과 |
+| [concept-view.schema.json](concept-view.schema.json) | [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **개념 복습 자료 응답.** `REVIEW_CONCEPT` 대상 Skill의 검증된 커리큘럼 자료 |
 | [problem.schema.json](problem.schema.json) | [ADR-0007](../docs/adr/0007-problems-are-verified-by-a-wrong-solution.md) | 문제 메타 + Skill 매핑. `problems/<CODE>/problem.yaml` |
 | [test-cases.schema.json](test-cases.schema.json) | Addendum §66 | Test Case 집합. `problems/<CODE>/cases.json` |
 | [skill-evidence.schema.json](skill-evidence.schema.json) | [ADR-0009](../docs/adr/0009-mastery-is-recomputed-from-evidence.md) | **학습의 정본.** mastery 는 이것으로부터 재계산된다 |

@@ -78,7 +78,10 @@
         "properties": {
           "problem": { "type": "null" },
           "concept": { "$ref": "https://codesprint.dev/contracts/concept-view.schema.json" },
-          "targetSkill": { "type": "string" }
+          "targetSkill": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+          }
         }
       }
     },

@@ -1,6 +1,7 @@
 package dev.codesprint.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,21 @@ class NextProblemConceptTest {
         SubmissionRow row = submission(43L, "CONTINUE", null);
         when(submissions.findById(43L)).thenReturn(Optional.of(row));
         assertThat(service.resolve(43L).orElseThrow().concept()).isNull();
+    }
+
+    @Test
+    @DisplayName("REVIEW_CONCEPT 대상 자료가 없으면 계약 위반 응답을 만들지 않는다")
+    void missingConceptMaterialFailsFast() {
+        CurriculumCatalog curriculum = mock(CurriculumCatalog.class);
+        NextProblemService guardedService = new NextProblemService(
+                mock(ProblemCatalog.class), submissions, mock(ProblemRepository.class),
+                curriculum);
+        SubmissionRow row = submission(44L, "REVIEW_CONCEPT", "UNKNOWN_SKILL");
+        when(submissions.findById(44L)).thenReturn(Optional.of(row));
+
+        assertThatThrownBy(() -> guardedService.resolve(44L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("UNKNOWN_SKILL");
     }
 
     private static SubmissionRow submission(long id, String action, String target) {
