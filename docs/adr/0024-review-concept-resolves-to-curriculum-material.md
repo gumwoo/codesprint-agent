@@ -1,4 +1,11 @@
-# ADR-0024 · `REVIEW_CONCEPT`는 검증된 커리큘럼 자료를 가리킨다
+# ADR-0024 · `REVIEW_CONCEPT`는 커리큘럼 자료를 가리킨다
+
+- 상태: 채택
+- 날짜: 2026-09-12
+- 정본 근거: PRD §75, Addendum §43,
+  [ADR-0001](0001-llm-analyzes-system-decides.md),
+  [ADR-0002](0002-next-action-decided-by-rule-engine.md),
+  [ADR-0012](0012-curriculum-is-packaged-from-one-source.md)
 
 ## 맥락
 
@@ -24,8 +31,24 @@ Decision Engine은 같은 문제를 세 번 연속 실패하면 `REVIEW_CONCEPT`
 반복 실패는 막다른 행동이 아니라 설명, 예시, 핵심 항목, 자기 확인 질문이 있는 학습 단계가 된다.
 새 Skill 승격에는 자료 작성 비용이 따르지만 불완전한 학습 경로가 공개되는 것을 CI가 차단한다.
 
+이것으로 갈 곳 없는 액션 네 개가 모두 닫혔다 — `CHANGE_SKILL`(PR #17) ·
+`SCHEDULE_REVIEW`(PR #27) · `UNLOCK_NEXT`(PR #28) · `REVIEW_CONCEPT`.
+
+### 남는 위험
+
+- **자료의 내용이 맞는지는 아무도 검사하지 않는다.** `check_curriculum.py` 가 보는 것은
+  "비어 있지 않은 문자열인가" 뿐이다. `example` 코드가 실제로 도는지, 설명이 그 Skill 을
+  제대로 말하는지는 확인되지 않는다 — 문제 본문이 풀이 전략을 흘린 것을 기계가 잡지
+  못했던 것과 같은 부류이고, **이 종류는 사람이 읽어야 한다**
+- **Skill 하나에 자료 하나다.** 같은 Skill 을 두 번 반복 실패한 사용자는 같은 설명을 다시
+  본다. 실패의 양상(경계 조건인가 방문 처리인가)에 따라 다른 자료를 주려면 자료를
+  Mistake 단위로 쪼개야 하는데, 그때 이 ADR 을 갈음한다
+- **화면에 자동 검사가 없다.** 자료가 실제로 그려지는지는 사람이 눌러 봐야 안다
+  (ADR-0017). `WebClientTest` 가 막는 것은 "화면이 행동을 다시 결정하지 않는가" 까지다
+
 ## 관련
 
-- [ADR-0002](0002-next-action-decided-by-rule-engine.md)
-- [ADR-0012](0012-curriculum-is-packaged-from-one-source.md)
-- [ADR-0017](0017-the-web-client-has-no-build-step.md)
+- [ADR-0002](0002-next-action-decided-by-rule-engine.md) — 행동의 결정자는 하나다
+- [ADR-0012](0012-curriculum-is-packaged-from-one-source.md) — 커리큘럼 복사본을 만들지 않는다
+- [ADR-0017](0017-the-web-client-has-no-build-step.md) — 화면에 자동 검사가 없는 이유
+- [ADR-0023](0023-the-screen-checks-ownership-not-behaviour.md) — 화면이 검사받는 범위
