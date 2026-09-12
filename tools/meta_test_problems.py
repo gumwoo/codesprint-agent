@@ -130,6 +130,27 @@ def normal_becomes_review(doc):
     doc["kind"] = "REVIEW"
 
 
+def drop_hint_level(doc):
+    doc["hints"] = [h for h in doc["hints"] if h["level"] != 3]
+
+
+def duplicate_hint_text(doc):
+    doc["hints"][3]["text"] = doc["hints"][2]["text"]
+
+
+def hint_leaks_the_solution(doc):
+    # P02 의 reference.py 에 있는 줄을 H2 에 그대로 옮긴다. 그러면 두 번째 칸에서
+    # 이미 정답 코드를 주는 셈이라 사다리가 성립하지 않는다.
+    doc["hints"][1]["text"] = "visited = [[False] * m for _ in range(n)]"
+
+
+def copy_another_ladder(doc):
+    # P03 의 사다리를 그대로 가져온다.
+    other = yaml.safe_load(
+        (ROOT / "problems" / "P03_CONNECTED_COMPONENT" / "hints.yaml").read_text(encoding="utf-8"))
+    doc["hints"] = other["hints"]
+
+
 def drop_sample(doc):
     doc["cases"] = [c for c in doc["cases"] if c["type"] != "SAMPLE"]
 
@@ -167,6 +188,14 @@ CASES = [
     ("hidden case 가 하나도 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", unhide_all_cases, "hidden case 가 없다"),
     ("SAMPLE 이 없으면", "problems/P03_CONNECTED_COMPONENT/cases.json", drop_sample, "SAMPLE case 가 없다"),
 
+    # -- 단계별 힌트 (PRD 73) --
+    # 힌트 의존도가 mastery 를 가르므로(Addendum 74), 세는 숫자가 같은 것을
+    # 가리키지 않으면 산식이 조용히 틀린 값을 받는다.
+    ("힌트 단계가 빠지면", "problems/P02_GRID_TRAVERSAL/hints.yaml", drop_hint_level, "1..5 순서가 아니다"),
+    ("같은 힌트가 두 단계에 들어가면", "problems/P02_GRID_TRAVERSAL/hints.yaml", duplicate_hint_text, "두 단계에 들어 있다"),
+    ("힌트가 정답 코드를 그대로 담으면", "problems/P02_GRID_TRAVERSAL/hints.yaml", hint_leaks_the_solution, "reference.py 의 코드를 그대로"),
+    ("다른 문제의 사다리를 복사하면", "problems/P02_GRID_TRAVERSAL/hints.yaml", copy_another_ladder, "힌트 사다리가 완전히 같다"),
+
     # -- CHANGE_SKILL 착지점 --
     ("선수 조건 Skill 의 NORMAL 문제가 사라지면", "problems/P15_MULTI_SOURCE_SPREAD/problem.yaml", normal_becomes_review, "CHANGE_SKILL 이 갈 곳 없는"),
 
@@ -184,6 +213,10 @@ CASES = [
 
 # 파일이 있고 없고로만 깨뜨릴 수 있는 것. (설명, 대상, 동작, 기대 메시지 조각)
 FILE_CASES = [
+    ("힌트 사다리 파일이 없으면",
+     "problems/P02_GRID_TRAVERSAL/hints.yaml", "delete",
+     "hints.yaml 이 없다"),
+
     ("겨냥한 실수의 풀이 파일을 지우면",
      "problems/P03_CONNECTED_COMPONENT/probes/BOUNDARY_CHECK.py", "delete",
      "probes/BOUNDARY_CHECK.py 가 없다"),
