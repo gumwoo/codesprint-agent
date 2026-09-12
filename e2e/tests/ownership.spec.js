@@ -1,12 +1,12 @@
 const { test, expect } = require("@playwright/test");
-const { gate, stubApi, problem, json, finished, conceptFor } =
+const { gate, releaseAndSettle, stubApi, problem, json, finished, conceptFor } =
     require("../fixtures/api");
 
 /**
  * 화면의 비동기 소유권 회귀. 정본: ADR-0023, ADR-0025.
  *
- * 여기 있는 다섯 개는 전부 **실제로 있었던 결함**이고, 전부 리뷰에서 사람이 찾았다.
- * 정적 검사(WebClientTest)는 다섯 중 하나도 잡지 못했다 - 소유권을 받기는 받았는데
+ * 여기 있는 여섯 개는 전부 **실제로 있었던 결함**이고, 전부 리뷰에서 사람이 찾았다.
+ * 정적 검사(WebClientTest)는 여섯 중 하나도 잡지 못했다 - 소유권을 받기는 받았는데
  * 통을 잘못 나눴거나, 축이 모자랐거나, 떠날 때 놓지 않았기 때문이다.
  *
  * 각 테스트는 늦게 온 응답이 최신 화면을 덮지 않는지 본다. 순서는 게이트가 쥔다.
@@ -35,8 +35,7 @@ test("먼저 누른 문제가 늦게 도착해도 마지막에 고른 문제가 
   await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
 
   // 이제 P02 를 놓아 준다. 마지막에 고른 것은 P03 이므로 화면이 바뀌면 안 된다.
-  slow.release();
-  await page.waitForTimeout(300);
+  await releaseAndSettle(page, slow, "/api/problems/P02_GRID_TRAVERSAL");
   await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
 });
 
@@ -55,8 +54,7 @@ test("문제를 기다리는 동안 목록으로 돌아가면 끌려가지 않�
   await page.click("#toProblems");
   await expect(page.locator("#picker")).toBeVisible();
 
-  slow.release();
-  await page.waitForTimeout(300);
+  await releaseAndSettle(page, slow, "/api/problems/P02_GRID_TRAVERSAL");
   await expect(page.locator("#picker")).toBeVisible();
   await expect(page.locator("#statementBody")).toBeHidden();
 });
@@ -76,8 +74,7 @@ test("문제를 기다리는 동안 내 Skill 로 옮겨도 끌려가지 않는�
   await page.click("#tabSkills");
   await expect(page.locator("#skillsBody")).toBeVisible();
 
-  slow.release();
-  await page.waitForTimeout(300);
+  await releaseAndSettle(page, slow, "/api/problems/P02_GRID_TRAVERSAL");
   await expect(page.locator("#skillsBody")).toBeVisible();
   await expect(page.locator("#statementBody")).toBeHidden();
 });
@@ -110,12 +107,13 @@ test("늦게 온 복습 조회가 지나간 '지금 복습하기' 를 되살리�
   });
 
   await asUser(page);
-  await page.waitForTimeout(200);
+  // 첫 조회가 **실제로 출발했는지**를 세어서 기다린다. 시간으로 재면 아직 나가지도
+  // 않은 요청을 두고 두 번째를 보내게 되어 경합이 성립하지 않는다.
+  await expect.poll(() => seen).toBe(1);
   await page.evaluate(() => refreshReviews());   // 두 번째 조회
   await expect(page.locator("#reviewWhen")).toHaveText("3일 간격");
 
-  slow.release();
-  await page.waitForTimeout(300);
+  await releaseAndSettle(page, slow, "/reviews");
   await expect(page.locator("#reviewWhen")).toHaveText("3일 간격");
   await expect(page.locator("#reviewStart")).toBeHidden();
 });
@@ -141,8 +139,7 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
   await page.click("#createUser");
   await expect(page.locator("#userId")).toHaveValue("12");
 
-  slow.release();
-  await page.waitForTimeout(300);
+  await releaseAndSettle(page, slow, "/api/users");
   await expect(page.locator("#userId")).toHaveValue("12");
 });
 
@@ -187,8 +184,7 @@ test("개념 자료가 다른 제출의 결정 요약 아래에 붙지 않는다
   await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
 
   // 이제 제출 1 의 자료가 도착한다. 지금 화면은 제출 2 의 것이다.
-  slow.release();
-  await page.waitForTimeout(300);
+  await releaseAndSettle(page, slow, "/api/submissions/1/next-problem");
   await expect(page.locator("#nextAction .concept")).toHaveCount(0);
   await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
 });

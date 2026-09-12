@@ -15,6 +15,29 @@ function gate() {
   return { held, release: () => open() };
 }
 
+/**
+ * 붙잡아 둔 응답을 놓고, **화면이 그것을 다 처리할 때까지** 기다린다.
+ *
+ * 게이트가 보장하는 것은 "언제 풀기 시작하는가" 까지다. 그 뒤에 시간을 재서
+ * 기다리면(`waitForTimeout(300)`) 이 하네스가 피하려던 바로 그것이 된다 -
+ * **처리가 그보다 늦게 끝나면 테스트는 조용히 통과한다.** 특히 "붙지 않았는가" 를
+ * 보는 검사는 아직 안 붙은 상태에서도 통과하므로 위험이 크다.
+ *
+ * 그래서 시간이 아니라 순서로 기다린다.
+ *
+ *   1. 늦춰 둔 응답이 실제로 브라우저에 도착할 때까지
+ *   2. 그 continuation 이 끝날 때까지 - getJson 은 body 를 한 번 더 읽으므로
+ *      (`.json()`), 페이지에서 매크로태스크를 두 번 돌려 그 사이의 마이크로태스크를
+ *      전부 비운다. 화면을 쓰는 부분은 `.json()` 이후 동기 코드다.
+ */
+async function releaseAndSettle(page, held, urlPart) {
+  const arrived = page.waitForResponse((response) => response.url().includes(urlPart));
+  held.release();
+  await arrived;
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+}
+
 /** 화면이 부르는 것들의 기본 응답. 테스트가 필요한 것만 덮어쓴다. */
 const DEFAULTS = {
   problems: {
@@ -118,4 +141,6 @@ async function stubApi(page, overrides = {}) {
   });
 }
 
-module.exports = { gate, stubApi, problem, json, finished, conceptFor, DEFAULTS };
+module.exports = {
+  gate, releaseAndSettle, stubApi, problem, json, finished, conceptFor, DEFAULTS,
+};
