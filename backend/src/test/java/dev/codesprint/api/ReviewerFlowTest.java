@@ -196,7 +196,7 @@ class ReviewerFlowTest {
             String casesJson) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                 "solveSeconds": 120}
                 """.formatted(userId);
         String json = mvc.perform(post("/api/problems/{code}/submit", problemCode)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
@@ -226,7 +226,7 @@ class ReviewerFlowTest {
             throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                 "solveSeconds": 120}
                 """.formatted(userId);
         String json = mvc.perform(post("/api/problems/{code}/submit", problemCode)
                         .contentType(MediaType.APPLICATION_JSON).content(body))

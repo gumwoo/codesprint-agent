@@ -265,7 +265,7 @@ class RunTest {
     void aSubmitJobIsNotARun() throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 60}
+                 "solveSeconds": 60}
                 """.formatted(userId);
         long submissionId = MAPPER.readTree(
                 mvc.perform(post("/api/problems/{code}/submit", "P02_GRID_TRAVERSAL")

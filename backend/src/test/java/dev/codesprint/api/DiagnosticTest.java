@@ -107,7 +107,7 @@ class DiagnosticTest {
 
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                 "solveSeconds": 120}
                 """.formatted(userId);
         long submissionId = MAPPER.readTree(
                 mvc.perform(post("/api/problems/{code}/submit", problemCode)

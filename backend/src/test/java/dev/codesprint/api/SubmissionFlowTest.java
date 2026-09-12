@@ -117,7 +117,12 @@ class SubmissionFlowTest {
                 "flow-" + System.nanoTime() + "@codesprint.dev", "흐름테스트")).id();
     }
 
-    /** 힌트 사용량을 스스로 신고하는 제출. 지금은 거절돼야 한다. */
+    /**
+     * 힌트 사용량을 스스로 신고하는 제출. 거절돼야 한다.
+     *
+     * <p>0 / false 도 거절이다. 서버가 기록에서 읽으므로(ADR-0026) 보낸 값은 어차피
+     * 쓰이지 않는데, 받아 놓으면 <b>보낸 쪽은 적용됐다고 믿는다.</b>
+     */
     private String bodyReporting(int hintLevel, boolean solutionViewed) {
         return """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
@@ -125,11 +130,14 @@ class SubmissionFlowTest {
                 """.formatted(userId, hintLevel, solutionViewed);
     }
 
-    private String requestBody(int hintLevel) {
+    /**
+     * 평범한 제출. <b>힌트 사용량이 없다</b> - 서버가 기록에서 읽는다(ADR-0026).
+     */
+    private String requestBody() {
         return """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": %d, "solutionViewed": false, "solveSeconds": 120}
-                """.formatted(userId, hintLevel);
+                 "solveSeconds": 120}
+                """.formatted(userId);
     }
 
     /** POST 는 접수만 한다. 202 와 submissionId 를 돌려준다. */
@@ -172,7 +180,7 @@ class SubmissionFlowTest {
     @Test
     @DisplayName("제출은 즉시 접수되고 채점 전에는 PENDING 이다")
     void submissionIsAcceptedBeforeJudging() throws Exception {
-        JsonNode accepted = accept("P02_GRID_TRAVERSAL", requestBody(0));
+        JsonNode accepted = accept("P02_GRID_TRAVERSAL", requestBody());
 
         assertThat(accepted.get("state").asText()).isEqualTo("PENDING");
         assertThat(accepted.get("result").isNull()).isTrue();
@@ -188,7 +196,7 @@ class SubmissionFlowTest {
     @Test
     @DisplayName("Worker 가 끝내면 Evidence 와 mastery 와 다음 행동이 만들어진다")
     void resultIsAppliedAfterWorkerFinishes() throws Exception {
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
 
         workerFinishes(submissionId, judged("ACCEPTED", 5, 5));
@@ -212,7 +220,7 @@ class SubmissionFlowTest {
     @Test
     @DisplayName("응답이 계약(submission-status + submit-response)을 지킨다")
     void responseMatchesContract() throws Exception {
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         workerFinishes(submissionId, judged("WRONG_ANSWER", 3, 5));
         poller.applyFinishedJobs();
@@ -227,7 +235,7 @@ class SubmissionFlowTest {
     void compileErrorResponseMatchesContract() throws Exception {
         // after 가 null 인 경로다. WA 하나만 검증하던 시절에는 이 경우가 계약을
         // 어겼는데도(after 가 non-null 이었다) 아무도 몰랐다.
-        long submissionId = accept("P01_QUEUE_BASIC", requestBody(0))
+        long submissionId = accept("P01_QUEUE_BASIC", requestBody())
                 .get("submissionId").asLong();
         workerFinishes(submissionId, judged("COMPILE_ERROR", 0, 5));
         poller.applyFinishedJobs();
@@ -247,7 +255,7 @@ class SubmissionFlowTest {
     void failedJobBecomesSystemError() throws Exception {
         // Worker 가 시도 횟수를 다 쓰고 포기한 경우다. 조용히 큐에 남겨두면 그
         // 제출은 영영 PENDING 이고, 사용자는 실패했다는 사실조차 모른다.
-        long submissionId = accept("P05_SHORTEST_PATH", requestBody(0))
+        long submissionId = accept("P05_SHORTEST_PATH", requestBody())
                 .get("submissionId").asLong();
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
         jdbc.update("UPDATE judge_jobs SET status = 'FAILED', failure_reason = ?"
@@ -268,7 +276,7 @@ class SubmissionFlowTest {
         // 반영만 표시하고 nextAction 을 비워 두면, 조회 쪽은 완료 여부를
         // nextActionType 으로 판단하므로 GET 이 영원히 PENDING 을 돌려준다 -
         // 사용자는 끝나지 않는 채점을 기다린다.
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         workerFinishes(submissionId, judged("ACCEPTED", 5, 5));
         // 카탈로그에서 사라진 상황을 만든다.
@@ -293,7 +301,7 @@ class SubmissionFlowTest {
     void applyingTwiceIsIdempotent() throws Exception {
         // 반영 도중 프로세스가 죽으면 같은 job 을 다시 집는다. Evidence 가 두 번
         // 쌓이면 EMA 가 두 번 적용되고 confidence 도 두 번 오른다.
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         workerFinishes(submissionId, judged("ACCEPTED", 5, 5));
 
@@ -319,7 +327,7 @@ class SubmissionFlowTest {
         // **어느 Skill 인지는 국면에 따라 다르다**(ADR-0019). 진단 중이면 진단이,
         // 끝났으면 선수 조건 규칙이 정한다. 여기서 확인하는 것은 <b>붙들고 있지
         // 않는다</b>는 것이고, 어느 규칙이 이기는지는 DecisionEngineTest 가 본다.
-        long submissionId = accept("P05_SHORTEST_PATH", requestBody(0))
+        long submissionId = accept("P05_SHORTEST_PATH", requestBody())
                 .get("submissionId").asLong();
         workerFinishes(submissionId, judged("WRONG_ANSWER", 0, 5));
         poller.applyFinishedJobs();
@@ -336,11 +344,11 @@ class SubmissionFlowTest {
     @DisplayName("우리 장애는 나중 제출의 경로도 바꾸지 않는다")
     void systemErrorsDoNotAccumulateIntoAttempts() throws Exception {
         for (int i = 0; i < 2; i++) {
-            long id = accept("P01_QUEUE_BASIC", requestBody(0)).get("submissionId").asLong();
+            long id = accept("P01_QUEUE_BASIC", requestBody()).get("submissionId").asLong();
             workerFinishes(id, judged("SYSTEM_ERROR", 0, 1));
             poller.applyFinishedJobs();
         }
-        long third = accept("P01_QUEUE_BASIC", requestBody(0)).get("submissionId").asLong();
+        long third = accept("P01_QUEUE_BASIC", requestBody()).get("submissionId").asLong();
         workerFinishes(third, judged("WRONG_ANSWER", 0, 5));
         poller.applyFinishedJobs();
 
@@ -354,7 +362,7 @@ class SubmissionFlowTest {
     void threeRealFailuresGoToConcept() throws Exception {
         long last = 0;
         for (int i = 0; i < 3; i++) {
-            last = accept("P01_QUEUE_BASIC", requestBody(0)).get("submissionId").asLong();
+            last = accept("P01_QUEUE_BASIC", requestBody()).get("submissionId").asLong();
             workerFinishes(last, judged("WRONG_ANSWER", 0, 5));
             poller.applyFinishedJobs();
         }
@@ -377,7 +385,7 @@ class SubmissionFlowTest {
                     print(grid[n][0])
                 IndexError: list index out of range""";
 
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
         jdbc.update("""
@@ -400,7 +408,7 @@ class SubmissionFlowTest {
     void stderrIsNullWhenThereWasNone() throws Exception {
         // 빈 문자열로 채우지 않는다. "에러 없이 끝났다" 와 "메시지가 비어 있다" 는
         // 다르고, 계약이 그 둘을 구분한다.
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
         jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
@@ -416,7 +424,7 @@ class SubmissionFlowTest {
     void unsupportedLanguageIsRejected() throws Exception {
         String body = """
                 {"userId": %d, "language": "JAVA", "sourceCode": "class Main {}",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                 "solveSeconds": 120}
                 """.formatted(userId);
 
         long before = jobs.count();
@@ -430,16 +438,17 @@ class SubmissionFlowTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest(name = "hintLevel={0} solutionViewed={1}")
-    @org.junit.jupiter.params.provider.CsvSource({"1, false", "5, false", "0, true"})
+    @org.junit.jupiter.params.provider.CsvSource({"1, false", "5, false", "0, true", "0, false"})
     @DisplayName("힌트 사용량 자기신고는 400 이고 큐에 넣지 않는다")
     void selfReportedHintUsageIsRejected(int hintLevel, boolean solutionViewed)
             throws Exception {
-        // 힌트 기능이 없다. 그런데 Evidence 는 이 값으로 독립 풀이 여부를 가른다 -
-        // 해설을 봤다고 하면 힌트 최고 단계(5)보다 위인 6 으로 친다. 즉 존재하지
-        // 않는 도움의 사용량을 신고받아 mastery 를 깎고 있었다.
+        // 힌트 사용량은 이제 서버가 기록에서 읽는다(ADR-0026). 그런데 요청이
+        // 여전히 값을 실어 보내면 **보낸 쪽은 그 값이 적용됐다고 믿는다.**
         //
-        // 받아 놓고 0 으로 덮어쓰지 않는다. 그러면 API 를 쓰는 쪽은 그 값이
-        // 적용됐다고 믿는다.
+        // "0, false" 가 목록에 있는 이유가 그것이다. 무해해 보이지만 무해하지 않다 -
+        // 조용히 받아 주면 나중에 "5, false" 를 보내도 되는 줄 알게 되고, 그때
+        // 기록과 다른 값이 mastery 에 들어간다. 필드를 지우지 않고 거절하는 이유는
+        // Jackson 이 모르는 필드를 조용히 버리기 때문이다.
         long before = jobs.count();
         int status = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -456,7 +465,7 @@ class SubmissionFlowTest {
         // 입력을 막았다고 컬럼과 산식을 지우지 않는다. 힌트가 생기면 서버가 그
         // 값을 채우고, 그때 Evidence 매핑이 그대로 쓰인다(ADR-0010 의 golden 이
         // 그 매핑을 고정하고 있다).
-        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody(0))
+        long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
 
         assertThat(jdbc.queryForObject(
@@ -493,7 +502,7 @@ class SubmissionFlowTest {
         long before = jobs.count();
         int status = mvc.perform(post("/api/problems/{code}/submit", "NO_SUCH_PROBLEM")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody(0)))
+                        .content(requestBody()))
                 .andReturn().getResponse().getStatus();
 
         assertThat(status).isEqualTo(404);

@@ -156,7 +156,7 @@ class ReviewLoopTest {
     private long submit(String problemCode) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 90}
+                 "solveSeconds": 90}
                 """.formatted(userId);
         return MAPPER.readTree(
                 mvc.perform(post("/api/problems/{code}/submit", problemCode)

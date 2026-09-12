@@ -143,34 +143,35 @@ class ProblemDeliveryTest {
         reviewer.scripted = null;
     }
 
-    private long submitAndJudge(String problemCode, String judgeStatus) throws Exception {
-        return submitAndJudge(problemCode, judgeStatus, 0, false);
+    /**
+     * 힌트를 실제로 <b>내주게 한다.</b> 한 단계씩만 열리므로 1 부터 차례로 부른다.
+     *
+     * <p>예전에는 제출 뒤에 {@code UPDATE submissions SET hint_level = ...} 로
+     * DB 를 직접 고쳤다. 힌트 기능이 없어 자기신고가 거절됐기 때문이다(PR #19).
+     * 이제 진짜 경로가 있으므로 우회를 지운다 - <b>우회가 남아 있으면 그 규칙이
+     * 실제 경로에서도 도는지 아무도 확인하지 않는다.</b>
+     */
+    private void revealHintsUpTo(String problemCode, int level) throws Exception {
+        for (int step = 1; step <= level; step++) {
+            mvc.perform(post("/api/problems/{code}/hints/{level}", problemCode, step)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"userId\": %d}".formatted(userId)))
+                    .andReturn();
+        }
     }
 
-    /**
-     * 제출한 뒤 힌트 사용량을 <b>DB 에 직접 적는다.</b>
-     *
-     * <p>API 로는 넣을 수 없다 - 힌트 기능이 없어 자기신고를 거절한다(PR #19).
-     * 그런데 "힌트를 많이 쓴 AC 는 독립 풀이가 아니다" 는 규칙 자체는 그대로 살아
-     * 있어야 한다. 힌트가 생기면 서버가 그 값을 채우고, 이 규칙이 그때 쓰인다.
-     *
-     * <p>그래서 입력 경로는 막힌 채로 두고 규칙만 확인한다. 이 우회를 테스트에 두는
-     * 이유가 그것이다 - 프로덕션 경로를 열어 두면 막은 의미가 없다.
-     */
     private long submitJudgeAndRecordHints(String problemCode, String judgeStatus,
             int hintLevel, boolean solutionViewed) throws Exception {
-        long submissionId = submitAndJudge(problemCode, judgeStatus);
-        jdbc.update("UPDATE submissions SET hint_level = ?, solution_viewed = ? WHERE id = ?",
-                hintLevel, solutionViewed, submissionId);
-        return submissionId;
+        // 힌트는 제출보다 먼저다. 제출 시점에 기록에서 읽으므로(ADR-0027) 순서가 중요하다.
+        revealHintsUpTo(problemCode, solutionViewed ? 6 : hintLevel);
+        return submitAndJudge(problemCode, judgeStatus);
     }
 
-    private long submitAndJudge(String problemCode, String judgeStatus, int hintLevel,
-            boolean solutionViewed) throws Exception {
+    private long submitAndJudge(String problemCode, String judgeStatus) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": %d, "solutionViewed": %s, "solveSeconds": 120}
-                """.formatted(userId, hintLevel, solutionViewed);
+                 "solveSeconds": 120}
+                """.formatted(userId);
         String json = mvc.perform(post("/api/problems/{code}/submit", problemCode)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andReturn().getResponse().getContentAsString();
@@ -304,7 +305,7 @@ class ProblemDeliveryTest {
     @Test
     @DisplayName("스스로 푼 문제는 다시 주지 않는다")
     void independentlySolvedProblemsAreNotHandedOutAgain() throws Exception {
-        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED", 0, false);
+        submitAndJudge("P03_CONNECTED_COMPONENT", "ACCEPTED");
 
         assertThat(retryVariantPick())
                 .as("P03 은 스스로 풀었으므로 건너뛴다")
@@ -342,7 +343,7 @@ class ProblemDeliveryTest {
         // 그 사이 추천됐던 문제를 스스로 풀어낸다. 조회할 때 다시 고르면 여기서
         // 답이 바뀐다 - nextAction 은 과거에 고정돼 있는데 문제만 현재 상태로
         // 고르면 한 응답 안에서 기준 시점이 둘이 된다.
-        submitAndJudge(first, "ACCEPTED", 0, false);
+        submitAndJudge(first, "ACCEPTED");
 
         assertThat(nextProblem(submissionId).get("problem").get("code").asText())
                 .as("추천은 반영 시점에 고정된다")
@@ -388,7 +389,7 @@ class ProblemDeliveryTest {
     void pendingSubmissionHasNoNextProblem() throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
-                 "hintLevel": 0, "solutionViewed": false, "solveSeconds": 120}
+                 "solveSeconds": 120}
                 """.formatted(userId);
         String json = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
