@@ -1,0 +1,194 @@
+const { test, expect } = require("@playwright/test");
+const { gate, stubApi, problem, json, finished, conceptFor } =
+    require("../fixtures/api");
+
+/**
+ * 화면의 비동기 소유권 회귀. 정본: ADR-0023, ADR-0025.
+ *
+ * 여기 있는 다섯 개는 전부 **실제로 있었던 결함**이고, 전부 리뷰에서 사람이 찾았다.
+ * 정적 검사(WebClientTest)는 다섯 중 하나도 잡지 못했다 - 소유권을 받기는 받았는데
+ * 통을 잘못 나눴거나, 축이 모자랐거나, 떠날 때 놓지 않았기 때문이다.
+ *
+ * 각 테스트는 늦게 온 응답이 최신 화면을 덮지 않는지 본다. 순서는 게이트가 쥔다.
+ */
+
+/** 사용자 id 를 넣고 화면이 자리를 잡을 때까지 기다린다. */
+async function asUser(page, id = "1") {
+  await page.goto("/index.html");
+  await page.locator("#problemList button").first().waitFor();
+  await page.fill("#userId", id);
+  await page.dispatchEvent("#userId", "change");
+}
+
+test("먼저 누른 문제가 늦게 도착해도 마지막에 고른 문제가 남는다", async ({ page }) => {
+  // PR #30. openProblem 이 표를 받지 않아, P02 -> P03 으로 눌렀는데 P02 가 열렸다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+    await slow.held;
+    await route.fulfill(json(problem("P02_GRID_TRAVERSAL", "P02 제목")));
+  });
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  // 이제 P02 를 놓아 준다. 마지막에 고른 것은 P03 이므로 화면이 바뀌면 안 된다.
+  slow.release();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+});
+
+test("문제를 기다리는 동안 목록으로 돌아가면 끌려가지 않는다", async ({ page }) => {
+  // PR #30. showPicker 가 진행 중인 이동을 놓지 않아, 늦게 온 문제가 사용자를
+  // 그 문제 화면으로 끌고 갔다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+    await slow.held;
+    await route.fulfill(json(problem("P02_GRID_TRAVERSAL", "P02 제목")));
+  });
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#toProblems");
+  await expect(page.locator("#picker")).toBeVisible();
+
+  slow.release();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#picker")).toBeVisible();
+  await expect(page.locator("#statementBody")).toBeHidden();
+});
+
+test("문제를 기다리는 동안 내 Skill 로 옮겨도 끌려가지 않는다", async ({ page }) => {
+  // PR #30. 목록은 놓았는데 "내 Skill" 탭은 놓지 않았다 - 떠나는 경로마다 따로
+  // 적으면 하나씩 빠뜨린다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+    await slow.held;
+    await route.fulfill(json(problem("P02_GRID_TRAVERSAL", "P02 제목")));
+  });
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#tabSkills");
+  await expect(page.locator("#skillsBody")).toBeVisible();
+
+  slow.release();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#skillsBody")).toBeVisible();
+  await expect(page.locator("#statementBody")).toBeHidden();
+});
+
+test("늦게 온 복습 조회가 지나간 '지금 복습하기' 를 되살리지 않는다", async ({ page }) => {
+  // PR #29. 복습을 마쳐 일정이 밀렸는데, 늦게 온 due=true 가 버튼을 되살렸다.
+  // 그 버튼을 누른 제출은 복습으로 세어지지 않는다 - 화면이 말한 것과 기록이 어긋난다.
+  const due = {
+    userId: 1, now: "2026-09-12T00:00:00Z",
+    reviews: [{ skillCode: "BFS_GRID_TRAVERSAL", dueAt: "2026-09-11T00:00:00Z",
+      due: true, intervalDays: 1,
+      problem: { code: "P02_GRID_TRAVERSAL", title: "복습 문제" } }],
+  };
+  const notDue = {
+    userId: 1, now: "2026-09-12T00:00:00Z",
+    reviews: [{ skillCode: "BFS_GRID_TRAVERSAL", dueAt: "2026-09-15T00:00:00Z",
+      due: false, intervalDays: 3, problem: null }],
+  };
+
+  const slow = gate();
+  let seen = 0;
+  await stubApi(page);
+  await page.route("**/api/users/*/reviews", async (route) => {
+    seen += 1;
+    if (seen === 1) {
+      await slow.held;                       // 첫 조회(만기)를 붙잡는다
+      return route.fulfill(json(due));
+    }
+    return route.fulfill(json(notDue));      // 두 번째(만기 아님)가 먼저 도착한다
+  });
+
+  await asUser(page);
+  await page.waitForTimeout(200);
+  await page.evaluate(() => refreshReviews());   // 두 번째 조회
+  await expect(page.locator("#reviewWhen")).toHaveText("3일 간격");
+
+  slow.release();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#reviewWhen")).toHaveText("3일 간격");
+  await expect(page.locator("#reviewStart")).toBeHidden();
+});
+
+test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는다", async ({ page }) => {
+  // PR #30. createUser 를 "화면 조각이 아니다" 로 예외에 뒀는데, 실은 소유권이
+  // 가장 큰 변경이다 - 사용자를 바꾸면 화면 전체가 따라간다.
+  const slow = gate();
+  let made = 0;
+  await stubApi(page);
+  await page.route("**/api/users", async (route) => {
+    made += 1;
+    if (made === 1) {
+      await slow.held;
+      return route.fulfill(json({ userId: 11, nickname: "먼저" }));
+    }
+    return route.fulfill(json({ userId: 12, nickname: "나중" }));
+  });
+
+  await page.goto("/index.html");
+  await page.locator("#problemList button").first().waitFor();
+  await page.click("#createUser");
+  await page.click("#createUser");
+  await expect(page.locator("#userId")).toHaveValue("12");
+
+  slow.release();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#userId")).toHaveValue("12");
+});
+
+test("개념 자료가 다른 제출의 결정 요약 아래에 붙지 않는다", async ({ page }) => {
+  // PR #32. goToNextProblem 이 claimView("problem") 만 봤다. 그 통은 "어느 문제를
+  // 보고 있는가" 를 지키지, "어느 제출의 결정을 보고 있는가" 는 지키지 않는다.
+  //
+  // 그러면 이 화면이 이으려던 "왜(3회 실패)" 와 "무엇(개념 자료)" 이 서로 다른
+  // 제출에서 온다 - 고치려던 것의 정확히 반대다.
+  const slow = gate();
+  let submitted = 0;
+
+  await stubApi(page);
+  await page.route("**/api/problems/*/submit", async (route) => {
+    submitted += 1;
+    return route.fulfill({ status: 202, contentType: "application/json",
+      body: JSON.stringify({ submissionId: submitted }) });
+  });
+  await page.route("**/api/submissions/1", (route) =>
+      route.fulfill(json(finished(1, "REVIEW_CONCEPT", "BFS_GRID_TRAVERSAL",
+          "같은 문제 3회 실패 - 개념부터 다시 본다"))));
+  await page.route("**/api/submissions/2", (route) =>
+      route.fulfill(json(finished(2, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL",
+          "구현 연습이 더 필요하다"))));
+  await page.route("**/api/submissions/1/next-problem", async (route) => {
+    await slow.held;
+    return route.fulfill(json({ submissionId: 1, action: "REVIEW_CONCEPT",
+      targetSkill: "BFS_GRID_TRAVERSAL", problem: null,
+      concept: conceptFor("BFS_GRID_TRAVERSAL"), reason: "개념을 다시 확인한다" }));
+  });
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+
+  // 제출 1 의 결과가 뜨고, 거기서 "다음 단계 보기" 를 누른다.
+  await page.click("#submitButton");
+  await expect(page.locator("#nextAction")).toContainText("3회 실패");
+  await page.click("#goNext");
+
+  // 그 사이 제출 2 가 접수되어 결과 패널을 넘겨받는다.
+  await page.click("#submitButton");
+  await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
+
+  // 이제 제출 1 의 자료가 도착한다. 지금 화면은 제출 2 의 것이다.
+  slow.release();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#nextAction .concept")).toHaveCount(0);
+  await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
+});
