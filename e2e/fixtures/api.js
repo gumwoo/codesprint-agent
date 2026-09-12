@@ -1,3 +1,5 @@
+const { fulfill } = require("./contracts");
+
 // 화면이 부르는 API 를 고정하고, **그 응답이 도착하는 순서를 테스트가 쥔다.**
 //
 // 지연 시간(setTimeout)만으로는 부족하다. 수동 재현에서 두 번 실패했는데, 둘 다
@@ -53,14 +55,28 @@ const DEFAULTS = {
     assessed: 8, total: 8, reason: "8개를 직접 확인했다",
   },
   reviews: { userId: 1, now: "2026-09-12T00:00:00Z", reviews: [] },
+
+  // /api/skills 와 /api/users/{id}/skills 는 **다른 계약이다** - 정의(누구에게나
+  // 같다)와 상태(사용자별)를 나눠 둔 것이고, 둘 다 minItems 1 이다. 하나의 stub
+  // 으로 둘 다 답하고 있었는데 검증을 붙이자 바로 걸렸다.
+  catalog: {
+    skills: [{ code: "BFS_GRID_TRAVERSAL", name: "격자 BFS", domain: "GRAPH",
+      tier: "CORE", requires: [] }],
+  },
+  skillMap: {
+    userId: 1,
+    skills: [{ skillCode: "BFS_GRID_TRAVERSAL", concept: null, recognition: null,
+      implementation: null, independent: null, retention: null, speed: null,
+      mastery: null, confidence: 0, evidenceCount: 0, status: "UNASSESSED" }],
+  },
 };
 
-function problem(code, title) {
+function problem(code, title = `${code} 제목`) {
   return {
-    code, title, kind: "NORMAL", source: "DEV_FIXTURE",
+    code, title, kind: "NORMAL",
     statement: `${code} 본문`, timeLimitMs: 2000, memoryLimitMb: 256,
     expectedSolveSeconds: 600,
-    skills: [{ skillCode: "BFS_GRID_TRAVERSAL", role: "PRIMARY", weight: 1.0 }],
+    skills: [{ skillCode: "BFS_GRID_TRAVERSAL", role: "PRIMARY" }],
     samples: [{ input: "1\n", expectedOutput: "1\n" }],
   };
 }
@@ -74,13 +90,13 @@ function problem(code, title) {
  * **모양이 어긋나면 통과하든 실패하든 아무것도 재지 못한다.**
  *
  * 이 모양이 서버와 갈리는 것은 WebClientTest 가 막지 못한다 - 그쪽은 경로와
- * method 만 대조한다. 그래서 여기 필드를 고칠 때는 contracts/submit-response
- * 와 SubmissionController 를 함께 본다.
+ * method 만 대조한다. 그래서 지금은 `fulfill` 이 응답을 내보내는 자리에서
+ * contracts/submission-status.schema.json 에 대고 검증한다.
  */
 function finished(submissionId, action, targetSkill, reason) {
   return {
     submissionId,
-    state: "DONE",
+    state: "COMPLETE",
     result: {
       submissionId,
       judge: { status: "WRONG_ANSWER", passed: 0, total: 6, executionMs: 90,
@@ -93,16 +109,20 @@ function finished(submissionId, action, targetSkill, reason) {
   };
 }
 
+/**
+ * 접수만 된 제출(202). GET 조회와 **같은 계약**을 쓴다 - 클라이언트가 둘을 다르게
+ * 다룰 이유가 없기 때문이다(submission-status.schema.json).
+ */
+function accepted(submissionId) {
+  return { submissionId, state: "PENDING", result: null };
+}
+
 /** REVIEW_CONCEPT 가 가리키는 자료. */
 function conceptFor(skillCode) {
   return {
     skillCode, title: `${skillCode} 자료`, summary: "요약",
     keyPoints: ["핵심"], example: "예시 코드", selfCheck: "확인 질문",
   };
-}
-
-function json(body) {
-  return { status: 200, contentType: "application/json", body: JSON.stringify(body) };
 }
 
 /**
@@ -120,20 +140,22 @@ async function stubApi(page, overrides = {}) {
     const p = url.pathname;
 
     if (p === "/api/problems") {
-      return route.fulfill(json(overrides.problems || DEFAULTS.problems));
+      return fulfill(route, overrides.problems || DEFAULTS.problems);
     }
     if (/^\/api\/problems\/[^/]+$/.test(p)) {
-      const code = p.split("/").pop();
-      return route.fulfill(json(problem(code, `${code} 제목`)));
+      return fulfill(route, problem(p.split("/").pop()));
     }
     if (p.endsWith("/diagnostic")) {
-      return route.fulfill(json(overrides.diagnostic || DEFAULTS.diagnostic));
+      return fulfill(route, overrides.diagnostic || DEFAULTS.diagnostic);
     }
     if (p.endsWith("/reviews")) {
-      return route.fulfill(json(overrides.reviews || DEFAULTS.reviews));
+      return fulfill(route, overrides.reviews || DEFAULTS.reviews);
     }
-    if (p.endsWith("/skills") || p === "/api/skills") {
-      return route.fulfill(json({ userId: 1, skills: [] }));
+    if (p === "/api/skills") {
+      return fulfill(route, DEFAULTS.catalog);
+    }
+    if (p.endsWith("/skills")) {
+      return fulfill(route, DEFAULTS.skillMap);
     }
     // 테스트가 쓰지 않는 것은 명시적으로 막는다. 조용히 통과시키면 화면이
     // 부르는 줄도 모르는 엔드포인트가 생긴다.
@@ -142,5 +164,6 @@ async function stubApi(page, overrides = {}) {
 }
 
 module.exports = {
-  gate, releaseAndSettle, stubApi, problem, json, finished, conceptFor, DEFAULTS,
+  gate, releaseAndSettle, stubApi, problem, finished, accepted, conceptFor,
+  fulfill, DEFAULTS,
 };
