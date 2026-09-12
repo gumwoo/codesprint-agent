@@ -127,7 +127,11 @@ def main() -> int:
         for err in hints_schema.iter_errors(hints_doc):
             fail("hints-schema", f"{rel}{list(err.path)}: {err.message}")
 
-        ladder = hints_doc.get("hints") or []
+        # 스키마가 이미 말한 뒤에도 **의미 검사는 계속 돈다.** 다만 모양을 믿고
+        # 들어가지 않는다 - 항목이 object 가 아닌데 .get() 을 부르면 예외로
+        # 터지고, 그러면 뒤따르는 검사가 아예 돌지 않아 보고가 잘린다. 한 문제의
+        # 오타가 나머지 14개를 안 본 것으로 만든다.
+        ladder = [h for h in (hints_doc.get("hints") or []) if isinstance(h, dict)]
         levels = [h.get("level") for h in ladder]
         if levels != [1, 2, 3, 4, 5]:
             fail("hints", f"{rel}: 힌트 단계가 1..5 순서가 아니다 ({levels})")
