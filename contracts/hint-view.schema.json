@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/hint-view.schema.json",
+  "title": "HintView",
+  "description": "POST /api/problems/{code}/hints/{level} 의 응답. 내용 한 단계와, 그 요청까지 포함해 이 문제에서 본 최고 단계다. **화면이 '다음은 몇 단계인가' 를 계산하지 않는다** - 서버가 기록의 주인이고, 화면이 세기 시작하면 그 숫자와 mastery 에 들어가는 숫자가 갈린다(ADR-0001, ADR-0026).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["problemCode", "level", "text", "highestLevel", "topLevel"],
+  "properties": {
+    "problemCode": { "type": "string", "minLength": 1 },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6,
+      "description": "이번에 내준 단계. 1..5 는 hints.yaml 의 사다리, 6 은 전체 풀이(reference.py)다."
+    },
+    "text": { "type": "string", "minLength": 1 },
+    "highestLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6,
+      "description": "이 문제에서 본 최고 단계. 이미 본 단계를 다시 열면 level 보다 크다 - 다시 봤다고 더 많이 본 것이 아니기 때문이다."
+    },
+    "topLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6,
+      "description": "사다리의 끝. highestLevel 과 같으면 더 줄 것이 없다."
+    }
+  }
+}
