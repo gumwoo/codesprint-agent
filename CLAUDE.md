@@ -309,11 +309,20 @@ Reviewer 정확도를 재는 라벨이 된다.
 여부를 갈랐다 - 해설을 봤다고 하면 힌트 최고 단계(5)보다 위인 6 으로 친다.
 **존재하지 않는 도움의 사용량을 신고받아 mastery 를 깎은 것이다.**
 
-지금은 0 / false 만 받고 그 외에는 400 이다. 받아 놓고 무시하지 않는다 - 무시하면
-API 를 쓰는 쪽은 그 값이 적용됐다고 믿는다.
+지금은 **서버가 내주면서 기록하고 제출이 그 기록에서 읽는다**
+([ADR-0027](docs/adr/0027-hint-level-is-observed-not-reported.md)).
 
-**컬럼과 산식은 그대로 둔다.** 입력 경로만 막았다. golden(`tests/golden/evidence/`)이
-그 매핑을 고정하고 있고, 힌트가 생기면 그대로 쓴다.
+```
+POST /api/problems/{code}/hints/{level}   내주고 hint_usage 에 남긴다
+POST /api/problems/{code}/submit          최고 단계를 읽어 제출 행에 얼린다
+```
+
+제출에 `hintLevel` 을 실어 보내면 400 이다 - `0` 이어도 그렇다. 받아 놓고 무시하지
+않는다. 무시하면 API 를 쓰는 쪽은 그 값이 적용됐다고 믿는다.
+
+**사다리는 한 단계씩만 열리고, 본 힌트는 되돌릴 수 없다.** 건너뛰기를 허용하면 받은
+도움의 양이 다른데 같은 값이 기록되고, 제출마다 새로 세면 힌트를 다 본 뒤 제출만
+여러 번 해서 독립 풀이를 만들 수 있다.
 
 **힌트 사다리는 문제 데이터다**([ADR-0026](docs/adr/0026-hint-ladder-is-problem-data.md)).
 `problems/<CODE>/hints.yaml` 이 H1~H5 를 갖고, **H6(전체 풀이)는 `reference.py` 다** -
