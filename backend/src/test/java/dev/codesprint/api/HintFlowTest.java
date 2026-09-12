@@ -11,6 +11,13 @@ import dev.codesprint.learning.persistence.UserRepository;
 import dev.codesprint.learning.persistence.UserRow;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -82,6 +89,9 @@ class HintFlowTest {
 
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Autowired
+    private dev.codesprint.learning.service.HintService hintService;
 
     private MockMvc mvc;
     private Long userId;
@@ -240,6 +250,50 @@ class HintFlowTest {
         long submissionId = submit();
         // Evidence 는 해설을 본 것을 힌트 최고 단계(5)보다 위로 친다.
         assertThat(recordedSolutionViewed(submissionId)).isTrue();
+    }
+
+    @Test
+    @DisplayName("같은 단계를 동시에 요청해도 전부 성공한다")
+    void concurrentRequestsForTheSameLevelAllSucceed() throws Exception {
+        // 읽고 확인한 뒤 쓰면 여덟이 나란히 "아직 없다" 를 보고 여덟이 다 넣는다.
+        // 그때 일곱이 UNIQUE 위반으로 터졌다 - 실제로 재현했다.
+        //
+        // 더블클릭 · 재시도 · 응답을 못 받아 다시 누르는 경우에 그대로 일어나고,
+        // 무엇보다 이 서비스는 "다시 열어도 새로 기록하지 않는다" 를 약속한다.
+        // 순차 재요청에서만 지켜지는 약속은 약속이 아니다.
+        int threads = 8;
+        CyclicBarrier gate = new CyclicBarrier(threads);
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        List<Callable<String>> tasks = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            tasks.add(() -> {
+                gate.await();
+                hintService.reveal(userId, PROBLEM, 1);
+                return "OK";
+            });
+        }
+        try {
+            for (Future<String> result : pool.invokeAll(tasks)) {
+                assertThat(result.get()).isEqualTo("OK");
+            }
+        } finally {
+            pool.shutdown();
+        }
+
+        Integer rows = jdbc.queryForObject(
+                "select count(*) from hint_usage where user_id = ?", Integer.class, userId);
+        assertThat(rows).as("여덟 번 눌러도 한 번 본 것이다").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("userId 없는 요청은 400 이다 - 서버 잘못이 아니다")
+    void missingUserIdIsABadRequest() throws Exception {
+        for (String body : List.of("{}", "{\"userId\": null}")) {
+            int status = mvc.perform(post("/api/problems/{code}/hints/{level}", PROBLEM, 1)
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andReturn().getResponse().getStatus();
+            assertThat(status).as(body).isEqualTo(400);
+        }
     }
 
     @Test

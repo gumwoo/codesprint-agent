@@ -1,7 +1,6 @@
 package dev.codesprint.learning.service;
 
 import dev.codesprint.learning.persistence.HintUsageRepository;
-import dev.codesprint.learning.persistence.HintUsageRow;
 import dev.codesprint.learning.persistence.ProblemRepository;
 import dev.codesprint.learning.persistence.ProblemRow;
 import dev.codesprint.learning.persistence.UserRepository;
@@ -108,11 +107,12 @@ public class HintService {
                     "힌트는 한 단계씩 연다. 지금까지 본 것은 H" + seen
                             + " 이므로 다음은 H" + (seen + 1) + " 다 (요청: H" + level + ")");
         }
-        if (level > seen) {
-            usage.save(new HintUsageRow(userId, problemRow.id(), level, clock.now()));
-        }
+        // **조건부로 넣지 않는다.** seen 을 읽은 뒤 넣기로 정하면 같은 단계 요청
+        // 둘이 나란히 통과해 한쪽이 UNIQUE 위반으로 터진다. 넣는 쪽이 충돌을
+        // 흡수하게 하고, 최고 단계는 그 뒤에 다시 읽는다.
+        usage.recordOnce(userId, problemRow.id(), level, clock.now());
 
-        return new Hint(problem.code(), level, text,
-                Math.max(seen, level), hints.topLevel(problemCode));
+        int highest = usage.highestLevel(userId, problemRow.id()).orElse(level);
+        return new Hint(problem.code(), level, text, highest, hints.topLevel(problemCode));
     }
 }

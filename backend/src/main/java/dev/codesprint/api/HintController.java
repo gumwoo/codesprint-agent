@@ -1,6 +1,8 @@
 package dev.codesprint.api;
 
 import dev.codesprint.learning.service.HintService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +30,12 @@ public class HintController {
         this.hints = hints;
     }
 
-    public record RevealRequest(Long userId) {
+    /**
+     * @param userId <b>{@code @NotNull} 이 필요하다.</b> 없으면 null 이 그대로
+     *     {@code long} 파라미터로 흘러가 autounboxing NPE 가 되고, 400 이어야 할
+     *     것이 500 이 된다. 실제로 그랬다 - 잘못된 요청을 서버 잘못으로 보고했다.
+     */
+    public record RevealRequest(@NotNull Long userId) {
     }
 
     /**
@@ -37,7 +44,7 @@ public class HintController {
      */
     @PostMapping("/problems/{problemCode}/hints/{level}")
     public HintService.Hint reveal(@PathVariable String problemCode, @PathVariable int level,
-            @RequestBody RevealRequest request) {
+            @Valid @RequestBody RevealRequest request) {
         return hints.reveal(request.userId(), problemCode, level);
     }
 
