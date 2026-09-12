@@ -681,6 +681,22 @@ function cancelActiveRun() {
 }
 
 /**
+ * 결과 패널이 아직 이 제출의 것인가.
+ *
+ * **문제 화면의 주인(claimView)만으로는 부족하다.** 그쪽은 "어느 문제를 보고 있는가"
+ * 를 지키지, "어느 제출의 결정을 보고 있는가" 는 지키지 않는다. 같은 문제를 다시
+ * 내면 결과 패널은 새 제출로 갈리는데 문제 화면은 그대로라, 늦게 온 앞 제출의
+ * 자료가 **새 제출의 결정 요약 아래에 붙는다** - 이 화면이 이으려던 "왜(3회 실패)"
+ * 와 "무엇(개념 자료)" 이 서로 다른 제출에서 오게 된다.
+ *
+ * activeSubmissionId 를 쓰는 이유는 그것이 **접수된 뒤에만** 넘어가기 때문이다 -
+ * 새 제출이 거절되면 앞 결과는 그대로 살아 있다(PR #25).
+ */
+function showsResultOf(submissionId) {
+  return activeSubmissionId === submissionId;
+}
+
+/**
  * 보고 있던 실행만 놓는다. <b>번호는 올리지 않는다</b> - 인수인계할 때 쓰며,
  * 올리면 인수받으려는 요청 자신의 번호가 무효가 된다.
  */
@@ -945,7 +961,7 @@ async function goToNextProblem(submissionId) {
   // 이번 PR 이 openProblem 에서 막은 것과 같은 결함이 이름만 달라 새어 나갔다.
   const mine = claimView("problem");
   const response = await fetch(`/api/submissions/${submissionId}/next-problem`);
-  if (!mine()) {
+  if (!mine() || !showsResultOf(submissionId)) {
     return;
   }
   if (!response.ok) {
@@ -953,7 +969,7 @@ async function goToNextProblem(submissionId) {
     return;
   }
   const next = await response.json();
-  if (!mine()) {
+  if (!mine() || !showsResultOf(submissionId)) {
     return;
   }
   if (!next.problem) {
