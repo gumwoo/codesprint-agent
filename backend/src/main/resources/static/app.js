@@ -52,7 +52,6 @@ let activeRunId = null;
  * 문제나 사용자가 바뀌면 cancelActive* 가 자리를 비운다.
  */
 
-
 const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
@@ -568,10 +567,9 @@ async function submit() {
         userId: submittingUserId,
         language: "PYTHON",
         sourceCode: sourceCode(),
-        // 화면은 힌트 사용량을 신고하지 않는다. 서버도 0 / false 만 받는다 -
-        // 힌트가 생기면 서버가 내주면서 기록하고, 제출은 그 기록을 쓴다.
-        hintLevel: 0,
-        solutionViewed: false,
+        // 화면은 힌트 사용량을 신고하지 않는다. 서버가 힌트를 내주면서 기록하고,
+        // 제출은 그 기록에서 읽는다(ADR-0026). 보내면 400 이다 - 받아 놓고 무시하면
+        // 보낸 쪽은 그 값이 적용됐다고 믿는다.
         // 풀이 시간은 화면이 잰다. 서버가 알 방법이 없다.
         solveSeconds: Math.max(1, Math.round((Date.now() - openedAt) / 1000)),
       }),
