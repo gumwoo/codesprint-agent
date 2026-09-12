@@ -13,6 +13,9 @@ on:
       # 화면 파일이 바뀌면 돈다.
       - 'backend/src/main/resources/static/**'
       - 'e2e/**'
+      # stub 이 계약에 대고 검증되므로(fixtures/contracts.js), 계약이 바뀌면
+      # fixture 가 먼저 깨져야 한다.
+      - 'contracts/**'
       - '.github/workflows/e2e.yml'
 
 concurrency:
