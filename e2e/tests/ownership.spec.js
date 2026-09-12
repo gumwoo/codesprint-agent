@@ -1,6 +1,6 @@
 const { test, expect } = require("@playwright/test");
-const { gate, releaseAndSettle, stubApi, problem, json, finished, conceptFor } =
-    require("../fixtures/api");
+const { gate, releaseAndSettle, stubApi, problem, finished, accepted, conceptFor,
+  fulfill } = require("../fixtures/api");
 
 /**
  * 화면의 비동기 소유권 회귀. 정본: ADR-0023, ADR-0025.
@@ -26,7 +26,7 @@ test("먼저 누른 문제가 늦게 도착해도 마지막에 고른 문제가 
   await stubApi(page);
   await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
     await slow.held;
-    await route.fulfill(json(problem("P02_GRID_TRAVERSAL", "P02 제목")));
+    await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
 
   await asUser(page);
@@ -46,7 +46,7 @@ test("문제를 기다리는 동안 목록으로 돌아가면 끌려가지 않�
   await stubApi(page);
   await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
     await slow.held;
-    await route.fulfill(json(problem("P02_GRID_TRAVERSAL", "P02 제목")));
+    await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
 
   await asUser(page);
@@ -66,7 +66,7 @@ test("문제를 기다리는 동안 내 Skill 로 옮겨도 끌려가지 않는�
   await stubApi(page);
   await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
     await slow.held;
-    await route.fulfill(json(problem("P02_GRID_TRAVERSAL", "P02 제목")));
+    await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
 
   await asUser(page);
@@ -101,9 +101,9 @@ test("늦게 온 복습 조회가 지나간 '지금 복습하기' 를 되살리�
     seen += 1;
     if (seen === 1) {
       await slow.held;                       // 첫 조회(만기)를 붙잡는다
-      return route.fulfill(json(due));
+      return fulfill(route, due);
     }
-    return route.fulfill(json(notDue));      // 두 번째(만기 아님)가 먼저 도착한다
+    return fulfill(route, notDue);            // 두 번째(만기 아님)가 먼저 도착한다
   });
 
   await asUser(page);
@@ -128,9 +128,9 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
     made += 1;
     if (made === 1) {
       await slow.held;
-      return route.fulfill(json({ userId: 11, nickname: "먼저" }));
+      return fulfill(route, { userId: 11, nickname: "먼저" });
     }
-    return route.fulfill(json({ userId: 12, nickname: "나중" }));
+    return fulfill(route, { userId: 12, nickname: "나중" });
   });
 
   await page.goto("/index.html");
@@ -155,20 +155,19 @@ test("개념 자료가 다른 제출의 결정 요약 아래에 붙지 않는다
   await stubApi(page);
   await page.route("**/api/problems/*/submit", async (route) => {
     submitted += 1;
-    return route.fulfill({ status: 202, contentType: "application/json",
-      body: JSON.stringify({ submissionId: submitted }) });
+    return fulfill(route, accepted(submitted), 202);
   });
   await page.route("**/api/submissions/1", (route) =>
-      route.fulfill(json(finished(1, "REVIEW_CONCEPT", "BFS_GRID_TRAVERSAL",
-          "같은 문제 3회 실패 - 개념부터 다시 본다"))));
+      fulfill(route, finished(1, "REVIEW_CONCEPT", "BFS_GRID_TRAVERSAL",
+          "같은 문제 3회 실패 - 개념부터 다시 본다")));
   await page.route("**/api/submissions/2", (route) =>
-      route.fulfill(json(finished(2, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL",
-          "구현 연습이 더 필요하다"))));
+      fulfill(route, finished(2, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL",
+          "구현 연습이 더 필요하다")));
   await page.route("**/api/submissions/1/next-problem", async (route) => {
     await slow.held;
-    return route.fulfill(json({ submissionId: 1, action: "REVIEW_CONCEPT",
+    return fulfill(route, { submissionId: 1, action: "REVIEW_CONCEPT",
       targetSkill: "BFS_GRID_TRAVERSAL", problem: null,
-      concept: conceptFor("BFS_GRID_TRAVERSAL"), reason: "개념을 다시 확인한다" }));
+      concept: conceptFor("BFS_GRID_TRAVERSAL"), reason: "개념을 다시 확인한다" });
   });
 
   await asUser(page);
