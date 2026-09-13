@@ -243,6 +243,12 @@ cd e2e && npm ci && npx playwright install chromium && npx playwright test
 **그 fix 를 되돌려 실제로 깨지는지** 확인한다 - 커리큘럼 검사에 메타테스트를
 요구하는 것과 같은 이유다.
 
+**안내받는 길을 끝에서 끝까지 걸어 본다**([ADR-0028](docs/adr/0028-the-guided-path-is-walked-end-to-end.md)).
+`GuidedJourneyTest` 는 아무것도 고르지 않는다 - 진단이 준 첫 문제에서 출발해 매번
+`nextAction` 이 가리키는 곳으로만 간다. 규칙을 하나씩 보는 테스트는 전부 **문제를
+손으로 골라 놓고** 그 규칙만 확인하므로, 규칙들을 이어 붙였을 때 실제로 어딘가에
+도착하는지는 아무도 보지 않았다. 첫 실행에서 열두 걸음 중 여덟 걸음이 갈 곳이 없었다.
+
 제출 하나가 지나는 길:
 
 ```
