@@ -222,9 +222,18 @@ public class DecisionEngine {
                     "점수는 문턱을 넘었으나 복습이 잡혀 있지 않다");
         }
 
-        return NextAction.of(ActionType.CONTINUE,
+        // **CONTINUE 를 내지 않는다.** 그 행동은 "같은 문제를 이어서 푼다" 는 뜻인데
+        // (NextProblemService), 방금 맞힌 문제에는 이어서 풀 것이 없다. 그래서 화면은
+        // 아무 문제도 주지 못하고, 사용자는 목록으로 돌아가 직접 고르게 된다.
+        //
+        // 끝에서 끝까지 걸어 보고 찾았다(GuidedJourneyTest) - 열두 걸음 중 여덟 걸음이
+        // 그랬다. 갈 곳 없는 액션을 내지 않는다는 규칙이 여기서만 지켜지지 않고 있었다.
+        //
+        // 같은 Skill 에 머무는 것은 그대로다. 달라지는 것은 **어디에 머물지 말해 준다**
+        // 는 것뿐이다.
+        return NextAction.targeting(ActionType.RETRY_VARIANT, state.skillCode(),
                 "정답이지만 아직 " + state.status() + " (mastery=" + mastery
-                        + ", confidence=" + state.confidence() + ")");
+                        + ", confidence=" + state.confidence() + ") - 같은 Skill 을 더 연습한다");
     }
 
     /** Addendum §43 의 실패 분기. */
