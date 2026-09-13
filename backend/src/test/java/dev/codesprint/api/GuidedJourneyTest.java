@@ -249,6 +249,16 @@ class GuidedJourneyTest {
     @Test
     @DisplayName("에이전트가 가리키는 대로만 따라가면 MASTERED 에 닿는다")
     void followingOnlyTheAgentReachesMastered() throws Exception {
+        walkUntilMastered();
+    }
+
+    /**
+     * MASTERED 가 나올 때까지 걷는다.
+     *
+     * @return <b>MASTERED 를 만든 마지막 제출</b>. 그 제출의 결정이 "다음은 어디인가" 를
+     *     들고 있으므로, 그것을 검사하려면 id 가 필요하다.
+     */
+    private long walkUntilMastered() throws Exception {
         Long lastSubmissionId = null;
 
         for (int step = 0; step < STEP_LIMIT; step++) {
@@ -283,7 +293,10 @@ class GuidedJourneyTest {
         assertThat(masteredSkills())
                 .as("걸어온 길: " + trail)
                 .isNotEmpty();
-
+        assertThat(lastSubmissionId)
+                .as("걸어온 길: " + trail)
+                .isNotNull();
+        return lastSubmissionId;
     }
 
     private String lastProblemOf(long submissionId) {
@@ -330,14 +343,30 @@ class GuidedJourneyTest {
     @Test
     @DisplayName("MASTERED 다음에도 갈 곳을 준다")
     void afterMasteredThereIsStillSomewhereToGo() throws Exception {
-        followingOnlyTheAgentReachesMastered();
+        long lastSubmissionId = walkUntilMastered();
 
         String mastered = masteredSkills().iterator().next();
         assertThat(statusOf(mastered)).isEqualTo("MASTERED");
 
-        // MASTERED 로 끝나면 그 자리에서 화면이 멈춘다. 다음 Skill 을 가리켜야 한다
-        // (ADR-0022) - 그리고 그 Skill 에 실제로 풀 문제가 있어야 한다.
-        JsonNode last = getJson("/api/users/{id}/skills", userId);
-        assertThat(last.get("skills")).isNotEmpty();
+        // **여기서 Skill 목록이 비어 있지 않은지만 보면 아무것도 보지 않는 것이다.**
+        // 처음에 그렇게 썼고, 리뷰에서 잡혔다. 재현했다 - UNLOCK_NEXT 의 targetSkill 을
+        // null 로 만들어도 세 테스트가 전부 통과했다.
+        //
+        // 실제로 확인해야 하는 것은 그 제출의 결정이 어디를 가리키는가다.
+        JsonNode next = getJson("/api/submissions/{id}/next-problem", lastSubmissionId);
+
+        assertThat(next.get("action").asText())
+                .as("MASTERED 다음은 UNLOCK_NEXT 다. 걸어온 길: " + trail)
+                .isEqualTo("UNLOCK_NEXT");
+        assertThat(next.get("targetSkill").isNull())
+                .as("어느 Skill 이 열렸는지 말해 준다(ADR-0022)")
+                .isFalse();
+        assertThat(next.get("targetSkill").asText())
+                .as("방금 숙달한 것을 다시 가리키지 않는다")
+                .isNotEqualTo(mastered);
+        assertThat(next.get("problem").isNull())
+                .as("그 Skill 에 실제로 풀 문제까지 있어야 한다. 없으면 '다음으로 가라' 고만"
+                        + " 말하고 어디로 가는지는 말하지 않는 액션이 된다")
+                .isFalse();
     }
 }

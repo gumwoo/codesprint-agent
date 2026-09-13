@@ -49,6 +49,24 @@
 도착했다는 것이 중간에 빈 화면이 없었다는 뜻은 아니다. **사용자는 그 빈 화면에서
 멈춘다.**
 
+### 끝난 뒤를 보는 검사가 처음엔 아무것도 보지 않았다
+
+세 번째 테스트를 이렇게 썼다.
+
+```java
+JsonNode last = getJson("/api/users/{id}/skills", userId);
+assertThat(last.get("skills")).isNotEmpty();
+```
+
+이름은 "MASTERED 다음에도 갈 곳을 준다" 인데, 보는 것은 Skill 목록이 비어 있지
+않다는 것뿐이다. 리뷰에서 잡혔고 재현했다 — `UNLOCK_NEXT` 의 `targetSkill` 을
+`null` 로 만들어도 **세 테스트가 전부 통과했다.**
+
+이 PR 이 지적한 것과 정확히 같은 실수다. 규칙은 검사받고 있는 것처럼 보였고,
+실제로는 아무것도 붙잡지 않았다. 지금은 그 제출의 결정을 직접 본다 — `action` 이
+`UNLOCK_NEXT` 인지, `targetSkill` 이 방금 숙달한 것과 다른지, 그 Skill 에 실제로
+풀 문제가 있는지.
+
 ## 첫 실행이 찾은 것
 
 열두 걸음 중 **여덟 걸음이 갈 곳이 없었다.**
