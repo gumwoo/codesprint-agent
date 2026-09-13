@@ -93,4 +93,18 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             """)
     List<Long> findIndependentlySolvedProblemIds(@Param("userId") Long userId,
             @Param("hintCeiling") int hintCeiling);
+
+    /**
+     * 이 문제에서 개념 자료를 이미 한 번 보여줬는가.
+     *
+     * <p>같은 자료를 되풀이하지 않기 위해 필요하다(ADR-0030). 자료를 읽고도 또 틀렸다면
+     * 그 자료를 다시 주는 것은 이미 듣지 않은 말을 되풀이하는 것이다.
+     */
+    @Query("""
+            select count(s) > 0 from SubmissionRow s
+            where s.userId = :userId and s.problemId = :problemId
+              and s.nextActionType = 'REVIEW_CONCEPT'
+            """)
+    boolean conceptAlreadyShown(@Param("userId") Long userId,
+            @Param("problemId") Long problemId);
 }

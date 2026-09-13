@@ -58,10 +58,15 @@ class DecisionEngineTest {
 
     private NextAction decide(JudgeStatus judgeStatus, SkillState state, String mistake,
             int attempts, boolean reviewCompleted) {
+        return decide(judgeStatus, state, mistake, attempts, reviewCompleted, false);
+    }
+
+    private NextAction decide(JudgeStatus judgeStatus, SkillState state, String mistake,
+            int attempts, boolean reviewCompleted, boolean conceptAlreadyShown) {
         // 이번 제출 전 개수는 반영 후에서 이번 것 하나를 뺀 값이다.
         return engine.decide(new DecisionEngine.Context(
                 SKILL, state, Math.max(0, state.evidenceCount() - 1),
-                judgeStatus, mistake, attempts, reviewCompleted,
+                judgeStatus, mistake, attempts, conceptAlreadyShown, reviewCompleted,
                 allPrerequisitesMet(),
                 null, null, NEXT));
     }
@@ -69,6 +74,32 @@ class DecisionEngineTest {
     @Nested
     @DisplayName("성공했을 때 (Addendum 43)")
     class OnAccepted {
+
+        @Test
+        @DisplayName("개념 자료는 한 번만 준다 - 읽고도 틀리면 다른 문제로 옮긴다")
+        void theConceptIsShownOnlyOnce() {
+            // Addendum 43 의 MVP 규칙은 "같은 문제 3회 실패 -> REVIEW_CONCEPT" 까지만
+            // 정하고 그 뒤를 말하지 않는다. 그래서 자료를 본 뒤에도 조건이 그대로
+            // 맞아 같은 자료가 계속 나왔다 - 실제로 걸어 보니 스물네 걸음이 같은
+            // 자료였다(ADR-0030).
+            NextAction first = decide(JudgeStatus.WRONG_ANSWER,
+                    state(0.3, 0.4, SkillStatus.LEARNING), null, 3, false, false);
+            assertThat(first.type()).isEqualTo(ActionType.REVIEW_CONCEPT);
+
+            NextAction after = decide(JudgeStatus.WRONG_ANSWER,
+                    state(0.3, 0.4, SkillStatus.LEARNING), null, 4, false, true);
+            assertThat(after.type())
+                    .as("이미 듣지 않은 말을 되풀이하지 않는다")
+                    .isEqualTo(ActionType.RETRY_VARIANT);
+        }
+
+        @Test
+        @DisplayName("확정된 실수는 개념보다 먼저다 - 자료를 이미 봤어도 드릴로 간다")
+        void aConfirmedMistakeStillWins() {
+            NextAction action = decide(JudgeStatus.WRONG_ANSWER,
+                    state(0.3, 0.4, SkillStatus.LEARNING), "BOUNDARY_CHECK", 4, false, true);
+            assertThat(action.type()).isEqualTo(ActionType.MICRO_DRILL);
+        }
 
         @Test
         @DisplayName("문턱 아래면 같은 Skill 의 다른 문제로 더 연습한다")
@@ -265,7 +296,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false,
                     Map.of(), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
@@ -286,7 +317,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.LOCKED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null, null, NEXT));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false, Map.of(), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -301,7 +332,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.READY),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false,
                     Map.of("BFS_GRID_TRAVERSAL", 0.30), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
@@ -318,7 +349,7 @@ class DecisionEngineTest {
                     "BFS_SHORTEST_PATH",
                     state(0.55, 0.40, SkillStatus.PRACTICING),
                     4,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false,
                     Map.of(), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
@@ -340,7 +371,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_GRID_TRAVERSAL", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, masteries, null, null, NEXT));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false, masteries, null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill())
@@ -364,7 +395,7 @@ class DecisionEngineTest {
             NextAction action = engine.decide(new DecisionEngine.Context(
                     "BFS_SHORTEST_PATH", afterThisSubmission,
                     0,                                   // 제출 전에는 하나도 없었다
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null, null, NEXT));
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false, Map.of(), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.CHANGE_SKILL);
             assertThat(action.targetSkill()).isEqualTo("BFS_GRID_TRAVERSAL");
@@ -379,7 +410,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 1,
                             SkillStatus.LEARNING),
                     2,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false, Map.of(), null, null, NEXT))
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false, Map.of(), null, null, NEXT))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("priorEvidenceCount");
         }
@@ -394,7 +425,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.SYSTEM_ERROR, null, 1, false, Map.of(), null, null, NEXT));
+                    JudgeStatus.SYSTEM_ERROR, null, 1, false, false, Map.of(), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
         }
@@ -407,7 +438,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false,
                     Map.of("BFS_GRID_TRAVERSAL", 0.95), null, null, NEXT));
 
             assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
@@ -424,7 +455,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    status, null, 1, false,
+                    status, null, 1, false, false,
                     Map.of(),                 // 선수 조건은 하나도 못 채웠다
                     diagnosticSkill, null, NEXT));
         }
@@ -465,7 +496,7 @@ class DecisionEngineTest {
                     new SkillState("BFS_SHORTEST_PATH", Map.of(), null, 0.0, 0,
                             SkillStatus.UNASSESSED),
                     0,
-                    JudgeStatus.WRONG_ANSWER, null, 1, false,
+                    JudgeStatus.WRONG_ANSWER, null, 1, false, false,
                     Map.of("BFS_GRID_TRAVERSAL", 0.95),   // 막힌 선수가 없다
                     "BFS_BASIC", null, NEXT));
 
@@ -482,7 +513,7 @@ class DecisionEngineTest {
                     SKILL,
                     state(0.60, 0.50, SkillStatus.PRACTICING),
                     4,
-                    JudgeStatus.WRONG_ANSWER, "BOUNDARY_CHECK", 1, false,
+                    JudgeStatus.WRONG_ANSWER, "BOUNDARY_CHECK", 1, false, false,
                     allPrerequisitesMet(),
                     "BFS_BASIC", null, NEXT));
 

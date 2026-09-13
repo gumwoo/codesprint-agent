@@ -177,8 +177,14 @@ public class NextProblemService {
                         .findFirst()
                         .map(problem -> new Selection(problem.code(),
                                 why + " (전부 스스로 푼 적이 있어 다시 낸다)"))
-                        .orElseGet(() -> none(
-                                "방금 푼 문제 말고는 " + skillCode + " 문제가 없다")));
+                        // **빈손으로 돌려보내지 않는다.** 그 Skill 에 문제가 하나뿐이면
+                        // 방금 푼 그것이 유일한 답이다. 여기서 none 을 내면 화면은
+                        // "다음" 을 눌러도 아무것도 주지 못한다 - 틀린 사용자를
+                        // 목록으로 돌려보내는 것이 이 Engine 이 가장 피해야 할 일이다.
+                        .orElseGet(() -> justAttempted == null
+                                ? none("대상 Skill 의 " + kind + " 문제가 없다")
+                                : new Selection(justAttempted,
+                                        why + " (이 Skill 에는 이 문제뿐이다)")));
     }
 
     private static Selection none(String reason) {
