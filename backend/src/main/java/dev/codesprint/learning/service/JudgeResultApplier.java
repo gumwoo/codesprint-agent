@@ -281,7 +281,9 @@ public class JudgeResultApplier {
                     reviewRequest(problem, judged, job),
                     // Reviewer 밖의 근거. **Reviewer 출력을 넣지 않는다**(ADR-0014).
                     new CaseCorroboration(judged.passedCaseIds(), judged.failedCaseIds(),
-                            catalog.probesOf(problem.code())));
+                            catalog.probesOf(problem.code())),
+                    // 이 문제에서 일어날 수 있다고 선언된 실수들(ADR-0029).
+                    problem.commonMistakes());
 
             if (review.isPresent()) {
                 ReviewService.Review value = review.get();

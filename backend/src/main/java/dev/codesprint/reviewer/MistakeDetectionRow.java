@@ -49,6 +49,15 @@ public class MistakeDetectionRow {
     @Column(name = "prompt_version", nullable = false, updatable = false, length = 40)
     private String promptVersion;
 
+    /**
+     * 그 문제에서 일어날 수 있다고 선언된 실수였는가(ADR-0029).
+     *
+     * <p>false 면 확정에도 재발 집계에도 쓰지 않는다. <b>그래도 지우지 않는다</b> -
+     * Reviewer 정확도를 재는 라벨이 여기서 나온다.
+     */
+    @Column(name = "declared_for_problem", nullable = false, updatable = false)
+    private boolean declaredForProblem = true;
+
     @Column(name = "detected_at", insertable = false, updatable = false)
     private Instant detectedAt;
 
@@ -56,7 +65,9 @@ public class MistakeDetectionRow {
     }
 
     public MistakeDetectionRow(Long submissionId, Long userId, String mistakeCode, String role,
-            BigDecimal confidence, String status, String reason, String promptVersion) {
+            BigDecimal confidence, String status, String reason, String promptVersion,
+            boolean declaredForProblem) {
+        this.declaredForProblem = declaredForProblem;
         this.submissionId = submissionId;
         this.userId = userId;
         this.mistakeCode = mistakeCode;
