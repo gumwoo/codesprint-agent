@@ -95,15 +95,20 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             @Param("hintCeiling") int hintCeiling);
 
     /**
-     * 이 문제에서 개념 자료를 이미 한 번 보여줬는가.
+     * 이 문제에서 개념 자료를 <b>실제로 건넨 적이 있는가.</b>
      *
      * <p>같은 자료를 되풀이하지 않기 위해 필요하다(ADR-0030). 자료를 읽고도 또 틀렸다면
      * 그 자료를 다시 주는 것은 이미 듣지 않은 말을 되풀이하는 것이다.
+     *
+     * <p><b>{@code next_action_type} 을 보지 않는다.</b> 그것은 "보여주기로 정했다"
+     * 이지 "보여줬다" 가 아니다 - 사용자가 "다음 단계 보기" 를 누르지 않으면 자료는
+     * 화면에 뜨지 않는다. 처음에는 그 값으로 판단했고, 한 번도 열어 보지 않은
+     * 사용자에게 다시는 자료를 주지 않는 결함이 있었다.
      */
     @Query("""
             select count(s) > 0 from SubmissionRow s
             where s.userId = :userId and s.problemId = :problemId
-              and s.nextActionType = 'REVIEW_CONCEPT'
+              and s.conceptDeliveredAt is not null
             """)
     boolean conceptAlreadyShown(@Param("userId") Long userId,
             @Param("problemId") Long problemId);

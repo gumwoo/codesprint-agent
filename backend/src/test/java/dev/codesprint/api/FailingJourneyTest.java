@@ -310,4 +310,67 @@ class FailingJourneyTest {
                 .isFalse();
         assertThat(next.get("problem").get("kind").asText()).isEqualTo("MICRO_DRILL");
     }
+
+    /** 3회 실패까지 몰아붙인다. 마지막 제출 id 를 돌려준다. */
+    private long failUntilConceptIsDecided(String code) throws Exception {
+        Long last = null;
+        for (int i = 0; i < 3; i++) {
+            last = fail(code);
+            clock.advance(Duration.ofHours(1));
+        }
+        assertThat(getJson("/api/submissions/{id}/next-problem", last).get("action").asText())
+                .isEqualTo("REVIEW_CONCEPT");
+        return last;
+    }
+
+    private String actionOf(long submissionId) throws Exception {
+        return getJson("/api/submissions/{id}/next-problem", submissionId).get("action").asText();
+    }
+
+    @Test
+    @DisplayName("자료를 열어 보지 않았으면 다시 준다")
+    void anUnopenedConceptIsOfferedAgain() throws Exception {
+        // **결정은 결정이고 관측은 관측이다.** next_action_type 이 REVIEW_CONCEPT 라는
+        // 것은 "보여주기로 정했다" 이지 "보여줬다" 가 아니다 - 사용자가 "다음 단계
+        // 보기" 를 누르지 않으면 자료는 화면에 뜨지 않는다.
+        //
+        // 처음에는 그 값으로 판단했고, 한 번도 열어 보지 않은 사용자에게 다시는
+        // 자료를 주지 않았다. 재현했다(ADR-0030).
+        String code = whereNext(null);
+        Long last = null;
+        for (int i = 0; i < 3; i++) {
+            last = fail(code);
+            clock.advance(Duration.ofHours(1));
+        }
+        // 여기서 next-problem 을 **부르지 않는다.** 자료는 건네지지 않았다.
+        assertThat(jdbc.queryForObject(
+                "select count(*) from submissions where user_id = ?"
+                        + " and concept_delivered_at is not null", Integer.class, userId))
+                .as("아무것도 건네지지 않았다")
+                .isZero();
+
+        long again = fail(code);
+        assertThat(actionOf(again))
+                .as("열어 보지 않았으므로 아직 줄 차례다")
+                .isEqualTo("REVIEW_CONCEPT");
+    }
+
+    @Test
+    @DisplayName("자료를 실제로 받은 뒤에는 다른 문제로 옮긴다")
+    void aDeliveredConceptIsNotRepeated() throws Exception {
+        String code = whereNext(null);
+        long decided = failUntilConceptIsDecided(code);
+
+        // 위 호출이 자료를 실제로 응답에 실어 보냈다. 그 사실이 남는다.
+        assertThat(jdbc.queryForObject(
+                "select concept_delivered_at is not null from submissions where id = ?",
+                Boolean.class, decided))
+                .as("건네진 시점이 찍힌다")
+                .isTrue();
+
+        long after = fail(code);
+        assertThat(actionOf(after))
+                .as("이미 듣지 않은 말을 되풀이하지 않는다")
+                .isNotEqualTo("REVIEW_CONCEPT");
+    }
 }

@@ -38,13 +38,16 @@ public class NextProblemService {
     private final SubmissionRepository submissions;
     private final ProblemRepository problems;
     private final CurriculumCatalog curriculum;
+    private final ReviewScheduleService clock;
 
     public NextProblemService(ProblemCatalog catalog, SubmissionRepository submissions,
-            ProblemRepository problems, CurriculumCatalog curriculum) {
+            ProblemRepository problems, CurriculumCatalog curriculum,
+            ReviewScheduleService clock) {
         this.catalog = catalog;
         this.problems = problems;
         this.submissions = submissions;
         this.curriculum = curriculum;
+        this.clock = clock;
     }
 
     /**
@@ -104,13 +107,29 @@ public class NextProblemService {
     /**
      * 저장된 선택을 읽는다. <b>여기서 다시 고르지 않는다.</b>
      *
+     * <p><b>자료가 나가면 그 사실을 남긴다.</b> 조회인데 쓰기가 있는 이유는, 여기가
+     * 자료가 실제로 건네지는 유일한 자리이기 때문이다(ADR-0030). 결정만 보고
+     * "봤다" 로 치면 한 번도 열어 보지 않은 사용자에게 다시는 주지 않게 된다.
+     *
+     * <p>처음 한 번만 찍는다 - 새로고침이 무엇도 늘리지 않는다. 힌트를 POST 로 둔
+     * 것과 다른 선택인데(ADR-0027), 그쪽은 사용자가 한 칸씩 올리는 행동이고 이쪽은
+     * 이미 정해진 결정을 옮겨 주는 것이라 셀 것이 없기 때문이다.
+     *
      * @return 결과가 아직 반영되지 않았으면 비어 있다 - 고를 근거 자체가 없던 구간이다.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<Resolution> resolve(long submissionId) {
         SubmissionRow submission = submissions.findById(submissionId).orElse(null);
         if (submission == null || submission.nextActionType() == null) {
             return Optional.empty();
+        }
+        boolean isConcept =
+                ActionType.REVIEW_CONCEPT.name().equals(submission.nextActionType());
+        ConceptDefinition concept =
+                isConcept ? requiredConcept(submission.nextActionTarget()) : null;
+        if (concept != null) {
+            submission.markConceptDelivered(clock.now());
+            submissions.save(submission);
         }
         return Optional.of(new Resolution(
                 submission.id(),
@@ -118,8 +137,7 @@ public class NextProblemService {
                 submission.nextActionTarget(),
                 submission.nextProblemCode() == null
                         ? null : catalog.find(submission.nextProblemCode()),
-                ActionType.REVIEW_CONCEPT.name().equals(submission.nextActionType())
-                        ? requiredConcept(submission.nextActionTarget()) : null,
+                concept,
                 submission.nextProblemReason()));
     }
 

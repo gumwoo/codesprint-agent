@@ -84,6 +84,16 @@ public class SubmissionRow {
     @Column(name = "next_action_target", length = 100)
     private String nextActionTarget;
 
+    /**
+     * 개념 자료가 <b>실제로 건네진</b> 시각. 아직이면 null 이다.
+     *
+     * <p>{@code nextActionType == REVIEW_CONCEPT} 는 "보여주기로 정했다" 이지
+     * "보여줬다" 가 아니다. 둘을 같게 보면 한 번도 열어 보지 않은 사용자에게
+     * 다시는 자료를 주지 않는다(ADR-0030).
+     */
+    @Column(name = "concept_delivered_at")
+    private Instant conceptDeliveredAt;
+
     @Column(name = "next_action_reason")
     private String nextActionReason;
 
@@ -282,5 +292,16 @@ public class SubmissionRow {
 
     public String skillUpdates() {
         return skillUpdates;
+    }
+
+    public Instant conceptDeliveredAt() {
+        return conceptDeliveredAt;
+    }
+
+    /** 처음 한 번만 찍는다. 다시 열어 본다고 새로 건넨 것이 아니다. */
+    public void markConceptDelivered(Instant when) {
+        if (conceptDeliveredAt == null) {
+            conceptDeliveredAt = when;
+        }
     }
 }
