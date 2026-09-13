@@ -21,7 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import dev.codesprint.support.MovableClock;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -45,41 +47,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * 시간을 앞당기는 수단을 두면 그것으로 {@code MASTERED} 를 만들 수 있다.
  */
 @SpringBootTest
+@Import(MovableClock.Installed.class)
 class ReviewLoopTest {
 
-    /** 테스트가 옮길 수 있는 시계. */
-    static class MovableClock extends Clock {
-
-        private Instant now = Instant.parse("2026-09-08T09:00:00Z");
-
-        @Override
-        public Instant instant() {
-            return now;
-        }
-
-        @Override
-        public ZoneOffset getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(java.time.ZoneId zone) {
-            return this;
-        }
-
-        void advance(Duration by) {
-            now = now.plus(by);
-        }
-    }
-
-    @TestConfiguration
-    static class Fakes {
-        @Bean
-        @Primary
-        MovableClock movableClock() {
-            return new MovableClock();
-        }
-    }
 
     private static final String EXTERNAL_URL = System.getenv("TEST_DB_URL");
     private static PostgreSQLContainer<?> container;

@@ -71,20 +71,25 @@ class DecisionEngineTest {
     class OnAccepted {
 
         @Test
-        @DisplayName("문턱 아래면 CONTINUE")
+        @DisplayName("문턱 아래면 같은 Skill 의 다른 문제로 더 연습한다")
         void belowThreshold() {
+            // **CONTINUE 가 아니다.** 그 행동은 "같은 문제를 이어서 푼다" 는 뜻인데
+            // 방금 맞힌 문제에는 이어서 풀 것이 없다. 갈 곳을 주지 않는 액션이 된다.
             NextAction action = decide(JudgeStatus.ACCEPTED,
                     state(0.60, 0.80, SkillStatus.PRACTICING), null, 1, true);
-            assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
+            assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
+            assertThat(action.targetSkill())
+                    .as("어느 Skill 을 더 연습할지 말해 준다")
+                    .isEqualTo("BFS_GRID_TRAVERSAL");
         }
 
         @Test
-        @DisplayName("confidence 가 낮으면 mastery 가 높아도 CONTINUE")
+        @DisplayName("confidence 가 낮으면 mastery 가 높아도 더 연습한다")
         void masteryHighButConfidenceLow() {
             // 잘할 가능성은 높아 보이지만 증거가 적다(Addendum 17).
             NextAction action = decide(JudgeStatus.ACCEPTED,
                     state(0.95, 0.20, SkillStatus.PRACTICING), null, 1, true);
-            assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
+            assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
         }
 
         @Test
@@ -114,7 +119,7 @@ class DecisionEngineTest {
 
             assertThat(action.type())
                     .as("아직 숙달되지 않은 사용자를 다음 Skill 로 넘기면 안 된다")
-                    .isEqualTo(ActionType.CONTINUE);
+                    .isEqualTo(ActionType.RETRY_VARIANT);
         }
 
         @Test
@@ -125,7 +130,7 @@ class DecisionEngineTest {
                     state(0.82, 0.80, SkillStatus.WEAKENED), null, 1, true);
 
             assertThat(action.type()).isNotEqualTo(ActionType.UNLOCK_NEXT);
-            assertThat(action.type()).isEqualTo(ActionType.CONTINUE);
+            assertThat(action.type()).isEqualTo(ActionType.RETRY_VARIANT);
         }
 
         @Test
