@@ -98,8 +98,7 @@ public class HintService {
             throw new NotFound("그런 힌트 단계가 없다: " + problemCode + " H" + level);
         }
 
-        ProblemRow problemRow = problemRows.findByCode(problem.code())
-                .orElseGet(() -> problemRows.save(new ProblemRow(problem.code(), problem.source())));
+        ProblemRow problemRow = problemRows.ensure(problem.code(), problem.source());
 
         int seen = usage.highestLevel(userId, problemRow.id()).orElse(0);
         if (level > seen + 1) {

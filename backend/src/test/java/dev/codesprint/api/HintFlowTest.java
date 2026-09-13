@@ -252,6 +252,60 @@ class HintFlowTest {
         assertThat(recordedSolutionViewed(submissionId)).isTrue();
     }
 
+    /** 여덟이 동시에 같은 힌트를 연다. 실패한 것이 있으면 그 이유를 그대로 돌려준다. */
+    private List<String> eightAtOnce(String problemCode) throws Exception {
+        int threads = 8;
+        CyclicBarrier gate = new CyclicBarrier(threads);
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        List<Callable<String>> tasks = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            tasks.add(() -> {
+                gate.await();
+                try {
+                    hintService.reveal(userId, problemCode, 1);
+                    return "OK";
+                } catch (Exception e) {
+                    Throwable root = e;
+                    while (root.getCause() != null) {
+                        root = root.getCause();
+                    }
+                    return root.getClass().getSimpleName() + ": "
+                            + String.valueOf(root.getMessage());
+                }
+            });
+        }
+        try {
+            List<String> results = new ArrayList<>();
+            for (Future<String> result : pool.invokeAll(tasks)) {
+                results.add(result.get());
+            }
+            return results;
+        } finally {
+            pool.shutdown();
+        }
+    }
+
+    @Test
+    @DisplayName("그 문제를 처음 건드리는 요청이 동시에 와도 전부 성공한다")
+    void concurrentFirstTouchOfAProblemAllSucceed() throws Exception {
+        // **이 테스트가 없으면 아래 것이 반쪽이다.** 아래는 P02 를 쓰는데, 같은
+        // 클래스의 다른 테스트가 이미 그 problems 행을 만들어 두므로 hint_usage
+        // 충돌만 보게 된다. 그 앞에 problems.code UNIQUE 가 있고, 깨끗한 DB 에서는
+        // 거기서 먼저 터진다 - 실제로 여덟 중 일곱이 그랬다.
+        //
+        // 그래서 아무도 건드리지 않은 상태를 만들고 시작한다.
+        String untouched = "P13_EDGE_CELLS";
+        jdbc.update("delete from hint_usage where problem_id in "
+                + "(select id from problems where code = ?)", untouched);
+        jdbc.update("delete from problems where code = ?", untouched);
+
+        assertThat(eightAtOnce(untouched)).containsOnly("OK");
+        assertThat(jdbc.queryForObject(
+                "select count(*) from problems where code = ?", Integer.class, untouched))
+                .as("행은 하나만 생긴다")
+                .isEqualTo(1);
+    }
+
     @Test
     @DisplayName("같은 단계를 동시에 요청해도 전부 성공한다")
     void concurrentRequestsForTheSameLevelAllSucceed() throws Exception {
@@ -261,24 +315,7 @@ class HintFlowTest {
         // 더블클릭 · 재시도 · 응답을 못 받아 다시 누르는 경우에 그대로 일어나고,
         // 무엇보다 이 서비스는 "다시 열어도 새로 기록하지 않는다" 를 약속한다.
         // 순차 재요청에서만 지켜지는 약속은 약속이 아니다.
-        int threads = 8;
-        CyclicBarrier gate = new CyclicBarrier(threads);
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
-        List<Callable<String>> tasks = new ArrayList<>();
-        for (int i = 0; i < threads; i++) {
-            tasks.add(() -> {
-                gate.await();
-                hintService.reveal(userId, PROBLEM, 1);
-                return "OK";
-            });
-        }
-        try {
-            for (Future<String> result : pool.invokeAll(tasks)) {
-                assertThat(result.get()).isEqualTo("OK");
-            }
-        } finally {
-            pool.shutdown();
-        }
+        assertThat(eightAtOnce(PROBLEM)).containsOnly("OK");
 
         Integer rows = jdbc.queryForObject(
                 "select count(*) from hint_usage where user_id = ?", Integer.class, userId);

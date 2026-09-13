@@ -128,8 +128,9 @@ public class SubmissionIntakeService {
         if (!users.existsById(request.userId())) {
             throw new NotFound("그런 사용자가 없다: " + request.userId());
         }
-        ProblemRow problemRow = problems.findByCode(problem.code())
-                .orElseGet(() -> problems.save(new ProblemRow(problem.code(), problem.source())));
+        // 같은 문제의 첫 제출 둘이 동시에 오면 둘 다 "행이 없다" 를 보고 둘 다 넣는다.
+        // 힌트와 같은 길을 쓴다 - 따로 적으면 한쪽만 고쳐진다.
+        ProblemRow problemRow = problems.ensure(problem.code(), problem.source());
 
         // **힌트 단계를 여기서 읽는다.** 신고받지 않고 기록에서 가져온다(ADR-0026).
         //
