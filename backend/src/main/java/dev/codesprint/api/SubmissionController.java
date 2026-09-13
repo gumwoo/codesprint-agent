@@ -3,8 +3,6 @@ package dev.codesprint.api;
 import dev.codesprint.learning.service.SubmissionIntakeService;
 import dev.codesprint.learning.service.SubmissionQueryService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -52,11 +50,11 @@ public class SubmissionController {
      * @param language 슬라이스 1 은 {@code PYTHON} 만 받는다. 다른 값은 400 이다 -
      *     Worker 가 무엇을 받든 Python 으로 돌리므로, 받아두면 language 와 실제 판정이
      *     어긋난 기록이 남는다.
-     * @param hintLevel <b>0 만 받는다.</b> 힌트 기능이 없으므로 쓴 적 없는 도움을
-     *     신고할 수 없다. 필드를 지우지 않는 이유는 계약을 바꾸지 않기 위해서다 -
-     *     0 이 아닌 값이 오면 400 으로 거절한다.
-     * @param solutionViewed <b>false 만 받는다.</b> 위와 같은 이유이며, Evidence 는
-     *     이 값을 힌트 최고 단계보다 위로 친다.
+     * @param hintLevel <b>보내지 않는다.</b> 서버가 힌트를 내주면서 기록하고 제출
+     *     시점에 그 기록에서 읽는다(ADR-0026). 필드를 지우는 대신 남겨 둔 이유는
+     *     Jackson 이 모르는 필드를 조용히 버리기 때문이다 - 그러면 보낸 쪽은 그 값이
+     *     적용됐다고 믿는다. null 이 아니면 400 이다.
+     * @param solutionViewed <b>보내지 않는다.</b> 위와 같다.
      * @param solveSeconds 재지 않았으면 null 이다. 0 이나 음수는 400 - speed 를 기대
      *     시간 대비 <b>비율</b>로 매기므로 음수 시간이 오히려 최고 점수를 받는다.
      */
@@ -64,8 +62,8 @@ public class SubmissionController {
             @NotNull Long userId,
             @NotBlank String language,
             @NotBlank String sourceCode,
-            @Min(0) @Max(6) int hintLevel,
-            boolean solutionViewed,
+            Integer hintLevel,
+            Boolean solutionViewed,
             @Positive Integer solveSeconds) {
     }
 
@@ -121,9 +119,16 @@ public class SubmissionController {
     public ResponseEntity<SubmissionStatusResponse> submit(@PathVariable String problemCode,
             @Valid @RequestBody SubmitRequest request) {
 
+        if (request.hintLevel() != null || request.solutionViewed() != null) {
+            throw new SubmissionIntakeService.SelfReportedHintUsage(
+                    "힌트 사용량은 서버가 기록에서 읽는다. 제출에 실어 보내지 않는다 "
+                            + "(받은 값: hintLevel=" + request.hintLevel()
+                            + ", solutionViewed=" + request.solutionViewed() + ")");
+        }
+
         long submissionId = intake.accept(new SubmissionIntakeService.Request(
                 request.userId(), problemCode, request.language(), request.sourceCode(),
-                request.hintLevel(), request.solutionViewed(), request.solveSeconds()));
+                request.solveSeconds()));
 
         // 202 다. 접수했을 뿐 아직 아무것도 판정하지 않았다.
         return ResponseEntity.accepted()

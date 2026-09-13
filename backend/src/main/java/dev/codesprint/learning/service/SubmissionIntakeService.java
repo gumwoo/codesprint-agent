@@ -3,11 +3,13 @@ package dev.codesprint.learning.service;
 import dev.codesprint.judge.JudgeJobRepository;
 import dev.codesprint.judge.JudgeJobRow;
 import dev.codesprint.learning.domain.JudgeStatus;
+import dev.codesprint.learning.persistence.HintUsageRepository;
 import dev.codesprint.learning.persistence.ProblemRepository;
 import dev.codesprint.learning.persistence.ProblemRow;
 import dev.codesprint.learning.persistence.SubmissionRepository;
 import dev.codesprint.learning.persistence.SubmissionRow;
 import dev.codesprint.learning.persistence.UserRepository;
+import dev.codesprint.problem.HintCatalog;
 import dev.codesprint.problem.ProblemCatalog;
 import dev.codesprint.problem.ProblemCatalog.ProblemDefinition;
 import org.springframework.stereotype.Service;
@@ -42,43 +44,42 @@ public class SubmissionIntakeService {
     private final SubmissionRepository submissions;
     private final JudgeJobRepository jobs;
     private final ReviewScheduleService reviewSchedules;
+    private final HintUsageRepository hintUsage;
 
     public SubmissionIntakeService(ProblemCatalog catalog, UserRepository users,
             ProblemRepository problems, SubmissionRepository submissions,
-            JudgeJobRepository jobs, ReviewScheduleService reviewSchedules) {
+            JudgeJobRepository jobs, ReviewScheduleService reviewSchedules,
+            HintUsageRepository hintUsage) {
         this.catalog = catalog;
         this.users = users;
         this.problems = problems;
         this.submissions = submissions;
         this.jobs = jobs;
         this.reviewSchedules = reviewSchedules;
+        this.hintUsage = hintUsage;
     }
 
+    /**
+     * <b>힌트 사용량이 없다.</b> 클라이언트가 신고하지 않고 서버가 기록에서 읽는다
+     * (ADR-0026). 이 record 에 필드를 다시 넣는 것은 그 결정을 되돌리는 것이다.
+     */
     public record Request(
             Long userId,
             String problemCode,
             String language,
             String sourceCode,
-            int hintLevel,
-            boolean solutionViewed,
             Integer solveSeconds) {
     }
 
     /**
-     * 힌트를 쓴 적이 있다고 <b>스스로 신고한</b> 제출. 400 이다.
+     * 힌트 사용량을 <b>스스로 신고한</b> 제출. 400 이다.
      *
-     * <p>힌트 기능이 없다. 그런데 Evidence 는 {@code hintLevel} 과
-     * {@code solutionViewed} 로 독립 풀이 여부와 점수를 가른다 - 해설을 봤다고 하면
-     * 힌트 최고 단계(5)보다 위인 6 으로 친다.
+     * <p>이제 서버가 기록에서 읽는다(ADR-0026). 그런데 요청이 여전히 값을 실어 보내면
+     * <b>보낸 쪽은 그 값이 적용됐다고 믿는다.</b> 조용히 무시하는 것이 가장 나쁘다 -
+     * 화면은 "해설을 봤다" 고 보냈는데 기록에는 없어서 독립 풀이로 남는다.
      *
-     * <p>즉 <b>존재하지 않는 도움의 사용량을 사용자가 신고하고, 그 신고로 mastery 가
-     * 깎였다.</b> 아무도 확인할 수 없는 값이다.
-     *
-     * <p>받아 놓고 무시하지 않는다. 무시하면 API 를 쓰는 쪽은 그 값이 적용됐다고 믿는다.
-     *
-     * <p>힌트 기능이 생기면 이 제한은 사라진다. 다만 그때도 <b>클라이언트가 신고하지
-     * 않는다</b> - 서버가 힌트를 내주면서 기록하고, 제출 시점에 그 기록에서 단계를
-     * 읽는다. LLM 이 힌트 내용을 만들어도 "몇 단계를 봤는가" 는 관측이다(ADR-0001).
+     * <p>그래서 필드를 지우는 대신 <b>있으면 거절한다.</b> 지우기만 하면 Jackson 이
+     * 모르는 필드를 조용히 버리므로 같은 일이 벌어진다.
      */
     public static class SelfReportedHintUsage extends RuntimeException {
 
@@ -120,13 +121,6 @@ public class SubmissionIntakeService {
             throw new UnsupportedLanguage(
                     "아직 " + SUPPORTED_LANGUAGE + " 만 채점한다: " + request.language());
         }
-        if (request.hintLevel() != 0 || request.solutionViewed()) {
-            throw new SelfReportedHintUsage(
-                    "힌트 기능이 아직 없다. 쓴 적 없는 도움을 신고할 수 없으므로 "
-                            + "hintLevel 은 0, solutionViewed 는 false 여야 한다 "
-                            + "(받은 값: hintLevel=" + request.hintLevel()
-                            + ", solutionViewed=" + request.solutionViewed() + ")");
-        }
         ProblemDefinition problem = catalog.find(request.problemCode());
         if (problem == null) {
             throw new NotFound("그런 문제가 없다: " + request.problemCode());
@@ -134,12 +128,25 @@ public class SubmissionIntakeService {
         if (!users.existsById(request.userId())) {
             throw new NotFound("그런 사용자가 없다: " + request.userId());
         }
-        ProblemRow problemRow = problems.findByCode(problem.code())
-                .orElseGet(() -> problems.save(new ProblemRow(problem.code(), problem.source())));
+        // 같은 문제의 첫 제출 둘이 동시에 오면 둘 다 "행이 없다" 를 보고 둘 다 넣는다.
+        // 힌트와 같은 길을 쓴다 - 따로 적으면 한쪽만 고쳐진다.
+        ProblemRow problemRow = problems.ensure(problem.code(), problem.source());
+
+        // **힌트 단계를 여기서 읽는다.** 신고받지 않고 기록에서 가져온다(ADR-0026).
+        //
+        // 지금까지의 최댓값을 쓰는 이유는 한 번 본 힌트를 되돌릴 수 없기 때문이다.
+        // H3 를 보고 실패한 뒤 힌트 없이 다시 내도 그 사람은 여전히 H3 를 알고 있다 -
+        // 두 번째를 "힌트 없는 풀이" 로 세면 독립 풀이를 실제보다 높게 기록한다.
+        //
+        // 값은 제출 행에 **얼려 둔다.** 나중에 H5 를 더 봐도 이미 낸 제출의 Evidence 가
+        // 따라 바뀌면 안 된다 - Evidence 는 append-only 정본이다(ADR-0009).
+        int seenLevel = hintUsage.highestLevel(request.userId(), problemRow.id()).orElse(0);
+        boolean solutionViewed = seenLevel >= HintCatalog.SOLUTION_LEVEL;
+        int hintLevel = solutionViewed ? 0 : seenLevel;
 
         SubmissionRow submission = submissions.save(new SubmissionRow(
                 request.userId(), problemRow.id(), SUPPORTED_LANGUAGE,
-                JudgeStatus.QUEUED.name(), request.hintLevel(), request.solutionViewed(),
+                JudgeStatus.QUEUED.name(), hintLevel, solutionViewed,
                 request.solveSeconds(),
                 // 제출 시각을 여기서 박는다. 복습 만기를 이 값으로 판정하므로
                 // (ADR-0021) 시계가 하나여야 한다.
