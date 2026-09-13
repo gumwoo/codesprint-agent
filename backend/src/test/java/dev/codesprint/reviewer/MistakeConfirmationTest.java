@@ -34,7 +34,7 @@ class MistakeConfirmationTest {
         @DisplayName("근거가 없으면 구간이 그대로 상한이다")
         void bandsWithoutEvidence(double confidence, MistakeStatus expected) {
             // 근거 인용도 없고 재발도 없다 - 확정 조건 A/B 를 둘 다 못 채운다.
-            assertThat(MistakeConfirmation.decide(confidence, false, 1).status())
+            assertThat(MistakeConfirmation.decide(confidence, false, 1, true).status())
                     .isEqualTo(expected);
         }
 
@@ -43,11 +43,11 @@ class MistakeConfirmationTest {
         void boundariesAreInclusive() {
             // 0.60 미만이 LOGGED_ONLY 다. 0.60 자체는 POSSIBLE 이어야 한다 -
             // 부등호를 뒤집으면 문턱에 걸친 분석이 통째로 한 칸씩 내려간다.
-            assertThat(MistakeConfirmation.decide(0.60, false, 1).status())
+            assertThat(MistakeConfirmation.decide(0.60, false, 1, true).status())
                     .isEqualTo(MistakeStatus.POSSIBLE);
-            assertThat(MistakeConfirmation.decide(0.80, false, 1).status())
+            assertThat(MistakeConfirmation.decide(0.80, false, 1, true).status())
                     .isEqualTo(MistakeStatus.PROBABLE);
-            assertThat(MistakeConfirmation.decide(0.90, true, 1).status())
+            assertThat(MistakeConfirmation.decide(0.90, true, 1, true).status())
                     .isEqualTo(MistakeStatus.CONFIRMED);
         }
     }
@@ -59,7 +59,7 @@ class MistakeConfirmationTest {
         @Test
         @DisplayName("A: confidence 0.90 이상이고 독립적인 근거가 뒷받침한다")
         void conditionA() {
-            var verdict = MistakeConfirmation.decide(0.95, true, 1);
+            var verdict = MistakeConfirmation.decide(0.95, true, 1, true);
             assertThat(verdict.status()).isEqualTo(MistakeStatus.CONFIRMED);
             assertThat(verdict.reason()).contains("case 의 모양");
         }
@@ -69,7 +69,7 @@ class MistakeConfirmationTest {
         void highConfidenceAloneIsNotConfirmed() {
             // Judge Evidence 가 LLM 보다 우선한다(Addendum 20). 확신에 찬 오분류를
             // 막을 수 있는 유일한 지점이다 - confidence 는 LLM 이 스스로 매긴다.
-            var verdict = MistakeConfirmation.decide(0.99, false, 1);
+            var verdict = MistakeConfirmation.decide(0.99, false, 1, true);
             assertThat(verdict.status()).isEqualTo(MistakeStatus.PROBABLE);
             assertThat(verdict.isConfirmed()).isFalse();
         }
@@ -77,7 +77,7 @@ class MistakeConfirmationTest {
         @Test
         @DisplayName("B: confidence 0.80 이상이고 최근 3문제에서 2회 이상 탐지됐다")
         void conditionB() {
-            var verdict = MistakeConfirmation.decide(0.82, false, 2);
+            var verdict = MistakeConfirmation.decide(0.82, false, 2, true);
             assertThat(verdict.status()).isEqualTo(MistakeStatus.CONFIRMED);
             assertThat(verdict.reason()).contains("2회");
         }
@@ -87,7 +87,7 @@ class MistakeConfirmationTest {
         void conditionBNeedsNoCitation() {
             // 재발 자체가 다른 종류의 근거다. 한 번의 분석이 아니라 여러 제출에
             // 걸친 관측이다.
-            assertThat(MistakeConfirmation.decide(0.80, false, 3).isConfirmed()).isTrue();
+            assertThat(MistakeConfirmation.decide(0.80, false, 3, true).isConfirmed()).isTrue();
         }
 
         @Test
@@ -96,14 +96,14 @@ class MistakeConfirmationTest {
             // 0.60~0.80 은 "자동 드릴 금지" 구간이다(Addendum 19). 재발했다는
             // 사실만으로 그 구간을 건너뛰면 낮은 확신의 오분류가 반복될 때
             // 오히려 확정된다.
-            var verdict = MistakeConfirmation.decide(0.79, false, 3);
+            var verdict = MistakeConfirmation.decide(0.79, false, 3, true);
             assertThat(verdict.status()).isEqualTo(MistakeStatus.POSSIBLE);
         }
 
         @Test
         @DisplayName("한 번만 탐지된 것은 재발이 아니다")
         void singleDetectionIsNotRecurrence() {
-            assertThat(MistakeConfirmation.decide(0.85, false, 1).isConfirmed()).isFalse();
+            assertThat(MistakeConfirmation.decide(0.85, false, 1, true).isConfirmed()).isFalse();
         }
     }
 
@@ -112,7 +112,7 @@ class MistakeConfirmationTest {
     void rejectsOutOfRangeConfidence() {
         // 스키마 밖에서 들어온 값이 그대로 확정 구간에 걸리면 안 된다.
         for (double bad : new double[] {-0.1, 1.5}) {
-            assertThatThrownBy(() -> MistakeConfirmation.decide(bad, true, 1))
+            assertThatThrownBy(() -> MistakeConfirmation.decide(bad, true, 1, true))
                     .as("confidence=%s", bad)
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -123,9 +123,53 @@ class MistakeConfirmationTest {
     void alwaysExplainsItself() {
         // 사용자가 왜 이 드릴을 받았는지 나중에 추적해야 한다.
         for (double confidence : new double[] {0.1, 0.7, 0.85, 0.95}) {
-            assertThat(MistakeConfirmation.decide(confidence, true, 2).reason())
+            assertThat(MistakeConfirmation.decide(confidence, true, 2, true).reason())
                     .as("confidence=%s", confidence)
                     .isNotBlank();
+        }
+    }
+
+    @org.junit.jupiter.api.Nested
+    @DisplayName("그 문제에서 일어날 수 없다고 선언된 실수 (ADR-0029)")
+    class NotDeclaredForThisProblem {
+
+        @Test
+        @DisplayName("A 경로로 확정하지 않는다")
+        void pathAIsBlocked() {
+            // 실측에서 나왔다 - P01_QUEUE_BASIC(큐 문제)에 BOUNDARY_CHECK(격자 경계).
+            // 그 문제에는 격자가 없고 commonMistakes 는 INPUT_PARSE / OUTPUT_FORMAT 뿐이다.
+            var verdict = MistakeConfirmation.decide(0.99, true, 1, false);
+
+            assertThat(verdict.isConfirmed()).isFalse();
+            assertThat(verdict.reason()).contains("commonMistakes");
+        }
+
+        @Test
+        @DisplayName("B 경로로도 확정하지 않는다 - 여기가 실제로 열려 있던 구멍이다")
+        void pathBIsBlocked() {
+            // A 는 probes 태그가 막아 준다. B 는 재발만 보므로 같은 오분류가 두 번
+            // 나오면 그대로 확정됐다. BOUNDARY_CHECK 는 auto_drill 이 켜져 있어
+            // 하지도 않은 실수로 드릴에 보내진다.
+            var verdict = MistakeConfirmation.decide(0.85, false, 3, false);
+
+            assertThat(verdict.isConfirmed()).isFalse();
+        }
+
+        @Test
+        @DisplayName("기록은 남긴다 - 지우지 않는다")
+        void itIsStillRecorded() {
+            // 재발 집계와 Reviewer 정확도 라벨이 여기서 나온다(ADR-0014).
+            assertThat(MistakeConfirmation.decide(0.85, false, 1, false).status())
+                    .isEqualTo(MistakeStatus.POSSIBLE);
+            assertThat(MistakeConfirmation.decide(0.30, false, 1, false).status())
+                    .isEqualTo(MistakeStatus.LOGGED_ONLY);
+        }
+
+        @Test
+        @DisplayName("선언된 실수는 그대로 확정된다")
+        void declaredOnesAreUnaffected() {
+            assertThat(MistakeConfirmation.decide(0.95, true, 1, true).isConfirmed()).isTrue();
+            assertThat(MistakeConfirmation.decide(0.85, false, 2, true).isConfirmed()).isTrue();
         }
     }
 }
