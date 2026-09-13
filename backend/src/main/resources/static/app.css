@@ -405,3 +405,36 @@ table.runcases pre {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* 단계별 힌트. 사다리라는 것이 보이게 번호를 남긴다. */
+.hints {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.hints h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+#hintList {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+#hintList li {
+  margin-bottom: 8px;
+  line-height: 1.55;
+}
+
+#hintList pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: pre;
+}
