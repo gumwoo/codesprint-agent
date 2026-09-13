@@ -70,6 +70,19 @@ def dsn_for_tests() -> str:
     )
 
 
+def migration_version(path: pathlib.Path) -> int:
+    """`V10__x.sql` -> 10.
+
+    **문자열로 정렬하지 않는다.** V10 이 생기는 순간 V1 보다 앞에 오고, 그러면
+    아직 만들어지지 않은 테이블을 ALTER 하게 된다 - 실제로 그렇게 깨졌다.
+
+    Flyway 는 숫자로 정렬한다. 하네스가 그것과 달라지면 여기서 도는 스키마가
+    실물과 다른 스키마가 되고, 이 테스트가 지키려던 것("정본이 둘이 되지 않게")이
+    그대로 무너진다.
+    """
+    return int(path.name[1:].split("__", 1)[0])
+
+
 def migrate(conn) -> None:
     """백엔드와 **같은 마이그레이션**으로 스키마를 만든다.
 
@@ -80,7 +93,7 @@ def migrate(conn) -> None:
         # 매번 처음부터 만든다. 이어서 돌리면 두 번째 실행이 DuplicateTable 로 죽고,
         # 그러면 "테스트 DB 를 새로 띄웠을 때만 도는" 테스트가 된다.
         cur.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public")
-        for path in sorted(MIGRATIONS.glob("V*.sql")):
+        for path in sorted(MIGRATIONS.glob("V*.sql"), key=migration_version):
             cur.execute(path.read_text(encoding="utf-8"))
     conn.commit()
 
@@ -359,6 +372,30 @@ def test_worker_does_not_touch_learning_state(conn) -> None:
     check("반영 표시는 Java 의 몫이다", row(conn, job_id)["appliedAt"] is None)
 
 
+def test_migrations_run_in_flyway_order(conn) -> None:
+    """마이그레이션을 **숫자 순서**로 돌리는가.
+
+    DB 가 필요 없는 검사지만 여기 둔다 - 깨지는 곳이 여기이기 때문이다.
+
+    V9 까지는 문자열 정렬과 숫자 정렬이 우연히 같았다. V10 이 생기자 갈라졌고,
+    아직 만들어지지 않은 테이블을 ALTER 하다 죽었다. **우연히 맞던 것이 언제
+    틀리기 시작하는지는 그때가 되어야 보인다.**
+    """
+    names = [p.name for p in sorted(MIGRATIONS.glob("V*.sql"), key=migration_version)]
+    versions = [migration_version(MIGRATIONS / name) for name in names]
+
+    check("마이그레이션이 숫자 순서로 돈다", versions == sorted(versions), str(names))
+    check("버전이 중복되지 않는다", len(set(versions)) == len(versions), str(names))
+
+    # 문자열 정렬과 갈라지는 순간을 실제로 확인한다. 같아지면 이 검사는 그
+    # 이후로 아무것도 잡지 못하므로, 그 사실을 드러내 둔다.
+    as_text = [p.name for p in sorted(MIGRATIONS.glob("V*.sql"))]
+    if as_text == names:
+        print("   (지금은 문자열 정렬과 결과가 같다 - V10 이상이 사라지면 이 검사는 무력하다)")
+    else:
+        print(f"   문자열 정렬이라면 {as_text[0]} 이 먼저 온다 - 숫자 정렬은 {names[0]}")
+
+
 def main() -> int:
     try:
         import psycopg
@@ -376,7 +413,8 @@ def main() -> int:
 
     with conn:
         migrate(conn)
-        for fn in (test_claims_once, test_expired_lease_is_reclaimed,
+        for fn in (test_migrations_run_in_flyway_order,
+                   test_claims_once, test_expired_lease_is_reclaimed,
                    test_exhausted_job_is_failed, test_stale_worker_cannot_overwrite,
                    test_stale_worker_cannot_revive_failed_job, test_accepted_submission,
                    test_wrong_submission, test_infra_failure_is_retried,

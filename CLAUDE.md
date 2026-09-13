@@ -280,6 +280,11 @@ A. c >= 0.90 + Reviewer 밖의 독립 근거     CONFIRMED
 B. c >= 0.80 + 최근 3문제에서 2회 이상      CONFIRMED
 ```
 
+**그 문제에서 일어날 수 없다고 선언된 실수는 확정하지 않는다**
+([ADR-0029](docs/adr/0029-confirmation-respects-the-problems-declared-mistakes.md)).
+`problem.yaml` 의 `commonMistakes` 밖이면 기록만 하고, 재발 집계에서도 뺀다 - 남겨
+두면 남의 확정을 앞당긴다. 실제 평가에서 큐 문제에 격자 경계 실수가 나와 찾았다.
+
 **확신만으로 확정하지 않는다.** confidence 는 LLM 이 스스로 매기므로 그것만 보면
 순환이다. **Reviewer 에게 알려준 값을 되돌려받는 것도 근거가 아니다** - 실패 case
 번호를 요청에 넣어 보내므로 그대로 돌려주기만 하면 된다.

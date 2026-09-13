@@ -19,6 +19,10 @@ public interface MistakeDetectionRepository extends JpaRepository<MistakeDetecti
      * 아니다 - 그렇게 세면 한 문제에서 고전하는 사용자가 곧바로 확정을 받는다.
      *
      * <p>SECONDARY 는 세지 않는다. 곁다리로 언급된 것이 확정을 만들면 안 된다.
+     *
+     * <p>그 문제에서 <b>일어날 수 없다고 선언된</b> 탐지도 세지 않는다(ADR-0029).
+     * 확정을 그 자리에서 막는 것만으로는 부족하다 - 행이 남아 있으면 나중에 다른
+     * 문제에서 같은 실수가 나올 때 재발 횟수를 채워 준다.
      */
     @Query("""
             select count(distinct s.problemId)
@@ -27,6 +31,7 @@ public interface MistakeDetectionRepository extends JpaRepository<MistakeDetecti
               and d.userId = :userId
               and d.mistakeCode = :mistakeCode
               and d.role = 'PRIMARY'
+              and d.declaredForProblem = true
               and s.problemId in :problemIds
             """)
     long countProblemsWithPrimary(@Param("userId") Long userId,

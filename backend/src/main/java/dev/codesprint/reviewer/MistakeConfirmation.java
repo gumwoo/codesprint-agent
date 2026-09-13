@@ -71,10 +71,30 @@ public final class MistakeConfirmation {
      *     몇 번 탐지됐는가. 이번 것을 포함한다.
      */
     public static Verdict decide(double confidence, boolean corroborated,
-            int recentDetections) {
+            int recentDetections, boolean declaredForThisProblem) {
 
         if (confidence < 0 || confidence > 1) {
             throw new IllegalArgumentException("confidence 는 0~1 이어야 한다: " + confidence);
+        }
+
+        // **그 문제에서 일어날 수 없다고 선언된 실수는 확정하지 않는다.**
+        //
+        // 실측으로 나왔다 - 평가 25건 중 유일한 불일치가 P01_QUEUE_BASIC(큐 문제)에
+        // BOUNDARY_CHECK(격자 경계)였다. 그 문제에는 격자가 없고, commonMistakes 는
+        // INPUT_PARSE 와 OUTPUT_FORMAT 둘뿐이다.
+        //
+        // 그때는 §21-A 가 막았다 - probes 태그가 없어 case 근거가 붙지 않았다.
+        // 그런데 §21-B(재발)는 그 검사를 거치지 않는다. 같은 오분류가 두 번 나오면
+        // 확정되고, BOUNDARY_CHECK 는 auto_drill 이 켜져 있어 **하지도 않은 실수로
+        // 드릴에 보내진다.**
+        //
+        // 기록은 남긴다. 재발 집계와 Reviewer 정확도 라벨이 거기서 나온다(ADR-0014).
+        if (!declaredForThisProblem) {
+            MistakeStatus capped = confidence >= LOGGED_ONLY_CEILING
+                    ? MistakeStatus.POSSIBLE : MistakeStatus.LOGGED_ONLY;
+            return new Verdict(capped,
+                    "이 문제의 commonMistakes 에 없는 실수다 - 기록만 하고 확정하지 않는다 "
+                            + "(confidence " + confidence + ")");
         }
 
         // §21-A. 확신이 높고, 독립적인 근거가 같은 것을 가리킨다.

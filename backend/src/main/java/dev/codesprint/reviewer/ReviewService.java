@@ -79,9 +79,14 @@ public class ReviewService {
      *     것은 확인이 아니다(ADR-0014). 뒷받침할 데이터가 없으면
      *     {@link CaseCorroboration#NONE} 을 넘긴다.
      */
+    /**
+     * @param declaredMistakes 이 문제에서 일어날 수 있다고 <b>선언된</b> 실수들
+     *     ({@code problem.yaml} 의 {@code commonMistakes}). {@code corroboration} 과
+     *     같은 자리다 - 둘 다 Reviewer 가 만들지 않았고 이 분석 이전에 정해져 있다.
+     */
     public Optional<Review> review(Long userId, Long submissionId, Long problemId,
             java.time.Instant submittedAt, ReviewerPort.Request request,
-            CaseCorroboration corroboration) {
+            CaseCorroboration corroboration, java.util.Collection<String> declaredMistakes) {
 
         Optional<ReviewerOutput> analysed;
         try {
@@ -116,15 +121,23 @@ public class ReviewService {
         // 이 분석 이전에 정해져 있다.
         boolean corroborated = corroboration.supports(output.primaryMistake());
 
+        // 그 문제에서 일어날 수 있다고 **선언된** 실수인가. 이것도 Reviewer 밖에서
+        // 온다 - 문제를 만든 사람이 적었고 CI 가 검증한 목록이다(ADR-0029).
+        boolean declared = declaredMistakes.contains(output.primaryMistake());
+        if (!declared) {
+            log.warn("submission {}: {} 는 이 문제의 commonMistakes 에 없다 - "
+                    + "기록만 하고 확정하지 않는다", submissionId, output.primaryMistake());
+        }
+
         MistakeConfirmation.Verdict verdict = MistakeConfirmation.decide(
-                output.confidence(), corroborated, recent);
+                output.confidence(), corroborated, recent, declared);
         if (corroborated) {
             log.info("submission {}: {} 를 실패 case 의 모양이 뒷받침한다 - {}",
                     submissionId, output.primaryMistake(),
                     corroboration.describe(output.primaryMistake()));
         }
 
-        record(userId, submissionId, output, verdict);
+        record(userId, submissionId, output, verdict, declaredMistakes);
 
         return Optional.of(new Review(
                 output.primaryMistake(),
@@ -175,19 +188,22 @@ public class ReviewService {
     }
 
     private void record(Long userId, Long submissionId, ReviewerOutput output,
-            MistakeConfirmation.Verdict verdict) {
+            MistakeConfirmation.Verdict verdict,
+            java.util.Collection<String> declaredMistakes) {
 
         List<MistakeDetectionRow> rows = new ArrayList<>();
         rows.add(new MistakeDetectionRow(submissionId, userId, output.primaryMistake(),
                 "PRIMARY", BigDecimal.valueOf(output.confidence()),
-                verdict.status().name(), verdict.reason(), reviewer.promptVersion()));
+                verdict.status().name(), verdict.reason(), reviewer.promptVersion(),
+                declaredMistakes.contains(output.primaryMistake())));
 
         for (String code : output.secondaryMistakes()) {
             // secondary 는 확정 대상이 아니다. 기록은 남기되 상태는 참고 로그다 -
             // 곁다리로 언급된 것이 재발 계수에도, 자동 드릴에도 들어가지 않는다.
             rows.add(new MistakeDetectionRow(submissionId, userId, code, "SECONDARY",
                     BigDecimal.valueOf(output.confidence()), MistakeStatus.LOGGED_ONLY.name(),
-                    "secondary 는 확정 대상이 아니다", reviewer.promptVersion()));
+                    "secondary 는 확정 대상이 아니다", reviewer.promptVersion(),
+                    declaredMistakes.contains(code)));
         }
         detections.saveAll(rows);
     }

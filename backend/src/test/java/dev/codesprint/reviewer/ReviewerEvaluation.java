@@ -208,10 +208,16 @@ public final class ReviewerEvaluation {
                 ints(judge.get("passedCaseIds")), ints(judge.get("failedCaseIds")),
                 probes(one.get("probes")));
 
+        // 그 문제에서 일어날 수 있다고 선언된 실수인가(ADR-0029). **실제 경로와 같은
+        // 것을 봐야 한다** - 여기서만 빼면 이 하네스가 재는 확정이 실제와 달라진다.
+        List<String> declared = problems.find(problemCode) == null
+                ? List.of() : problems.find(problemCode).commonMistakes();
+
         // 재발(§21-B)은 사용자 이력이라 여기서 잴 수 없다. 이 하네스가 재는 것은
         // **한 번의 분석만으로 확정까지 가는 경로**, 즉 §21-A 다.
         MistakeConfirmation.Verdict verdict = MistakeConfirmation.decide(
-                output.confidence(), corroboration.supports(output.primaryMistake()), 1);
+                output.confidence(), corroboration.supports(output.primaryMistake()), 1,
+                declared.contains(output.primaryMistake()));
 
         return new Outcome(problemCode, label, output.primaryMistake(),
                 output.confidence(), verdict.status(), verdict.reason());
