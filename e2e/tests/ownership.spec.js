@@ -1,6 +1,6 @@
 const { test, expect } = require("@playwright/test");
-const { gate, releaseAndSettle, stubApi, problem, finished, accepted, conceptFor,
-  fulfill } = require("../fixtures/api");
+const { gate, releaseAndSettle, stubApi, problem, finished, accepted, hint,
+  conceptFor, fulfill } = require("../fixtures/api");
 
 /**
  * 화면의 비동기 소유권 회귀. 정본: ADR-0023, ADR-0025.
@@ -186,4 +186,60 @@ test("개념 자료가 다른 제출의 결정 요약 아래에 붙지 않는다
   await releaseAndSettle(page, slow, "/api/submissions/1/next-problem");
   await expect(page.locator("#nextAction .concept")).toHaveCount(0);
   await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
+});
+
+test("늦게 온 힌트가 다른 문제의 화면에 붙지 않는다", async ({ page }) => {
+  // 힌트는 문제 화면의 것이다. P02 에서 힌트를 눌러 두고 P03 으로 옮기면, 늦게
+  // 도착한 H1 이 P03 의 힌트인 것처럼 붙는다 - 그리고 그것은 기록과도 어긋난다.
+  // 서버에 남은 것은 P02 의 H1 이기 때문이다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL/hints/1", async (route) => {
+    await slow.held;
+    return fulfill(route, hint(1));
+  });
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#hintButton");
+
+  // 목록으로 돌아가 다른 문제로 옮긴다. P02 는 이미 열렸으므로 목록이 숨어 있다.
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/hints/1");
+  await expect(page.locator("#hintList li")).toHaveCount(0);
+  await expect(page.locator("#hintNote")).toHaveText("");
+});
+
+test("사용자를 바꾸면 띄워 둔 힌트가 남지 않는다", async ({ page }) => {
+  // 힌트는 사용자별 기록이다. 남겨 두면 새 사용자는 그 문제에서 아무것도 보지
+  // 않았는데 본 것처럼 보이고, 제출에 얼려지는 값과 어긋난다.
+  await stubApi(page);
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#hintButton");
+  await expect(page.locator("#hintList li")).toHaveCount(1);
+
+  await page.fill("#userId", "2");
+  await page.dispatchEvent("#userId", "change");
+  await expect(page.locator("#hintList li")).toHaveCount(0);
+});
+
+test("다음 단계는 화면이 정하지 않고 서버가 준 값을 따른다", async ({ page }) => {
+  // 이미 H3 까지 본 사용자. 화면은 0 부터 다시 보여주지만, **채점 기록에 남는
+  // 값은 서버가 말한 3** 이다. 화면이 자기 계산으로 "H1" 이라고 적으면 사용자가
+  // 보는 값과 mastery 에 들어가는 값이 갈린다(ADR-0027).
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL/hints/1", (route) =>
+      fulfill(route, hint(1, 3)));
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#hintButton");
+
+  await expect(page.locator("#hintNote")).toHaveText("채점 기록에 남는 단계: H3 / H6");
+  await expect(page.locator("#hintButton")).toHaveText("다음 힌트 (H2)");
 });

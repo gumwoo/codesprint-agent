@@ -85,6 +85,18 @@
       <h2 id="problemTitle"></h2>
       <pre class="statement" id="statement"></pre>
       <div id="samples"></div>
+
+      <!--
+        단계별 힌트. 한 칸씩만 열리고, 몇 단계까지 봤는지는 서버가 정한다 -
+        화면은 세지 않는다(ADR-0027). 그 숫자가 곧 mastery 에 들어가므로,
+        화면이 따로 세기 시작하면 사용자가 보는 값과 기록되는 값이 갈린다.
+      -->
+      <div class="hints">
+        <h3>막히면</h3>
+        <ol id="hintList"></ol>
+        <button type="button" id="hintButton">힌트 보기</button>
+        <p class="note" id="hintNote"></p>
+      </div>
     </div>
 
     <!--

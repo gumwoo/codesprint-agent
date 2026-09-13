@@ -29,3 +29,7 @@ node_modules/
 
 # Python 캐시 (learning 패키지 추가로 생김)
 **/__pycache__/
+
+# Playwright 실행 산출물. 돌릴 때마다 저장소 변경으로 잡힌다.
+test-results/
+playwright-report/

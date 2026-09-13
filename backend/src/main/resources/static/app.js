@@ -273,6 +273,9 @@ function switchedUser() {
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
   // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
   $("footNote").textContent = "";
+  // 띄워 둔 힌트도 이전 사용자가 연 것이다. 새 사용자는 그 문제에서 아직
+  // 아무것도 보지 않았는데, 남겨 두면 본 것처럼 보이고 채점 기록과 어긋난다.
+  resetHints();
 
   remember($("userId").value);
   refreshDiagnostic();
@@ -461,6 +464,100 @@ async function refreshDiagnostic() {
   button.onclick = () => openProblem(step.problem.code);
 }
 
+/**
+ * 이 화면에 지금까지 <b>띄운</b> 힌트 수. 서버가 기록한 최고 단계와 다를 수 있다 -
+ * 예전에 H3 까지 봤어도 이 화면은 0 부터 다시 보여준다.
+ *
+ * 이 값으로 mastery 를 말하지 않는다. 기록은 서버가 가지고 있고 화면은 그것을
+ * 받아 적기만 한다(ADR-0027).
+ */
+let shownHints = 0;
+
+/**
+ * 힌트 패널을 비운다. <b>문제가 바뀌는 모든 길이 여기를 지난다</b> -
+ * {@code openProblem} 하나이고, {@code goToNextProblem} 도 그것을 부른다.
+ *
+ * <p>처음에는 {@code showLeft} 에도 놓는 줄을 넣었다. 그런데 대조군을 돌려 보니
+ * <b>그 줄을 지워도 테스트가 통과했다</b> - 아무것도 막고 있지 않았다는 뜻이다.
+ * 무엇도 막지 않는 안전장치는 "검사가 있다" 는 믿음만 남긴다(ADR-0025).
+ */
+function resetHints() {
+  invalidateView("hints");
+  shownHints = 0;
+  $("hintList").replaceChildren();
+  $("hintNote").textContent = "";
+  $("hintButton").textContent = "힌트 보기";
+  $("hintButton").hidden = false;
+  $("hintButton").disabled = false;
+}
+
+/**
+ * 다음 한 칸을 연다.
+ *
+ * <p><b>다음이 몇 단계인지 화면이 정하지 않는다.</b> 요청은 "지금까지 띄운 것 + 1"
+ * 이고, 그것이 사다리를 건너뛰는 일은 없다 - 서버가 본 것이 더 많으면 그쪽이 크다.
+ * 응답의 highestLevel / topLevel 을 그대로 옮긴다.
+ */
+async function revealNextHint() {
+  if (!currentProblem) {
+    return;
+  }
+  const code = currentProblem.code;
+  const level = shownHints + 1;
+  const mine = claimView("hints");
+  $("hintButton").disabled = true;
+
+  let hint;
+  try {
+    const response = await fetch(`/api/problems/${code}/hints/${level}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: Number($("userId").value) }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `힌트를 받지 못했다 (${response.status})`);
+    }
+    hint = await response.json();
+  } catch (error) {
+    // 늦게 온 실패도 남의 화면에 쓰지 않는다.
+    if (!mine()) {
+      return;
+    }
+    $("hintNote").textContent = error.message;
+    $("hintButton").disabled = false;
+    return;
+  }
+  if (!mine()) {
+    return;
+  }
+
+  const item = document.createElement("li");
+  item.value = hint.level;
+  if (hint.level === hint.topLevel) {
+    // 마지막 칸은 전체 풀이다. 코드이므로 줄바꿈을 살린다.
+    const code = document.createElement("pre");
+    code.textContent = hint.text;
+    item.append(code);
+  } else {
+    item.textContent = hint.text;
+  }
+  $("hintList").append(item);
+  shownHints = hint.level;
+
+  // **서버가 준 숫자를 그대로 쓴다.** 이 값이 제출에 얼려져 mastery 에 들어간다.
+  $("hintNote").textContent =
+      `채점 기록에 남는 단계: H${hint.highestLevel} / H${hint.topLevel}`;
+  if (shownHints >= hint.topLevel) {
+    $("hintButton").hidden = true;
+    return;
+  }
+  const next = shownHints + 1;
+  $("hintButton").textContent =
+      next === hint.topLevel ? `전체 풀이 보기 (H${next})` : `다음 힌트 (H${next})`;
+  $("hintButton").disabled = false;
+}
+
 async function openProblem(code) {
   // **문제를 빠르게 두 번 고르면 늦게 온 응답이 이긴다.** 마지막에 누른 것이
   // 아니라 먼저 누른 문제가 열린다 - 이 검사가 그것을 찾았다(ADR-0023).
@@ -495,6 +592,7 @@ async function openProblem(code) {
     samples.append(block);
   });
 
+  resetHints();
   showLeft("statementBody");
   $("submitButton").disabled = false;
   $("runButton").disabled = false;
@@ -1119,6 +1217,7 @@ $("tabProblem").addEventListener("click", () => {
 $("tabSkills").addEventListener("click", showSkills);
 $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);
+$("hintButton").addEventListener("click", revealNextHint);
 restore();
 refreshDiagnostic();
 refreshReviews();
