@@ -42,6 +42,14 @@ public class ProblemCatalog {
      *     "느렸다" 가 된다.
      * @param kind {@code NORMAL} / {@code MICRO_DRILL} 등. 드릴은 Evidence 종류가 다르다.
      */
+    /**
+     * @param commonMistakes 이 문제에서 <b>실제로 일어날 수 있다고 선언된</b> 실수들.
+     *     문제를 만든 사람이 적고, CI 가 검증한다 - {@code wrong.py} 와
+     *     {@code probes/} 가 실제로 그 실수를 담고 있어야 한다(ADR-0007, ADR-0015).
+     *
+     *     <p>그래서 이 목록 밖의 주장은 <b>일어날 수 없다고 선언된 것</b>이다.
+     *     기록은 하되 확정의 근거로 쓰지 않는다(ADR-0029).
+     */
     public record ProblemDefinition(
             String code,
             String title,
@@ -51,7 +59,8 @@ public class ProblemCatalog {
             Integer timeLimitMs,
             Integer memoryLimitMb,
             Integer expectedSolveSeconds,
-            List<SkillLink> skills) {
+            List<SkillLink> skills,
+            List<String> commonMistakes) {
 
         /** 이 문제가 주로 겨냥하는 Skill. */
         public String primarySkill() {
@@ -120,7 +129,9 @@ public class ProblemCatalog {
                         integer(doc.get("timeLimitMs")),
                         integer(doc.get("memoryLimitMb")),
                         integer(doc.get("expectedSolveSeconds")),
-                        List.copyOf(skills)));
+                        List.copyOf(skills),
+                        List.copyOf((List<String>) doc.getOrDefault(
+                                "commonMistakes", List.<String>of()))));
             }
         } catch (IOException e) {
             throw new UncheckedIOException("문제를 읽지 못했다: " + root, e);
