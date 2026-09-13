@@ -109,6 +109,17 @@ function finished(submissionId, action, targetSkill, reason) {
   };
 }
 
+/** 한 단계 내준 힌트. */
+function hint(level, highestLevel = level, topLevel = 6) {
+  return {
+    problemCode: "P02_GRID_TRAVERSAL",
+    level,
+    text: level === topLevel ? "print(1)" : `H${level} 내용`,
+    highestLevel,
+    topLevel,
+  };
+}
+
 /**
  * 접수만 된 제출(202). GET 조회와 **같은 계약**을 쓴다 - 클라이언트가 둘을 다르게
  * 다룰 이유가 없기 때문이다(submission-status.schema.json).
@@ -145,6 +156,9 @@ async function stubApi(page, overrides = {}) {
     if (/^\/api\/problems\/[^/]+$/.test(p)) {
       return fulfill(route, problem(p.split("/").pop()));
     }
+    if (/\/hints\/\d+$/.test(p)) {
+      return fulfill(route, hint(Number(p.split("/").pop())));
+    }
     if (p.endsWith("/diagnostic")) {
       return fulfill(route, overrides.diagnostic || DEFAULTS.diagnostic);
     }
@@ -164,6 +178,6 @@ async function stubApi(page, overrides = {}) {
 }
 
 module.exports = {
-  gate, releaseAndSettle, stubApi, problem, finished, accepted, conceptFor,
+  gate, releaseAndSettle, stubApi, problem, finished, accepted, hint, conceptFor,
   fulfill, DEFAULTS,
 };

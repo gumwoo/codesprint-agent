@@ -33,6 +33,7 @@ const BY_PATH = [
   [/^\/api\/submissions\/\d+\/next-problem$/, "next-problem"],
   [/^\/api\/submissions\/\d+$/, "submission-status"],
   [/^\/api\/problems\/[^/]+\/submit$/, "submission-status"],
+  [/^\/api\/problems\/[^/]+\/hints\/\d+$/, "hint-view"],
   [/^\/api\/problems\/[^/]+$/, "problem-view"],
   [/^\/api\/problems$/, "problem-list"],
   [/^\/api\/runs\/\d+$/, "run-result"],
