@@ -336,6 +336,8 @@ public class JudgeResultApplier {
                 judged.status(),
                 confirmedMistake,
                 consecutiveFailures(userId, submission.problemId()),
+                // 같은 자료를 두 번 주지 않는다(ADR-0030).
+                submissions.conceptAlreadyShown(userId, submission.problemId()),
                 reviewSchedules.isScheduled(userId, primarySkill),
                 masteries,
                 pendingDiagnosticSkill(states),

@@ -249,6 +249,12 @@ cd e2e && npm ci && npx playwright install chromium && npx playwright test
 손으로 골라 놓고** 그 규칙만 확인하므로, 규칙들을 이어 붙였을 때 실제로 어딘가에
 도착하는지는 아무도 보지 않았다. 첫 실행에서 열두 걸음 중 여덟 걸음이 갈 곳이 없었다.
 
+틀리는 갈래도 걷는다(`FailingJourneyTest`,
+[ADR-0030](docs/adr/0030-the-agent-does-not-repeat-itself.md)). 첫 실행에서 서른 걸음
+중 스물여섯이 제자리였다 - 문제가 하나뿐인 Skill 에서 빈손으로 돌려보냈고, 개념
+자료를 스물네 번 되풀이했다. **한 번 주는 것은 맞고 스물네 번 주는 것이 틀린 것이라,
+조각 검사로는 보이지 않는다.**
+
 제출 하나가 지나는 길:
 
 ```

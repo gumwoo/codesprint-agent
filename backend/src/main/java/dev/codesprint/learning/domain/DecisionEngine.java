@@ -50,6 +50,11 @@ public class DecisionEngine {
      *     참여하는 입력이므로, 값을 빠뜨리면 "진단 밖" 과 "안 물어봤다" 가 같아진다.
      * @param dueReviewSkill 만기된 복습이 걸려 있는 Skill. 없으면 null 이다.
      *     <b>만기인지는 일정이 정한다</b>(ADR-0021) - 문제 종류가 아니다.
+     * @param conceptAlreadyShown 이 문제에서 개념 자료를 이미 한 번 보여줬는가.
+     *     <b>같은 자료를 반복해서 주지 않기 위해 필요하다.</b> Addendum §43 의 MVP
+     *     규칙은 "같은 문제 3회 실패 -> REVIEW_CONCEPT" 까지만 정하고 그 뒤를 말하지
+     *     않는다. 그래서 자료를 본 뒤에도 조건이 그대로 맞아 같은 자료가 계속 나왔다 -
+     *     실제로 걸어 보니 스물네 걸음이 같은 자료였다(ADR-0030).
      * @param unlockedSkill 이 Skill 을 숙달했을 때 다음으로 갈 Skill(ADR-0022).
      *     커리큘럼에 남은 것이 없으면 null 이다. <b>숙달하지 않았어도 채워서 들어온다</b> -
      *     쓸지 말지는 여기서 정한다.
@@ -61,6 +66,7 @@ public class DecisionEngine {
             JudgeStatus judgeStatus,
             String confirmedMistake,
             int sameProblemAttempts,
+            boolean conceptAlreadyShown,
             boolean reviewScheduled,
             Map<String, Double> masteries,
             String diagnosticSkill,
@@ -260,7 +266,11 @@ public class DecisionEngine {
         }
 
         // 같은 문제를 세 번 넘게 틀리면 문제가 아니라 개념 쪽이다.
-        if (context.sameProblemAttempts() >= 3) {
+        //
+        // **한 번만 보여준다.** 자료를 읽고도 또 틀렸다면 그 자료를 다시 주는 것은
+        // 이미 듣지 않은 말을 되풀이하는 것이다. 그때는 아래로 흘러 Addendum §43 의
+        // else 인 RETRY_VARIANT 가 된다 - 같은 Skill 의 다른 문제로 옮긴다.
+        if (context.sameProblemAttempts() >= 3 && !context.conceptAlreadyShown()) {
             return NextAction.targeting(ActionType.REVIEW_CONCEPT, context.skillCode(),
                     "같은 문제 " + context.sameProblemAttempts() + "회 실패 - 개념부터 다시 본다");
         }

@@ -20,7 +20,8 @@ class NextProblemConceptTest {
     private final SubmissionRepository submissions = mock(SubmissionRepository.class);
     private final NextProblemService service = new NextProblemService(
             mock(ProblemCatalog.class), submissions, mock(ProblemRepository.class),
-            new CurriculumCatalog());
+            new CurriculumCatalog(),
+            mock(dev.codesprint.learning.service.ReviewScheduleService.class));
 
     @Test
     @DisplayName("REVIEW_CONCEPT만 대상 Skill의 개념 자료를 받는다")
@@ -48,7 +49,8 @@ class NextProblemConceptTest {
         CurriculumCatalog curriculum = mock(CurriculumCatalog.class);
         NextProblemService guardedService = new NextProblemService(
                 mock(ProblemCatalog.class), submissions, mock(ProblemRepository.class),
-                curriculum);
+                curriculum,
+                mock(dev.codesprint.learning.service.ReviewScheduleService.class));
         SubmissionRow row = submission(44L, "REVIEW_CONCEPT", "UNKNOWN_SKILL");
         when(submissions.findById(44L)).thenReturn(Optional.of(row));
 
