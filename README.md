@@ -34,16 +34,58 @@
 
 ```text
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
-contracts/     LLM 요청/응답 + Judge 판정 계약 (JSON Schema)
-judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스
-problems/      슬라이스 1 의 검증된 문제 10개 (전부 개발 fixture — ADR-0008)
+contracts/     API · LLM · Judge 계약 (JSON Schema) — 전부 contracts/README.md 표에 있다
+judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스 + Judge Worker
+problems/      슬라이스 1 의 검증된 문제 15개 (전부 개발 fixture — ADR-0008)
 learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
-backend/       Spring Boot · PostgreSQL · Mastery / Decision Engine
-tests/golden/  두 구현을 대조하는 golden fixture
-tools/         계약 검사 + 메타테스트
+backend/       Spring Boot · PostgreSQL · Decision Engine · API · 화면(static/)
+reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
+e2e/           실제 브라우저로 보는 화면 비동기 순서 검사 (Playwright)
+tests/         golden fixture + Reviewer 평가 케이스
+tools/         계약 · 문제 데이터 검사 + 메타테스트
+scripts/       내 PC 에서 끝까지 띄우는 스크립트
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
 ```
+
+## 내 PC 에서 실행
+
+배포하지 않는다. 만든 사람이 자기 PC 에서 돌린다.
+
+**필요한 것:** Docker Desktop(켜진 상태) · Java 17+ · Python 3.12+ ·
+`pip install -r requirements-dev.txt`. Claude CLI 는 선택이다 — 없으면 오답 분석만
+빠지고 판정 · mastery · 다음 행동은 그대로 돈다.
+
+```bash
+scripts/local.sh check      # 필요한 것이 다 있는가 (포트 충돌도 본다)
+scripts/local.sh db         # PostgreSQL (localhost:55440)
+scripts/local.sh build      # 샌드박스 이미지 + 백엔드 jar
+scripts/local.sh backend    # 터미널 1 — 화면 http://localhost:18080
+scripts/local.sh worker     # 터미널 2 — 채점
+```
+
+**떠야 하는 것이 넷이고, 한 스크립트가 숨기지 않는다.**
+
+| | 어디서 | 없으면 |
+| --- | --- | --- |
+| PostgreSQL | 컨테이너 (`compose.yaml`) | 백엔드가 뜨지 않는다 |
+| 백엔드 + 화면 | 호스트 `java -jar` | — |
+| Judge Worker | 호스트 `python judge/worker.py` | **제출이 영원히 "채점 중" 이다** |
+| Reviewer (선택) | 호스트 `claude` CLI | 오답 원인 분석만 빠진다 |
+
+백엔드와 Worker 가 컨테이너가 아닌 이유는 둘 다 호스트의 무언가를 불러야 해서다 —
+Reviewer 는 로그인된 `claude` CLI 를, Worker 는 채점 샌드박스를 띄울 `docker` 를.
+그리고 둘은 **각자 한 터미널을 차지한다.** 백그라운드로 숨기면 하나가 죽었을 때
+화면은 멈춘 것처럼 보이고 이유는 어디에도 남지 않는다.
+
+Reviewer 까지 켜려면:
+
+```bash
+CODESPRINT_REVIEWER_ENABLED=true scripts/local.sh backend
+```
+
+포트는 `PORT=` 와 `CODESPRINT_DB_PORT=` 로 바꾼다. 8080 · 5432 를 쓰지 않는 이유는
+개발 PC 에 흔히 다른 서버가 이미 떠 있기 때문이다 — 실제로 부딪혔다.
 
 ## 검증
 
@@ -60,7 +102,7 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 아무것도 안 하는 검사도 통과한다. 그래서 계약을 일부러 망가뜨린 뒤 검사가 실제로
 실패하는지 확인한다. 여기서 "검사가 놓침"이 나오면 데이터가 아니라 **하네스가 깨진 것**이다.
 
-현재 계약 27건 + 문제 데이터 15건, 총 42개 위반 케이스를 차단한다.
+현재 커리큘럼 · 계약 32건 + 문제 데이터 27건, 총 59개 위반 케이스를 차단한다.
 
 같은 논리가 문제 데이터에도 적용된다. **정답이 통과하는 것과 오답이 걸리는 것은
 다르다** — 아무것도 거르지 못하는 Test Case 집합도 정답은 통과시킨다. 그래서 문제마다
@@ -69,7 +111,7 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 그것도 "실패했는가" 가 아니라 **"의도한 이유로 실패했는가"** 를 본다 — 심어둔 실수와
 드러나야 할 판정을 `negativeControl` 에 데이터로 적어두고 대조한다.
 
-저장소의 문제 10개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
+저장소의 문제 15개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
 실서비스 문제은행은 여기 두지 않는다([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
 
 Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
@@ -79,7 +121,7 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 ```bash
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
-python tools/verify_problems.py           # 문제 10개를 실제로 채점
+python tools/verify_problems.py           # 문제 15개를 실제로 채점
 python learning/tests/test_mastery.py     # Mastery 산식 (Python oracle)
 python tools/gen_mastery_golden.py        # golden 이 oracle 과 일치하는가
 cd backend && gradle test                 # Java 구현이 oracle 과 같은 값을 내는가
@@ -96,21 +138,24 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 
 ## 현재 상태
 
-첫 Vertical Slice 착수 전. 존재하는 것은 커리큘럼 데이터, LLM 계약, 그리고
-그 둘을 지키는 하네스다.
+**슬라이스 1 의 필수 흐름(Addendum §38)이 끝까지 돈다** — 진단에서 출발해 문제를 풀고,
+실제 샌드박스가 채점하고, 판정 · mastery · 다음 행동을 거쳐 다음 문제로 간다.
+에이전트가 가리키는 대로만 걸어 `MASTERED` 에 닿는 것을 테스트가 본다
+([ADR-0028](docs/adr/0028-the-guided-path-is-walked-end-to-end.md),
+[ADR-0030](docs/adr/0030-the-agent-does-not-repeat-itself.md)).
 
 | | 상태 |
 | --- | --- |
 | Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
-| LLM 계약 + 검사 하네스 | 완료 |
-| Judge / Sandbox (Python 3.12) | 완료 |
-| 문제 · Test Case 10개 | 완료 |
-| Mastery / Evidence 산식 (Python oracle) | 완료 |
-| 백엔드 기반 · Evidence 영속성 · Java 산식 | 완료 |
-| Judge Worker / 큐 | 미착수 |
-| Decision Engine · 선수 관계 판정 | 완료 |
-| API / Frontend | 미착수 |
-| Reviewer 평가 하네스 | 슬라이스 1 이후 (로깅은 지금부터) |
+| 계약 + 검사 하네스 + 메타테스트 | 완료 |
+| Judge / Sandbox (Python 3.12) + Judge Worker / 큐 | 완료 |
+| 문제 · Test Case 15개 + 단계별 힌트 사다리 | 완료 |
+| Mastery / Evidence 산식 (Python oracle ↔ Java) | 완료 |
+| 초기 진단 · Decision Engine · 선수 관계 | 완료 |
+| 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |
+| API + 화면 (빌드 도구 없음) + 브라우저 E2E | 완료 |
+| Reviewer + 실제 모델 평가 (25건 · 오확정 0) | 완료 — 기본은 꺼져 있다 |
+| 내 PC 실행 경로 (`scripts/local.sh`) | 완료 |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이다.
 도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개

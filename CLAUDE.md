@@ -189,7 +189,7 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 ## 현재 상태
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
-10개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
+15개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
 제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
 LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않으면 분석 없이 나머지가
 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
@@ -213,8 +213,20 @@ CODESPRINT_REVIEWER_ENABLED=true   # 로컬 Claude CLI 가 있고 로그인돼 �
 때는 새 파일을 만든다 - 같은 이름으로 내용을 바꾸면 이전에 쌓인 라벨과 이후 라벨이
 섞여 Reviewer 정확도를 잴 수 없게 된다.
 
-화면을 열면 그 길이 눈에 보인다. `http://localhost:8080` - 문제를 고르고, 제출하고,
-채점을 기다리고, 판정·분석·다음 행동을 보고, 그 다음 문제로 넘어간다.
+화면을 열면 그 길이 눈에 보인다 - 문제를 고르고, 제출하고, 채점을 기다리고,
+판정·분석·다음 행동을 보고, 그 다음 문제로 넘어간다.
+
+**내 PC 에서 끝까지 띄우는 길은 `scripts/local.sh` 하나다.** DB 만 컨테이너(compose.yaml)고
+백엔드와 Judge Worker 는 호스트에서 각자 한 터미널을 차지한다 - 백엔드는 호스트의
+claude CLI 를, Worker 는 호스트의 docker 를 불러야 해서다. **Worker 가 없으면 제출은
+영원히 "채점 중" 이다.** 화면은 `http://localhost:18080` 이다 - 8080 은 개발 PC 에 흔히
+다른 서버가 떠 있어 실제로 부딪혔다.
+
+```bash
+scripts/local.sh check && scripts/local.sh db && scripts/local.sh build
+scripts/local.sh backend    # 터미널 1
+scripts/local.sh worker     # 터미널 2
+```
 
 **화면은 판단하지 않는다.** 점수도 다음 행동도 서버가 정해서 내려준 것을 보여주기만
 한다. `app.js` 가 mastery 를 계산하거나 액션을 고르기 시작하면 테스트가 막는다 -
