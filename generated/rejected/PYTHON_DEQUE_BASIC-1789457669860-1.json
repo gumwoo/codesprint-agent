@@ -1,0 +1,70 @@
+{
+  "id": "PYTHON_DEQUE_BASIC-1789457669860-1",
+  "skill": "PYTHON_DEQUE_BASIC",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T08:28:54+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "P18_DEQUE_MOVING_SUM 으로 채택됐다가 PR #43 검토에서 철회했다",
+    "deque 없이 배열 인덱스로 K 칸 전 값을 빼는 풀이가 실제 채점에서 ACCEPTED - PYTHON_DEQUE_BASIC 을 재지 못한다",
+    "당시 채택 검사에 Skill 측정 단계가 없었다. 같은 모양의 초안은 이제 그 단계에서 막힌다(ADR-0033)"
+  ],
+  "draft": {
+    "codeSuffix": "DEQUE_MOVING_SUM",
+    "title": "이동합 구하기",
+    "statement": "정수 수열이 순서대로 하나씩 들어온다. 매번 새 정수가 들어올 때마다 최근에 들어온 최대 K 개의 값들의 합을 출력한다.\n\n입력: 첫 줄에 정수의 개수 N 과 윈도우 크기 K (1 ≤ K ≤ N ≤ 100000) 가 공백으로 구분되어 주어진다. 둘째 줄에 N 개의 정수가 공백으로 구분되어 주어진다. 각 정수의 절댓값은 1000 이하다.\n\n출력: i 번째 정수가 들어온 직후의 윈도우 합을 한 줄에 하나씩, 총 N 줄에 걸쳐 출력한다. 지금까지 들어온 정수의 개수가 K 개 미만이면 그때까지 들어온 모든 정수의 합을 출력한다. 인덱스는 1부터 센다(입력에 등장하는 순서 기준).",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(N)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT",
+      "INDEX_ERROR",
+      "IMPLEMENTATION_MISC"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "윈도우 크기를 초과해도 popleft 를 호출하지 않아 deque 가 끝없이 커지고, 윈도우 밖의 값까지 합에 포함된다.",
+    "sampleInputs": [
+      "5 3\n1 2 3 4 5",
+      "4 1\n10 -10 5 5"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n-1000"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "3 2\n1000 -1000 1000"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "4 4\n1 2 3 4"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "6 3\n1 1 2 2 3 3"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5 3\n7 7 7 7 7"
+      }
+    ],
+    "inputGenerator": "import random, sys\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    n = rng.randint(1, 8)\n    k = rng.randint(1, n)\n    values = [rng.randint(-20, 20) for _ in range(n)]\n    print(n, k)\n    print(*values)\n\nif __name__ == \"__main__\":\n    main()\n",
+    "reference": "import sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    k = int(data[idx]); idx += 1\n    values = [int(data[idx + i]) for i in range(n)]\n    dq = deque()\n    total = 0\n    out = []\n    for v in values:\n        dq.append(v)\n        total += v\n        if len(dq) > k:\n            total -= dq.popleft()\n        out.append(str(total))\n    print(\"\\n\".join(out))\n\nif __name__ == \"__main__\":\n    main()\n",
+    "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    k = int(data[idx]); idx += 1\n    values = [int(data[idx + i]) for i in range(n)]\n    out = []\n    for i in range(n):\n        start = max(0, i - k + 1)\n        window = values[start:i + 1]\n        out.append(str(sum(window)))\n    print(\"\\n\".join(out))\n\nif __name__ == \"__main__\":\n    main()\n",
+    "wrong": "# 윈도우 크기를 초과해도 popleft 를 호출하지 않는다.\nimport sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    k = int(data[idx]); idx += 1\n    values = [int(data[idx + i]) for i in range(n)]\n    dq = deque()\n    total = 0\n    out = []\n    for v in values:\n        dq.append(v)\n        total += v\n        out.append(str(total))\n    print(\"\\n\".join(out))\n\nif __name__ == \"__main__\":\n    main()\n",
+    "hints": [
+      "매번 값이 들어올 때, 답에 영향을 주는 것은 전체가 아니라 '최근 K 개'뿐이라는 점에 주목하라 - 그보다 오래된 값은 더 이상 필요 없다.",
+      "정렬이나 매번 전체를 훑는 방식이 아니라, 값이 들어오고 나가는 순서를 그대로 활용하는 자료구조 문제다.",
+      "양쪽 끝에서 효율적으로 값을 추가하고 제거할 수 있는 구조가 필요하다 - collections.deque 의 append 와 popleft.",
+      "새 값이 들어오면 뒤에 추가하고 합에 더한다. 그 결과 보관 중인 개수가 K 를 넘으면 가장 오래된 값을 앞에서 빼내 합에서도 제거한다.",
+      "큐에 새 값을 넣고 합에 더한다. 큐 길이가 K 보다 크면 맨 앞 값을 빼서 합에서 제거한다. 그 다음 현재 합을 출력한다."
+    ]
+  }
+}
