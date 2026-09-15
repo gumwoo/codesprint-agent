@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/problem-draft.llm.schema.json",
+  "title": "ProblemDraft",
+  "description": "LLM 에게 요청하는 문제 초안(ADR-0032). **초안이지 문제가 아니다** - tools/adopt_problem.py 의 채택 검사를 통과한 것만 problems/ 에 들어간다. 여기 없는 것이 중요하다: 기대 출력(expectedOutput)을 받지 않는다. 시스템이 정답을 실행해서 만든다 - LLM 이 정답과 '맞게 틀린' 기대값을 함께 적는 경로를 없애기 위해서다. Skill 비중(weight)과 시간 · 메모리 제한도 받지 않는다 - 시스템이 정한다(ADR-0001).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "codeSuffix",
+    "title",
+    "statement",
+    "secondarySkills",
+    "referenceComplexity",
+    "expectedSolveSeconds",
+    "commonMistakes",
+    "negativeControl",
+    "wrongDescription",
+    "sampleInputs",
+    "edgeCases",
+    "inputGenerator",
+    "reference",
+    "bruteForce",
+    "wrong",
+    "hints"
+  ],
+  "properties": {
+    "codeSuffix": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$",
+      "description": "문제 code 의 뒷부분. 번호는 시스템이 붙인다 - P16_ 처럼."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "statement": {
+      "type": "string",
+      "minLength": 20,
+      "description": "입력 형식 · 출력 형식 · 인덱스 기준(0-based 여부)을 모두 적는다."
+    },
+    "secondarySkills": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" },
+      "description": "요청한 Skill 말고 이 문제가 함께 요구하는 Skill. 없으면 [] 다."
+    },
+    "referenceComplexity": { "type": "string", "minLength": 1 },
+    "expectedSolveSeconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+    "commonMistakes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" },
+      "description": "curriculum/mistakes.yaml 에서 assigned_by 가 REVIEWER 인 code 만."
+    },
+    "negativeControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mistake", "expectedStatus"],
+      "properties": {
+        "mistake": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" },
+        "expectedStatus": { "enum": ["WRONG_ANSWER", "RUNTIME_ERROR"] }
+      },
+      "description": "wrong 풀이가 심은 실수와 그것이 드러나야 하는 판정."
+    },
+    "wrongDescription": {
+      "type": "string",
+      "minLength": 1,
+      "description": "wrong 이 무엇을 틀리게 했는가. wrong.py 첫 줄 주석이 된다."
+    },
+    "sampleInputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "사용자에게 보여줄 예시 입력. 기대 출력은 적지 않는다."
+    },
+    "edgeCases": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "input"],
+        "properties": {
+          "type": {
+            "enum": ["MINIMUM", "MAXIMUM", "BOUNDARY", "DUPLICATE", "SINGLE", "ALL_SAME", "ADVERSARIAL"]
+          },
+          "input": { "type": "string", "minLength": 1 }
+        }
+      },
+      "description": "숨은 case 가 될 경계 입력. 기대 출력은 적지 않는다."
+    },
+    "inputGenerator": {
+      "type": "string",
+      "minLength": 1,
+      "description": "표준입력으로 정수 seed 하나를 받아 작은 무작위 입력 하나를 출력하는 Python 프로그램. bruteForce 가 금방 끝날 크기여야 한다."
+    },
+    "reference": { "type": "string", "minLength": 1, "description": "정답 풀이 (Python 3.12, 표준 라이브러리만)." },
+    "bruteForce": {
+      "type": "string",
+      "minLength": 1,
+      "description": "reference 와 **다른 방식**의 단순한 정답 풀이. 느려도 된다. 둘이 모든 입력에서 같은 답을 내야 채택된다."
+    },
+    "wrong": { "type": "string", "minLength": 1, "description": "negativeControl 의 실수 하나만 심은 오답." },
+    "hints": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "H1 관찰 포인트 · H2 알고리즘 범주 · H3 자료구조 · H4 핵심 전이 · H5 의사코드. 정답 코드의 줄을 그대로 담지 않는다."
+    }
+  }
+}
