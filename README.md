@@ -104,8 +104,12 @@ scripts/local.sh adopt generated/drafts/*.json     # 채택 검사 (Docker)
 입력 30개와 경계 입력 전부에서 **답이 같아야** 채택된다.
 
 ```text
-계약 → 참조 → 중복 → 입력 생성기 → 교차 검증 → 문제 데이터 검사 → 실제 채점
+계약 → 참조 → 중복 → 입력 생성기 → 교차 검증 → Skill 측정 → 문제 데이터 검사 → 실제 채점
 ```
+
+**AC 는 Skill 사용을 증명하지 않는다**([ADR-0033](docs/adr/0033-an-accepted-answer-does-not-prove-the-skill.md)).
+deque 를 몰라도 AC 가 나는 문제가 채택됐다가 철회됐다. 정답만으로 잴 수 없는 Skill 이면
+그 Skill 없이 같은 답을 내는 풀이가 큰 입력에서 시간 초과해야 채택된다.
 
 뒤의 두 단계는 사람이 쓴 문제에 쓰던 검사 그대로다. 거절된 초안도 단계와 사유와 함께
 `generated/rejected/` 에 남는다. 채택된 문제는 PR 로 들어오고 사람이 마지막에 본다.
