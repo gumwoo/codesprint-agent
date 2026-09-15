@@ -406,6 +406,28 @@ table.runcases pre {
   word-break: break-all;
 }
 
+/* 좁은 화면. 두 단을 위아래로 쌓는다 - 문제 본문이 위, 에디터와 결과가 아래.
+   새 색이나 모양을 넣지 않는다. 경계선과 명도만 그대로 쓰고, 한 화면에 가두던
+   높이 제한을 풀어 페이지가 세로로 스크롤되게 한다. 가운데 핸들은 끌 폭이 없으므로
+   숨긴다. */
+@media (max-width: 900px) {
+  html, body { height: auto; }
+  body { overflow: auto; }
+
+  .split { grid-template-columns: 1fr; }
+  .gutter { display: none; }
+
+  .pane.left { border-right: none; border-bottom: 1px solid var(--line); }
+  .pane-body { overflow: visible; }
+
+  .editor { flex: 0 0 auto; height: 320px; }
+  .pane-body.result { flex: 0 0 auto; }
+
+  .topbar { gap: 8px; padding: 0 10px; }
+  .who input { width: 48px; }
+  .sample { grid-template-columns: 1fr; }
+}
+
 /* 단계별 힌트. 사다리라는 것이 보이게 번호를 남긴다. */
 .hints {
   margin-top: 20px;

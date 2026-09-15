@@ -474,6 +474,23 @@ async function refreshDiagnostic() {
 let shownHints = 0;
 
 /**
+ * 사다리의 끝(전체 풀이) 번호. 서버가 한 번이라도 알려주기 전에는 null 이다.
+ * 화면이 6 이라고 가정하지 않는다 - 끝이 어디인지는 서버가 정한다(ADR-0026).
+ */
+let hintTop = null;
+
+/**
+ * 전체 풀이 버튼을 한 번 눌러 둔 상태인가.
+ *
+ * <p><b>전체 풀이는 되돌릴 수 없다.</b> 한 번 열면 그 문제의 다음 제출은 독립 풀이로
+ * 세지 않고(solutionViewed), independent 관측값이 0.95 에서 0.10 으로 떨어진다.
+ * 그래서 두 번 누르게 한다 - 앞 단계 힌트를 연달아 누르다 손이 한 번 더 가는 것으로
+ * 끝나면 안 된다. 브라우저 confirm 창을 쓰지 않는 이유는 결과를 제자리에서 말하는
+ * 이 화면의 방식과 맞지 않기 때문이다.
+ */
+let solutionArmed = false;
+
+/**
  * 힌트 패널을 비운다. <b>문제가 바뀌는 모든 길이 여기를 지난다</b> -
  * {@code openProblem} 하나이고, {@code goToNextProblem} 도 그것을 부른다.
  *
@@ -484,6 +501,9 @@ let shownHints = 0;
 function resetHints() {
   invalidateView("hints");
   shownHints = 0;
+  hintTop = null;
+  // 눌러 둔 상태가 남으면 다른 문제에서 한 번만 눌러도 전체 풀이가 열린다.
+  solutionArmed = false;
   $("hintList").replaceChildren();
   $("hintNote").textContent = "";
   $("hintButton").textContent = "힌트 보기";
@@ -504,6 +524,16 @@ async function revealNextHint() {
   }
   const code = currentProblem.code;
   const level = shownHints + 1;
+
+  // 다음이 전체 풀이면 한 번은 멈춘다. 끝 번호는 서버가 알려준 값이다.
+  if (hintTop !== null && level === hintTop && !solutionArmed) {
+    solutionArmed = true;
+    $("hintButton").textContent = "한 번 더 누르면 전체 풀이를 연다";
+    $("hintNote").textContent =
+        "전체 풀이를 열면 이 문제의 다음 제출은 독립 풀이로 세지 않는다.";
+    return;
+  }
+
   const mine = claimView("hints");
   $("hintButton").disabled = true;
 
@@ -544,6 +574,7 @@ async function revealNextHint() {
   }
   $("hintList").append(item);
   shownHints = hint.level;
+  hintTop = hint.topLevel;
 
   // **서버가 준 숫자를 그대로 쓴다.** 이 값이 제출에 얼려져 mastery 에 들어간다.
   $("hintNote").textContent =
