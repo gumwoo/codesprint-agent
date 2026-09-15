@@ -51,6 +51,29 @@ python tools/check_curriculum.py      # 데이터/계약이 맞는가
 python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 ```
 
+## 문제를 생성할 때
+
+**LLM 은 초안만 만들고, 채택은 검사가 정한다**([ADR-0032](docs/adr/0032-the-agent-drafts-the-system-adopts.md)).
+점수와 액션을 LLM 에게 묻지 않는 것과 같은 선이다 - 문제가 되는지도 묻지 않는다.
+
+```bash
+scripts/local.sh generate <SKILL> [개수]    # generated/drafts/ (Claude CLI)
+scripts/local.sh adopt generated/drafts/*.json
+python tools/meta_test_adoption.py         # 채택 검사가 실제로 거르는가 (Docker)
+```
+
+- **기대 출력을 초안에 받지 않는다.** 시스템이 reference 를 실행해 만든다. 초안 계약에
+  `expectedOutput` 을 넣으면 LLM 이 정답과 "맞게 틀린" 기대값을 함께 적는 길이 다시 열린다
+- 그래서 **reference 와 다른 방식의 bruteForce 가 모든 입력에서 같아야** 채택한다.
+  교차 검증을 빼면 "정답이 통과한다" 는 자기 답과 자기를 비교한 것이다
+- 채택 검사의 뒤 두 단계는 `check_problems` · `verify_problems` 를 **그대로** 부른다.
+  생성 문제용 검사를 따로 만들면 사람이 쓴 문제와 기준이 갈린다
+- 초안 코드(입력 생성기 포함)는 **신뢰할 수 없는 입력**이다. 전부 샌드박스에서 돈다
+- 채택 검사를 새로 넣으면 `meta_test_adoption.py` 에 그것을 **제 단계에서** 걸리게 하는
+  케이스를 함께 넣는다
+- 생성기 프롬프트도 **파일 이름이 버전이다**(`generator/prompts/problem-v1.md`). 명령은
+  Reviewer 와 `application.yml` 앵커로 공유한다 - 따로 적으면 한쪽만 도구 권한이 열린다
+
 ## 사용자 제출 코드
 
 `judge/submissions/` 아래는 **신뢰할 수 없는 입력**이다. 판정 대상이지 실행 대상이 아니다.

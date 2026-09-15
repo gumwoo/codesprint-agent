@@ -43,7 +43,9 @@ reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
 e2e/           실제 브라우저로 보는 화면 비동기 순서 검사 (Playwright)
 tests/         golden fixture + Reviewer 평가 케이스
 tools/         계약 · 문제 데이터 검사 + 메타테스트
-scripts/       내 PC 에서 끝까지 띄우는 스크립트
+scripts/       내 PC 에서 끝까지 띄우는 스크립트 (+ 문제 초안 생성 · 채택)
+generator/     문제 초안 생성기 프롬프트 (파일 이름이 버전이다)
+generated/     생성된 초안 · 채택 기록 · 거절 사유
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
 ```
@@ -86,6 +88,30 @@ CODESPRINT_REVIEWER_ENABLED=true scripts/local.sh backend
 
 포트는 `PORT=` 와 `CODESPRINT_DB_PORT=` 로 바꾼다. 8080 · 5432 를 쓰지 않는 이유는
 개발 PC 에 흔히 다른 서버가 이미 떠 있기 때문이다 — 실제로 부딪혔다.
+
+## 문제 만들기 — 에이전트가 초안을, 시스템이 채택을
+
+문제는 LLM 이 **초안**으로 만들고, 채택 검사를 통과한 것만 문제은행에 들어간다
+([ADR-0032](docs/adr/0032-the-agent-drafts-the-system-adopts.md)).
+
+```bash
+scripts/local.sh generate PYTHON_LIST_BASIC 2      # 초안 2개 (Claude CLI)
+scripts/local.sh adopt generated/drafts/*.json     # 채택 검사 (Docker)
+```
+
+**기대 출력은 LLM 에게 받지 않는다.** 시스템이 정답을 실행해서 만든다. 그러면 "정답이
+통과한다" 는 아무것도 증명하지 못하므로, 초안은 **다른 방식의 풀이 둘**을 내고 무작위
+입력 30개와 경계 입력 전부에서 **답이 같아야** 채택된다.
+
+```text
+계약 → 참조 → 중복 → 입력 생성기 → 교차 검증 → 문제 데이터 검사 → 실제 채점
+```
+
+뒤의 두 단계는 사람이 쓴 문제에 쓰던 검사 그대로다. 거절된 초안도 단계와 사유와 함께
+`generated/rejected/` 에 남는다. 채택된 문제는 PR 로 들어오고 사람이 마지막에 본다.
+
+`tools/meta_test_adoption.py` 가 고정 초안을 일부러 망가뜨려 각 결함이 **제 단계에서**
+막히는지 CI 에서 본다. 모델은 부르지 않는다.
 
 ## 검증
 
