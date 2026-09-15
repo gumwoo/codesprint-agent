@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.support.JudgeResultFixture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -209,7 +210,7 @@ class ReviewerFlowTest {
                  "memoryKb": 20480, "failedCaseId": %s, "stderr": null, "cases": %s}
                 """.formatted(judgeStatus, failedCaseId == null ? "null" : failedCaseId,
                 casesJson);
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+        JudgeResultFixture.finish(jdbc,
                 result, job.id());
 
         poller.applyFinishedJobs();
@@ -234,9 +235,7 @@ class ReviewerFlowTest {
         long submissionId = MAPPER.readTree(json).get("submissionId").asLong();
 
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
-        jdbc.update("""
-                UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?
-                """,
+        JudgeResultFixture.finish(jdbc,
                 """
                 {"status": "%s", "passed": 0, "total": 5, "executionMs": 90,
                  "memoryKb": 20480, "failedCaseId": %s, "stderr": null, "cases": []}

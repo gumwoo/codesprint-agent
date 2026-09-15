@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.support.JudgeResultFixture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -182,7 +183,7 @@ class ProblemDeliveryTest {
                 {"status": "%s", "passed": 0, "total": 5, "executionMs": 90,
                  "memoryKb": 20480, "failedCaseId": 4, "stderr": null, "cases": []}
                 """.formatted(judgeStatus);
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+        JudgeResultFixture.finish(jdbc,
                 result, job.id());
         poller.applyFinishedJobs();
         return submissionId;

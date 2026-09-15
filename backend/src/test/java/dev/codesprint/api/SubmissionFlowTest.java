@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.support.JudgeResultFixture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -160,8 +161,7 @@ class SubmissionFlowTest {
     private void workerFinishes(long submissionId, String resultJson) {
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow(
                 () -> new AssertionError("큐에 job 이 없다: submission " + submissionId));
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb,"
-                + " lease_expires_at = NULL WHERE id = ?", resultJson, job.id());
+        JudgeResultFixture.finish(jdbc, resultJson, job.id());
     }
 
     private JsonNode statusOf(long submissionId) throws Exception {
@@ -388,9 +388,7 @@ class SubmissionFlowTest {
         long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
-        jdbc.update("""
-                UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?
-                """,
+        JudgeResultFixture.finish(jdbc,
                 MAPPER.writeValueAsString(java.util.Map.of(
                         "status", "RUNTIME_ERROR", "passed", 0, "total", 6,
                         "executionMs", 90, "memoryKb", 20480, "failedCaseId", 1,
@@ -411,7 +409,7 @@ class SubmissionFlowTest {
         long submissionId = accept("P02_GRID_TRAVERSAL", requestBody())
                 .get("submissionId").asLong();
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+        JudgeResultFixture.finish(jdbc,
                 judged("ACCEPTED", 6, 6), job.id());
         poller.applyFinishedJobs();
 
