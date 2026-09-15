@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.support.JudgeResultFixture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -107,9 +108,12 @@ class RunTest {
         return MAPPER.readTree(response.getContentAsString()).get("runId").asLong();
     }
 
-    /** Worker 가 끝낸 것처럼 결과를 큐에 쓴다. */
+    /**
+     * Worker 가 끝낸 것처럼 결과를 큐에 쓴다. 실행 결과에는 case 마다 출력이 실리므로
+     * 제출 채점 계약이 아니라 run 계약(run-judge-result.schema.json)에 대고 검증한다.
+     */
     private void workerFinishes(long runId) {
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+        JudgeResultFixture.finishRun(jdbc,
                 """
                 {"status": "WRONG_ANSWER", "passed": 0, "total": 1, "executionMs": 40,
                  "memoryKb": 10240, "failedCaseId": 1, "stderr": null,

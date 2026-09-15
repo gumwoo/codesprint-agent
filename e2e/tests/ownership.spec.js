@@ -243,3 +243,55 @@ test("다음 단계는 화면이 정하지 않고 서버가 준 값을 따른다
   await expect(page.locator("#hintNote")).toHaveText("채점 기록에 남는 단계: H3 / H6");
   await expect(page.locator("#hintButton")).toHaveText("다음 힌트 (H2)");
 });
+
+test("전체 풀이는 두 번 눌러야 열린다", async ({ page }) => {
+  // 전체 풀이는 되돌릴 수 없다. 열면 그 문제의 다음 제출이 독립 풀이로 세지 않는다.
+  // 앞 단계 힌트를 연달아 누르다 손이 한 번 더 가는 것으로 끝나면 안 된다.
+  const solutionRequests = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/hints/6")) {
+      solutionRequests.push(request.url());
+    }
+  });
+  await stubApi(page);
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  for (let level = 1; level <= 5; level++) {
+    await page.click("#hintButton");
+    await expect(page.locator("#hintList li")).toHaveCount(level);
+  }
+  await expect(page.locator("#hintButton")).toHaveText("전체 풀이 보기 (H6)");
+
+  // 한 번 누르면 아무것도 열리지 않고, 무엇이 기록되는지 말한다.
+  await page.click("#hintButton");
+  await expect(page.locator("#hintButton")).toHaveText("한 번 더 누르면 전체 풀이를 연다");
+  await expect(page.locator("#hintNote")).toContainText("독립 풀이로 세지 않는다");
+  await expect(page.locator("#hintList li")).toHaveCount(5);
+  expect(solutionRequests).toHaveLength(0);
+
+  // 두 번째에 연다.
+  await page.click("#hintButton");
+  await expect(page.locator("#hintList li")).toHaveCount(6);
+  await expect(page.locator("#hintList li pre")).toHaveCount(1);
+  expect(solutionRequests).toHaveLength(1);
+});
+
+test("전체 풀이를 눌러 둔 채 문제를 옮기면 그 상태가 따라가지 않는다", async ({ page }) => {
+  // 눌러 둔 상태가 남으면 다른 문제에서 한 번만 눌러도 전체 풀이가 열린다.
+  await stubApi(page);
+
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  for (let level = 1; level <= 5; level++) {
+    await page.click("#hintButton");
+    await expect(page.locator("#hintList li")).toHaveCount(level);
+  }
+  await page.click("#hintButton");
+  await expect(page.locator("#hintButton")).toHaveText("한 번 더 누르면 전체 풀이를 연다");
+
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+  await expect(page.locator("#hintButton")).toHaveText("힌트 보기");
+});

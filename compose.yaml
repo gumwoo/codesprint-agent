@@ -1,0 +1,29 @@
+# 로컬에서 화면을 확인하기 위한 DB. 이것 하나만 컨테이너로 띄운다.
+#
+# 백엔드와 Judge Worker 는 호스트에서 돈다 - 둘 다 호스트의 무언가를 불러야 해서다.
+#
+#   백엔드   Reviewer 가 호스트의 claude CLI 를 부른다(로그인 세션을 쓴다)
+#   Worker   채점 샌드박스를 호스트의 docker 로 띄운다(ADR-0005)
+#
+# 포트를 5432 가 아니라 55440 으로 둔다. 개발 PC 에 이미 떠 있는 PostgreSQL 과
+# 부딪히면 "앱이 엉뚱한 DB 에 붙었다" 를 한참 뒤에야 알게 된다.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: codesprint-db
+    environment:
+      POSTGRES_DB: codesprint
+      POSTGRES_USER: codesprint
+      POSTGRES_PASSWORD: codesprint
+    ports:
+      - "${CODESPRINT_DB_PORT:-55440}:5432"
+    volumes:
+      - codesprint-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codesprint -d codesprint"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  codesprint-db:

@@ -518,6 +518,23 @@ def check_judge_status_enums_match() -> None:
     if only_response:
         fail("judge-sync", f"submit-response 에만 있는 status: {only_response}")
 
+    # 제출 전 실행의 결과도 같은 Runner 가 낸다(ADR-0031). 계약을 나눴다고 판정 값까지
+    # 갈라지면, 실행에서만 나오는 상태를 화면이 모르게 된다.
+    run = load_json(CONTRACTS / "run-judge-result.schema.json")
+    if run is None:
+        fail("judge-sync", "run-judge-result.schema.json 이 없다")
+        return
+    c = run.get("properties", {}).get("status", {}).get("enum")
+    if c is None:
+        fail("judge-sync", "run-judge-result 의 status enum 을 찾지 못했다")
+        return
+    only_run = sorted(set(c) - set(a))
+    only_judge_vs_run = sorted(set(a) - set(c))
+    if only_run:
+        fail("judge-sync", f"run-judge-result 에만 있는 status: {only_run}")
+    if only_judge_vs_run:
+        fail("judge-sync", f"run-judge-result 에 없는 status: {only_judge_vs_run}")
+
 
 def check_dependencies_have_one_source() -> None:
     """CI 와 README 가 서로 다른 의존성을 설치하는 것을 막는다.
@@ -554,6 +571,23 @@ def check_dependencies_have_one_source() -> None:
                     f"README.md:{i}: 의존성을 직접 나열한다 "
                     f"(requirements-dev.txt 를 쓴다) - {line.strip()}",
                 )
+
+
+def check_contracts_are_listed() -> None:
+    """contracts/ 의 계약이 전부 contracts/README.md 표에 있는가.
+
+    README 첫 줄이 "실제로 검증에 사용하는 계약이다" 라고 단정하는데, 실제로는
+    23개 중 10개만 적혀 있었다. 계약을 새로 만든 PR 마다 표를 잊었고, 아무도
+    몰랐다 - 처음 보는 사람은 표에 없는 계약이 있다는 것 자체를 모른다.
+    """
+    readme = CONTRACTS / "README.md"
+    if not readme.exists():
+        fail("contracts-readme", "contracts/README.md 가 없다")
+        return
+    text = readme.read_text(encoding="utf-8")
+    for path in sorted(CONTRACTS.glob("*.json")):
+        if f"[{path.name}]" not in text:
+            fail("contracts-readme", f"{path.name} 이 contracts/README.md 표에 없다")
 
 
 def check_test_inputs_trigger_ci() -> None:
@@ -698,6 +732,7 @@ def main() -> int:
     check_schemas_are_closed()
     check_judge_status_enums_match()
     check_dependencies_have_one_source()
+    check_contracts_are_listed()
     check_test_inputs_trigger_ci()
     check_nullable_fields_are_required()
     check_llm_schema_owns_nothing_systemic()

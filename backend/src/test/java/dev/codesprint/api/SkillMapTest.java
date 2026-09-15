@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.support.JudgeResultFixture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -131,7 +132,7 @@ class SkillMapTest {
                 .get("submissionId").asLong();
 
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+        JudgeResultFixture.finish(jdbc,
                 """
                 {"status": "%s", "passed": 6, "total": 6, "executionMs": 100,
                  "memoryKb": 20480, "failedCaseId": null, "stderr": null, "cases": []}

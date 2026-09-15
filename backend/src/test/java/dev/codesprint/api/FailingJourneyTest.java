@@ -1,5 +1,6 @@
 package dev.codesprint.api;
 
+import dev.codesprint.support.JudgeResultFixture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -177,7 +178,7 @@ class FailingJourneyTest {
         JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
         // case 4 만 실패시킨다. 전부 실패시키면 어떤 태그든 만족해 버려서 실패의
         // 모양이 근거가 되지 못한다(ADR-0015 의 대조군).
-        jdbc.update("UPDATE judge_jobs SET status = 'DONE', result = ?::jsonb WHERE id = ?",
+        JudgeResultFixture.finish(jdbc,
                 """
                 {"status": "WRONG_ANSWER", "passed": 5, "total": 6, "executionMs": 90,
                  "memoryKb": 20480, "failedCaseId": 4, "stderr": null,

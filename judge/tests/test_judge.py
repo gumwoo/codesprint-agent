@@ -42,8 +42,20 @@ RESULT_SCHEMA = Draft202012Validator(
 )
 
 
+# 제출 전 실행의 결과는 다른 계약이다 - case 에 출력이 실린다. 오랫동안 이 모양은
+# 어떤 계약에도 대 보지 않았고, 그래서 계약이 그것을 설명하지 못한다는 것이
+# 드러나지 않았다(ADR-0031).
+RUN_RESULT_SCHEMA = Draft202012Validator(
+    json.loads((ROOT / "contracts" / "run-judge-result.schema.json").read_text(encoding="utf-8"))
+)
+
+
 def contract_errors(result: dict) -> list[str]:
     return [f"{list(e.path)}: {e.message}" for e in RESULT_SCHEMA.iter_errors(result)]
+
+
+def run_contract_errors(result: dict) -> list[str]:
+    return [f"{list(e.path)}: {e.message}" for e in RUN_RESULT_SCHEMA.iter_errors(result)]
 
 
 # -- 판정 -----------------------------------------------------------------
@@ -268,12 +280,23 @@ def check_samples_only() -> list[str]:
     if "stdout" not in run_only["cases"][0]:
         problems.append("실행인데 출력이 없다 - 그러면 돌려 볼 이유가 없다")
 
+    # 실행 결과는 실행 계약을 지킨다. 여기서 대 보지 않았던 탓에 계약이 이 모양을
+    # 설명하지 못한다는 것이 한참 동안 드러나지 않았다.
+    for error in run_contract_errors(run_only):
+        problems.append(f"실행 결과가 run-judge-result.schema.json 을 어긴다: {error}")
+
     # 대조군: 플래그가 없으면 전부 돈다.
     full = judge_with_job(code, job)
     if full["total"] != 3:
         problems.append(f"[대조군 실패] 제출 채점이 3개를 돌려야 하는데 {full['total']}개다")
     if any("stdout" in c for c in full["cases"]):
         problems.append("[대조군 실패] 제출 채점 결과에 출력이 실려 있다")
+    # 두 계약이 서로를 대신하지 않는가. 출력이 실린 실행 결과가 제출 채점 계약을
+    # 통과하면, 제출 결과에 출력이 새어도 계약이 막지 못한다.
+    if not contract_errors(run_only):
+        problems.append("[대조군 실패] 출력이 실린 실행 결과가 제출 채점 계약을 통과한다")
+    for error in contract_errors(full):
+        problems.append(f"제출 채점 결과가 judge-result.schema.json 을 어긴다: {error}")
     return problems
 
 
