@@ -17,7 +17,8 @@
     "referenceComplexity",
     "skills",
     "commonMistakes",
-    "negativeControl"
+    "negativeControl",
+    "skillControl"
   ],
   "properties": {
     "code": {
@@ -129,6 +130,19 @@
             "OUTPUT_LIMIT"
           ],
           "description": "그 실수가 드러나야 하는 판정. COMPILE_ERROR 와 SYSTEM_ERROR 는 뺐다 - 그 둘은 심어둔 실수가 아니라 fixture 자체가 깨졌다는 뜻이다."
+        }
+      }
+    },
+    "skillControl": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["approach"],
+      "description": "정답 여부만으로 PRIMARY Skill 을 썼는지 가를 수 없을 때, 그 Skill 없이 같은 답을 내는 풀이(skill_control.py)가 무엇인가(ADR-0033). 실제 채점에서 TIME_LIMIT 이어야 하고, 시간 초과 전의 case 는 전부 맞혀야 한다. null 은 '정답이 곧 그 Skill 을 보여준다고 봤다' 이다. curriculum/skills.yaml 의 needs_skill_control 이 true 인 Skill 을 PRIMARY 로 가지면 null 일 수 없다.",
+      "properties": {
+        "approach": {
+          "type": "string",
+          "minLength": 1,
+          "description": "대조 풀이가 Skill 대신 쓰는 방법. 예: list 의 pop(0) 으로 앞에서 꺼낸다."
         }
       }
     }

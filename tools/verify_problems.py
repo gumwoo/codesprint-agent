@@ -161,6 +161,30 @@ def verify_probes(d: pathlib.Path, cases_doc: dict, problem: dict, job: dict) ->
     return problems_msgs
 
 
+def verify_skill_control(d: pathlib.Path, job: dict) -> str | None:
+    """그 Skill 없이 같은 답을 내는 풀이가 **시간 제한에** 걸리는가(ADR-0033).
+
+    정답이 Skill 사용을 증명하지 않는 문제가 있다. 출력만 보는 채점은 어떤 자료구조를
+    썼는지 보지 못하므로, 차이가 드러나는 곳은 입력이 클 때의 시간뿐이다.
+
+    TIME_LIMIT 인 것만으로는 부족하다. 처음부터 틀리는 풀이도 걸리기는 한다 - 그건
+    Skill 이 없는 풀이가 아니라 그냥 틀린 풀이라 아무것도 보여주지 못한다. 그래서
+    시간 초과 전까지 간 case 는 전부 맞혀야 한다.
+    """
+    result = judge(d / "skill_control.py", job)
+    if result["status"] == "ACCEPTED":
+        return ("그 Skill 없이 쓴 풀이가 ACCEPTED 다 - 이 문제는 그 Skill 을 재지 못한다. "
+                "큰 case 를 더하거나 문제를 바꾼다 [VACUOUS]")
+    if result["status"] != "TIME_LIMIT":
+        return (f"skill_control 이 TIME_LIMIT 이어야 하는데 {result['status']} "
+                f"(case {result['failedCaseId']})")
+    before = [c for c in result.get("cases", []) if c["id"] != result["failedCaseId"]]
+    if not before or any(c["status"] != "ACCEPTED" for c in before):
+        return ("skill_control 이 시간 초과 전의 case 부터 맞히지 못한다 - 같은 답을 내는 "
+                "풀이가 아니라서 대조가 되지 않는다")
+    return None
+
+
 def judge(solution: pathlib.Path, job: dict) -> dict:
     with tempfile.TemporaryDirectory() as d:
         job_path = pathlib.Path(d) / "job.json"
@@ -231,6 +255,13 @@ def main() -> int:
                   f" {detail[0][:70]}")
             continue
 
+        if problem.get("skillControl"):
+            control_msg = verify_skill_control(d, job)
+            if control_msg:
+                failed += 1
+                print(f"[X] {d.name}: {control_msg}")
+                continue
+
         probe_msgs = verify_probes(d, cases_doc, problem, job)
         if probe_msgs:
             failed += 1
@@ -242,6 +273,7 @@ def main() -> int:
         print(f"[O] {d.name}: reference ACCEPTED / "
               f"wrong {wrong['status']} (case {wrong['failedCaseId']}, "
               f"심어둔 실수 {control['mistake']})"
+              + (" / Skill 대조 TIME_LIMIT" if problem.get("skillControl") else "")
               + (f" / probes {sorted({m for c in cases_doc['cases'] for m in c['probes']})}"
                  if any(c["probes"] for c in cases_doc["cases"]) else ""))
 

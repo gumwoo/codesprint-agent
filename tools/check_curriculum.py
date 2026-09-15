@@ -182,6 +182,10 @@ def check_skills(skills_doc, domain_codes: set[str]) -> dict[str, dict]:
             fail("skills", f"{code}: language 필드가 없다 (언어 독립이면 null 을 명시한다)")
         if not s.get("description"):
             fail("skills", f"{code}: description 이 비어 있다")
+        # 정답 여부만으로 잴 수 있는 Skill 인지 데이터가 말해야 한다(ADR-0033). 생략을
+        # false 로 읽으면, 잴 수 없는 Skill 이 대조 풀이 없이 조용히 문제를 얻는다.
+        if not isinstance(s.get("needs_skill_control"), bool):
+            fail("skills", f"{code}: needs_skill_control 이 true/false 가 아니다 (ADR-0033)")
     return skills
 
 

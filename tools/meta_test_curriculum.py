@@ -51,6 +51,10 @@ def drop_language_field(doc):
     doc["skills"][0].pop("language", None)
 
 
+def drop_skill_control_flag(doc):
+    doc["skills"][1].pop("needs_skill_control", None)
+
+
 def make_cycle(doc):
     # BFS_BASIC 이 BFS_SHORTEST_PATH 를 요구하게 만들면
     # BFS_BASIC -> BFS_SHORTEST_PATH -> BFS_GRID_TRAVERSAL -> BFS_BASIC 순환이 생긴다.
@@ -228,6 +232,7 @@ CASES = [
     ("ADR-0003 · Skill code 가 소문자가 되면", "curriculum/skills.yaml", lowercase_skill_code, "UPPER_SNAKE_CASE 가 아니다"),
     ("등록되지 않은 domain 을 참조하면", "curriculum/skills.yaml", unknown_domain, "없는 domain"),
     ("language 필드를 생략하면", "curriculum/skills.yaml", drop_language_field, "language 필드가 없다"),
+    ("ADR-0033 · Skill 대조 필요 여부를 생략하면", "curriculum/skills.yaml", drop_skill_control_flag, "needs_skill_control 이 true/false 가 아니다"),
 
     # -- 선수 관계 --
     ("선수 관계에 순환이 생기면", "curriculum/prerequisites.yaml", make_cycle, "순환 선수 관계"),

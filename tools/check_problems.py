@@ -116,6 +116,26 @@ def main() -> int:
         if len({s.get("code") for s in entries}) != len(entries):
             fail("skill-map", f"{rel}: 같은 Skill 이 두 번 들어 있다")
 
+        # -- Skill 대조 풀이 (ADR-0033) --
+        #
+        # 정답이 Skill 사용을 증명하지 않는 Skill 이 있다. deque 를 모르고도 인덱스로
+        # 이동합을 풀어 AC 를 받았고, 그 AC 가 PYTHON_DEQUE_BASIC Evidence 로 쌓였다.
+        # 그런 Skill 을 PRIMARY 로 가지면 "그 Skill 없이 같은 답을 내는 풀이" 가
+        # 저장소에 있어야 한다 - 걸리는지는 verify_problems.py 가 실제 채점으로 본다.
+        control_spec = problem.get("skillControl")
+        control_file = d / "skill_control.py"
+        primary_code = primaries[0].get("code") if primaries else None
+        if (skills.get(primary_code) or {}).get("needs_skill_control") and not control_spec:
+            fail("skill-control",
+                 f"{rel}: PRIMARY {primary_code} 는 정답 여부만으로 잴 수 없는 Skill 인데 "
+                 f"skillControl 이 없다 - 그 Skill 없이도 AC 를 받는지 확인할 방법이 없다")
+        if control_spec and not control_file.exists():
+            fail("skill-control", f"{rel}: skillControl 을 적었는데 skill_control.py 가 없다")
+        if not control_spec and control_file.exists():
+            fail("skill-control",
+                 f"{rel}: skill_control.py 가 있는데 skillControl 이 null 이다 "
+                 f"- 아무와도 대조되지 않는 파일이다")
+
         # -- 단계별 힌트 (PRD 73) --
         #
         # 힌트 의존도(Addendum 74)는 "몇 단계를 봤는가" 로 mastery 를 가른다.

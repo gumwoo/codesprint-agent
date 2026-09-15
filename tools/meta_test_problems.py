@@ -60,6 +60,15 @@ def source_becomes_curated(doc):
     doc["source"] = "CURATED"
 
 
+def queue_problem_loses_skill_control(doc):
+    # PYTHON_DEQUE_BASIC 은 정답만으로 잴 수 없다(ADR-0033). 대조 풀이를 떼면 막혀야 한다.
+    doc["skillControl"] = None
+
+
+def drop_skill_control_field(doc):
+    doc.pop("skillControl")
+
+
 def dangling_control_mistake(doc):
     doc["negativeControl"]["mistake"] = "MISTAKE_THAT_DOES_NOT_EXIST"
 
@@ -209,6 +218,10 @@ CASES = [
     ("경쟁하는 실수의 오답이 없으면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", competing_mistake_without_solution, "probes/INPUT_PARSE.py 가 없다"),
     ("모든 case 가 같은 실수를 겨냥하면", "problems/P03_CONNECTED_COMPONENT/cases.json", probe_every_case, "대조군이 없다"),
     ("같은 실수의 오답이 둘이면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", control_duplicates_a_probe_solution, "wrong.py 하나로 둔다"),
+
+    # ADR-0033 · 정답이 Skill 사용을 증명하지 않는 Skill
+    ("정답만으로 잴 수 없는 Skill 에 대조 풀이가 없으면", "problems/P01_QUEUE_BASIC/problem.yaml", queue_problem_loses_skill_control, "skillControl 이 없다"),
+    ("skillControl 을 생략하면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", drop_skill_control_field, "'skillControl' is a required property"),
 ]
 
 # 파일이 있고 없고로만 깨뜨릴 수 있는 것. (설명, 대상, 동작, 기대 메시지 조각)
@@ -226,6 +239,13 @@ FILE_CASES = [
     ("commonMistakes 에 없는 실수의 풀이가 남아 있으면",
      "problems/P03_CONNECTED_COMPONENT/probes/INPUT_PARSE.py", "create",
      "commonMistakes 에 없다"),
+
+    ("Skill 대조 풀이 파일을 지우면",
+     "problems/P01_QUEUE_BASIC/skill_control.py", "delete",
+     "skill_control.py 가 없다"),
+    ("대조할 것이 없는 문제에 대조 풀이가 남아 있으면",
+     "problems/P03_CONNECTED_COMPONENT/skill_control.py", "create",
+     "skillControl 이 null 이다"),
 ]
 
 
