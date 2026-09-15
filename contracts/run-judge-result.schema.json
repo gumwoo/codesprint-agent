@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/run-judge-result.schema.json",
+  "title": "RunJudgeResult",
+  "description": "제출 전 실행(kind RUN, --samples-only)에서 Sandbox Runner 가 내는 결과. judge-result.schema.json 과 나눠 둔 이유는 **case 에 출력이 실리기 때문이다** - 실행은 공개 case 만 돌며(ADR-0020), 입력 · 기대 출력 · 실제 출력을 함께 보여줘야 돌려 볼 이유가 있다. 제출 채점 결과에는 출력이 실리면 안 되고(hidden case 의 출력이 새는 조합이 생긴다), judge-result 가 그것을 계속 막는다. 한 스키마로 합치면 '출력은 run 일 때만' 을 required 로 말할 수 없다. 오랫동안 이 모양을 설명하는 계약이 없었다 - 하네스 테스트가 run 출력을 계약에 대 보지 않았기 때문이다(ADR-0031).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "passed",
+    "total",
+    "executionMs",
+    "memoryKb",
+    "failedCaseId",
+    "stderr",
+    "cases"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ACCEPTED",
+        "WRONG_ANSWER",
+        "TIME_LIMIT",
+        "MEMORY_LIMIT",
+        "RUNTIME_ERROR",
+        "COMPILE_ERROR",
+        "OUTPUT_LIMIT",
+        "SYSTEM_ERROR"
+      ],
+      "description": "judge-result.schema.json 의 status 와 같아야 한다 - CI 가 검증한다."
+    },
+    "passed": { "type": "integer", "minimum": 0 },
+    "total": { "type": "integer", "minimum": 0 },
+    "executionMs": { "type": ["integer", "null"], "minimum": 0 },
+    "memoryKb": { "type": ["integer", "null"], "minimum": 0 },
+    "failedCaseId": { "type": ["integer", "null"], "minimum": 1 },
+    "stderr": {
+      "type": ["string", "null"],
+      "description": "Host 경로를 제거한 sanitize 결과만(Addendum §63)."
+    },
+    "cases": {
+      "type": "array",
+      "description": "실행한 공개 case 들. 여기 없는 case 는 실행되지 않은 것이다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "executionMs", "input", "expectedOutput", "stdout", "stderr"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "status": {
+            "enum": [
+              "ACCEPTED",
+              "WRONG_ANSWER",
+              "TIME_LIMIT",
+              "MEMORY_LIMIT",
+              "RUNTIME_ERROR",
+              "OUTPUT_LIMIT"
+            ]
+          },
+          "executionMs": { "type": ["integer", "null"], "minimum": 0 },
+          "input": { "type": "string" },
+          "expectedOutput": {
+            "type": "string",
+            "description": "공개 case 의 기대 출력. 비교는 호스트가 끝낸 뒤 싣는다 - 컨테이너 안으로 들어가지 않는다(ADR-0006)."
+          },
+          "stdout": { "type": "string" },
+          "stderr": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

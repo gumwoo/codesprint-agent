@@ -144,6 +144,16 @@ def ci_inlines_dependencies(text: str) -> str:
 ci_inlines_dependencies._text_mode = True
 
 
+def readme_forgets_a_contract(text: str) -> str:
+    # 계약을 만들고 표를 잊으면 처음 보는 사람은 그 계약이 있는 줄도 모른다.
+    # 실제로 23개 중 13개가 빠져 있었다.
+    kept = [line for line in text.splitlines() if "[hint-view.schema.json]" not in line]
+    return chr(10).join(kept) + chr(10)
+
+
+readme_forgets_a_contract._text_mode = True
+
+
 def ci_drops_a_test_input(text: str) -> str:
     # gradle 이 테스트 입력으로 선언한 디렉터리를 워크플로 트리거에서 빼면,
     # 그 디렉터리만 바꾼 PR 에서 Backend 잡이 아예 시작되지 않는다.
@@ -258,11 +268,13 @@ CASES = [
 
     # -- Judge 계약 (PR 2) --
     ("Judge status enum 이 두 계약에서 갈라지면", "contracts/judge-result.schema.json", judge_status_enums_drift, "judge-result 에만 있는 status"),
+    ("실행 결과 계약의 status 가 갈라지면", "contracts/run-judge-result.schema.json", judge_status_enums_drift, "run-judge-result 에만 있는 status"),
 
     # -- 의존성 단일 출처 --
     ("CI 가 의존성을 직접 나열하면", ".github/workflows/curriculum.yml", ci_inlines_dependencies, "의존성을 직접 나열한다"),
     ("테스트 입력이 CI 트리거에서 빠지면", ".github/workflows/backend.yml", ci_drops_a_test_input, "트리거로 두지 않는다"),
     ("README 가 의존성을 직접 나열하면", "README.md", readme_inlines_dependencies, "의존성을 직접 나열한다"),
+    ("계약 표에서 계약이 빠지면", "contracts/README.md", readme_forgets_a_contract, "README.md 표에 없다"),
 ]
 
 
