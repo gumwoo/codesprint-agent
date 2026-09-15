@@ -31,6 +31,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 import adopt_problem  # noqa: E402
 
 GOOD = json.loads((ROOT / "tests" / "generation" / "good-draft.json").read_text(encoding="utf-8"))
+# 정답만으로 잴 수 없는 Skill(PYTHON_DEQUE_BASIC)의 고정 초안. Skill 측정 단계를 본다(ADR-0033).
+QUEUE = json.loads((ROOT / "tests" / "generation" / "good-queue-draft.json")
+                   .read_text(encoding="utf-8"))
+FIXTURES = {"list": (GOOD, "PYTHON_LIST_BASIC"), "queue": (QUEUE, "PYTHON_DEQUE_BASIC")}
 
 
 def brute_disagrees(draft):
@@ -70,17 +74,40 @@ def reference_hangs(draft):
     draft["reference"] = "while True:\n    pass\n"
 
 
-# (설명, 망가뜨리는 방법, 기대 단계) - 기대 단계가 None 이면 채택돼야 한다.
+def queue_without_control(draft):
+    draft["skillControl"] = None
+
+
+def control_is_efficient(draft):
+    # P18 이 실제로 그랬다 - Skill 없이도 효율적으로 풀리는 풀이가 있었다. 여기서는 list 에
+    # 앞 위치 번호를 두어 원소를 옮기지 않는다. 답이 같고 시간 안에 끝난다.
+    draft["skillControl"]["solution"] = (
+        "import sys\n\nn = int(sys.stdin.read().split()[0])\npile = list(range(1, n + 1))\n"
+        "head = 0\nwhile len(pile) - head > 1:\n    head += 1\n    pile.append(pile[head])\n"
+        "    head += 1\nprint(pile[head])\n")
+
+
+def control_is_just_wrong(draft):
+    # 느린 게 아니라 틀린 풀이. 큰 입력에서 걸려도 대조가 아니다.
+    draft["skillControl"]["solution"] = draft["wrong"]
+
+
+# (설명, 고정 초안, 망가뜨리는 방법, 기대 단계) - 기대 단계가 None 이면 채택돼야 한다.
 CASES = [
-    ("정상 초안은 채택된다", None, None),
-    ("계약을 어기면", contract_breaks, "계약"),
-    ("SYSTEM 이 부여하는 실수를 적으면", system_mistake, "참조"),
-    ("기존 문제와 본문이 같으면", duplicate_statement, "중복"),
-    ("입력 생성기가 터지면", generator_crashes, "입력 생성기"),
-    ("정답과 완전탐색이 갈라지면", brute_disagrees, "교차 검증"),
-    ("정답이 끝나지 않으면", reference_hangs, "교차 검증"),
-    ("힌트가 정답 코드를 담으면", hint_leaks_the_reference, "문제 데이터 검사"),
-    ("오답이 통과하면", wrong_is_correct, "실제 채점"),
+    ("정상 초안은 채택된다", "list", None, None),
+    ("계약을 어기면", "list", contract_breaks, "계약"),
+    ("SYSTEM 이 부여하는 실수를 적으면", "list", system_mistake, "참조"),
+    ("기존 문제와 본문이 같으면", "list", duplicate_statement, "중복"),
+    ("입력 생성기가 터지면", "list", generator_crashes, "입력 생성기"),
+    ("정답과 완전탐색이 갈라지면", "list", brute_disagrees, "교차 검증"),
+    ("정답이 끝나지 않으면", "list", reference_hangs, "교차 검증"),
+    ("힌트가 정답 코드를 담으면", "list", hint_leaks_the_reference, "문제 데이터 검사"),
+    ("오답이 통과하면", "list", wrong_is_correct, "실제 채점"),
+    # ADR-0033 · 정답이 Skill 사용을 증명하지 않는 Skill
+    ("큐 초안이 Skill 대조를 갖추면 채택된다", "queue", None, None),
+    ("잴 수 없는 Skill 인데 대조 풀이가 없으면", "queue", queue_without_control, "Skill 측정"),
+    ("그 Skill 없이도 시간 안에 풀리면", "queue", control_is_efficient, "Skill 측정"),
+    ("대조 풀이가 그냥 틀리면", "queue", control_is_just_wrong, "Skill 측정"),
 ]
 
 
@@ -90,13 +117,14 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as work:
         work = pathlib.Path(work)
-        for index, (name, mutate, expected) in enumerate(CASES):
-            draft = copy.deepcopy(GOOD)
+        for index, (name, fixture, mutate, expected) in enumerate(CASES):
+            base, skill = FIXTURES[fixture]
+            draft = copy.deepcopy(base)
             if mutate:
                 mutate(draft)
             envelope = work / f"case-{index}.json"
             envelope.write_text(json.dumps({
-                "id": f"meta-{index}", "skill": "PYTHON_LIST_BASIC",
+                "id": f"meta-{index}", "skill": skill,
                 "promptVersion": "fixture", "generatedAt": "2026-09-15T00:00:00Z",
                 "draft": draft}, ensure_ascii=False), encoding="utf-8")
 
@@ -130,7 +158,8 @@ def main() -> int:
     if failures:
         print(f"\n[FAIL] 채택 파이프라인 메타테스트 {failures}건 실패")
         return 1
-    print(f"\n[OK] 채택 파이프라인이 {len(CASES) - 1}개 결함을 전부 제 단계에서 막았다")
+    rejections = sum(1 for case in CASES if case[3] is not None)
+    print(f"\n[OK] 채택 파이프라인이 {rejections}개 결함을 전부 제 단계에서 막았다")
     return 0
 
 

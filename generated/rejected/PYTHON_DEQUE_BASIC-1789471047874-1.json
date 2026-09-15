@@ -1,0 +1,70 @@
+{
+  "id": "PYTHON_DEQUE_BASIC-1789471047874-1",
+  "skill": "PYTHON_DEQUE_BASIC",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-15T11:23:32+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "정답이 큰 입력에서 OUTPUT_LIMIT"
+  ],
+  "draft": {
+    "codeSuffix": "SLIDING_WINDOW_SUM",
+    "title": "최근 K개 원소의 합",
+    "statement": "정수가 하나씩 순서대로 도착한다. 도착한 정수들 중 가장 최근에 들어온 최대 K개만 유지하는 창(window)을 관리한다.\n\n새 정수가 도착하면 창의 뒤에 그 정수를 추가한다. 그 결과 창에 들어있는 정수의 개수가 K를 초과하면, 창의 맨 앞에 있는 정수를 하나 꺼내 버려서 창의 크기를 다시 K 이하로 만든다(한 번에 최대 하나만 초과한다).\n\n각 정수가 도착해 창이 갱신된 직후, 그 시점의 창에 들어있는 모든 정수의 합을 기록한다.\n\n입력: 첫 줄에 정수의 개수 N과 창의 최대 크기 K가 공백으로 구분되어 주어진다 (1 ≤ K ≤ N ≤ 500000). 둘째 줄에 N개의 정수 A_1, A_2, ..., A_N 이 공백으로 구분되어 주어진다 (-1000000000 ≤ A_i ≤ 1000000000). 정수들은 A_1부터 A_N 순서로 하나씩 도착한다(1-based).\n\n출력: N개의 정수를 공백으로 구분해 한 줄에 출력한다. i번째 값은 A_i 가 도착해 창이 갱신된 직후 창에 들어있는 모든 정수의 합이다.",
+    "secondarySkills": [],
+    "referenceComplexity": "시간 O(N), 공간 O(K)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT",
+      "IMPLEMENTATION_MISC"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "창의 크기가 K를 '초과'할 때가 아니라 K '이상'일 때 원소를 꺼내는 off-by-one 실수로, 창이 항상 K-1개 이하로 유지되어 합이 실제보다 작게 계산된다.",
+    "sampleInputs": [
+      "5 3\n1 2 3 4 5",
+      "6 4\n-3 5 -3 5 -3 5"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n5"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5 5\n1 2 3 4 5"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "6 2\n7 7 7 7 7 7"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5 2\n-4 -4 -4 -4 -4"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "5 1\n1000000000 -1000000000 1000000000 -1000000000 1000000000"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\n\ndef main():\n    seed = int(sys.stdin.read().strip())\n    rnd = random.Random(seed)\n    n = rnd.randint(1, 10)\n    k = rnd.randint(1, n)\n    arr = [rnd.randint(-20, 20) for _ in range(n)]\n    print(n, k)\n    print(' '.join(map(str, arr)))\n\n\nmain()\n",
+    "reference": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    k = int(data[1])\n    arr = list(map(int, data[2:2 + n]))\n\n    dq = deque()\n    window_sum = 0\n    out = []\n    for x in arr:\n        dq.append(x)\n        window_sum += x\n        if len(dq) > k:\n            window_sum -= dq.popleft()\n        out.append(str(window_sum))\n\n    print(' '.join(out))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    k = int(data[1])\n    arr = list(map(int, data[2:2 + n]))\n\n    out = []\n    for i in range(n):\n        start = max(0, i - k + 1)\n        out.append(str(sum(arr[start:i + 1])))\n\n    print(' '.join(out))\n\n\nmain()\n",
+    "wrong": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    k = int(data[1])\n    arr = list(map(int, data[2:2 + n]))\n\n    dq = deque()\n    window_sum = 0\n    out = []\n    for x in arr:\n        dq.append(x)\n        window_sum += x\n        if len(dq) >= k:\n            window_sum -= dq.popleft()\n        out.append(str(window_sum))\n\n    print(' '.join(out))\n\n\nmain()\n",
+    "hints": [
+      "원소가 들어오는 순서와 나가는 순서를 살펴보면, 항상 먼저 들어온 원소가 먼저 나간다.",
+      "정렬이나 탐색이 아니라 알맞은 자료구조를 고르는 문제다. 창을 유지하는 큐 조작만으로 풀 수 있다.",
+      "collections.deque 를 쓰면 뒤에 추가하는 연산과 앞에서 제거하는 연산을 둘 다 상수 시간에 할 수 있다. 파이썬 리스트에서 맨 앞 원소를 지우면 남은 원소를 전부 옮겨야 해서 느리다.",
+      "합을 매번 처음부터 다시 더하지 않아도 된다. 새 값이 들어오면 합에 더하고, 창에서 값이 빠질 때 그 값만큼 합에서 빼면 된다.",
+      "각 값을 받을 때마다: 덱의 뒤에 추가하고 합에 더한다 → 덱의 길이가 K보다 크면 덱의 맨 앞 값을 꺼내 합에서 뺀다 → 그 시점의 합을 출력 목록에 추가한다."
+    ],
+    "skillControl": {
+      "approach": "덱 대신 파이썬 리스트를 쓰고, 창에서 빠지는 원소를 list.pop(0)으로 지운다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    k = int(data[1])\n    arr = list(map(int, data[2:2 + n]))\n\n    window = []\n    window_sum = 0\n    out = []\n    for x in arr:\n        window.append(x)\n        window_sum += x\n        if len(window) > k:\n            window_sum -= window.pop(0)\n        out.append(str(window_sum))\n\n    print(' '.join(out))\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\n\ndef main():\n    n = 300000\n    k = 150000\n    rnd = random.Random(12345)\n    arr = [rnd.randint(0, 9) for _ in range(n)]\n    print(n, k)\n    print(' '.join(map(str, arr)))\n\n\nmain()\n"
+    }
+  }
+}

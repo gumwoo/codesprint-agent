@@ -41,7 +41,7 @@ class GeneratorSharesReviewerSettingsTest {
             values.put(name, "x");
         }
         String version = GeneratorSettings.load().promptVersion();
-        assertThat(version).isEqualTo("problem-v1");
+        assertThat(version).isEqualTo("problem-v2");
         assertThatCode(() -> PromptTemplate.load(version).render(values))
                 .doesNotThrowAnyException();
     }
@@ -55,6 +55,16 @@ class GeneratorSharesReviewerSettingsTest {
         assertThat(values.get("existingProblems")).contains("P11_LIST_BASIC");
         // SYSTEM 이 부여하는 실수는 초안에 쓸 수 없다고 알려 준다.
         assertThat(values.get("allowedMistakes")).doesNotContain("SYNTAX_ERROR");
+        assertThat(values.get("skillControlRule")).contains("null 로 둔다");
+    }
+
+    @Test
+    @DisplayName("정답만으로 잴 수 없는 Skill 이면 대조 풀이를 요구한다 - 커리큘럼 데이터에서 읽는다")
+    void theSkillControlRuleFollowsTheCurriculum() {
+        // ADR-0033. deque 없이 인덱스로 풀리는 문제가 채택돼 PYTHON_DEQUE_BASIC 을 재지 못했다.
+        Map<String, String> values = DraftPrompt.values(
+                Path.of(System.getProperty("codesprint.repoRoot")), "PYTHON_DEQUE_BASIC");
+        assertThat(values.get("skillControlRule")).contains("skillControl 을 반드시 채운다");
     }
 
     @Test
@@ -65,8 +75,10 @@ class GeneratorSharesReviewerSettingsTest {
         Path root = Path.of(System.getProperty("codesprint.repoRoot"));
         var schema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
                 .getSchema(Files.readString(root.resolve("contracts/problem-draft.llm.schema.json")));
-        var draft = new ObjectMapper().readTree(
-                Files.readString(root.resolve("tests/generation/good-draft.json")));
-        assertThat(schema.validate(draft)).isEmpty();
+        for (String fixture : new String[] {"good-draft.json", "good-queue-draft.json"}) {
+            var draft = new ObjectMapper().readTree(
+                    Files.readString(root.resolve("tests/generation/" + fixture)));
+            assertThat(schema.validate(draft)).as(fixture).isEmpty();
+        }
     }
 }

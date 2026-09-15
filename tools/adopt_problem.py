@@ -13,6 +13,7 @@
   중복            기존 문제와 본문이 겹치는가
   입력 생성기     seed 30 개로 무작위 입력을 실제로 만들 수 있는가
   교차 검증       reference 와 bruteForce 가 모든 입력에서 같은 답을 내는가
+  Skill 측정      그 Skill 없이 같은 답을 내는 풀이가 큰 입력에서 걸리는가 (ADR-0033)
   문제 데이터 검사 tools/check_problems.py (힌트 사다리 · 정답 코드 유출 포함)
   실제 채점       tools/verify_problems.py (정답 통과 · 오답이 의도한 이유로 실패)
 
@@ -61,6 +62,9 @@ DUPLICATE_RATIO = 0.75
 # 시간 · 메모리 제한은 시스템이 정한다. LLM 에게 받지 않는다.
 TIME_LIMIT_MS = 2000
 MEMORY_LIMIT_MB = 256
+# 큰 입력에서 정답이 넘지 말아야 할 시간. 제한에 붙어 있으면 대조 풀이와의 차이가
+# 기계 속도에 따라 뒤집힌다 - 제한의 절반 안에 끝나야 차이가 드러난다고 본다.
+REFERENCE_STRESS_BUDGET_MS = 1000
 
 HINTS_HEADER = """# 단계별 힌트. 정본 형식: contracts/hint-ladder.schema.json
 #
@@ -136,12 +140,8 @@ def check_duplicate(draft: dict) -> None:
             raise Rejected("중복", [f"{d.name} 와 code 가 겹친다"])
 
 
-def run_program(source: str, inputs: list[str], what: str, stage: str) -> list[str]:
-    """샌드박스에서 돌려 **출력**을 모은다. 판정이 아니라 출력이 필요하다.
-
-    기대 출력을 비워 둔 공개 case 로 돌린다(제출 전 실행과 같은 경로, ADR-0020).
-    하나라도 실행되지 않았거나 중간에 멈추면 거절이다 - **덜 돈 결과로 비교하지 않는다.**
-    """
+def _execute(source: str, inputs: list[str], what: str, stage: str) -> dict:
+    """샌드박스에서 돌린다. 기대 출력을 비워 둔 공개 case 로 돈다(제출 전 실행과 같은 경로, ADR-0020)."""
     job = {
         "problemId": "draft",
         "timeLimitMs": TIME_LIMIT_MS,
@@ -159,6 +159,15 @@ def run_program(source: str, inputs: list[str], what: str, stage: str) -> list[s
     if result["status"] in ("COMPILE_ERROR", "SYSTEM_ERROR"):
         detail = (result.get("stderr") or "").strip().splitlines()[-1:] or [""]
         raise Rejected(stage, [f"{what} 가 실행되지 않았다: {result['status']} {detail[0][:160]}"])
+    return result
+
+
+def run_program(source: str, inputs: list[str], what: str, stage: str) -> list[str]:
+    """샌드박스에서 돌려 **출력**을 모은다. 판정이 아니라 출력이 필요하다.
+
+    하나라도 실행되지 않았거나 중간에 멈추면 거절이다 - **덜 돈 결과로 비교하지 않는다.**
+    """
+    result = _execute(source, inputs, what, stage)
     cases = {c["id"]: c for c in result.get("cases", [])}
     if len(cases) != len(inputs):
         raise Rejected(stage, [
@@ -208,6 +217,64 @@ def cross_check(draft: dict, inputs: list[str]) -> list[str]:
     return [out + "\n" for out in normalized]
 
 
+def check_skill_control(draft: dict, skill: str, inputs: list[str],
+                        expected: list[str]) -> dict | None:
+    """그 Skill 없이 같은 답을 내는 풀이가 큰 입력에서 걸리는가(ADR-0033).
+
+    출력만 보는 채점은 어떤 자료구조를 썼는지 보지 못한다. 파일럿의 deque 이동합 문제는
+    인덱스로 K 칸 전 값을 빼는 풀이로도 AC 였고, 그 AC 가 PYTHON_DEQUE_BASIC Evidence 가
+    됐다. 교차 검증도 실제 채점도 통과한 뒤 사람이 PR 에서 찾았다.
+
+    세 가지를 본다. 하나라도 빠지면 아무것도 거르지 않는 대조가 통과한다.
+
+      같은 답     작은 입력 전부에서 정답과 같다 - 그냥 틀린 풀이는 대조가 아니다
+      정답은 빠름  큰 입력에서 정답이 제한의 절반 안에 끝난다
+      대조는 느림  큰 입력에서 대조 풀이가 TIME_LIMIT 이다
+
+    통과하면 큰 입력과 그 기대 출력을 돌려준다. 대조가 필요 없는 Skill 이면 None.
+    """
+    skills = {s["code"]: s for s in _load_yaml(CURRICULUM / "skills.yaml")["skills"]}
+    spec = draft["skillControl"]
+    if spec is None:
+        if (skills.get(skill) or {}).get("needs_skill_control"):
+            raise Rejected("Skill 측정", [
+                f"{skill} 는 정답 여부만으로 잴 수 없는 Skill 인데 skillControl 이 null 이다"])
+        return None
+
+    stage = "Skill 측정"
+    control = run_program(spec["solution"], inputs, "대조 풀이(skillControl)", stage)
+    mismatches = [i for i, (out, want) in enumerate(zip(control, expected))
+                  if run_submission.normalize(out) != run_submission.normalize(want)]
+    if mismatches:
+        raise Rejected(stage, [
+            f"대조 풀이가 입력 {i + 1} 에서 정답과 다른 답을 낸다 - 같은 답을 내는 풀이가 "
+            f"아니라 대조가 되지 않는다 / 입력 {inputs[i][:60]!r}" for i in mismatches[:3]])
+
+    stress = run_program(spec["stressInputGenerator"], [""], "큰 입력 생성기", stage)[0]
+    if not stress.strip():
+        raise Rejected(stage, ["큰 입력 생성기가 아무 입력도 만들지 않았다"])
+    stress = stress if stress.endswith("\n") else stress + "\n"
+
+    ref = _execute(draft["reference"], [stress], "정답(reference)", stage)["cases"][0]
+    if ref["status"] not in ("ACCEPTED", "WRONG_ANSWER"):
+        raise Rejected(stage, [f"정답이 큰 입력에서 {ref['status']}"])
+    if ref.get("executionMs", 0) > REFERENCE_STRESS_BUDGET_MS:
+        raise Rejected(stage, [
+            f"정답이 큰 입력에서 {ref['executionMs']}ms - {REFERENCE_STRESS_BUDGET_MS}ms 안에 "
+            f"끝나지 않으면 대조 풀이와의 차이가 기계 속도에 묻힌다"])
+
+    slow = _execute(spec["solution"], [stress], "대조 풀이(skillControl)", stage)["cases"][0]
+    if slow["status"] in ("ACCEPTED", "WRONG_ANSWER"):
+        raise Rejected(stage, [
+            f"대조 풀이({spec['approach']})가 큰 입력에서 {slow.get('executionMs')}ms 에 끝났다 "
+            f"- 이 문제는 {skill} 없이도 풀린다"])
+    if slow["status"] != "TIME_LIMIT":
+        raise Rejected(stage, [f"대조 풀이가 큰 입력에서 TIME_LIMIT 이 아니라 {slow['status']}"])
+
+    return {"approach": spec["approach"], "solution": spec["solution"], "input": stress,
+            "expectedOutput": run_submission.normalize(ref.get("stdout", "")) + "\n"}
+
+
 class _Literal(str):
     pass
 
@@ -229,7 +296,8 @@ def next_code(draft: dict) -> str:
 
 
 def materialize(draft: dict, skill: str, sample_inputs: list[str], edge_cases: list[dict],
-                random_inputs: list[str], expected: list[str]) -> str:
+                random_inputs: list[str], expected: list[str],
+                control: dict | None = None) -> str:
     code = next_code(draft)
     target = PROBLEMS / code
     target.mkdir()
@@ -254,6 +322,7 @@ def materialize(draft: dict, skill: str, sample_inputs: list[str], edge_cases: l
         "skills": skills,
         "commonMistakes": draft["commonMistakes"],
         "negativeControl": draft["negativeControl"],
+        "skillControl": {"approach": control["approach"]} if control else None,
     }
     header = ("# 정본 형식: contracts/problem.schema.json\n"
               "# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).\n"
@@ -277,6 +346,11 @@ def materialize(draft: dict, skill: str, sample_inputs: list[str], edge_cases: l
         cases.append({"id": ordinal + 1, "type": "RANDOM", "hidden": True, "input": text,
                       "expectedOutput": expected[ordinal], "probes": []})
         ordinal += 1
+    if control:
+        # 맨 뒤에 둔다. 대조 풀이는 여기서 시간 초과하고, 그 앞 case 는 전부 맞혀야 한다.
+        cases.append({"id": ordinal + 1, "type": "MAXIMUM", "hidden": True,
+                      "input": control["input"], "expectedOutput": control["expectedOutput"],
+                      "probes": []})
     (target / "cases.json").write_text(
         json.dumps({"cases": cases}, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8", newline="")
@@ -289,6 +363,11 @@ def materialize(draft: dict, skill: str, sample_inputs: list[str], edge_cases: l
         description = draft["wrongDescription"].strip().splitlines()[0]
         wrong = f"# {description}\n" + wrong
     (target / "wrong.py").write_text(wrong, encoding="utf-8", newline="")
+    if control:
+        (target / "skill_control.py").write_text(
+            f"# Skill 대조 풀이(ADR-0033). {control['approach']}\n"
+            "# 답은 reference 와 같고, 큰 case 에서 시간 안에 끝나지 않아야 한다.\n"
+            + control["solution"], encoding="utf-8", newline="")
     ladder = "".join(
         f"  - level: {level}\n    text: {json.dumps(text, ensure_ascii=False)}\n"
         for level, text in enumerate(draft["hints"], start=1))
@@ -336,7 +415,9 @@ def adopt(envelope_path: pathlib.Path, records: pathlib.Path = RECORDS) -> dict:
         edge_cases = list(draft["edgeCases"])
         all_inputs = sample_inputs + [e["input"] for e in edge_cases] + random_inputs
         expected = cross_check(draft, all_inputs)
-        code = materialize(draft, skill, sample_inputs, edge_cases, random_inputs, expected)
+        control = check_skill_control(draft, skill, all_inputs, expected)
+        code = materialize(draft, skill, sample_inputs, edge_cases, random_inputs, expected,
+                           control)
         run_repo_checks(code)
     except Rejected as rejected:
         if code is not None:
@@ -351,7 +432,8 @@ def adopt(envelope_path: pathlib.Path, records: pathlib.Path = RECORDS) -> dict:
     _record(records / "adopted" / f"{code}.json", {
         "id": draft_id, "skill": skill, "promptVersion": envelope.get("promptVersion"),
         "decidedAt": stamp, "code": code, "crossCheckedInputs": len(all_inputs),
-        "bruteForce": draft["bruteForce"], "inputGenerator": draft["inputGenerator"]})
+        "bruteForce": draft["bruteForce"], "inputGenerator": draft["inputGenerator"],
+        "stressInputGenerator": (draft["skillControl"] or {}).get("stressInputGenerator")})
     return {"id": draft_id, "code": code}
 
 

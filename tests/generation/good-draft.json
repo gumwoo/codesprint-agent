@@ -5,14 +5,31 @@
   "secondarySkills": [],
   "referenceComplexity": "O(N)",
   "expectedSolveSeconds": 180,
-  "commonMistakes": ["INDEX_ERROR", "INPUT_PARSE"],
-  "negativeControl": { "mistake": "INDEX_ERROR", "expectedStatus": "WRONG_ANSWER" },
+  "commonMistakes": [
+    "INDEX_ERROR",
+    "INPUT_PARSE"
+  ],
+  "negativeControl": {
+    "mistake": "INDEX_ERROR",
+    "expectedStatus": "WRONG_ANSWER"
+  },
   "wrongDescription": "위치를 1 부터 센다고 착각해 홀수 번째 위치의 값을 더한다.",
-  "sampleInputs": ["5\n1 2 3 4 5\n"],
+  "sampleInputs": [
+    "5\n1 2 3 4 5\n"
+  ],
   "edgeCases": [
-    { "type": "MINIMUM", "input": "1\n7\n" },
-    { "type": "ALL_SAME", "input": "4\n2 2 2 2\n" },
-    { "type": "BOUNDARY", "input": "2\n-3 5\n" }
+    {
+      "type": "MINIMUM",
+      "input": "1\n7\n"
+    },
+    {
+      "type": "ALL_SAME",
+      "input": "4\n2 2 2 2\n"
+    },
+    {
+      "type": "BOUNDARY",
+      "input": "2\n-3 5\n"
+    }
   ],
   "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.read().strip() or \"0\")\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nprint(n)\nprint(\" \".join(str(rng.randint(-50, 50)) for _ in range(n)))\n",
   "reference": "import sys\n\ndata = sys.stdin.read().split()\nn = int(data[0])\nvalues = [int(x) for x in data[1:1 + n]]\nprint(sum(values[0::2]))\n",
@@ -24,5 +41,6 @@
     "정수 리스트 하나와 합을 담을 변수 하나면 됩니다.",
     "위치 i 가 2 로 나누어떨어질 때만 그 값을 더합니다. 값이 아니라 위치를 기준으로 거릅니다.",
     "N 과 리스트를 읽는다 / 합을 0 으로 둔다 / 위치 i 를 0 부터 N-1 까지 보며 i 가 짝수면 합에 더한다 / 합을 출력한다"
-  ]
+  ],
+  "skillControl": null
 }

@@ -21,7 +21,8 @@
     "reference",
     "bruteForce",
     "wrong",
-    "hints"
+    "hints",
+    "skillControl"
   ],
   "properties": {
     "codeSuffix": {
@@ -107,6 +108,21 @@
       "maxItems": 5,
       "items": { "type": "string", "minLength": 1 },
       "description": "H1 관찰 포인트 · H2 알고리즘 범주 · H3 자료구조 · H4 핵심 전이 · H5 의사코드. 정답 코드의 줄을 그대로 담지 않는다."
+    },
+    "skillControl": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["approach", "solution", "stressInputGenerator"],
+      "description": "그 Skill 없이 같은 답을 내는 풀이와, 그 풀이가 시간 안에 끝나지 못하는 큰 입력(ADR-0033). 정답 여부만으로 Skill 사용을 가를 수 없는 Skill(skills.yaml 의 needs_skill_control)이면 null 일 수 없다. 채택 검사가 작은 입력에서 정답과 같은 답인지, 큰 입력에서 TIME_LIMIT 인지 실제로 돌려 본다.",
+      "properties": {
+        "approach": { "type": "string", "minLength": 1, "description": "Skill 대신 쓰는 방법 한 줄." },
+        "solution": { "type": "string", "minLength": 1, "description": "그 방법으로 쓴 풀이 (Python 3.12)." },
+        "stressInputGenerator": {
+          "type": "string",
+          "minLength": 1,
+          "description": "표준 입력을 읽지 않고 큰 입력 하나를 출력하는 Python 프로그램. 1MB 이하."
+        }
+      }
     }
   }
 }

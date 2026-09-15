@@ -23,7 +23,21 @@ public final class DraftPrompt {
     /** 프롬프트 파일이 요구하는 자리. 테스트가 이것으로 파일과 코드가 맞는지 본다. */
     public static final List<String> PLACEHOLDERS = List.of(
             "skillCode", "skillName", "skillDescription", "draftSchema",
-            "secondaryCandidates", "allowedMistakes", "existingProblems");
+            "secondaryCandidates", "allowedMistakes", "existingProblems", "skillControlRule");
+
+    /** 정답 여부만으로 잴 수 없는 Skill(ADR-0033). 대조 풀이를 요구한다. */
+    static final String SKILL_CONTROL_REQUIRED =
+            "이 Skill 은 정답 여부만으로 썼는지 가를 수 없다. skillControl 을 반드시 채운다 - "
+                    + "solution 은 이 Skill 없이 같은 답을 내는 풀이(예: 앞에서 꺼낼 때마다 원소를 "
+                    + "옮기는 풀이)이고, stressInputGenerator 는 표준 입력을 읽지 않고 큰 입력 하나를 "
+                    + "출력하는 프로그램이다(1MB 이하). solution 은 작은 입력에서 reference 와 답이 "
+                    + "같아야 하고 그 큰 입력에서 2초 안에 끝나지 못해야 하며, reference 는 1초 안에 "
+                    + "끝나야 채택된다. 이 Skill 없이도 효율적으로 풀리는 문제(예: 인덱스 계산으로 "
+                    + "끝나는 문제)는 만들지 않는다.";
+
+    /** 정답이 곧 사용을 보여준다고 보는 Skill. */
+    static final String SKILL_CONTROL_NOT_REQUIRED =
+            "이 Skill 은 정답이 곧 사용을 보여준다고 본다. skillControl 은 null 로 둔다.";
 
     private DraftPrompt() {
     }
@@ -63,6 +77,9 @@ public final class DraftPrompt {
         values.put("secondaryCandidates", String.join("\n", secondary));
         values.put("allowedMistakes", String.join("\n", allowed));
         values.put("existingProblems", existingProblems(repoRoot, skillCode));
+        // 무엇을 요구할지는 커리큘럼 데이터가 정한다 - 코드에 Skill 이름을 적지 않는다(ADR-0012).
+        values.put("skillControlRule", Boolean.TRUE.equals(skill.get("needs_skill_control"))
+                ? SKILL_CONTROL_REQUIRED : SKILL_CONTROL_NOT_REQUIRED);
         return values;
     }
 
