@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5 3\n1 2 3 4 5",
+      "expectedOutput": "1\n3\n6\n9\n12\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4 1\n10 -10 5 5",
+      "expectedOutput": "10\n-10\n5\n5\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 1\n-1000",
+      "expectedOutput": "-1000\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "3 2\n1000 -1000 1000",
+      "expectedOutput": "1000\n0\n0\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "4 4\n1 2 3 4",
+      "expectedOutput": "1\n3\n6\n10\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "6 3\n1 1 2 2 3 3",
+      "expectedOutput": "1\n2\n4\n5\n7\n8\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "5 3\n7 7 7 7 7",
+      "expectedOutput": "7\n14\n21\n21\n21\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "3 3\n-16 -4 -13\n",
+      "expectedOutput": "-16\n-20\n-33\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "1 1\n-15\n",
+      "expectedOutput": "-15\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4 2\n3 18 10 20\n",
+      "expectedOutput": "3\n21\n28\n30\n",
+      "probes": []
+    }
+  ]
+}

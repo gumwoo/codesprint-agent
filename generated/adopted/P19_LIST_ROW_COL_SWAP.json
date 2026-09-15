@@ -1,0 +1,10 @@
+{
+  "id": "PYTHON_LIST_BASIC-1789457876285-2",
+  "skill": "PYTHON_LIST_BASIC",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T07:42:15+00:00",
+  "code": "P19_LIST_ROW_COL_SWAP",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    pos = 0\n    n = int(data[pos]); pos += 1\n    m = int(data[pos]); pos += 1\n    grid = []\n    for _ in range(n):\n        row = [int(data[pos + j]) for j in range(m)]\n        pos += m\n        grid.append(row)\n    q = int(data[pos]); pos += 1\n    row_perm = list(range(n))\n    col_perm = list(range(m))\n    for _ in range(q):\n        cmd = data[pos]; pos += 1\n        a = int(data[pos]); pos += 1\n        b = int(data[pos]); pos += 1\n        if cmd == 'row':\n            row_perm[a], row_perm[b] = row_perm[b], row_perm[a]\n        else:\n            col_perm[a], col_perm[b] = col_perm[b], col_perm[a]\n    lines = []\n    for i in range(n):\n        line = [str(grid[row_perm[i]][col_perm[j]]) for j in range(m)]\n        lines.append(' '.join(line))\n    print('\\n'.join(lines))\n\nmain()\n",
+  "inputGenerator": "import random, sys\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rnd = random.Random(seed)\n    n = rnd.randint(1, 4)\n    m = rnd.randint(1, 4)\n    lines = [f\"{n} {m}\"]\n    for _ in range(n):\n        row = [rnd.randint(-9, 9) for _ in range(m)]\n        lines.append(' '.join(map(str, row)))\n    q = rnd.randint(0, 5)\n    lines.append(str(q))\n    for _ in range(q):\n        cmd = rnd.choice(['row', 'col'])\n        if cmd == 'row':\n            a = rnd.randint(0, n - 1)\n            b = rnd.randint(0, n - 1)\n        else:\n            a = rnd.randint(0, m - 1)\n            b = rnd.randint(0, m - 1)\n        lines.append(f\"{cmd} {a} {b}\")\n    print('\\n'.join(lines))\n\nmain()\n"
+}

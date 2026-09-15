@@ -1,0 +1,61 @@
+{
+  "id": "PYTHON_DEQUE_BASIC-1789457735328-2",
+  "skill": "PYTHON_DEQUE_BASIC",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T07:41:57+00:00",
+  "stage": "실제 채점",
+  "reasons": [
+    "[X] P20_CARD_ELIMINATION: wrong 이 RUNTIME_ERROR 여야 하는데 WRONG_ANSWER"
+  ],
+  "draft": {
+    "codeSuffix": "CARD_ELIMINATION",
+    "title": "카드 한 장 남기기",
+    "statement": "정수 N 이 한 줄로 주어진다 (1 ≤ N ≤ 100000). 카드가 위에서부터 1번, 2번, ..., N번 순서로 쌓여 있다. 카드가 한 장 남을 때까지 다음 과정을 반복한다: 맨 위 카드를 버린다. 카드가 더 남아 있다면, 그 다음 카드를 맨 아래로 옮긴다. 이 과정이 끝나고 마지막에 남는 카드의 번호를 한 줄에 출력한다. 카드 번호는 1부터 N까지이며, 항상 1번 카드가 맨 위에서 시작한다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "두 번째로 꺼낸 카드를 다시 뒤에 넣지 않고 그대로 버려, 한 라운드에 카드가 두 장씩 사라진다. N이 짝수면 마지막에 deque가 비어 있는 상태에서 원소를 참조해 오류가 난다.",
+    "sampleInputs": [
+      "5",
+      "2"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "2"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "3"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "100000"
+      }
+    ],
+    "inputGenerator": "import sys, random\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    n = rng.randint(1, 20)\n    print(n)\n\nmain()\n",
+    "reference": "import sys\nfrom collections import deque\n\ndef solve():\n    n = int(sys.stdin.readline())\n    dq = deque(range(1, n + 1))\n    while len(dq) > 1:\n        dq.popleft()\n        if dq:\n            dq.append(dq.popleft())\n    print(dq[0])\n\nsolve()\n",
+    "bruteForce": "import sys\n\ndef solve():\n    n = int(sys.stdin.readline())\n    m = 1\n    while m * 2 <= n:\n        m *= 2\n    l = n - m\n    j = 2 * l + 1\n    result = j - 1\n    if result == 0:\n        result = n\n    print(result)\n\nsolve()\n",
+    "wrong": "# 두 번째로 꺼낸 카드를 다시 넣지 않고 버린다\nimport sys\nfrom collections import deque\n\ndef solve():\n    n = int(sys.stdin.readline())\n    dq = deque(range(1, n + 1))\n    while len(dq) > 1:\n        dq.popleft()\n        dq.popleft()\n    print(dq[0])\n\nsolve()\n",
+    "hints": [
+      "매 라운드마다 카드 한 장이 사라지고, 그 다음 카드는 사라지지 않은 채 순서만 뒤로 옮겨진다는 점을 관찰하라.",
+      "완전 탐색이나 정렬이 필요한 문제가 아니라, 정해진 규칙을 그대로 흉내 내는 시뮬레이션 문제다.",
+      "리스트에서 맨 앞 원소를 계속 꺼내면 나머지 원소가 한 칸씩 당겨져 느려진다. collections.deque 를 쓰면 맨 앞에서 꺼내는 비용이 상수 시간이다.",
+      "카드가 두 장 이상 남아 있는 동안, 맨 앞 카드를 버리고(popleft), 이어서 그 다음 카드를 꺼내(popleft) 맨 뒤에 다시 넣는(append) 과정을 반복한다.",
+      "dq = deque(1..N) 으로 시작해 len(dq) > 1 인 동안 popleft() 로 한 장을 버리고, 남은 카드가 있다면 popleft() 한 값을 append() 로 다시 넣는다. 반복이 끝나면 dq[0] 을 출력한다."
+    ]
+  }
+}

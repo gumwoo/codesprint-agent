@@ -1,0 +1,30 @@
+{
+  "problemCode": "P17_COORD_INDEX_CONVERT",
+  "problemTitle": "좌표와 1차원 인덱스 변환",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GRID_COORDINATE"
+  ],
+  "sourceCode": "\nimport sys\n\ndef main():\n    data = sys.stdin.read().split()\n    pos = 0\n    n = int(data[pos]); pos += 1\n    m = int(data[pos]); pos += 1\n    q = int(data[pos]); pos += 1\n    out = []\n    for _ in range(q):\n        t = data[pos]; pos += 1\n        if t == 'R':\n            r = int(data[pos]); pos += 1\n            c = int(data[pos]); pos += 1\n            out.append(str(r * n + c))\n        else:\n            i = int(data[pos]); pos += 1\n            row = i // n\n            col = i % n\n            out.append(f\"{row} {col}\")\n    print(\"\\n\".join(out))\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      8
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      7,
+      9
+    ]
+  },
+  "probes": {}
+}

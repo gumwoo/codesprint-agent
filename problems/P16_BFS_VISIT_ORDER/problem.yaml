@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P16_BFS_VISIT_ORDER
+title: BFS 방문 순서 출력
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(N + M)
+statement: |
+  정점이 1번부터 N번까지 번호가 매겨진 무방향 그래프가 주어진다. 첫 줄에 정점의 개수 N, 간선의 개수 M, 시작 정점 S가 공백으로 구분되어 주어진다 (1 ≤ N ≤ 1000, 0 ≤ M ≤ 10000, 1 ≤ S ≤ N). 이어지는 M개의 줄에 간선의 양 끝 정점 U V가 주어진다 (1 ≤ U, V ≤ N, U ≠ V, U와 V는 다르다). 같은 간선이 여러 번 주어질 수 있다. 정점 S에서 시작해 너비 우선 탐색(BFS)으로 그래프를 탐색한다. 각 정점을 처리할 때 이웃 정점은 번호가 작은 것부터 방문한다. 방문한 정점을 방문한 순서대로 공백으로 구분해 한 줄에 출력한다. S에서 도달할 수 없는 정점은 출력하지 않는다. 정점 번호는 1부터 시작한다(1-based).
+skills:
+- code: BFS_BASIC
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_DEQUE_BASIC
+  role: SECONDARY
+  weight: 0.15
+- code: BFS_VISITED_MANAGEMENT
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- NO_VISITED
+- VISITED_TIMING
+- INPUT_PARSE
+- OUTPUT_FORMAT
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: VISITED_TIMING
+  expectedStatus: WRONG_ANSWER

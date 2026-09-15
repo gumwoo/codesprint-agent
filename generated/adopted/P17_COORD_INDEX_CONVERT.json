@@ -1,0 +1,10 @@
+{
+  "id": "GRID_COORDINATE-1789457673060-1",
+  "skill": "GRID_COORDINATE",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T07:41:25+00:00",
+  "code": "P17_COORD_INDEX_CONVERT",
+  "crossCheckedInputs": 36,
+  "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    pos = 0\n    n = int(data[pos]); pos += 1\n    m = int(data[pos]); pos += 1\n    q = int(data[pos]); pos += 1\n    coord_to_idx = {}\n    idx_to_coord = []\n    counter = 0\n    for r in range(n):\n        for c in range(m):\n            coord_to_idx[(r, c)] = counter\n            idx_to_coord.append((r, c))\n            counter += 1\n    out = []\n    for _ in range(q):\n        t = data[pos]; pos += 1\n        if t == 'R':\n            r = int(data[pos]); pos += 1\n            c = int(data[pos]); pos += 1\n            out.append(str(coord_to_idx[(r, c)]))\n        else:\n            i = int(data[pos]); pos += 1\n            row, col = idx_to_coord[i]\n            out.append(f\"{row} {col}\")\n    print(\"\\n\".join(out))\n\nmain()\n",
+  "inputGenerator": "import random, sys\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    n = rng.randint(1, 6)\n    m = rng.randint(1, 6)\n    q = rng.randint(1, 5)\n    lines = [f\"{n} {m}\", str(q)]\n    for _ in range(q):\n        if rng.random() < 0.5:\n            r = rng.randint(0, n - 1)\n            c = rng.randint(0, m - 1)\n            lines.append(f\"R {r} {c}\")\n        else:\n            idx = rng.randint(0, n * m - 1)\n            lines.append(f\"I {idx}\")\n    print(\"\\n\".join(lines))\n\nmain()\n"
+}
