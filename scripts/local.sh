@@ -7,6 +7,9 @@
 #   scripts/local.sh backend   백엔드 + 화면 (http://localhost:18080)  <- 터미널 하나
 #   scripts/local.sh worker    Judge Worker                            <- 터미널 하나
 #
+#   scripts/local.sh generate <SKILL> [개수]   문제 초안을 만든다 (Claude CLI, ADR-0032)
+#   scripts/local.sh adopt <초안.json ...>     초안을 채택 검사에 넣는다 (Docker)
+#
 # 백엔드와 Worker 는 **각자 한 터미널을 차지한다.** 둘 다 멈추지 않고 도는 프로세스라
 # 한 스크립트가 백그라운드로 숨기면, 하나가 죽었을 때 화면은 "채점 중" 에서 멈추고
 # 그 이유는 어디에도 보이지 않는다.
@@ -85,11 +88,34 @@ worker() {
   exec python judge/worker.py
 }
 
+generate() {
+  local skill="${1:?Skill code 가 필요하다 - 예: scripts/local.sh generate PYTHON_LIST_BASIC 2}"
+  local count="${2:-1}"
+  command -v claude >/dev/null || die "claude CLI 가 없다 - 초안은 로그인된 claude CLI 로 만든다"
+  # gradle 은 컨테이너에서, claude CLI 는 호스트에 있다. 한 프로세스가 둘을 동시에 볼 수
+  # 없으므로 클래스와 의존성 jar 만 컨테이너에서 만들고 실행은 호스트에서 한다.
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$ROOT":/w -w /w/backend gradle:8.10.2-jdk17     gradle classes evalLibs --no-daemon -q
+  local sep=":" root="$ROOT"
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) sep=";"; root="$(cd "$ROOT" && pwd -W)" ;;
+  esac
+  cd "$ROOT"
+  java -Dfile.encoding=UTF-8 -Dcodesprint.repoRoot="$root"     -cp "backend/build/classes/java/main${sep}backend/build/resources/main${sep}backend/build/eval-lib/*"     dev.codesprint.generator.ProblemDraftGenerator "$skill" "$count"
+}
+
+adopt() {
+  [ "$#" -gt 0 ] || die "초안 파일이 필요하다 - 예: scripts/local.sh adopt generated/drafts/*.json"
+  cd "$ROOT"
+  exec python tools/adopt_problem.py "$@"
+}
+
 case "${1:-}" in
   check) check ;;
   db) db ;;
   build) build ;;
   backend) backend ;;
   worker) worker ;;
+  generate) shift; generate "$@" ;;
+  adopt) shift; adopt "$@" ;;
   *) sed -n '2,15p' "$0"; exit 2 ;;
 esac

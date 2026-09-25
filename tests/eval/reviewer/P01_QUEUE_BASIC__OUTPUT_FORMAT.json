@@ -8,19 +8,21 @@
     "PYTHON_DEQUE_BASIC",
     "PYTHON_LIST_BASIC"
   ],
-  "sourceCode": "\nimport sys\nfrom collections import deque\n\nlines = sys.stdin.read().splitlines()\nn = int(lines[0])\nq = deque()\nfor i in range(1, n + 1):\n    parts = lines[i].split()\n    if parts[0] == \"push\":\n        q.append(int(parts[1]))\n    elif q:\n        print(q.popleft())\n",
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\nlines = sys.stdin.read().splitlines()\nm, n = map(int, lines[0].split())\nq = deque(range(1, m + 1))\nout = []\nfor i in range(1, n + 1):\n    parts = lines[i].split()\n    if parts[0] == \"push\":\n        q.append(int(parts[1]))\n    elif q:\n        out.append(str(q.popleft()))\nprint(\"\\n\".join(out))\n",
   "judge": {
     "status": "WRONG_ANSWER",
     "failedCaseId": 1,
     "stderr": null,
     "passedCaseIds": [
-      3
+      4,
+      7
     ],
     "failedCaseIds": [
       1,
       2,
-      4,
-      5
+      3,
+      5,
+      6
     ]
   },
   "probes": {}

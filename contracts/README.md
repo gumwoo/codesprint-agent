@@ -7,6 +7,7 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | 파일 | 정본 문서 | 쓰이는 곳 |
 | --- | --- | --- |
 | [reviewer-output.llm.schema.json](reviewer-output.llm.schema.json) | [ADR-0001](../docs/adr/0001-llm-analyzes-system-decides.md) | **LLM 요청 스키마.** 오답 분석만. 점수·액션 필드 없음 |
+| [problem-draft.llm.schema.json](problem-draft.llm.schema.json) | [ADR-0032](../docs/adr/0032-the-agent-drafts-the-system-adopts.md) | **LLM 요청 스키마.** 문제 초안. 기대 출력 · Skill 비중 · 시간 제한은 받지 않는다 - 시스템이 정한다 |
 | [submit-response.schema.json](submit-response.schema.json) | Addendum §82 | **API 응답 스키마.** 시스템이 점수와 액션을 채운 최종 결과 |
 | [next-problem.schema.json](next-problem.schema.json) | [ADR-0002](../docs/adr/0002-next-action-decided-by-rule-engine.md), [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **다음 학습 단계 API 응답.** 결정된 액션을 문제 또는 개념 복습 자료로 옮긴 결과 |
 | [concept-view.schema.json](concept-view.schema.json) | [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **개념 복습 자료 응답.** `REVIEW_CONCEPT` 대상 Skill의 검증된 커리큘럼 자료 |

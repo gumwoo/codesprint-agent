@@ -1,0 +1,50 @@
+{
+  "codeSuffix": "CARD_DISCARD_LAST",
+  "title": "마지막에 남는 카드",
+  "statement": "1 부터 N 까지 번호가 붙은 카드가 1 이 맨 위가 되도록 쌓여 있다.\n카드가 한 장 남을 때까지 다음을 되풀이한다: 맨 위 카드를 버리고, 그다음 맨 위 카드를 맨 아래로 옮긴다.\n\n입력: 정수 N (1 ≤ N ≤ 300000)\n출력: 마지막에 남는 카드의 번호\n",
+  "secondarySkills": [],
+  "referenceComplexity": "O(N)",
+  "expectedSolveSeconds": 300,
+  "commonMistakes": [
+    "IMPLEMENTATION_MISC",
+    "INPUT_PARSE"
+  ],
+  "negativeControl": {
+    "mistake": "IMPLEMENTATION_MISC",
+    "expectedStatus": "WRONG_ANSWER"
+  },
+  "wrongDescription": "버리기와 옮기기의 순서를 바꿔, 옮긴 뒤에 버린다.",
+  "sampleInputs": [
+    "6\n"
+  ],
+  "edgeCases": [
+    {
+      "type": "MINIMUM",
+      "input": "1\n"
+    },
+    {
+      "type": "BOUNDARY",
+      "input": "2\n"
+    },
+    {
+      "type": "SINGLE",
+      "input": "7\n"
+    }
+  ],
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.read().strip() or \"0\")\nprint(random.Random(seed).randint(1, 60))\n",
+  "reference": "import sys\nfrom collections import deque\n\nn = int(sys.stdin.read().split()[0])\ncards = deque(range(1, n + 1))\nwhile len(cards) > 1:\n    cards.popleft()\n    cards.append(cards.popleft())\nprint(cards[0])\n",
+  "bruteForce": "import sys\n\ncount = int(sys.stdin.read().split()[0])\npile = list(range(1, count + 1))\nwhile len(pile) > 1:\n    pile.pop(0)\n    pile.append(pile.pop(0))\nprint(pile[0])\n",
+  "wrong": "import sys\nfrom collections import deque\n\nn = int(sys.stdin.read().split()[0])\ncards = deque(range(1, n + 1))\nwhile len(cards) > 1:\n    cards.append(cards.popleft())\n    cards.popleft()\nprint(cards[0])\n",
+  "hints": [
+    "맨 위에서 빼고 맨 아래에 넣습니다. 먼저 쌓인 카드가 먼저 나오는 순서를 보세요. N 은 수십만일 수 있습니다.",
+    "그대로 흉내 내는 시뮬레이션 문제입니다. 규칙을 수식으로 바꿀 필요는 없습니다.",
+    "앞에서 꺼내고 뒤에 넣는 일이 매 차례 일어납니다. 앞에서 꺼낼 때 나머지를 옮기지 않는 자료구조가 필요합니다 - collections.deque.",
+    "한 차례는 두 동작입니다. 맨 앞을 하나 버리고, 그다음 맨 앞을 꺼내 뒤에 붙입니다. 순서를 바꾸면 답이 달라집니다.",
+    "N 을 읽는다 / 1..N 을 담은 큐를 만든다 / 길이가 1 보다 크면 앞을 버리고 다음 앞을 뒤로 옮긴다 / 남은 하나를 출력한다"
+  ],
+  "skillControl": {
+    "approach": "list 의 pop(0) 으로 맨 위 카드를 뺀다",
+    "solution": "import sys\n\ncount = int(sys.stdin.read().split()[0])\npile = list(range(1, count + 1))\nwhile len(pile) > 1:\n    pile.pop(0)\n    pile.append(pile.pop(0))\nprint(pile[0])\n",
+    "stressInputGenerator": "print(300000)\n"
+  }
+}

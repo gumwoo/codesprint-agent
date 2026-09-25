@@ -1,0 +1,70 @@
+{
+  "id": "PYTHON_DEQUE_BASIC-1789471187894-2",
+  "skill": "PYTHON_DEQUE_BASIC",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-15T11:24:54+00:00",
+  "stage": "사람 검토",
+  "code": "P20_ROUND_ROBIN_FINISH_ORDER",
+  "reasons": [
+    "P20_ROUND_ROBIN_FINISH_ORDER 로 채택 검사를 전부 통과했다 (Skill 측정 포함)",
+    "종료 순서는 (필요 시간, 번호) 로 정렬한 것과 같다 - 큐 없이 정렬만 하는 풀이가 실제 채점에서 ACCEPTED",
+    "Skill 측정 단계는 초안이 스스로 낸 대조 풀이(list.pop(0))만 걸리는지 본다. 초안이 말하지 않은 지름길은 보지 못한다(ADR-0033 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "ROUND_ROBIN_FINISH_ORDER",
+    "title": "라운드 로빈 종료 순서",
+    "statement": "프로세스 N개가 있다. 프로세스 번호는 1번부터 N번까지이며(1-based), 각 프로세스 i 는 완료까지 필요한 시간 t_i 를 갖는다. 프로세스들은 처음에 1번부터 N번까지 순서대로 줄을 선다(맨 앞이 1번). 매 턴마다 줄의 맨 앞 프로세스를 꺼내 남은 시간을 1 줄인다. 줄인 뒤 남은 시간이 0보다 크면 그 프로세스를 줄의 맨 뒤에 다시 넣고, 0이면 그 순간 종료된 것으로 기록하고 다시 넣지 않는다. 모든 프로세스가 종료될 때까지 이를 반복한다.\n\n입력: 첫 줄에 N (1 ≤ N ≤ 100000). 둘째 줄에 N개의 정수 t_1 t_2 ... t_N 이 공백으로 구분되어 주어진다 (1 ≤ t_i ≤ 10). i번째 값이 i번 프로세스의 필요 시간이다.\n\n출력: 프로세스가 종료된 순서대로 번호를 공백으로 구분해 한 줄에 출력한다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N + sum(t_i))",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE",
+      "IMPLEMENTATION_MISC",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "종료된 프로세스 번호를 기록할 때 1을 빼서 0-based 인덱스로 잘못 출력한다.",
+    "sampleInputs": [
+      "3\n2 1 3",
+      "1\n5"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n1"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "2\n10 10"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5\n4 4 4 4 4"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6\n6 5 4 3 2 1"
+      }
+    ],
+    "inputGenerator": "import sys, random\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    n = rng.randint(1, 8)\n    times = [rng.randint(1, 6) for _ in range(n)]\n    print(n)\n    print(' '.join(map(str, times)))\n\nmain()\n",
+    "reference": "import sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    times = list(map(int, data[1:1+n]))\n    dq = deque(range(1, n+1))\n    remaining = times[:]\n    order = []\n    while dq:\n        pid = dq.popleft()\n        remaining[pid-1] -= 1\n        if remaining[pid-1] > 0:\n            dq.append(pid)\n        else:\n            order.append(pid)\n    print(' '.join(map(str, order)))\n\nmain()\n",
+    "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    times = list(map(int, data[1:1+n]))\n    queue = list(range(1, n+1))\n    remaining = times[:]\n    order = []\n    while queue:\n        pid = queue.pop(0)\n        remaining[pid-1] -= 1\n        if remaining[pid-1] > 0:\n            queue.append(pid)\n        else:\n            order.append(pid)\n    print(' '.join(map(str, order)))\n\nmain()\n",
+    "wrong": "import sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    times = list(map(int, data[1:1+n]))\n    dq = deque(range(1, n+1))\n    remaining = times[:]\n    order = []\n    while dq:\n        pid = dq.popleft()\n        remaining[pid-1] -= 1\n        if remaining[pid-1] > 0:\n            dq.append(pid)\n        else:\n            order.append(pid - 1)\n    print(' '.join(map(str, order)))\n\nmain()\n",
+    "hints": [
+      "매 턴마다 반드시 줄의 맨 앞 원소를 꺼내고, 조건에 따라 다시 맨 뒤에 집어넣는 일이 N번이 아니라 아주 여러 번 반복된다는 점을 관찰하라.",
+      "이 문제는 그래프 탐색이 아니라 큐를 이용한 시뮬레이션(라운드 로빈 스케줄링)이다.",
+      "리스트의 맨 앞 원소를 꺼내는 pop(0)은 나머지 원소를 모두 한 칸씩 옮기므로 느리다. 양쪽 끝 조작이 상수 시간인 자료구조를 사용해야 한다.",
+      "꺼낸 프로세스의 남은 시간을 1 줄인 뒤, 0보다 크면 다시 뒤로 보내고 0이 되면 그 시점의 순서를 기록하고 버린다.",
+      "while 큐가 비어있지 않다: 앞에서 하나 꺼낸다; 남은 시간을 1 감소시킨다; 남은 시간이 0보다 크면 뒤에 다시 넣고, 아니면 종료 순서에 기록한다."
+    ],
+    "skillControl": {
+      "approach": "collections.deque 대신 리스트를 사용해 queue.pop(0)으로 맨 앞 원소를 꺼낸다.",
+      "solution": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    times = list(map(int, data[1:1+n]))\n    queue = list(range(1, n+1))\n    remaining = times[:]\n    order = []\n    while queue:\n        pid = queue.pop(0)\n        remaining[pid-1] -= 1\n        if remaining[pid-1] > 0:\n            queue.append(pid)\n        else:\n            order.append(pid)\n    print(' '.join(map(str, order)))\n\nmain()\n",
+      "stressInputGenerator": "n = 100000\nprint(n)\nprint(' '.join(['10'] * n))\n"
+    }
+  }
+}

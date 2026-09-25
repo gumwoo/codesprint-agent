@@ -1,0 +1,65 @@
+{
+  "id": "PYTHON_LIST_BASIC-1789457702488-1",
+  "skill": "PYTHON_LIST_BASIC",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T07:42:08+00:00",
+  "stage": "교차 검증",
+  "reasons": [
+    "정답이 입력 [15, 16, 22, 27] 에서 아무것도 출력하지 않는다"
+  ],
+  "draft": {
+    "codeSuffix": "LIST_ROW_SWAP",
+    "title": "2차원 리스트 행 통째로 바꾸기",
+    "statement": "첫 줄에 정수 N (1 ≤ N ≤ 50) 이 주어진다. 이어지는 N개의 줄에는 각각 N개의 정수(각 값은 -1000 이상 1000 이하)가 공백으로 구분되어 주어지며, 이는 N×N 크기의 2차원 리스트를 이룬다. 다음 줄에는 명령의 개수 Q (1 ≤ Q ≤ 100) 가 주어지고, 이어지는 Q개의 줄에 다음 두 종류의 명령 중 하나가 주어진다. 행과 열 인덱스는 모두 0부터 센다.\n\n- `swap r1 r2` : r1번째 행과 r2번째 행을 통째로 맞바꾼다. (0 ≤ r1, r2 < N)\n- `get r c` : r번째 행, c번째 열의 값을 출력한다. (0 ≤ r, c < N)\n\n`get` 명령이 실행될 때마다 그 결과를 명령이 주어진 순서대로 한 줄에 하나씩 출력한다. `swap` 명령은 출력을 만들지 않는다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N^2 + Q)",
+    "expectedSolveSeconds": 300,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "get 명령에서 행과 열 인덱스를 뒤바꿔 grid[c][r]로 접근한다.",
+    "sampleInputs": [
+      "3\n1 2 3\n4 5 6\n7 8 9\n4\nget 1 2\nswap 0 2\nget 0 1\nget 2 0",
+      "2\n10 20\n30 40\n3\nswap 0 1\nget 0 1\nget 1 0"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n5\n1\nget 0 0"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "4\n1 2 3 4\n5 6 7 8\n9 10 11 12\n13 14 15 16\n3\nswap 0 3\nget 3 3\nget 0 0"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "3\n1 2 3\n3 1 2\n2 3 1\n3\nget 0 2\nswap 0 2\nget 0 2"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "2\n7 7\n7 7\n2\nswap 0 1\nget 1 1"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "5\n1 2 3 4 5\n6 7 8 9 10\n11 12 13 14 15\n16 17 18 19 20\n21 22 23 24 25\n6\nswap 0 4\nswap 1 3\nswap 0 2\nget 0 0\nget 2 0\nget 4 0"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rnd = random.Random(seed)\n    n = rnd.randint(1, 4)\n    lines = [str(n)]\n    grid = [[rnd.randint(-9, 9) for _ in range(n)] for _ in range(n)]\n    for row in grid:\n        lines.append(' '.join(map(str, row)))\n    q = rnd.randint(1, 5)\n    lines.append(str(q))\n    for _ in range(q):\n        if n >= 2 and rnd.random() < 0.5:\n            r1 = rnd.randint(0, n - 1)\n            r2 = rnd.randint(0, n - 1)\n            lines.append(f'swap {r1} {r2}')\n        else:\n            r = rnd.randint(0, n - 1)\n            c = rnd.randint(0, n - 1)\n            lines.append(f'get {r} {c}')\n    print('\\n'.join(lines))\n\n\nif __name__ == '__main__':\n    main()\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    grid = []\n    for _ in range(n):\n        row = [int(data[idx + j]) for j in range(n)]\n        idx += n\n        grid.append(row)\n    q = int(data[idx]); idx += 1\n    out = []\n    for _ in range(q):\n        cmd = data[idx]; idx += 1\n        if cmd == 'swap':\n            r1 = int(data[idx]); idx += 1\n            r2 = int(data[idx]); idx += 1\n            grid[r1], grid[r2] = grid[r2], grid[r1]\n        else:\n            r = int(data[idx]); idx += 1\n            c = int(data[idx]); idx += 1\n            out.append(str(grid[r][c]))\n    print('\\n'.join(out))\n\n\nif __name__ == '__main__':\n    main()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    grid = []\n    for _ in range(n):\n        row = [int(data[idx + j]) for j in range(n)]\n        idx += n\n        grid.append(row)\n    q = int(data[idx]); idx += 1\n    perm = list(range(n))\n    out = []\n    for _ in range(q):\n        cmd = data[idx]; idx += 1\n        if cmd == 'swap':\n            r1 = int(data[idx]); idx += 1\n            r2 = int(data[idx]); idx += 1\n            perm[r1], perm[r2] = perm[r2], perm[r1]\n        else:\n            r = int(data[idx]); idx += 1\n            c = int(data[idx]); idx += 1\n            out.append(str(grid[perm[r]][c]))\n    print('\\n'.join(out))\n\n\nif __name__ == '__main__':\n    main()\n",
+    "wrong": "# get 명령에서 행과 열 인덱스를 뒤바꿔 grid[c][r]로 접근한다\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    grid = []\n    for _ in range(n):\n        row = [int(data[idx + j]) for j in range(n)]\n        idx += n\n        grid.append(row)\n    q = int(data[idx]); idx += 1\n    out = []\n    for _ in range(q):\n        cmd = data[idx]; idx += 1\n        if cmd == 'swap':\n            r1 = int(data[idx]); idx += 1\n            r2 = int(data[idx]); idx += 1\n            grid[r1], grid[r2] = grid[r2], grid[r1]\n        else:\n            r = int(data[idx]); idx += 1\n            c = int(data[idx]); idx += 1\n            out.append(str(grid[c][r]))\n    print('\\n'.join(out))\n\n\nif __name__ == '__main__':\n    main()\n",
+    "hints": [
+      "swap 명령은 값 하나가 아니라 행 전체를 맞바꾼다는 점에 주목하라. 원소를 하나씩 옮기는 것과 행 자체를 바꾸는 것은 다르다.",
+      "탐색이나 정렬이 필요 없는 순수한 자료구조 조작 문제다. 주어진 명령을 입력 순서대로 그대로 처리하면 충분하다.",
+      "2차원 리스트를 리스트의 리스트로 표현하면 grid[r] 자체가 하나의 행(1차원 리스트)이다. 파이썬은 두 변수를 한 번에 바꾸는 튜플 언패킹 대입을 지원한다.",
+      "get r c 는 먼저 행 grid[r] 을 고른 뒤 그 행에서 c번째 값을 꺼내는 두 단계로 이루어진다. r과 c의 역할(행/열)을 혼동하지 않아야 한다.",
+      "1. N을 읽고 N×N 2차원 리스트를 만든다.\n2. Q개의 명령을 순서대로 읽는다.\n3. swap이면 두 행 전체를 서로 바꾼다.\n4. get이면 지정한 행을 먼저 고르고 그 행에서 지정한 열의 값을 결과 목록에 추가한다.\n5. 결과 목록을 한 줄씩 출력한다."
+    ]
+  }
+}

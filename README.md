@@ -36,14 +36,16 @@
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     API · LLM · Judge 계약 (JSON Schema) — 전부 contracts/README.md 표에 있다
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스 + Judge Worker
-problems/      슬라이스 1 의 검증된 문제 15개 (전부 개발 fixture — ADR-0008)
+problems/      슬라이스 1 의 검증된 문제 18개 (전부 개발 fixture — ADR-0008)
 learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
 backend/       Spring Boot · PostgreSQL · Decision Engine · API · 화면(static/)
 reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
 e2e/           실제 브라우저로 보는 화면 비동기 순서 검사 (Playwright)
 tests/         golden fixture + Reviewer 평가 케이스
 tools/         계약 · 문제 데이터 검사 + 메타테스트
-scripts/       내 PC 에서 끝까지 띄우는 스크립트
+scripts/       내 PC 에서 끝까지 띄우는 스크립트 (+ 문제 초안 생성 · 채택)
+generator/     문제 초안 생성기 프롬프트 (파일 이름이 버전이다)
+generated/     생성된 초안 · 채택 기록 · 거절 사유
 docs/adr/      결정과 그 이유
 docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
 ```
@@ -87,6 +89,34 @@ CODESPRINT_REVIEWER_ENABLED=true scripts/local.sh backend
 포트는 `PORT=` 와 `CODESPRINT_DB_PORT=` 로 바꾼다. 8080 · 5432 를 쓰지 않는 이유는
 개발 PC 에 흔히 다른 서버가 이미 떠 있기 때문이다 — 실제로 부딪혔다.
 
+## 문제 만들기 — 에이전트가 초안을, 시스템이 채택을
+
+문제는 LLM 이 **초안**으로 만들고, 채택 검사를 통과한 것만 문제은행에 들어간다
+([ADR-0032](docs/adr/0032-the-agent-drafts-the-system-adopts.md)).
+
+```bash
+scripts/local.sh generate PYTHON_LIST_BASIC 2      # 초안 2개 (Claude CLI)
+scripts/local.sh adopt generated/drafts/*.json     # 채택 검사 (Docker)
+```
+
+**기대 출력은 LLM 에게 받지 않는다.** 시스템이 정답을 실행해서 만든다. 그러면 "정답이
+통과한다" 는 아무것도 증명하지 못하므로, 초안은 **다른 방식의 풀이 둘**을 내고 무작위
+입력 30개와 경계 입력 전부에서 **답이 같아야** 채택된다.
+
+```text
+계약 → 참조 → 중복 → 입력 생성기 → 교차 검증 → Skill 측정 → 문제 데이터 검사 → 실제 채점
+```
+
+**AC 는 Skill 사용을 증명하지 않는다**([ADR-0033](docs/adr/0033-an-accepted-answer-does-not-prove-the-skill.md)).
+deque 를 몰라도 AC 가 나는 문제가 채택됐다가 철회됐다. 정답만으로 잴 수 없는 Skill 이면
+그 Skill 없이 같은 답을 내는 풀이가 큰 입력에서 시간 초과해야 채택된다.
+
+뒤의 두 단계는 사람이 쓴 문제에 쓰던 검사 그대로다. 거절된 초안도 단계와 사유와 함께
+`generated/rejected/` 에 남는다. 채택된 문제는 PR 로 들어오고 사람이 마지막에 본다.
+
+`tools/meta_test_adoption.py` 가 고정 초안을 일부러 망가뜨려 각 결함이 **제 단계에서**
+막히는지 CI 에서 본다. 모델은 부르지 않는다.
+
 ## 검증
 
 ```bash
@@ -111,7 +141,7 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 그것도 "실패했는가" 가 아니라 **"의도한 이유로 실패했는가"** 를 본다 — 심어둔 실수와
 드러나야 할 판정을 `negativeControl` 에 데이터로 적어두고 대조한다.
 
-저장소의 문제 15개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
+저장소의 문제 18개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
 실서비스 문제은행은 여기 두지 않는다([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
 
 Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
@@ -121,7 +151,7 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 ```bash
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
-python tools/verify_problems.py           # 문제 15개를 실제로 채점
+python tools/verify_problems.py           # 문제 18개를 실제로 채점
 python learning/tests/test_mastery.py     # Mastery 산식 (Python oracle)
 python tools/gen_mastery_golden.py        # golden 이 oracle 과 일치하는가
 cd backend && gradle test                 # Java 구현이 oracle 과 같은 값을 내는가
@@ -149,7 +179,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
 | 계약 + 검사 하네스 + 메타테스트 | 완료 |
 | Judge / Sandbox (Python 3.12) + Judge Worker / 큐 | 완료 |
-| 문제 · Test Case 15개 + 단계별 힌트 사다리 | 완료 |
+| 문제 · Test Case 18개 + 단계별 힌트 사다리 | 완료 |
 | Mastery / Evidence 산식 (Python oracle ↔ Java) | 완료 |
 | 초기 진단 · Decision Engine · 선수 관계 | 완료 |
 | 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |

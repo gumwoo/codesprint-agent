@@ -51,6 +51,34 @@ python tools/check_curriculum.py      # 데이터/계약이 맞는가
 python tools/meta_test_curriculum.py  # 검사가 실제로 잡는가
 ```
 
+## 문제를 생성할 때
+
+**LLM 은 초안만 만들고, 채택은 검사가 정한다**([ADR-0032](docs/adr/0032-the-agent-drafts-the-system-adopts.md)).
+점수와 액션을 LLM 에게 묻지 않는 것과 같은 선이다 - 문제가 되는지도 묻지 않는다.
+
+```bash
+scripts/local.sh generate <SKILL> [개수]    # generated/drafts/ (Claude CLI)
+scripts/local.sh adopt generated/drafts/*.json
+python tools/meta_test_adoption.py         # 채택 검사가 실제로 거르는가 (Docker)
+```
+
+- **기대 출력을 초안에 받지 않는다.** 시스템이 reference 를 실행해 만든다. 초안 계약에
+  `expectedOutput` 을 넣으면 LLM 이 정답과 "맞게 틀린" 기대값을 함께 적는 길이 다시 열린다
+- 그래서 **reference 와 다른 방식의 bruteForce 가 모든 입력에서 같아야** 채택한다.
+  교차 검증을 빼면 "정답이 통과한다" 는 자기 답과 자기를 비교한 것이다
+- **정답이 Skill 사용을 증명하지 않는다**([ADR-0033](docs/adr/0033-an-accepted-answer-does-not-prove-the-skill.md)).
+  `needs_skill_control` 이 true 인 Skill 이면 초안이 그 Skill 없이 같은 답을 내는 풀이와
+  큰 입력을 함께 내고, 그 풀이가 **작은 입력에서는 맞고 큰 입력에서는 TIME_LIMIT** 이어야
+  채택한다. 파일럿의 deque 이동합 문제가 인덱스 풀이로 AC 가 나서, 채택 검사를 전부
+  통과한 뒤 PR 검토에서 철회됐다
+- 채택 검사의 뒤 두 단계는 `check_problems` · `verify_problems` 를 **그대로** 부른다.
+  생성 문제용 검사를 따로 만들면 사람이 쓴 문제와 기준이 갈린다
+- 초안 코드(입력 생성기 포함)는 **신뢰할 수 없는 입력**이다. 전부 샌드박스에서 돈다
+- 채택 검사를 새로 넣으면 `meta_test_adoption.py` 에 그것을 **제 단계에서** 걸리게 하는
+  케이스를 함께 넣는다
+- 생성기 프롬프트도 **파일 이름이 버전이다**(`generator/prompts/problem-v2.md`). 명령은
+  Reviewer 와 `application.yml` 앵커로 공유한다 - 따로 적으면 한쪽만 도구 권한이 열린다
+
 ## 사용자 제출 코드
 
 `judge/submissions/` 아래는 **신뢰할 수 없는 입력**이다. 판정 대상이지 실행 대상이 아니다.
@@ -106,6 +134,13 @@ read-only 마운트는 수정을 막을 뿐 읽기를 막지 않는다. 하네�
 
 `auto_drill` 이 켜진 Mistake 는 그 `target_skill` 을 PRIMARY 로 갖는 `MICRO_DRILL`
 문제가 반드시 있어야 한다. 없으면 Decision Engine 이 갈 곳 없는 액션을 낸다.
+
+**AC 가 곧 그 Skill 을 썼다는 뜻은 아니다**([ADR-0033](docs/adr/0033-an-accepted-answer-does-not-prove-the-skill.md)).
+채점은 출력만 본다 - deque 를 몰라도 AC 가 나면 그 AC 가 `PYTHON_DEQUE_BASIC` Evidence 가
+된다. `skills.yaml` 의 `needs_skill_control` 이 true 인 Skill 을 PRIMARY 로 가지면
+`skill_control.py`(그 Skill 없이 같은 답을 내는 풀이)를 두고 `skillControl` 에 적는다.
+CI 가 그 풀이가 **시간 초과 전 case 는 전부 맞히고 큰 case 에서 TIME_LIMIT** 인지 채점해서 본다.
+처음부터 틀리는 풀이는 대조가 아니다 - 걸리기는 하지만 아무것도 보여주지 못한다.
 
 **이 저장소의 문제는 전부 `source: DEV_FIXTURE` 다**([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
 공개 저장소이므로 Test Case 와 정답이 그대로 보인다 — `hidden` 은 UI 노출 여부일 뿐
@@ -189,7 +224,7 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 ## 현재 상태
 
 Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
-15개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
+18개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
 제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
 LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않으면 분석 없이 나머지가
 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.

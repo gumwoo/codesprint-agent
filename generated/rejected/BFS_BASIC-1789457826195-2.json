@@ -1,0 +1,75 @@
+{
+  "id": "BFS_BASIC-1789457826195-2",
+  "skill": "BFS_BASIC",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T07:41:25+00:00",
+  "stage": "중복",
+  "reasons": [
+    "P16_BFS_VISIT_ORDER 와 code 가 겹친다"
+  ],
+  "draft": {
+    "codeSuffix": "BFS_VISIT_ORDER",
+    "title": "그래프 BFS 방문 순서",
+    "statement": "첫 줄에 정점의 수 N, 간선의 수 M, 시작 정점 V가 공백으로 구분되어 주어진다. 정점 번호는 1부터 N까지이다(1-based). 이어지는 M개의 줄에 간선의 양 끝 정점 A, B가 공백으로 구분되어 주어진다. 그래프는 무방향 그래프이며, 같은 간선이 여러 번 주어지거나 A와 B가 같은 자기 자신을 향한 간선이 주어질 수 있다. 정점 V에서 시작해 너비 우선 탐색(BFS)으로 그래프를 탐색한다. 한 정점에서 방문 가능한 인접 정점이 여러 개면 번호가 작은 정점부터 먼저 방문한다. 방문한 정점을 방문한 순서대로 공백 하나로 구분해 한 줄에 출력한다. V에서 도달할 수 없는 정점은 출력하지 않는다. 제약: 1 ≤ N ≤ 100000, 0 ≤ M ≤ 200000, 1 ≤ V ≤ N, 1 ≤ A, B ≤ N.",
+    "secondarySkills": [
+      "PYTHON_DEQUE_BASIC",
+      "BFS_VISITED_MANAGEMENT"
+    ],
+    "referenceComplexity": "O(N + M log M)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "VISITED_TIMING",
+      "NO_VISITED",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT",
+      "INDEX_ERROR",
+      "IMPLEMENTATION_MISC"
+    ],
+    "negativeControl": {
+      "mistake": "VISITED_TIMING",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "방문 처리를 큐에 넣을 때가 아니라 큐에서 꺼낼 때 수행해, 같은 정점이 큐에 중복으로 들어가 방문 순서에 중복 출력이 생긴다.",
+    "sampleInputs": [
+      "6 5 1\n1 2\n1 3\n2 4\n3 4\n4 5",
+      "2 0 2"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 0 1"
+      },
+      {
+        "type": "SINGLE",
+        "input": "3 0 2"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "100000 1 1\n1 2"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "3 3 1\n1 1\n1 2\n1 2"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5 4 1\n1 2\n1 3\n1 4\n1 5"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "4 4 1\n1 2\n1 3\n2 4\n3 4"
+      }
+    ],
+    "inputGenerator": "import sys, random\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    n = rng.randint(1, 8)\n    v = rng.randint(1, n)\n    max_edges = n * (n - 1) // 2 + 2\n    m = rng.randint(0, max_edges)\n    edges = []\n    for _ in range(m):\n        a = rng.randint(1, n)\n        b = rng.randint(1, n)\n        edges.append((a, b))\n    print(n, m, v)\n    for a, b in edges:\n        print(a, b)\n\nif __name__ == \"__main__\":\n    main()\n",
+    "reference": "import sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    v = int(data[idx]); idx += 1\n    adj = [[] for _ in range(n + 1)]\n    for _ in range(m):\n        a = int(data[idx]); idx += 1\n        b = int(data[idx]); idx += 1\n        adj[a].append(b)\n        adj[b].append(a)\n    for lst in adj:\n        lst.sort()\n    visited = [False] * (n + 1)\n    visited[v] = True\n    order = [v]\n    queue = deque([v])\n    while queue:\n        u = queue.popleft()\n        for nb in adj[u]:\n            if not visited[nb]:\n                visited[nb] = True\n                order.append(nb)\n                queue.append(nb)\n    print(' '.join(map(str, order)))\n\nif __name__ == \"__main__\":\n    main()\n",
+    "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    v = int(data[idx]); idx += 1\n    adj = [[] for _ in range(n + 1)]\n    for _ in range(m):\n        a = int(data[idx]); idx += 1\n        b = int(data[idx]); idx += 1\n        adj[a].append(b)\n        adj[b].append(a)\n    for lst in adj:\n        lst.sort()\n    visited = [False] * (n + 1)\n    visited[v] = True\n    order = [v]\n    frontier = [v]\n    while frontier:\n        next_frontier = []\n        for u in frontier:\n            for nb in adj[u]:\n                if not visited[nb]:\n                    visited[nb] = True\n                    order.append(nb)\n                    next_frontier.append(nb)\n        frontier = next_frontier\n    print(' '.join(map(str, order)))\n\nif __name__ == \"__main__\":\n    main()\n",
+    "wrong": "# 방문 처리를 큐에 넣을 때가 아니라 꺼낼 때 수행해 같은 정점이 큐에 중복으로 쌓인다\nimport sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    v = int(data[idx]); idx += 1\n    adj = [[] for _ in range(n + 1)]\n    for _ in range(m):\n        a = int(data[idx]); idx += 1\n        b = int(data[idx]); idx += 1\n        adj[a].append(b)\n        adj[b].append(a)\n    for lst in adj:\n        lst.sort()\n    visited = [False] * (n + 1)\n    order = []\n    queue = deque([v])\n    while queue:\n        u = queue.popleft()\n        order.append(u)\n        visited[u] = True\n        for nb in adj[u]:\n            if not visited[nb]:\n                queue.append(nb)\n    print(' '.join(map(str, order)))\n\nif __name__ == \"__main__\":\n    main()\n",
+    "hints": [
+      "두 개 이상의 서로 다른 정점에서 동시에 도달 가능한 정점이 있는 그래프(예: 마름모 모양)를 만들어 보고, 그 정점이 출력에 몇 번 나와야 하는지 생각해 보라.",
+      "너비 우선 탐색(BFS)으로 시작 정점부터 인접한 정점을 순서대로 넓혀가며 방문한다.",
+      "방문 대기 중인 정점은 큐(FIFO)에 저장하고, 이미 방문했거나 큐에 들어간 정점은 별도의 boolean 배열로 표시해 관리한다.",
+      "정점을 큐에서 꺼낼 때가 아니라 큐에 '넣는' 순간 방문 표시를 해야, 아직 처리되지 않은 같은 정점이 여러 경로를 통해 큐에 중복으로 쌓이는 것을 막을 수 있다.",
+      "visited[V] = True; queue = [V]\nwhile queue is not empty:\n    u = queue.popleft()\n    print(u)\n    for nb in sorted(adjacency[u]):\n        if visited[nb] is False:\n            visited[nb] = True\n            queue.append(nb)"
+    ]
+  }
+}

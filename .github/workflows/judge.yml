@@ -16,6 +16,12 @@ on:
       # 돌아야 한다.
       - 'tests/**'
       - 'contracts/**'
+      # 채택 파이프라인이 샌드박스로 초안을 거른다(ADR-0032).
+      - 'tools/adopt_problem.py'
+      - 'tools/meta_test_adoption.py'
+      # 실제 채점과 Skill 대조 검사(ADR-0033). 그 파일만 고친 PR 에서도 돌아야 한다.
+      - 'tools/verify_problems.py'
+      - 'tools/gen_reviewer_eval_cases.py'
       - 'requirements-dev.txt'
       # Worker 는 백엔드의 마이그레이션으로 스키마를 만든다. 큐 테이블이 바뀌면
       # 여기가 먼저 깨져야 한다.
@@ -93,6 +99,11 @@ jobs:
       # 아무것도 거르지 못하는 Test Case 집합도 reference 만으로는 통과한다.
       - name: 문제 데이터 채점 검증
         run: python tools/verify_problems.py
+
+      # 문제 초안 채택 파이프라인이 실제로 거르는가(ADR-0032). 모델을 부르지 않는다 -
+      # 고정 초안을 일부러 망가뜨려 각 검사가 제 단계에서 막는지 본다.
+      - name: 문제 채택 파이프라인 메타테스트
+        run: python tools/meta_test_adoption.py
 
       # Reviewer 평가 케이스가 **실제 채점 결과와 같은가**(ADR-0016).
       #

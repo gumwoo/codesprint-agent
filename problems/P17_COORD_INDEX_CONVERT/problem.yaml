@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P17_COORD_INDEX_CONVERT
+title: 좌표와 1차원 인덱스 변환
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 240
+referenceComplexity: O(Q)
+statement: |
+  격자의 행과 열 좌표를 행 우선(row-major) 1차원 인덱스로, 또는 그 반대로 변환한다. 모든 좌표와 인덱스는 0-based 이다.
+
+  입력: 첫 줄에 격자의 행 개수 N 과 열 개수 M 이 공백으로 주어진다 (1 <= N, M <= 1000). 둘째 줄에 질의의 개수 Q 가 주어진다 (1 <= Q <= 1000). 이어지는 Q 개의 줄에 질의가 하나씩 주어진다. 각 질의는 다음 두 형태 중 하나다.
+  - "R r c" : 0-based 좌표 (r, c) 를 행 우선 1차원 인덱스로 변환하라. (0 <= r < N, 0 <= c < M)
+  - "I idx" : 0-based 1차원 인덱스 idx 를 좌표 (row, col) 로 변환하라. (0 <= idx < N*M)
+
+  행 우선 인덱스는 0 행의 칸들에 왼쪽부터 0, 1, 2, ... 를 매기고, 이어서 1 행, 2 행 순서로 계속 매긴 번호다.
+
+  출력: 각 질의에 대해 결과를 한 줄씩 출력한다. "R" 질의는 변환된 인덱스 하나를 출력한다. "I" 질의는 "row col" 형태로 공백을 사이에 두고 출력한다.
+skills:
+- code: GRID_COORDINATE
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+
+# 정답이 곧 PRIMARY Skill 을 보여준다고 본다 - 대조 풀이를 두지 않는다(ADR-0033).
+skillControl: null

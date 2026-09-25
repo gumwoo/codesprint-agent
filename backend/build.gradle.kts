@@ -51,6 +51,10 @@ val curriculumSource = rootProject.projectDir.parentFile.resolve("curriculum")
 // 그러면 promptVersion 이 가리키는 내용이 무엇인지 알 수 없게 된다.
 val promptSource = rootProject.projectDir.parentFile.resolve("reviewer/prompts")
 
+// 문제 초안 생성기의 프롬프트(ADR-0032). 같은 prompts/ 로 굽는다 - 파일 이름이 버전이고
+// 둘은 이름으로 갈린다(reviewer-v1 / problem-v1).
+val generatorPromptSource = rootProject.projectDir.parentFile.resolve("generator/prompts")
+
 // Reviewer 요청용 계약. 프롬프트에 그대로 넣으므로 런타임에 필요하다 -
 // 스키마를 손으로 옮겨 적으면 계약과 프롬프트가 갈라지고, 그때 모델은 프롬프트를 따른다.
 val contractSource = rootProject.projectDir.parentFile.resolve("contracts")
@@ -64,13 +68,18 @@ tasks.named<ProcessResources>("processResources") {
         into("prompts")
         include("*.md")
     }
+    from(generatorPromptSource) {
+        into("prompts")
+        include("*.md")
+    }
     from(contractSource) {
         into("contracts")
-        include("reviewer-output.llm.schema.json")
+        include("reviewer-output.llm.schema.json", "problem-draft.llm.schema.json")
     }
     // 커리큘럼이나 프롬프트가 바뀌면 다시 굽는다.
     inputs.dir(curriculumSource)
     inputs.dir(promptSource)
+    inputs.dir(generatorPromptSource)
     inputs.dir(contractSource)
 }
 

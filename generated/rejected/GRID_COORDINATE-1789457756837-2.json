@@ -1,0 +1,62 @@
+{
+  "id": "GRID_COORDINATE-1789457756837-2",
+  "skill": "GRID_COORDINATE",
+  "promptVersion": "problem-v1",
+  "decidedAt": "2026-09-15T07:45:36+00:00",
+  "stage": "사람 검토",
+  "reasons": [
+    "P17_COORD_INDEX_CONVERT 와 같은 문제다 - 둘 다 좌표와 행 우선 번호를 서로 바꾸고, 샘플 기대 출력까지 '6 / 1 1 / 11' 로 같다",
+    "채택 검사의 중복 단계는 본문 글자 유사도로 보므로 문장을 다르게 쓴 의미상 중복을 잡지 못했다 (ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "LINEAR_INDEX_CONVERT",
+    "title": "격자와 일렬 번호 변환",
+    "statement": "첫 줄에 격자의 크기 N M 이 주어진다. (N: 행의 개수, M: 열의 개수) 격자의 각 칸에는 왼쪽 위 (0, 0) 부터 시작해 행 우선(row-major) 순서로 0 부터 N*M-1 까지 번호가 매겨져 있다. 즉 (r, c) (0-based) 의 번호는 r*M+c 다. 다음 줄에 질의의 개수 Q 가 주어진다. 이어지는 Q 개의 줄에 질의가 하나씩 주어지며, 두 종류가 있다. \"I r c\" 는 좌표 (r, c) 의 번호를 묻는다. \"C k\" 는 번호 k 에 해당하는 좌표를 묻는다. 입력으로 주어지는 좌표와 번호는 항상 격자 범위 안에 있다고 가정한다. 각 질의에 대해, \"I\" 질의는 번호를 한 줄에 정수 하나로, \"C\" 질의는 좌표를 \"r c\" 형태로 한 줄에 출력한다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(Q)",
+    "expectedSolveSeconds": 240,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "좌표를 번호로 바꿀 때 열의 개수 M 대신 행의 개수 N 을 곱했다. 격자가 정사각형(N==M)이면 드러나지 않고, N!=M 일 때만 틀린 답이 나온다.",
+    "sampleInputs": [
+      "3 4\n3\nI 1 2\nC 5\nI 2 3",
+      "2 5\n2\nI 1 4\nC 3"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n1\nI 0 0"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5 1\n2\nI 4 0\nC 4"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "100 100\n3\nI 99 99\nC 9999\nI 50 30"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "3 7\n4\nI 0 6\nI 2 0\nC 20\nC 0"
+      }
+    ],
+    "inputGenerator": "import random, sys\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rnd = random.Random(seed)\n    n = rnd.randint(1, 6)\n    m = rnd.randint(1, 6)\n    q = rnd.randint(1, 5)\n    lines = [f\"{n} {m}\", str(q)]\n    for _ in range(q):\n        if rnd.random() < 0.5:\n            r = rnd.randint(0, n - 1)\n            c = rnd.randint(0, m - 1)\n            lines.append(f\"I {r} {c}\")\n        else:\n            k = rnd.randint(0, n * m - 1)\n            lines.append(f\"C {k}\")\n    print(\"\\n\".join(lines))\n\nmain()\n",
+    "reference": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    q = int(data[idx]); idx += 1\n    out = []\n    for _ in range(q):\n        t = data[idx]; idx += 1\n        if t == \"I\":\n            r = int(data[idx]); idx += 1\n            c = int(data[idx]); idx += 1\n            out.append(str(r * m + c))\n        else:\n            k = int(data[idx]); idx += 1\n            out.append(f\"{k // m} {k % m}\")\n    print(\"\\n\".join(out))\n\nmain()\n",
+    "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    q = int(data[idx]); idx += 1\n    coord_to_num = {}\n    num_to_coord = {}\n    num = 0\n    for r in range(n):\n        for c in range(m):\n            coord_to_num[(r, c)] = num\n            num_to_coord[num] = (r, c)\n            num += 1\n    out = []\n    for _ in range(q):\n        t = data[idx]; idx += 1\n        if t == \"I\":\n            r = int(data[idx]); idx += 1\n            c = int(data[idx]); idx += 1\n            out.append(str(coord_to_num[(r, c)]))\n        else:\n            k = int(data[idx]); idx += 1\n            rr, cc = num_to_coord[k]\n            out.append(f\"{rr} {cc}\")\n    print(\"\\n\".join(out))\n\nmain()\n",
+    "wrong": "# 좌표->번호 변환에서 열의 개수 M 대신 행의 개수 N 을 곱했다 (INDEX_ERROR)\nimport sys\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    q = int(data[idx]); idx += 1\n    out = []\n    for _ in range(q):\n        t = data[idx]; idx += 1\n        if t == \"I\":\n            r = int(data[idx]); idx += 1\n            c = int(data[idx]); idx += 1\n            out.append(str(r * n + c))\n        else:\n            k = int(data[idx]); idx += 1\n            out.append(f\"{k // m} {k % m}\")\n    print(\"\\n\".join(out))\n\nmain()\n",
+    "hints": [
+      "각 칸에는 왼쪽 위부터 오른쪽으로 번호가 매겨지고, 한 행이 끝나면 다음 행의 첫 칸으로 이어진다. 번호가 한 행 안에서, 그리고 행이 바뀔 때 각각 어떻게 변하는지 관찰하라.",
+      "탐색이나 그래프 알고리즘이 필요 없다. 좌표와 번호 사이의 관계를 나타내는 단순한 산술 변환 문제다.",
+      "격자 전체를 배열이나 딕셔너리로 만들 필요는 없다. 좌표와 번호는 수식 하나로 서로 바꿀 수 있다.",
+      "한 행에 열이 M 개 있으므로, 번호 k 를 M 으로 나눈 몫은 행 번호이고 나머지는 열 번호다. 반대 방향으로는 행 번호에 M 을 곱하고 열 번호를 더하면 번호가 된다.",
+      "\"I r c\" 질의에는 r * M + c 를 출력하고, \"C k\" 질의에는 k // M 과 k % M 을 공백으로 구분해 출력한다."
+    ]
+  }
+}

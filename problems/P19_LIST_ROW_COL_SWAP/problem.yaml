@@ -1,0 +1,31 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P19_LIST_ROW_COL_SWAP
+title: 2차원 리스트 행과 열 교환하기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 300
+referenceComplexity: O(Q * max(N, M))
+statement: |
+  첫 줄에 격자의 행의 개수 N 과 열의 개수 M 이 공백으로 구분되어 주어진다 (1 ≤ N, M ≤ 100). 이어지는 N 개의 줄에 각각 M 개의 정수가 공백으로 구분되어 주어져 격자를 이룬다 (각 정수의 절댓값은 1000 이하). 그 다음 줄에 명령의 개수 Q 가 주어진다 (0 ≤ Q ≤ 1000). 이어지는 Q 개의 줄에는 다음 두 가지 명령 중 하나가 주어진다. 행과 열의 번호는 모두 0 부터 센다.
+  row a b : a 번째 행과 b 번째 행을 통째로 교환한다.
+  col a b : a 번째 열과 b 번째 열을 통째로 교환한다.
+  Q 개의 명령을 순서대로 모두 처리한 뒤, 최종 격자를 N 개의 줄에 걸쳐 각 줄마다 M 개의 정수를 공백으로 구분해 출력한다.
+skills:
+- code: PYTHON_LIST_BASIC
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+
+# 정답이 곧 PRIMARY Skill 을 보여준다고 본다 - 대조 풀이를 두지 않는다(ADR-0033).
+skillControl: null

@@ -36,3 +36,6 @@ commonMistakes:
 negativeControl:
   mistake: BOUNDARY_CHECK
   expectedStatus: WRONG_ANSWER
+
+# 정답이 곧 PRIMARY Skill 을 보여준다고 본다 - 대조 풀이를 두지 않는다(ADR-0033).
+skillControl: null

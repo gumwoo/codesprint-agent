@@ -33,3 +33,7 @@ node_modules/
 # Playwright 실행 산출물. 돌릴 때마다 저장소 변경으로 잡힌다.
 test-results/
 playwright-report/
+
+# 문제 초안 원본. 채택 · 거절 기록(generated/adopted, generated/rejected)에 필요한 내용이
+# 남으므로 원본까지 올리지 않는다(ADR-0032).
+generated/drafts/
