@@ -4,6 +4,7 @@
   "promptVersion": "problem-v2",
   "decidedAt": "2026-09-15T11:24:54+00:00",
   "stage": "사람 검토",
+  "code": "P20_ROUND_ROBIN_FINISH_ORDER",
   "reasons": [
     "P20_ROUND_ROBIN_FINISH_ORDER 로 채택 검사를 전부 통과했다 (Skill 측정 포함)",
     "종료 순서는 (필요 시간, 번호) 로 정렬한 것과 같다 - 큐 없이 정렬만 하는 풀이가 실제 채점에서 ACCEPTED",

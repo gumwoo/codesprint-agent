@@ -4,6 +4,7 @@
   "promptVersion": "problem-v1",
   "decidedAt": "2026-09-15T08:28:54+00:00",
   "stage": "Skill 측정",
+  "code": "P18_DEQUE_MOVING_SUM",
   "reasons": [
     "P18_DEQUE_MOVING_SUM 으로 채택됐다가 PR #43 검토에서 철회했다",
     "deque 없이 배열 인덱스로 K 칸 전 값을 빼는 풀이가 실제 채점에서 ACCEPTED - PYTHON_DEQUE_BASIC 을 재지 못한다",

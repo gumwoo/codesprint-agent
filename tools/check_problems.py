@@ -129,6 +129,16 @@ def main() -> int:
             fail("skill-control",
                  f"{rel}: PRIMARY {primary_code} 는 정답 여부만으로 잴 수 없는 Skill 인데 "
                  f"skillControl 이 없다 - 그 Skill 없이도 AC 를 받는지 확인할 방법이 없다")
+        # PRIMARY 가 아닌 역할로 붙는 것도 막는다. SECONDARY 도 관측값은 PRIMARY 와 같은
+        # alpha 로 EMA 에 들어가고 weight 는 confidence 에만 곱해진다 - 대조 풀이가 없는
+        # 자리에서 그 Skill 을 모르는 AC 가 그 Skill 의 Evidence 가 된다. 실제로 P14 · P16 이
+        # PYTHON_DEQUE_BASIC 을 SECONDARY 로 가졌고, list.pop(0) BFS 가 둘 다 AC 였다.
+        for s in entries:
+            if (s.get("role") != "PRIMARY"
+                    and (skills.get(s.get("code")) or {}).get("needs_skill_control")):
+                fail("skill-control",
+                     f"{rel}: {s.get('code')} 는 정답 여부만으로 잴 수 없는 Skill 이라 "
+                     f"PRIMARY 로만 둘 수 있다 (지금 {s.get('role')})")
         if control_spec and not control_file.exists():
             fail("skill-control", f"{rel}: skillControl 을 적었는데 skill_control.py 가 없다")
         if not control_spec and control_file.exists():

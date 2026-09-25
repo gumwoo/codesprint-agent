@@ -56,6 +56,8 @@ class GeneratorSharesReviewerSettingsTest {
         // SYSTEM 이 부여하는 실수는 초안에 쓸 수 없다고 알려 준다.
         assertThat(values.get("allowedMistakes")).doesNotContain("SYNTAX_ERROR");
         assertThat(values.get("skillControlRule")).contains("null 로 둔다");
+        // 정답만으로 잴 수 없는 Skill 은 보조 후보에 없다 - 채택 검사가 막는 것을 권하지 않는다.
+        assertThat(values.get("secondaryCandidates")).doesNotContain("PYTHON_DEQUE_BASIC");
     }
 
     @Test

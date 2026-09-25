@@ -57,7 +57,9 @@ public final class DraftPrompt {
 
         List<String> secondary = new ArrayList<>();
         for (Map<String, Object> s : skills) {
-            if (!skillCode.equals(s.get("code"))) {
+            // 정답만으로 잴 수 없는 Skill 은 보조로 쓸 수 없다 - 채택 검사가 막는다(ADR-0033).
+            if (!skillCode.equals(s.get("code"))
+                    && !Boolean.TRUE.equals(s.get("needs_skill_control"))) {
                 secondary.add("- " + s.get("code") + " — " + s.get("name"));
             }
         }

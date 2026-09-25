@@ -106,11 +106,16 @@ def check_references(draft: dict, skill: str) -> None:
     reasons = []
     if skill not in skills:
         reasons.append(f"요청한 Skill {skill} 이 skills.yaml 에 없다")
+    catalog = {s["code"]: s for s in _load_yaml(CURRICULUM / "skills.yaml")["skills"]}
     for code in draft["secondarySkills"]:
         if code == skill:
             reasons.append(f"보조 Skill 에 요청한 Skill {code} 이 다시 들어 있다")
         elif code not in skills:
             reasons.append(f"skills.yaml 에 없는 보조 Skill {code}")
+        elif catalog[code].get("needs_skill_control"):
+            # 대조 풀이는 PRIMARY 에만 붙는다. 보조로 두면 그 Skill 을 모르는 AC 가 그
+            # Skill 의 Evidence 가 된다(ADR-0033, 검증 에이전트가 P16 에서 찾았다).
+            reasons.append(f"{code} 는 정답 여부만으로 잴 수 없는 Skill 이라 보조 Skill 로 둘 수 없다")
     for code in draft["commonMistakes"]:
         if code not in mistakes:
             reasons.append(f"mistakes.yaml 에 없는 실수 {code}")
@@ -286,9 +291,24 @@ def _literal_representer(dumper, data):
 yaml.add_representer(_Literal, _literal_representer, Dumper=yaml.SafeDumper)
 
 
-def next_code(draft: dict) -> str:
+def _used_numbers() -> list[int]:
+    """쓴 적이 있는 문제 번호. 지금 있는 문제와, 채택됐다가 철회된 기록의 code 까지.
+
+    철회된 번호를 다시 발급하면 ADR 과 거절 기록이 가리키는 P20 이 다른 문제가 된다 -
+    검증 에이전트가 메타 실행에서 P20 이 다시 발급되는 것을 찾았다.
+    """
     numbers = [int(m.group(1)) for p in PROBLEMS.iterdir()
-               if (m := re.match(r"^P(\d{2})_", p.name))]
+               if (m := re.match(r"^P(\d{2,3})_", p.name))]
+    for folder in ("adopted", "rejected"):
+        for record in (RECORDS / folder).glob("*.json"):
+            code = json.loads(record.read_text(encoding="utf-8")).get("code") or ""
+            if m := re.match(r"^P(\d{2,3})_", code):
+                numbers.append(int(m.group(1)))
+    return numbers
+
+
+def next_code(draft: dict) -> str:
+    numbers = _used_numbers()
     number = max(numbers, default=0) + 1
     if number > 99:
         raise Rejected("중복", ["문제 번호가 99 를 넘는다 - code 형식이 두 자리다"])
@@ -342,9 +362,18 @@ def materialize(draft: dict, skill: str, sample_inputs: list[str], edge_cases: l
         cases.append({"id": ordinal + 1, "type": edge["type"], "hidden": True,
                       "input": edge["input"], "expectedOutput": expected[ordinal], "probes": []})
         ordinal += 1
-    for text in random_inputs[:RANDOM_CASES_KEPT]:
+    # 숨은 무작위 case 는 **서로 다르고 큰 것**부터 남긴다. 앞에서 셋을 자르면 같은 입력이
+    # 두 번 들어가거나 가장 작은 입력만 남는다 - P16 이 그랬다(검증 에이전트).
+    kept, seen = [], set(sample_inputs) | {e["input"] for e in edge_cases}
+    for index in sorted(range(len(random_inputs)), key=lambda i: -len(random_inputs[i])):
+        if random_inputs[index] not in seen and len(kept) < RANDOM_CASES_KEPT:
+            seen.add(random_inputs[index])
+            kept.append(index)
+    base = len(sample_inputs) + len(edge_cases)
+    for index in sorted(kept):
+        text = random_inputs[index]
         cases.append({"id": ordinal + 1, "type": "RANDOM", "hidden": True, "input": text,
-                      "expectedOutput": expected[ordinal], "probes": []})
+                      "expectedOutput": expected[base + index], "probes": []})
         ordinal += 1
     if control:
         # 맨 뒤에 둔다. 대조 풀이는 여기서 시간 초과하고, 그 앞 case 는 전부 맞혀야 한다.
@@ -419,10 +448,14 @@ def adopt(envelope_path: pathlib.Path, records: pathlib.Path = RECORDS) -> dict:
         code = materialize(draft, skill, sample_inputs, edge_cases, random_inputs, expected,
                            control)
         run_repo_checks(code)
-    except Rejected as rejected:
+    except Exception as error:
         if code is not None:
-            # 들어갔다가 막힌 문제는 흔적 없이 걷는다. 반쯤 남으면 다음 검사가 그것에 걸린다.
+            # 들어갔다가 막힌 문제는 흔적 없이 걷는다. 검사 밖의 예외(TypeError 등)도
+            # 마찬가지다 - 반쯤 남으면 다음 채택이 그것에 걸린다(검증 에이전트).
             shutil.rmtree(PROBLEMS / code, ignore_errors=True)
+        if not isinstance(error, Rejected):
+            raise
+        rejected = error
         _record(records / "rejected" / f"{draft_id}.json", {
             "id": draft_id, "skill": skill, "promptVersion": envelope.get("promptVersion"),
             "decidedAt": stamp, "stage": rejected.stage, "reasons": rejected.reasons,

@@ -69,6 +69,12 @@ def drop_skill_control_field(doc):
     doc.pop("skillControl")
 
 
+def deque_becomes_secondary(doc):
+    # P14 · P16 이 실제로 그랬다. SECONDARY 로 붙이면 대조 없이 deque Evidence 가 쌓인다.
+    doc["skills"][0]["weight"] = 0.6
+    doc["skills"].append({"code": "PYTHON_DEQUE_BASIC", "role": "SECONDARY", "weight": 0.4})
+
+
 def dangling_control_mistake(doc):
     doc["negativeControl"]["mistake"] = "MISTAKE_THAT_DOES_NOT_EXIST"
 
@@ -222,6 +228,7 @@ CASES = [
     # ADR-0033 · 정답이 Skill 사용을 증명하지 않는 Skill
     ("정답만으로 잴 수 없는 Skill 에 대조 풀이가 없으면", "problems/P01_QUEUE_BASIC/problem.yaml", queue_problem_loses_skill_control, "skillControl 이 없다"),
     ("skillControl 을 생략하면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", drop_skill_control_field, "'skillControl' is a required property"),
+    ("잴 수 없는 Skill 을 SECONDARY 로 붙이면", "problems/P14_GRAPH_REACHABLE/problem.yaml", deque_becomes_secondary, "PRIMARY 로만 둘 수 있다"),
 ]
 
 # 파일이 있고 없고로만 깨뜨릴 수 있는 것. (설명, 대상, 동작, 기대 메시지 조각)
