@@ -1,0 +1,11 @@
+{
+  "id": "MINIMUM_SPANNING_TREE-1790372159094-2",
+  "skill": "MINIMUM_SPANNING_TREE",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T21:40:14+00:00",
+  "code": "P86_CITY_ROAD_MIN_COST",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom itertools import combinations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    edges = []\n    for i in range(m):\n        u = int(data[2 + 3 * i]) - 1\n        v = int(data[3 + 3 * i]) - 1\n        w = int(data[4 + 3 * i])\n        edges.append((u, v, w))\n    best = -1\n    for chosen in combinations(range(m), n - 1):\n        adj = [[] for _ in range(n)]\n        for idx in chosen:\n            u, v, _ = edges[idx]\n            adj[u].append(v)\n            adj[v].append(u)\n        seen = [False] * n\n        seen[0] = True\n        stack = [0]\n        count = 1\n        while stack:\n            x = stack.pop()\n            for y in adj[x]:\n                if not seen[y]:\n                    seen[y] = True\n                    count += 1\n                    stack.append(y)\n        if count == n:\n            cost = sum(edges[idx][2] for idx in chosen)\n            if best == -1 or cost < best:\n                best = cost\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nm = rng.randint(0, 9)\nhi = rng.choice([5, 20, 1000000000])\nlines = [f\"{n} {m}\"]\nfor _ in range(m):\n    u = rng.randint(1, n)\n    v = rng.randint(1, n)\n    w = rng.randint(1, hi)\n    lines.append(f\"{u} {v} {w}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 20000\nextra = 25000\norder = list(range(1, n + 1))\nrng.shuffle(order)\nedges = []\nfor i in range(1, n):\n    edges.append((order[i], order[rng.randrange(i)], rng.randint(1, 1000000)))\nfor _ in range(extra):\n    u = rng.randint(1, n)\n    v = rng.randint(1, n)\n    while v == u:\n        v = rng.randint(1, n)\n    edges.append((u, v, rng.randint(1, 1000000)))\nrng.shuffle(edges)\nout = [f\"{n} {len(edges)}\"]\nfor u, v, w in edges:\n    if rng.random() < 0.5:\n        u, v = v, u\n    out.append(f\"{u} {v} {w}\")\nprint(\"\\n\".join(out))\n"
+}

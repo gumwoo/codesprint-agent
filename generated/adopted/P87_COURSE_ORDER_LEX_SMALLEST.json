@@ -1,0 +1,11 @@
+{
+  "id": "TOPOLOGICAL_ORDER-1790371956506-1",
+  "skill": "TOPOLOGICAL_ORDER",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T21:40:36+00:00",
+  "code": "P87_COURSE_ORDER_LEX_SMALLEST",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom itertools import permutations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = [(int(data[2 + 2 * i]), int(data[3 + 2 * i])) for i in range(m)]\n    for p in permutations(range(1, n + 1)):\n        pos = [0] * (n + 1)\n        for i, v in enumerate(p):\n            pos[v] = i\n        if all(pos[a] < pos[b] for a, b in edges):\n            print(' '.join(map(str, p)))\n            return\n    print(-1)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read().split()[0])\nrng = random.Random(seed)\nn = rng.randint(1, 7)\nedges = []\nif n >= 2:\n    m = rng.randint(0, 10)\n    perm = list(range(1, n + 1))\n    rng.shuffle(perm)\n    acyclic = rng.random() < 0.6\n    for _ in range(m):\n        i, j = rng.sample(range(n), 2)\n        if acyclic and i > j:\n            i, j = j, i\n        edges.append((perm[i], perm[j]))\nprint(n, len(edges))\nfor a, b in edges:\n    print(a, b)\n",
+  "stressInputGenerator": null
+}

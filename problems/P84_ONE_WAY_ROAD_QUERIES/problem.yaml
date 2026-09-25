@@ -1,0 +1,46 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P84_ONE_WAY_ROAD_QUERIES
+title: 일방통행 도로 거리 질의
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N^3 + M + Q)
+statement: |
+  도시 N개가 1번부터 N번까지 번호로 매겨져 있다. 도로 M개가 있고, 각 도로는 도시 u에서 도시 v로만 갈 수 있으며 지나는 데 w분이 걸린다. 같은 두 도시 사이에 도로가 여러 개 있을 수 있고, 방향이 반대인 도로는 서로 다른 도로다.
+
+  질의 Q개가 주어진다. 각 질의는 두 도시 a, b다. 도로만 따라 a에서 b로 갈 때 걸리는 가장 짧은 시간을 출력한다. 갈 수 없으면 -1을 출력한다. a와 b가 같으면 0이다.
+
+  입력 형식
+  첫 줄: N M
+  다음 M줄: u v w (도시 u에서 v로 가는 도로, 걸리는 시간 w)
+  다음 줄: Q
+  다음 Q줄: a b
+
+  출력 형식
+  질의마다 한 줄에 답을 하나씩, 입력 순서대로 출력한다.
+
+  제약
+  1 ≤ N ≤ 100
+  0 ≤ M ≤ 10000
+  1 ≤ u, v ≤ N, u ≠ v
+  1 ≤ w ≤ 1000
+  1 ≤ Q ≤ 10000
+  1 ≤ a, b ≤ N
+  도시 번호는 1부터 센다.
+skills:
+- code: FLOYD_WARSHALL
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INDEX_ERROR
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

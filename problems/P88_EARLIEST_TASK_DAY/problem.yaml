@@ -1,0 +1,43 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P88_EARLIEST_TASK_DAY
+title: 작업별 가장 빠른 완료일
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(N + M)
+statement: |
+  작업 N개가 있고 1번부터 N번까지 번호가 붙어 있다(1-based). 선행 관계 M개가 주어진다. 선행 관계 a b 는 a번 작업이 끝난 다음 날부터 b번 작업을 할 수 있다는 뜻이다. 같은 선행 관계가 여러 번 주어질 수 있고, a 와 b 는 서로 다르다.
+
+  작업은 1일차부터 진행한다. 하루에 할 수 있는 작업 수에는 제한이 없고, 각 작업은 하루 만에 끝난다. 어떤 작업을 d일차에 하려면 그 작업의 모든 선행 작업이 d-1일차까지 끝나 있어야 한다. 선행 작업이 없는 작업은 1일차에 할 수 있다. 모든 작업은 할 수 있게 된 가장 이른 날에 한다.
+
+  선행 관계 때문에 어떤 날에도 할 수 없는 작업도 있다. 예를 들어 1 2 와 2 1 이 함께 주어지면 1번과 2번 작업은 영원히 할 수 없고, 그 둘 중 하나를 선행 작업으로 가지는 작업도 할 수 없다.
+
+  각 작업이 끝나는 날을 구하라. 할 수 없는 작업은 -1 로 적는다.
+
+  입력 형식
+  첫 줄에 N M 이 주어진다.
+  다음 M 줄에 선행 관계 a b 가 한 줄에 하나씩 주어진다.
+
+  출력 형식
+  1번 작업부터 N번 작업까지 각 작업이 끝나는 날(1부터 센다)을 공백 하나로 구분해 한 줄에 출력한다. 할 수 없는 작업은 -1 을 출력한다.
+
+  제약
+  1 <= N <= 100000
+  0 <= M <= 200000
+  1 <= a, b <= N, a != b
+skills:
+- code: TOPOLOGICAL_ORDER
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

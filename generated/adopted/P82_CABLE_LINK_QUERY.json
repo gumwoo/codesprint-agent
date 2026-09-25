@@ -1,0 +1,11 @@
+{
+  "id": "DISJOINT_SET-1790371851520-1",
+  "skill": "DISJOINT_SET",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T21:38:58+00:00",
+  "code": "P82_CABLE_LINK_QUERY",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, q = int(data[0]), int(data[1])\n    label = list(range(n + 1))\n    out = []\n    idx = 2\n    for _ in range(q):\n        t = data[idx]\n        a = int(data[idx + 1])\n        b = int(data[idx + 2])\n        idx += 3\n        if t == \"1\":\n            la = label[a]\n            lb = label[b]\n            if la != lb:\n                for v in range(1, n + 1):\n                    if label[v] == lb:\n                        label[v] = la\n        else:\n            out.append(\"YES\" if label[a] == label[b] else \"NO\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nq = rng.randint(1, 20)\nops = []\nfor _ in range(q):\n    t = rng.choice((1, 2))\n    ops.append((t, rng.randint(1, n), rng.randint(1, n)))\nif all(t == 1 for t, _, _ in ops):\n    k = rng.randrange(q)\n    ops[k] = (2, ops[k][1], ops[k][2])\nprint(n, q)\nfor t, a, b in ops:\n    print(t, a, b)\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 40000\nops = [\"1\"] * 38000 + [\"2\"] * 22000\nrng.shuffle(ops)\nlines = [f\"{n} {len(ops)}\"]\nfor t in ops:\n    a = rng.randint(1, n)\n    b = rng.randint(1, n)\n    lines.append(f\"{t} {a} {b}\")\nprint(\"\\n\".join(lines))\n"
+}

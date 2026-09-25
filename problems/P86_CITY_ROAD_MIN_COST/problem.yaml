@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P86_CITY_ROAD_MIN_COST
+title: 도시 도로 연결 비용
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(M log M)
+statement: |
+  도시 N 개가 있고 1 부터 N 까지 번호가 붙어 있다. 건설할 수 있는 도로 후보가 M 개 주어진다. 각 후보는 두 도시 u, v 를 양방향으로 잇고 건설 비용이 w 다. 같은 두 도시를 잇는 후보가 여러 개일 수 있고, u 와 v 가 같은 후보(한 도시에서 자기 자신으로 가는 도로)도 있을 수 있다.
+
+  후보 중 일부를 골라 건설해서, 어느 두 도시 사이든 건설한 도로만 따라 오갈 수 있게 하려 한다. 도시가 1 개뿐이면 도로 없이도 조건을 만족한다. 조건을 만족하도록 고를 때 건설 비용 합의 최솟값을 구한다. 어떻게 골라도 조건을 만족할 수 없으면 -1 을 출력한다.
+
+  입력
+  첫 줄에 N M 이 공백으로 주어진다.
+  다음 M 줄에 각 후보가 u v w 로 주어진다. 도시 번호는 1 부터 센다(1-based).
+
+  출력
+  최소 비용 합을 한 줄에 출력한다. 불가능하면 -1 을 출력한다.
+
+  제약
+  1 <= N <= 100000
+  0 <= M <= 200000
+  1 <= u, v <= N
+  1 <= w <= 1000000000
+skills:
+- code: MINIMUM_SPANNING_TREE
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+- INDEX_ERROR
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 비용 순으로 도로를 보되, 고를 때마다 지금까지 고른 도로만으로 BFS 를 새로 돌려 두 도시가 이미 이어졌는지 확인한다.
