@@ -59,6 +59,16 @@ const DEFAULTS = {
   // /api/skills 와 /api/users/{id}/skills 는 **다른 계약이다** - 정의(누구에게나
   // 같다)와 상태(사용자별)를 나눠 둔 것이고, 둘 다 minItems 1 이다. 하나의 stub
   // 으로 둘 다 답하고 있었는데 검증을 붙이자 바로 걸렸다.
+  today: {
+    userId: 1, date: "2026-09-26", examInDays: null, totalMinutes: null, mode: "NORMAL",
+    blocks: [
+      { type: "PRACTICE", skillCode: "BFS_GRID_TRAVERSAL",
+        problem: { code: "P02_GRID_TRAVERSAL", title: "도달할 수 있는 칸" }, minutes: 10,
+        reason: "mastery 0.30 - 아직 약하다" },
+    ],
+    reason: "하루 공부 시간을 정하지 않아 시간을 나누지 않았다 - 앞에서부터 한다",
+    mastered: 0, total: 8,
+  },
   tracks: {
     tracks: [
       { code: "INTRO", name: "입문", description: "구현까지", skillCount: 4 },
@@ -175,7 +185,14 @@ async function stubApi(page, overrides = {}) {
       return fulfill(route, DEFAULTS.tracks);
     }
     if (/^\/api\/users\/\d+$/.test(p)) {
-      return fulfill(route, { userId: Number(p.split("/").pop()), nickname: "stub", track: "JOB" });
+      return fulfill(route, { userId: Number(p.split("/").pop()), nickname: "stub", track: "JOB",
+        dailyMinutes: null, examDate: null });
+    }
+    if (p.endsWith("/today")) {
+      return fulfill(route, overrides.today || DEFAULTS.today);
+    }
+    if (p.endsWith("/mistakes")) {
+      return fulfill(route, { userId: Number(p.split("/")[3]), submissions: 0, mistakes: [] });
     }
     if (p === "/api/skills") {
       return fulfill(route, DEFAULTS.catalog);

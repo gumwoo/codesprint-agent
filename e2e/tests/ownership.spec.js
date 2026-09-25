@@ -128,9 +128,9 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
     made += 1;
     if (made === 1) {
       await slow.held;
-      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB" });
+      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB", dailyMinutes: null, examDate: null });
     }
-    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB" });
+    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB", dailyMinutes: null, examDate: null });
   });
 
   await page.goto("/index.html");
@@ -304,10 +304,10 @@ test("늦게 온 이전 사용자의 목표가 지금 사용자의 목표를 덮
   await stubApi(page);
   await page.route("**/api/users/1", async (route) => {
     await slow.held;
-    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB" });
+    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB", dailyMinutes: null, examDate: null });
   });
   await page.route("**/api/users/2", (route) =>
-    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO" }));
+    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO", dailyMinutes: null, examDate: null }));
 
   await asUser(page, "1");
   await page.fill("#userId", "2");
@@ -324,7 +324,7 @@ test("목표를 고르지 않으면 새로 시작하지 않는다", async ({ pag
   await stubApi(page);
   await page.route("**/api/users", (route) => {
     created += 1;
-    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO" });
+    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO", dailyMinutes: null, examDate: null });
   });
 
   await page.goto("/index.html");
@@ -333,4 +333,29 @@ test("목표를 고르지 않으면 새로 시작하지 않는다", async ({ pag
   await page.click("#createUser");
   await expect(page.locator("#footNote")).toHaveText("목표를 먼저 고른다");
   expect(created).toBe(0);
+});
+
+test("늦게 온 이전 사용자의 계획이 지금 사용자의 오늘 화면을 덮지 않는다", async ({ page }) => {
+  // ADR-0038. 오늘 탭은 사용자 · 계획 · 오답 세 요청을 기다린다. 1 번의 계획이 늦게 오면
+  // 2 번 화면에 1 번의 할 일이 그려진다.
+  const slow = gate();
+  const planFor = (userId, minutes) => ({
+    userId, date: "2026-09-26", examInDays: null, totalMinutes: minutes, mode: "NORMAL",
+    blocks: [], reason: `사용자 ${userId} 의 계획`, mastered: 0, total: 8,
+  });
+  await stubApi(page);
+  await page.route("**/api/users/1/today", async (route) => {
+    await slow.held;
+    await fulfill(route, planFor(1, 60));
+  });
+  await page.route("**/api/users/2/today", (route) => fulfill(route, planFor(2, 90)));
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.fill("#userId", "2");
+  await page.dispatchEvent("#userId", "change");
+  await expect(page.locator("#todayReason")).toHaveText("사용자 2 의 계획");
+
+  await releaseAndSettle(page, slow, "/api/users/1/today");
+  await expect(page.locator("#todayReason")).toHaveText("사용자 2 의 계획");
 });
