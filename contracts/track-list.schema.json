@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/track-list.schema.json",
+  "title": "TrackList",
+  "description": "고를 수 있는 학습 트랙(PRD §129, ADR-0035). 순서는 curriculum/tracks.yaml 그대로다. skillCount 는 서버가 센 켜지는 Skill 수다 - 화면이 도메인과 tier 를 다시 조합해 세면 서버가 정한 범위와 갈린다(ADR-0001).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tracks"],
+  "properties": {
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "name", "description", "skillCount"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "skillCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "0 이면 진단이 물을 것이 없다. tools/check_curriculum.py 가 빈 트랙을 막는다."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/user.schema.json",
+  "title": "User",
+  "description": "학습 이력을 매달 자리(인증이 아니다 - UserController). POST /api/users, GET /api/users/{id}, PUT /api/users/{id}/track 이 같은 모양을 돌려준다. track 은 curriculum/tracks.yaml 의 code 이며 켜지는 Skill 범위를 정한다(ADR-0035). 기본값이 없다 - 목표를 고르지 않은 사용자와 한 트랙을 고른 사용자가 구별되지 않게 되기 때문이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["userId", "nickname", "track"],
+  "properties": {
+    "userId": { "type": "integer", "minimum": 1 },
+    "nickname": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "track": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" }
+  }
+}

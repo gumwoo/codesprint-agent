@@ -26,6 +26,8 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | [diagnostic-step.schema.json](diagnostic-step.schema.json) | [ADR-0018](../docs/adr/0018-the-diagnostic-orders-problems-it-does-not-score.md) | 초기 진단의 현재 단계. 점수를 만들지 않는다 |
 | [reviews.schema.json](reviews.schema.json) | [ADR-0021](../docs/adr/0021-a-review-is-what-the-schedule-says-it-is.md) | 간격 복습 목록. **만기 여부는 서버가 정한다** |
 | [skill-catalog.schema.json](skill-catalog.schema.json) | [ADR-0012](../docs/adr/0012-curriculum-is-packaged-from-one-source.md) | 활성 Skill 정의. 사용자와 무관하다 |
+| [track-list.schema.json](track-list.schema.json) | [ADR-0035](../docs/adr/0035-a-learning-track-scopes-the-skill-graph.md) | 고를 수 있는 학습 트랙과 켜지는 Skill 수 |
+| [user.schema.json](user.schema.json) | [ADR-0035](../docs/adr/0035-a-learning-track-scopes-the-skill-graph.md) | 사용자 자리와 그 트랙. 인증이 아니다 |
 | [skill-map.schema.json](skill-map.schema.json) | [ADR-0009](../docs/adr/0009-mastery-is-recomputed-from-evidence.md) | 한 사용자의 Skill 상태 전체. 활성 Skill 을 빠뜨리지 않는다 |
 | [judge-job.schema.json](judge-job.schema.json) | [ADR-0011](../docs/adr/0011-language-boundary.md), [ADR-0013](../docs/adr/0013-judging-happens-outside-the-request.md) | **채점 큐의 행 하나.** Java 가 쓰고 Python Worker 가 읽는 유일한 메시지 |
 | [mastery-golden.schema.json](mastery-golden.schema.json) | [ADR-0010](../docs/adr/0010-java-implementation-is-checked-against-the-python-oracle.md) | Evidence 로부터의 **계산**을 두 구현에 고정하는 golden |
