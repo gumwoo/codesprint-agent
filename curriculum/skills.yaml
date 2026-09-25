@@ -113,3 +113,138 @@ skills:
     needs_skill_control: false
     description: >-
       가중치가 동일한 그래프/격자에서 BFS 로 최단거리를 계산한다.
+
+  # ══ W2 · CORE-1 (ADR-0034) ═════════════════════════════════════════════
+  # PRD §7~12, §15 의 소문자 목록을 채점으로 가를 수 있는 행동으로 묶었다(Addendum §29,
+  # ADR-0033). needs_skill_control 이 true 인 것은 "정답이 곧 그 Skill 을 보여주지 않는"
+  # 것 - 매번 전체를 훑는 풀이도 작은 입력에서는 같은 답을 낸다.
+
+  # ── IMPLEMENTATION ───────────────────────────────────────────────────
+  - code: SIMULATION_STATE
+    name: 상태 시뮬레이션
+    domain: IMPLEMENTATION
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      명령이나 규칙을 순서대로 적용해 위치 · 방향 · 값 같은 상태를 갱신하고 최종 상태를 낸다.
+
+  # ── ARRAY_MATRIX ─────────────────────────────────────────────────────
+  - code: MATRIX_TRANSFORM
+    name: 2차원 배열 변환
+    domain: ARRAY_MATRIX
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      2차원 배열을 전치 · 회전 · 뒤집기해 각 칸의 새 위치를 계산하고 새 배열을 만든다.
+
+  - code: MATRIX_TRAVERSAL
+    name: 2차원 배열 순회 순서
+    domain: ARRAY_MATRIX
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      2차원 배열을 대각선 · 지그재그 · 나선 같은 정해진 순서로 모든 칸을 정확히 한 번씩 방문한다.
+
+  # ── STRING ───────────────────────────────────────────────────────────
+  - code: STRING_MANIPULATION
+    name: 문자열 조작
+    domain: STRING
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      문자열을 문자 단위로 다뤄 뒤집기 · 치환 · 대소문자 변환 · 회문 판정 · 연속 문자 압축을 한다.
+
+  - code: STRING_PARSING
+    name: 문자열 해석
+    domain: STRING
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      구분자와 형식이 섞인 문자열을 토큰으로 나누고 숫자 · 이름 · 기호로 해석해 계산한다.
+
+  # ── HASH ─────────────────────────────────────────────────────────────
+  - code: HASH_SET_MEMBERSHIP
+    name: 집합으로 존재 확인
+    domain: HASH
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: true
+    description: >-
+      많은 질의에 대해 매번 전체를 훑지 않고 존재 여부를 답한다(set · dict).
+      매 질의마다 목록을 처음부터 찾는 풀이는 입력이 커지면 시간 안에 끝나지 않는다.
+
+  - code: HASH_MAP_COUNTING
+    name: 키별로 세고 모으기
+    domain: HASH
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: true
+    description: >-
+      키마다 개수 · 합계를 한 번 훑어 모은다(dict · Counter). 키마다 전체를 다시 세는
+      풀이는 입력이 커지면 시간 안에 끝나지 않는다.
+
+  # ── SORTING ──────────────────────────────────────────────────────────
+  - code: SORT_CUSTOM_KEY
+    name: 여러 기준으로 정렬
+    domain: SORTING
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      오름차순 · 내림차순 · 동점 처리를 섞은 여러 기준으로 정렬 key 를 구성한다.
+
+  - code: SORT_THEN_SCAN
+    name: 정렬 후 한 번 훑기
+    domain: SORTING
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: true
+    description: >-
+      정렬로 가까운 것끼리 모은 뒤 한 번 훑어 답한다. 모든 쌍을 비교하는 풀이는 입력이
+      커지면 시간 안에 끝나지 않는다.
+
+  # ── STACK_QUEUE ──────────────────────────────────────────────────────
+  - code: STACK_BASIC
+    name: 스택
+    domain: STACK_QUEUE
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      나중에 들어온 것을 먼저 처리하는 스택으로 여러 종류의 괄호 짝 · 되돌리기 · 중첩 구조를 처리한다.
+
+  # ── BRUTE_FORCE ──────────────────────────────────────────────────────
+  - code: BRUTE_FORCE_ENUMERATION
+    name: 완전 탐색
+    domain: BRUTE_FORCE
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      입력 크기로 경우의 수를 어림하고, 가능한 후보를 빠짐없이 만들어 조건을 검사한다.
+
+  - code: COMBINATORIAL_ENUMERATION
+    name: 순열 · 조합 · 부분집합 생성
+    domain: BRUTE_FORCE
+    tier: CORE
+    language: null
+    slice: 2
+    needs_skill_control: false
+    description: >-
+      순열 · 조합 · 부분집합을 빠짐없이, 중복 없이 만들어 각각을 검사한다.
