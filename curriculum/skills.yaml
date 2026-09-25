@@ -486,3 +486,76 @@ skills:
     description: >-
       위치에 추가 상태(벽을 부순 횟수 · 가진 열쇠 · 방향)를 더한 것을 하나의 정점으로 보고 BFS 로
       최단 거리를 구한다.
+
+  # ══ W6a · INTERMEDIATE 그래프 (ADR-0034 · 0040) ═══════════════════════════
+  # TOP_TIER · ALGORITHM 트랙에서만 켜진다(tier INTERMEDIATE).
+
+  # ── SHORTEST_PATH ────────────────────────────────────────────────────
+  - code: DIJKSTRA
+    name: 다익스트라 최단 거리
+    domain: SHORTEST_PATH
+    tier: INTERMEDIATE
+    language: null
+    slice: 6
+    needs_skill_control: true
+    description: >-
+      간선 가중치가 음이 아닌 그래프에서 가장 가까운 정점부터 거리를 확정하며(우선순위 큐) 최단 거리를
+      구한다. 매번 모든 정점을 훑어 가장 가까운 것을 찾는 풀이는 정점이 많으면 시간 안에 끝나지 않는다.
+
+  - code: FLOYD_WARSHALL
+    name: 모든 쌍 최단 거리
+    domain: SHORTEST_PATH
+    tier: INTERMEDIATE
+    language: null
+    slice: 6
+    needs_skill_control: false
+    description: >-
+      작은 그래프에서 모든 정점 쌍의 최단 거리를 거쳐 가는 정점을 하나씩 늘려 가며 구한다.
+
+  - code: BELLMAN_FORD
+    name: 음수 간선 최단 거리
+    domain: SHORTEST_PATH
+    tier: INTERMEDIATE
+    language: null
+    slice: 6
+    needs_skill_control: false
+    description: >-
+      음수 가중치 간선이 있는 그래프에서 최단 거리를 구하고, 거리가 끝없이 줄어드는 음수 사이클이
+      있는지 판정한다.
+
+  # ── UNION_FIND ───────────────────────────────────────────────────────
+  - code: DISJOINT_SET
+    name: 서로소 집합
+    domain: UNION_FIND
+    tier: INTERMEDIATE
+    language: null
+    slice: 6
+    needs_skill_control: true
+    description: >-
+      합치기와 "같은 집합인가" 질의가 섞여 들어올 때 대표를 따라가며(경로 압축) 거의 상수 시간에 답한다.
+      질의마다 그래프를 탐색하는 풀이는 입력이 커지면 시간 안에 끝나지 않는다.
+
+  # ── MST ──────────────────────────────────────────────────────────────
+  - code: MINIMUM_SPANNING_TREE
+    name: 최소 신장 트리
+    domain: MST
+    tier: INTERMEDIATE
+    language: null
+    slice: 6
+    needs_skill_control: true
+    description: >-
+      간선을 가중치 순으로 보며 사이클을 만들지 않는 것만 고르거나(크루스칼) 트리에서 가장 가까운 정점을
+      붙여 가며(프림) 최소 신장 트리를 구한다. 간선마다 그래프를 다시 탐색해 사이클을 확인하는 풀이는
+      입력이 커지면 시간 안에 끝나지 않는다.
+
+  # ── TOPOLOGICAL_SORT ─────────────────────────────────────────────────
+  - code: TOPOLOGICAL_ORDER
+    name: 위상 정렬
+    domain: TOPOLOGICAL_SORT
+    tier: INTERMEDIATE
+    language: null
+    slice: 6
+    needs_skill_control: false
+    description: >-
+      선행 관계가 있는 작업들을 들어오는 간선이 없는 것부터 차례로 꺼내 순서를 정하고, 순서를 정할 수
+      없으면(사이클) 그렇다고 판정한다.
