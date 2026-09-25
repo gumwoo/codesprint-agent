@@ -464,11 +464,12 @@ concepts:
       - b진법 문자열을 10진수로 바꿀 때는 앞에서부터 value = value * b + digit 으로 쌓는다.
       - 10보다 큰 자릿값은 A, B, ... 처럼 약속한 문자로 쓴다.
     example: |
+      DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       digits = []
       while n > 0:
           digits.append(n % base)
           n //= base
-      print("".join(str(d) for d in reversed(digits)) or "0")
+      print("".join(DIGITS[d] for d in reversed(digits)) or "0")
     self_check: 13을 2진법으로 바꾸는 과정을 나머지로 적어 보세요.
 
   - skill_code: GRAPH_REPRESENTATION
@@ -508,6 +509,7 @@ concepts:
       - 상태를 셋으로 둔다. 방문 전, 탐색 중, 탐색 완료.
       - 무방향 그래프에서는 바로 온 부모 정점으로 돌아가는 간선을 사이클로 세지 않는다.
       - 연결되지 않은 부분이 있으면 모든 시작점에서 한 번씩 확인한다.
+      - 진입 차수를 줄여 가는 방법(방향)이나 union-find(무방향)로도 같은 판정을 낼 수 있다.
     example: |
       def has_cycle(node):
           state[node] = 1
