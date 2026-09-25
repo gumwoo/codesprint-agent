@@ -1,0 +1,77 @@
+{
+  "id": "PREFIX_SUM_2D-1790361658710-1",
+  "skill": "PREFIX_SUM_2D",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T20:33:41+00:00",
+  "stage": "검증 검토",
+  "code": "P47_DIGIT_GRID_RECT_SUM",
+  "reasons": [
+    "2차원 누적 합 없이 행별 1차원 누적 합을 열 방향으로 옮겨 슬라이스 sum 두 번으로 푸는 풀이가 AC 다 (검증 에이전트)",
+    "N=M=500 · 질의 10만으로 키워도 그 풀이가 988ms 로 통과했다. 더 키우면 정답도 시간 예산에 걸린다 - 파이썬 채점 한도 안에서 PREFIX_SUM_2D 를 가를 수 없어 Skill 째로 이번 웨이브에서 올리지 않는다(ADR-0037)"
+  ],
+  "draft": {
+    "codeSuffix": "DIGIT_GRID_RECT_SUM",
+    "title": "숫자 격자의 직사각형 합",
+    "statement": "N행 M열 격자의 각 칸에 0 이상 9 이하의 숫자가 하나씩 적혀 있다. Q개의 질의가 주어진다. 각 질의는 왼쪽 위 칸 (r1, c1)과 오른쪽 아래 칸 (r2, c2)로 정해지는 직사각형이다. 직사각형 안(경계 포함)에 있는 모든 칸의 숫자 합을 구한다.\n\n행과 열 번호는 1부터 센다. (r, c)는 위에서 r번째 행, 왼쪽에서 c번째 열이다.\n\n입력 형식\n- 첫째 줄: N M (1 <= N, M <= 500)\n- 다음 N줄: 길이 M인 숫자 문자열. i번째 줄의 j번째 문자가 (i, j) 칸의 값이다. 공백 없이 붙어 있다.\n- 다음 줄: Q (1 <= Q <= 40000)\n- 다음 Q줄: r1 c1 r2 c2 (1 <= r1 <= r2 <= N, 1 <= c1 <= c2 <= M)\n\n출력 형식\n- 질의마다 한 줄에 직사각형 안 숫자의 합을 정수로 출력한다. 질의 순서대로 출력한다.",
+    "secondarySkills": [
+      "GRID_COORDINATE"
+    ],
+    "referenceComplexity": "O(N*M + Q)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "포함-배제에서 빼는 경계를 r1-1, c1-1 대신 r1, c1 로 잡아 직사각형의 첫 행과 첫 열을 빠뜨린다.",
+    "sampleInputs": [
+      "3 4\n1203\n4056\n7890\n3\n1 1 3 4\n2 2 3 3\n2 3 2 3\n",
+      "2 2\n12\n34\n2\n1 1 1 1\n1 2 2 2\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n0\n1\n1 1 1 1\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1 1\n7\n1\n1 1 1 1\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "1 5\n31415\n3\n1 1 1 5\n1 5 1 5\n1 2 1 4\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5 1\n2\n7\n1\n8\n2\n3\n1 1 5 1\n5 1 5 1\n2 1 4 1\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "3 3\n999\n999\n999\n3\n1 1 3 3\n2 2 2 2\n1 2 3 3\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "2 3\n506\n180\n4\n1 2 2 3\n1 2 2 3\n2 1 2 1\n2 1 2 1\n"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read().split()[0])\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nm = rng.randint(1, 6)\nlines = [f\"{n} {m}\"]\nfor _ in range(n):\n    lines.append(\"\".join(rng.choice(\"0123456789\") for _ in range(m)))\nq = rng.randint(1, 8)\nlines.append(str(q))\nfor _ in range(q):\n    r1 = rng.randint(1, n)\n    r2 = rng.randint(r1, n)\n    c1 = rng.randint(1, m)\n    c2 = rng.randint(c1, m)\n    lines.append(f\"{r1} {c1} {r2} {c2}\")\nprint(\"\\n\".join(lines))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    pre = [[0] * (m + 1) for _ in range(n + 1)]\n    for i in range(1, n + 1):\n        row = data[1 + i]\n        above = pre[i - 1]\n        cur = pre[i]\n        run = 0\n        for j in range(1, m + 1):\n            run += row[j - 1] - 48\n            cur[j] = above[j] + run\n    q = int(data[n + 2])\n    idx = n + 3\n    out = []\n    for _ in range(q):\n        r1 = int(data[idx])\n        c1 = int(data[idx + 1])\n        r2 = int(data[idx + 2])\n        c2 = int(data[idx + 3])\n        idx += 4\n        out.append(pre[r2][c2] - pre[r1 - 1][c2] - pre[r2][c1 - 1] + pre[r1 - 1][c1 - 1])\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    tokens = sys.stdin.read().split()\n    n = int(tokens[0])\n    m = int(tokens[1])\n    grid = []\n    for i in range(n):\n        grid.append([int(ch) for ch in tokens[2 + i]])\n    q = int(tokens[2 + n])\n    pos = 3 + n\n    for _ in range(q):\n        r1, c1, r2, c2 = (int(x) for x in tokens[pos:pos + 4])\n        pos += 4\n        total = 0\n        for r in range(r1 - 1, r2):\n            for c in range(c1 - 1, c2):\n                total += grid[r][c]\n        print(total)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    pre = [[0] * (m + 1) for _ in range(n + 1)]\n    for i in range(1, n + 1):\n        row = data[1 + i]\n        above = pre[i - 1]\n        cur = pre[i]\n        run = 0\n        for j in range(1, m + 1):\n            run += row[j - 1] - 48\n            cur[j] = above[j] + run\n    q = int(data[n + 2])\n    idx = n + 3\n    out = []\n    for _ in range(q):\n        r1 = int(data[idx])\n        c1 = int(data[idx + 1])\n        r2 = int(data[idx + 2])\n        c2 = int(data[idx + 3])\n        idx += 4\n        out.append(pre[r2][c2] - pre[r1][c2] - pre[r2][c1] + pre[r1][c1])\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "질의는 최대 40000개이고 직사각형 하나가 격자 거의 전체를 덮을 수 있다. 질의마다 칸을 하나씩 더하면 수억 번의 덧셈이 필요하다.",
+      "격자는 질의 동안 바뀌지 않는다. 한 번 전처리해 두고 각 질의를 상수 시간에 답하는 누적 합 계열의 방법이다.",
+      "(N+1) x (M+1) 크기의 2차원 표를 둔다. 표의 (i, j) 값은 (1, 1)부터 (i, j)까지 직사각형의 합이다. 0행과 0열은 모두 0으로 두어 경계 처리를 없앤다.",
+      "표를 채울 때는 위 칸 값과 왼쪽 칸 값을 더하고, 두 번 더해진 왼쪽 위 대각선 칸 값을 빼고, 현재 칸 값을 더한다. 질의 답은 (r2, c2) 값에서 (r1-1, c2) 값과 (r2, c1-1) 값을 빼고, 두 번 빠진 (r1-1, c1-1) 값을 다시 더한 것이다.",
+      "표 S 를 0으로 초기화\nfor i = 1..N, j = 1..M:\n    S[i][j] = 격자(i,j) + S[i-1][j] + S[i][j-1] - S[i-1][j-1]\nfor 각 질의 (r1, c1, r2, c2):\n    출력 S[r2][c2] - S[r1-1][c2] - S[r2][c1-1] + S[r1-1][c1-1]"
+    ],
+    "skillControl": {
+      "approach": "질의마다 직사각형에 걸친 각 행의 구간을 잘라 sum 으로 더한다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    grid = []\n    for i in range(n):\n        grid.append([b - 48 for b in data[2 + i]])\n    q = int(data[n + 2])\n    idx = n + 3\n    out = []\n    for _ in range(q):\n        r1 = int(data[idx])\n        c1 = int(data[idx + 1])\n        r2 = int(data[idx + 2])\n        c2 = int(data[idx + 3])\n        idx += 4\n        total = 0\n        for r in range(r1 - 1, r2):\n            total += sum(grid[r][c1 - 1:c2])\n        out.append(total)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+      "stressInputGenerator": "import sys\nimport random\n\nrng = random.Random(20260926)\nn = 500\nm = 500\nlines = [f\"{n} {m}\"]\nfor _ in range(n):\n    lines.append(\"\".join(rng.choice(\"0123456789\") for _ in range(m)))\nq = 40000\nlines.append(str(q))\nfor _ in range(q):\n    lines.append(f\"{rng.randint(1, 10)} {rng.randint(1, 10)} {rng.randint(491, 500)} {rng.randint(491, 500)}\")\nsys.stdout.write(\"\\n\".join(lines) + \"\\n\")\n"
+    }
+  }
+}

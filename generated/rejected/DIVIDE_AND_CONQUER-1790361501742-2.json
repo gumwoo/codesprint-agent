@@ -1,0 +1,76 @@
+{
+  "id": "DIVIDE_AND_CONQUER-1790361501742-2",
+  "skill": "DIVIDE_AND_CONQUER",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T20:33:41+00:00",
+  "stage": "검증 검토",
+  "code": "P43_GEOMETRIC_SUM_MOD",
+  "reasons": [
+    "등비수열 공식과 내장 pow 로 분할 없이 풀린다 - (pow(a, n, m*(a-1)) - 1) // (a-1) % m (검증 에이전트)",
+    "큰 case 의 m = 10^9+7 이 본문 제약 m ≤ 10^9 를 넘었다. 내장 pow 가 대신할 수 없는 문제(P76)로 바꾼다"
+  ],
+  "draft": {
+    "codeSuffix": "GEOMETRIC_SUM_MOD",
+    "title": "거듭제곱 합의 나머지",
+    "statement": "정수 a, n, m 이 주어진다. a^0 + a^1 + a^2 + ... + a^(n-1) 을 m 으로 나눈 나머지를 구한다. 지수는 0 부터 센다. 즉 항은 a^0 부터 a^(n-1) 까지 모두 n 개다. m 은 소수가 아닐 수 있다.\n\n입력: 첫째 줄에 a, n, m 이 공백으로 구분되어 주어진다. 1 <= a <= 10^9, 1 <= n <= 10^18, 1 <= m <= 10^9.\n\n출력: 합을 m 으로 나눈 나머지를 한 줄에 출력한다.",
+    "secondarySkills": [
+      "RECURSION_BASIC"
+    ],
+    "referenceComplexity": "O(log n)",
+    "expectedSolveSeconds": 1200,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "n 이 홀수일 때 절반 두 개를 합친 뒤 마지막 항 a^(n-1) 을 더하지 않는다.",
+    "sampleInputs": [
+      "2 5 1000",
+      "3 4 7"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1 1"
+      },
+      {
+        "type": "SINGLE",
+        "input": "7 1 100"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "1 2000 1000"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "1000000000 1000 1000000000"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "999999999 1023 999999937"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "3 1999 1000000000"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read())\nr = random.Random(seed)\na = r.randint(1, 20)\nn = r.randint(1, 2000)\nm = r.randint(1, 1000)\nprint(a, n, m)\n",
+    "reference": "import sys\n\n\ndef solve(a, n, m):\n    if n == 0:\n        return 0, 1 % m\n    s, p = solve(a, n // 2, m)\n    s2 = (s + s * p) % m\n    p2 = p * p % m\n    if n % 2 == 1:\n        s2 = (s2 + p2) % m\n        p2 = p2 * a % m\n    return s2, p2\n\n\ndef main():\n    a, n, m = map(int, sys.stdin.read().split())\n    a %= m\n    print(solve(a, n, m)[0])\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    a, n, m = map(int, sys.stdin.read().split())\n    total = 0\n    value = 1\n    for _ in range(n):\n        total += value\n        value *= a\n    print(total % m)\n\n\nmain()\n",
+    "wrong": "# n 이 홀수일 때 절반 두 개를 합친 뒤 마지막 항 a^(n-1) 을 더하지 않는다.\nimport sys\n\n\ndef solve(a, n, m):\n    if n == 0:\n        return 0, 1 % m\n    s, p = solve(a, n // 2, m)\n    s2 = (s + s * p) % m\n    p2 = p * p % m\n    if n % 2 == 1:\n        p2 = p2 * a % m\n    return s2, p2\n\n\ndef main():\n    a, n, m = map(int, sys.stdin.read().split())\n    a %= m\n    print(solve(a, n, m)[0])\n\n\nmain()\n",
+    "hints": [
+      "n 이 최대 10^18 이라 항을 하나씩 더하면 끝나지 않는다. m 이 소수가 아닐 수 있어 등비수열 공식의 나눗셈도 쓸 수 없다.",
+      "분할 정복 문제다. 길이 n 인 합을 길이 n/2 인 같은 합으로 나눠 구한 뒤 합친다.",
+      "재귀 호출 하나가 두 값을 함께 돌려주게 한다: 앞 k 개 항의 합 S(k) 와 a^k. 모든 값은 m 으로 나눈 나머지로 유지한다.",
+      "k = n/2 (내림) 일 때 앞 2k 개 항의 합은 S(k) * (1 + a^k) 이고 a^(2k) = (a^k)^2 이다. n 이 홀수면 여기에 a^(2k) 항을 하나 더 더하고 거듭제곱에 a 를 한 번 더 곱한다.",
+      "f(n): n 이 0 이면 (0, 1 mod m) 반환. (s, p) = f(n/2 내림). 합 = s + s*p, 거듭제곱 = p*p. n 이 홀수면 합에 거듭제곱을 더하고 거듭제곱에 a 를 곱한다. 모두 mod m. (합, 거듭제곱) 반환. 답은 f(n) 의 합."
+    ],
+    "skillControl": {
+      "approach": "a^0 부터 a^(n-1) 까지 항을 하나씩 곱해 가며 n 번 더한다.",
+      "solution": "import sys\n\n\ndef main():\n    a, n, m = map(int, sys.stdin.read().split())\n    total = 0\n    value = 1 % m\n    for _ in range(n):\n        total = (total + value) % m\n        value = value * a % m\n    print(total % m)\n\n\nmain()\n",
+      "stressInputGenerator": "print(2, 1000000000000000000, 1000000007)\n"
+    }
+  }
+}

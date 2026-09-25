@@ -1,0 +1,45 @@
+# 정본 형식: contracts/problem.schema.json
+# 검증 에이전트가 P43(등비수열 합)을 내장 pow 와 공식으로 분할 없이 풀어 철회한 뒤, 내장 함수가
+# 대신할 수 없는 분할 정복 문제로 손으로 썼다(ADR-0037). 정답은 반씩 줄이는 두 배 공식이고,
+# 완전탐색(값을 모두 만드는 풀이)과 무작위 입력 307 개에서 교차 검증했다. n = 10^18 case 의 기대
+# 출력은 2×2 행렬 거듭제곱으로 따로 계산해 대조했다.
+
+code: P76_FIBONACCI_MOD
+title: 아주 큰 번호의 피보나치 수
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: "O(log n)"
+
+statement: |
+  피보나치 수는 F(0) = 0, F(1) = 1, F(k) = F(k-1) + F(k-2) (k ≥ 2) 로 정의한다.
+
+  정수 n 과 m 이 주어질 때 F(n) 을 m 으로 나눈 나머지를 구한다.
+
+  입력: 한 줄에 n 과 m 이 공백으로 주어진다. (0 ≤ n ≤ 10^18, 1 ≤ m ≤ 10^9)
+
+  출력: F(n) 을 m 으로 나눈 나머지를 한 줄에 출력한다.
+
+skills:
+  - code: DIVIDE_AND_CONQUER
+    role: PRIMARY
+    weight: 0.7
+  - code: RECURSION_BASIC
+    role: SECONDARY
+    weight: 0.3
+
+commonMistakes:
+  - IMPLEMENTATION_MISC
+  - INPUT_PARSE
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# F(0) 을 1 로 본다
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+
+# 하나씩 올라가며 더하는 풀이는 작은 n 에서 같은 답을 내고, n 이 크면 시간 안에 끝나지 않는다(ADR-0033).
+skillControl:
+  approach: 0 부터 n 까지 하나씩 올라가며 두 값을 갱신한다
