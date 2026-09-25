@@ -16,12 +16,10 @@ skills:
 - code: BFS_BASIC
   role: PRIMARY
   weight: 0.7
-- code: PYTHON_DEQUE_BASIC
-  role: SECONDARY
-  weight: 0.15
 - code: BFS_VISITED_MANAGEMENT
   role: SECONDARY
-  weight: 0.15
+  weight: 0.3
+# PYTHON_DEQUE_BASIC 은 SECONDARY 로 두지 않는다(ADR-0033) - P14 의 주석 참고.
 commonMistakes:
 - NO_VISITED
 - VISITED_TIMING

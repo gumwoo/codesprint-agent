@@ -6,7 +6,6 @@
   "labelSource": "negativeControl",
   "skillCodes": [
     "BFS_BASIC",
-    "PYTHON_DEQUE_BASIC",
     "BFS_VISITED_MANAGEMENT"
   ],
   "sourceCode": "\nimport sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    idx = 0\n    n = int(data[idx]); idx += 1\n    m = int(data[idx]); idx += 1\n    s = int(data[idx]); idx += 1\n    adj = [set() for _ in range(n + 1)]\n    for _ in range(m):\n        u = int(data[idx]); idx += 1\n        v = int(data[idx]); idx += 1\n        adj[u].add(v)\n        adj[v].add(u)\n    graph = [sorted(adj[i]) for i in range(n + 1)]\n\n    visited = [False] * (n + 1)\n    order = []\n    q = deque([s])\n    while q:\n        cur = q.popleft()\n        visited[cur] = True\n        order.append(cur)\n        for nxt in graph[cur]:\n            if not visited[nxt]:\n                q.append(nxt)\n    print(' '.join(map(str, order)))\n\n\nmain()\n",
@@ -21,13 +20,14 @@
       4,
       5,
       6,
-      9,
-      10,
-      11
+      9
     ],
     "failedCaseIds": [
       7,
-      8
+      8,
+      10,
+      11,
+      12
     ]
   },
   "probes": {}

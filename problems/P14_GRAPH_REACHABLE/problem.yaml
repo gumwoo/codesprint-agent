@@ -19,10 +19,10 @@ statement: |
 skills:
   - code: BFS_BASIC
     role: PRIMARY
-    weight: 0.6
-  - code: PYTHON_DEQUE_BASIC
-    role: SECONDARY
-    weight: 0.4
+    weight: 1.0
+# PYTHON_DEQUE_BASIC 을 SECONDARY 로 두지 않는다(ADR-0033). list 의 pop(0) 으로 짠 BFS 도
+# 여기서 AC 이고, SECONDARY 도 관측값이 PRIMARY 와 같은 alpha 로 들어가므로 deque 를
+# 모르는 AC 가 deque Evidence 가 된다.
 
 commonMistakes:
   - NO_VISITED
