@@ -390,6 +390,8 @@ async function saveSettings() {
   // 잘못 입력하면 입력칸의 값이 "" 가 된다. 그대로 보내면 "정하지 않았다" 로 저장되어 기존
   // 설정이 지워진다 - 생략과 null 을 나눈 이유(ADR-0038 §4)가 화면에서 흐려진다(검증 에이전트).
   if ($("dailyMinutes").validity.badInput || $("examDate").validity.badInput) {
+    // 앞서 보낸 저장이 늦게 도착해 이 안내를 "저장했다" 로 덮지 않게 먼저 무효화한다.
+    invalidateView("settings");
     $("settingsNote").textContent = "입력한 값을 읽지 못했다 - 저장하지 않았다";
     return;
   }
@@ -446,8 +448,9 @@ function switchedUser() {
   cancelActivePolling();
   cancelActiveRun();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
-  // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
+  // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다. 설정 저장 결과도 그렇다.
   $("footNote").textContent = "";
+  $("settingsNote").textContent = "";
   // 띄워 둔 힌트도 이전 사용자가 연 것이다. 새 사용자는 그 문제에서 아직
   // 아무것도 보지 않았는데, 남겨 두면 본 것처럼 보이고 채점 기록과 어긋난다.
   resetHints();

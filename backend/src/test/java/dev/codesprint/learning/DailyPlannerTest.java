@@ -118,7 +118,7 @@ class DailyPlannerTest {
         assertThat(plan.blocks()).isNotEmpty();
         assertThat(plan.blocks().get(0).type()).isEqualTo(BlockType.DIAGNOSE);
         assertThat(skills(plan)).as("넘친 뒤에는 아무것도 더 넣지 않는다").containsExactly("PROBED");
-        assertThat(plan.reason()).contains("넘는다");
+        assertThat(plan.reason()).contains("넘는다").startsWith("진단");
     }
 
     @Test

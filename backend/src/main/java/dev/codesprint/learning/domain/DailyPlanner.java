@@ -156,11 +156,20 @@ public class DailyPlanner {
             }
         }
 
-        String how = (diagnosticSkill != null && !candidates.isEmpty()
-                        && candidates.get(0).type() == BlockType.DIAGNOSE
-                ? "진단을 먼저 하고, " : "")
-                + (mode == Mode.EXAM ? "시험이 " + examInDays + "일 남아 새로 배우지 않고 굳힌다"
-                        : "복습 · 연습 · 새로 배우기 순서로 채웠다");
+        // 무엇으로 채웠는지 실제 블록에서 말한다. 고정 문구는 연습이 하나도 없어도 "연습" 을 말했다.
+        java.util.LinkedHashSet<String> kinds = new java.util.LinkedHashSet<>();
+        for (Block block : candidates) {
+            kinds.add(switch (block.type()) {
+                case DIAGNOSE -> "진단";
+                case REVIEW -> "복습";
+                case PRACTICE -> "연습";
+                case LEARN -> "새로 배우기";
+                case MIXED -> "혼합";
+            });
+        }
+        String how = (kinds.isEmpty() ? "지금 줄 할 일이 없다"
+                : String.join(" · ", kinds) + " 순서로 채웠다")
+                + (mode == Mode.EXAM ? " - 시험이 " + examInDays + "일 남아 새로 배우지 않고 굳힌다" : "");
 
         if (dailyMinutes == null) {
             return new Plan(null, examInDays, mode,
