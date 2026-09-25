@@ -267,6 +267,10 @@ scripts/local.sh backend    # 터미널 1
 scripts/local.sh worker     # 터미널 2
 ```
 
+**오늘의 계획도 결정이다**([ADR-0038](docs/adr/0038-the-plan-is-decided-not-generated.md)). PRD 가 Planner 를
+Agent 로 불러도 LLM 을 부르지 않는다 - `DailyPlanner` 가 Skill 상태 · 만기 복습 · 진단 · 하루 시간 ·
+시험일로 정한다. 출제 빈도처럼 **잴 수 없는 항은 쓰지 않고**, 하루 시간을 모르면 어림하지 않는다.
+
 **화면은 판단하지 않는다.** 점수도 다음 행동도 서버가 정해서 내려준 것을 보여주기만
 한다. `app.js` 가 mastery 를 계산하거나 액션을 고르기 시작하면 테스트가 막는다 -
 경계는 프롬프트가 아니라 검사로 지킨다.
