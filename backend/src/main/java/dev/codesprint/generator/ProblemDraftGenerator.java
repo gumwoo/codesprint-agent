@@ -61,7 +61,10 @@ public final class ProblemDraftGenerator {
                 settings.command(), Duration.ofSeconds(settings.timeoutSeconds()));
         PromptTemplate template = PromptTemplate.load(settings.promptVersion());
         Map<String, String> values = DraftPrompt.values(repoRoot, skillCode);
-        String prompt = template.render(values);
+        // 이번 실행에서 만든 초안도 "이미 있는 문제" 로 보여 준다. 같은 프롬프트로 둘을 만들면
+        // 같은 문제가 나온다 - CORE-1 · CORE-2 에서 채택된 문제 중 여덟이 앞 초안과 같은
+        // 문제였다(ADR-0036). 초안은 아직 문제가 아니지만 겹치지 말라는 뜻은 같다.
+        StringBuilder madeNow = new StringBuilder();
         JsonSchema schema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
                 .getSchema(values.get("draftSchema"));
 
@@ -74,6 +77,7 @@ public final class ProblemDraftGenerator {
             envelope.put("promptVersion", template.version());
             envelope.put("generatedAt", Instant.now().toString());
 
+            String prompt = template.render(DraftPrompt.withDrafts(values, madeNow.toString()));
             String response;
             try {
                 response = client.complete(prompt);
@@ -94,6 +98,8 @@ public final class ProblemDraftGenerator {
 
             if (draft != null && reasons.isEmpty()) {
                 envelope.set("draft", draft);
+                madeNow.append(DraftPrompt.summary(id, draft.path("title").asText(),
+                        draft.path("statement").asText()));
                 Path out = write(repoRoot.resolve("generated/drafts"), id, envelope);
                 System.out.println("[O] 초안 " + repoRoot.relativize(out));
                 written++;
