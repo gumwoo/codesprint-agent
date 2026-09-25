@@ -131,19 +131,11 @@ prerequisites:
     minimum_mastery: 0.65
 
   - skill: SLIDING_WINDOW
-    requires: TWO_POINTER
+    requires: HASH_MAP_COUNTING
     minimum_mastery: 0.65
 
   - skill: PREFIX_SUM
     requires: PYTHON_LIST_BASIC
-    minimum_mastery: 0.65
-
-  - skill: PREFIX_SUM_2D
-    requires: PREFIX_SUM
-    minimum_mastery: 0.65
-
-  - skill: PREFIX_SUM_2D
-    requires: GRID_COORDINATE
     minimum_mastery: 0.65
 
   - skill: DIFFERENCE_ARRAY

@@ -274,7 +274,9 @@ skills:
     slice: 3
     needs_skill_control: false
     description: >-
-      기저 조건과 더 작은 같은 문제로 나누는 자기 호출로 재귀 구조(중첩 · 반복되는 모양)를 계산하거나 출력한다.
+      자기 자신을 더 작은 크기로 품은 구조(S(n) 이 S(n-1) 로 정의되는 모양)의 n 단계 결과를 구한다.
+      자기 호출 · 반복 · 통째로 만들기 중 무엇으로 구했는지는 채점으로 가를 수 없다 - 재귀적
+      정의를 읽고 계산하는 능력을 잰다.
 
   - code: DIVIDE_AND_CONQUER
     name: 분할 정복
@@ -334,17 +336,6 @@ skills:
     description: >-
       누적 합을 한 번 만들어 구간 합 질의에 바로 답한다. 질의마다 구간을 더하는 풀이는
       입력이 커지면 시간 안에 끝나지 않는다.
-
-  - code: PREFIX_SUM_2D
-    name: 2차원 누적 합
-    domain: PREFIX_SUM
-    tier: CORE
-    language: null
-    slice: 3
-    needs_skill_control: true
-    description: >-
-      2차원 누적 합을 한 번 만들어 직사각형 영역의 합 질의에 바로 답한다. 질의마다 영역을
-      더하는 풀이는 입력이 커지면 시간 안에 끝나지 않는다.
 
   - code: DIFFERENCE_ARRAY
     name: 차분 배열

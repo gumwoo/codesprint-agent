@@ -327,7 +327,7 @@ concepts:
     example: |
       def place(row):
           if row == n:
-              count += 1
+              found.append(1)   # 바깥 변수를 += 로 고치려면 nonlocal 이 필요하다
               return
           for col in range(n):
               if safe(row, col):
@@ -380,17 +380,6 @@ concepts:
           prefix[i + 1] = prefix[i] + values[i]
       answer = prefix[r + 1] - prefix[l]
     self_check: 1부터 세는 구간 [l, r]의 합을 prefix로 쓰면 식이 어떻게 달라지는지 써 보세요.
-
-  - skill_code: PREFIX_SUM_2D
-    title: 직사각형 합을 네 값으로 구하기
-    summary: S[r][c]를 (0,0)부터 (r-1,c-1)까지 직사각형의 합으로 두면 어떤 직사각형의 합도 네 값의 덧셈 · 뺄셈이다.
-    key_points:
-      - S[r+1][c+1] = grid[r][c] + S[r][c+1] + S[r+1][c] - S[r][c] 로 만든다.
-      - 두 번 뺀 겹치는 부분을 한 번 더한다.
-      - 행과 열의 범위를 섞지 않도록 (행, 열) 순서를 한 가지로 고정한다.
-    example: |
-      total = S[r2 + 1][c2 + 1] - S[r1][c2 + 1] - S[r2 + 1][c1] + S[r1][c1]
-    self_check: 위 식에서 S[r1][c1]을 더하는 이유를 그림으로 설명해 보세요.
 
   - skill_code: DIFFERENCE_ARRAY
     title: 구간 갱신을 양 끝에만 적기
