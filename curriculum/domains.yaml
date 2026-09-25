@@ -117,13 +117,13 @@ domains:
     order: 17
     name: Number Theory
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: COMBINATORICS
     order: 18
     name: Combinatorics
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: BITMASK
     order: 19
@@ -219,13 +219,13 @@ domains:
     order: 34
     name: Trie
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: STRING_MATCHING
     order: 35
     name: String Matching
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: SEGMENT_TREE
     order: 36
@@ -243,13 +243,13 @@ domains:
     order: 38
     name: Sweep Line / Interval
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: GEOMETRY
     order: 39
     name: Geometry
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: SCC
     order: 40
