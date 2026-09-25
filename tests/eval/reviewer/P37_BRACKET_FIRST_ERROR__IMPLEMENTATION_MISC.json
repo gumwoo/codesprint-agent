@@ -1,0 +1,33 @@
+{
+  "problemCode": "P37_BRACKET_FIRST_ERROR",
+  "problemTitle": "괄호 오류 위치",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "STACK_BASIC",
+    "STRING_PARSING"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    pair = {')': '(', ']': '[', '}': '{', '>': '<'}\n    st = []\n    for i, c in enumerate(s):\n        if c in pair:\n            if st.pop() != pair[c]:\n                print(i)\n                return\n        else:\n            st.append(c)\n    print(-1 if not st else len(s))\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 4,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 19, in <module>\n    main()\n  File \"solution.py\", line 11, in main\n    if st.pop() != pair[c]:\n       ^^^^^^^^\nIndexError: pop from empty list\n",
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "failedCaseIds": [
+      4,
+      6
+    ]
+  },
+  "probes": {}
+}

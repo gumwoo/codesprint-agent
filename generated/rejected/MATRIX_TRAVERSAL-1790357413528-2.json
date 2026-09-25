@@ -1,0 +1,71 @@
+{
+  "id": "MATRIX_TRAVERSAL-1790357413528-2",
+  "skill": "MATRIX_TRAVERSAL",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:54:48+00:00",
+  "stage": "검증 검토",
+  "code": "P32_DIAGONAL_ZIGZAG",
+  "reasons": [
+    "채택 검사를 전부 통과했지만 P31_DIAGONAL_ZIGZAG_ORDER 와 같은 문제다 - 명령 · 순서 규칙이 같고 이름과 문장만 다르다",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "DIAGONAL_ZIGZAG",
+    "title": "대각선 지그재그 읽기",
+    "statement": "N행 M열 정수 격자가 주어진다. 행과 열 번호는 0부터 센다. 행 번호 r 과 열 번호 c 의 합 r + c 가 같은 칸들을 하나의 대각선이라 한다. 대각선을 r + c = 0, 1, 2, ..., N + M - 2 순서로 읽는다. r + c 가 짝수인 대각선은 행 번호가 큰 칸부터 작은 칸 순서(왼쪽 아래에서 오른쪽 위)로, 홀수인 대각선은 행 번호가 작은 칸부터 큰 칸 순서(오른쪽 위에서 왼쪽 아래)로 읽는다. 모든 칸을 정확히 한 번씩 읽은 순서대로 값을 출력한다.\n\n입력 형식\n첫 줄에 N M (1 ≤ N, M ≤ 100) 이 공백으로 주어진다. 다음 N 줄의 각 줄에 M 개의 정수가 공백으로 주어진다. 각 정수는 -1000 이상 1000 이하다.\n\n출력 형식\n읽은 순서대로 N × M 개의 값을 한 줄에 공백 하나로 구분해 출력한다.",
+    "secondarySkills": [
+      "GRID_COORDINATE",
+      "GRID_BOUNDARY_CHECK"
+    ],
+    "referenceComplexity": "O(N × M)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "BOUNDARY_CHECK",
+      "INDEX_ERROR",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "BOUNDARY_CHECK",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "대각선의 행 시작 범위를 max(0, d - M + 1) 대신 0 으로 두어 열 번호 d - r 이 M 이상이 되는 칸을 검사하지 않는다.",
+    "sampleInputs": [
+      "3 4\n1 2 3 4\n5 6 7 8\n9 10 11 12\n",
+      "4 2\n1 2\n3 4\n5 6\n7 8\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n7\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1 5\n3 -1 4 -1 5\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5 1\n2\n7\n1\n8\n2\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "3 3\n0 0 0\n0 0 0\n0 0 0\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "2 6\n-5 4 -3 2 -1 0\n6 -7 8 -9 10 -11\n"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nm = rng.randint(1, 6)\nprint(n, m)\nfor _ in range(n):\n    print(' '.join(str(rng.randint(-20, 20)) for _ in range(m)))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    vals = list(map(int, data[2:2 + n * m]))\n    grid = [vals[r * m:(r + 1) * m] for r in range(n)]\n    out = []\n    for d in range(n + m - 1):\n        lo = max(0, d - m + 1)\n        hi = min(d, n - 1)\n        rows = range(hi, lo - 1, -1) if d % 2 == 0 else range(lo, hi + 1)\n        for r in rows:\n            out.append(grid[r][d - r])\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    vals = list(map(int, data[2:2 + n * m]))\n    cells = []\n    for r in range(n):\n        for c in range(m):\n            s = r + c\n            tie = r if s % 2 == 1 else -r\n            cells.append((s, tie, vals[r * m + c]))\n    cells.sort()\n    print(' '.join(str(v) for _, _, v in cells))\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    vals = list(map(int, data[2:2 + n * m]))\n    grid = [vals[r * m:(r + 1) * m] for r in range(n)]\n    out = []\n    for d in range(n + m - 1):\n        lo = 0\n        hi = min(d, n - 1)\n        rows = range(hi, lo - 1, -1) if d % 2 == 0 else range(lo, hi + 1)\n        for r in rows:\n            out.append(grid[r][d - r])\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "hints": [
+      "같은 대각선에 있는 칸들은 행 번호와 열 번호의 합이 같다. 합이 0 인 칸부터 N + M - 2 인 칸까지 차례로 본다.",
+      "정해진 순서로 격자를 한 번씩 훑는 순회 문제다. 탐색이나 정렬 없이 대각선 번호 하나로 모든 칸을 차례로 만들 수 있다.",
+      "상태는 대각선 번호 d 와 그 대각선 위의 행 번호 r 두 개면 된다. 열 번호는 d - r 로 정해진다.",
+      "대각선 d 에서 행 번호는 max(0, d - M + 1) 이상 min(d, N - 1) 이하만 유효하다. d 가 짝수면 이 범위를 큰 쪽에서 작은 쪽으로, 홀수면 작은 쪽에서 큰 쪽으로 돈다.",
+      "d 를 0 부터 N + M - 2 까지 돈다 / 유효한 행 범위의 하한과 상한을 구한다 / d 의 홀짝에 따라 행을 내려가거나 올라가며 (r, d - r) 칸의 값을 결과에 붙인다 / 결과를 공백으로 이어 출력한다"
+    ],
+    "skillControl": null
+  }
+}

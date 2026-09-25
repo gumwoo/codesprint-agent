@@ -1,0 +1,32 @@
+{
+  "problemCode": "P29_GRID_TRANSFORM_CHAIN",
+  "problemTitle": "격자 변환 명령 접기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MATRIX_TRANSFORM",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    tok = sys.stdin.read().split()\n    h = int(tok[0])\n    w = int(tok[1])\n    g = [list(tok[2 + i]) for i in range(h)]\n    q = int(tok[2 + h])\n    ops = tok[3 + h] if q > 0 else ''\n    for ch in ops:\n        n = len(g)\n        m = len(g[0])\n        if ch == 'T':\n            ng = [[g[i][j] for i in range(n)] for j in range(m)]\n        elif ch == 'R':\n            ng = [[g[i][m - 1 - j] for i in range(n)] for j in range(m)]\n        elif ch == 'L':\n            ng = [[g[i][m - 1 - j] for i in range(n)] for j in range(m)]\n        elif ch == 'V':\n            ng = [[g[n - 1 - i][j] for j in range(m)] for i in range(n)]\n        else:\n            ng = [[g[i][m - 1 - j] for j in range(m)] for i in range(n)]\n        g = ng\n    out = []\n    for row in g:\n        out.append(''.join(row))\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "failedCaseIds": [
+      1,
+      8,
+      9,
+      10
+    ]
+  },
+  "probes": {}
+}

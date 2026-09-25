@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P23_SUBSET_SUM_RANGE_COUNT
+title: 합이 구간 안에 드는 부분집합 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(2^N * N)
+statement: |
+  정수 N 개가 주어진다. 이 중 하나 이상을 골라 만든 부분집합 가운데, 고른 수의 합이 L 이상 R 이하인 것의 개수를 구하라. 부분집합은 고른 위치(인덱스)의 집합으로 구분한다. 값이 같아도 위치가 다르면 다른 부분집합이다. 인덱스는 1 부터 센다. 공집합은 세지 않는다.
+
+  입력 형식
+  첫째 줄에 N, L, R 이 공백으로 구분되어 주어진다. (1 <= N <= 15, 1 <= L <= R <= 1500)
+  둘째 줄에 a_1, a_2, ..., a_N 이 공백으로 구분되어 주어진다. (1 <= a_i <= 100)
+
+  출력 형식
+  조건을 만족하는 부분집합의 개수를 정수 하나로 출력한다.
+skills:
+- code: COMBINATORIAL_ENUMERATION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

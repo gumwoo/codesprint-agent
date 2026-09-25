@@ -1,0 +1,37 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P21_THREE_BOXES_UNDER_LIMIT
+title: 세 상자 싣기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(N^3)
+statement: |
+  무게가 적힌 상자 N개가 있다. 이 중 서로 다른 상자 정확히 3개를 골라 트럭에 싣는다. 세 무게의 합은 M 이하여야 한다. 가능한 합 중 가장 큰 값을 출력한다. 조건을 만족하는 선택이 없으면 -1 을 출력한다.
+
+  입력 형식
+  첫 줄에 정수 N, M 이 공백으로 주어진다. (3 <= N <= 100, 1 <= M <= 300000)
+  둘째 줄에 상자 무게 a_0, a_1, ..., a_{N-1} 이 공백으로 주어진다. (1 <= a_i <= 100000) 무게가 같은 상자가 여러 개 있을 수 있다.
+
+  출력 형식
+  조건을 만족하는 세 무게 합의 최댓값을 한 줄에 출력한다. 없으면 -1 을 출력한다.
+
+  인덱스는 0 부터 센다. 서로 다른 상자란 인덱스가 서로 다른 상자를 뜻한다. 같은 상자를 두 번 이상 고를 수 없다.
+skills:
+- code: BRUTE_FORCE_ENUMERATION
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl: null

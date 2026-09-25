@@ -1,0 +1,32 @@
+{
+  "problemCode": "P28_ENTRY_LIST_CHECK",
+  "problemTitle": "출입 명단 확인",
+  "problemSource": "DEV_FIXTURE",
+  "label": "OUTPUT_FORMAT",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "HASH_SET_MEMBERSHIP",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    registered = set(map(int, data[1:1 + n]))\n    q = int(data[1 + n])\n    queries = map(int, data[2 + n:2 + n + q])\n    out = [\"yes\" if x in registered else \"no\" for x in queries]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

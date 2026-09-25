@@ -1,0 +1,11 @@
+{
+  "id": "SORT_CUSTOM_KEY-1790357656777-2",
+  "skill": "SORT_CUSTOM_KEY",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:52:44+00:00",
+  "code": "P35_MULTI_KEY_RANKING",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef before(x, y, names, scores, ages):\n    if scores[x] != scores[y]:\n        return scores[x] > scores[y]\n    if ages[x] != ages[y]:\n        return ages[x] < ages[y]\n    if names[x] != names[y]:\n        return names[x] < names[y]\n    return x < y\n\n\ndef main():\n    lines = sys.stdin.read().strip().split(\"\\n\")\n    n = int(lines[0])\n    names = []\n    scores = []\n    ages = []\n    for k in range(1, n + 1):\n        parts = lines[k].split()\n        names.append(parts[0])\n        scores.append(int(parts[1]))\n        ages.append(int(parts[2]))\n    remaining = list(range(n))\n    result = []\n    while remaining:\n        best = remaining[0]\n        for c in remaining[1:]:\n            if before(c, best, names, scores, ages):\n                best = c\n        result.append(best)\n        remaining.remove(best)\n    print(\" \".join(str(x) for x in result))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\npool = [\"a\", \"ab\", \"abc\", \"b\", \"ba\", \"kim\", \"lee\"]\nlines = [str(n)]\nfor _ in range(n):\n    lines.append(f\"{rng.choice(pool)} {rng.randint(0, 3)} {rng.randint(1, 3)}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": null
+}

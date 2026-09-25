@@ -1,0 +1,11 @@
+{
+  "id": "SORT_CUSTOM_KEY-1790357615269-1",
+  "skill": "SORT_CUSTOM_KEY",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:52:33+00:00",
+  "code": "P34_RANK_BY_SCORE_AGE_NAME",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef before(a, b):\n    if a[1] != b[1]:\n        return a[1] > b[1]\n    if a[2] != b[2]:\n        return a[2] < b[2]\n    return a[0] < b[0]\n\n\ndef main():\n    lines = sys.stdin.read().splitlines()\n    n = int(lines[0])\n    rest = []\n    for i in range(1, n + 1):\n        parts = lines[i].split()\n        rest.append((parts[0], int(parts[1]), int(parts[2])))\n    out = []\n    while rest:\n        best = 0\n        for j in range(1, len(rest)):\n            if before(rest[j], rest[best]):\n                best = j\n        out.append(rest.pop(best)[0])\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nprint(n)\nfor _ in range(n):\n    name = \"\".join(rng.choice(\"abc\") for _ in range(rng.randint(1, 3)))\n    print(name, rng.randint(0, 5), rng.randint(1, 4))\n",
+  "stressInputGenerator": null
+}

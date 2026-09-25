@@ -1,0 +1,32 @@
+{
+  "problemCode": "P27_REGISTERED_ID_CHECK",
+  "problemTitle": "등록 번호 조회",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INPUT_PARSE",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "HASH_SET_MEMBERSHIP",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    registered = set(int(x) for x in data[1:1 + n])\n    queries = data[1 + n:]\n    out = []\n    for x in queries:\n        out.append(\"1\" if int(x) in registered else \"0\")\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

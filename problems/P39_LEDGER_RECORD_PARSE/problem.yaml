@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P39_LEDGER_RECORD_PARSE
+title: 거래 기록 합산
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(|S|)
+statement: |
+  한 줄 문자열 S 가 주어진다. S 는 쉼표(,)로 구분된 기록 여러 개로 이루어진다. 각 기록의 앞뒤에는 공백이 0개 이상 붙을 수 있다. 기록 내부에는 공백이 없다.
+
+  기록 하나의 형식은 '이름 부호 수' 이다. 이름은 영어 소문자 1~10자이다. 부호는 '+' 또는 '-' 이다. 수는 0 이상 999 이하의 정수이며 숫자 1~3자로 적힌다(앞에 0이 붙을 수 있다). '+' 는 그 이름의 잔액에 수를 더하고, '-' 는 뺀다. 모든 이름의 처음 잔액은 0이다.
+
+  입력
+  첫 줄에 S 가 주어진다. 기록의 수는 1 이상 100 이하이다.
+
+  출력
+  등장한 이름마다 한 줄에 '이름 잔액' 을 공백 하나로 구분해 출력한다. 이름은 S 에서 처음 등장한 순서대로 출력한다. 잔액은 음수일 수 있다. 기록 순서는 왼쪽부터 1번째로 센다(1-based)이지만 출력에 번호는 쓰지 않는다.
+skills:
+- code: STRING_PARSING
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: INPUT_PARSE
+  expectedStatus: WRONG_ANSWER
+skillControl: null

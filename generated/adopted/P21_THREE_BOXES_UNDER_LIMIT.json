@@ -1,0 +1,11 @@
+{
+  "id": "BRUTE_FORCE_ENUMERATION-1790357698349-1",
+  "skill": "BRUTE_FORCE_ENUMERATION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:49:32+00:00",
+  "code": "P21_THREE_BOXES_UNDER_LIMIT",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\nfrom itertools import combinations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    sums = [sum(c) for c in combinations(a, 3)]\n    valid = [s for s in sums if s <= m]\n    print(max(valid) if valid else -1)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(3, 8)\na = [r.randint(1, 20) for _ in range(n)]\nm = r.randint(1, 60)\nprint(n, m)\nprint(*a)\n",
+  "stressInputGenerator": null
+}

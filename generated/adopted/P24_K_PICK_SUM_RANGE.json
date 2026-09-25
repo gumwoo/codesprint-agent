@@ -1,0 +1,11 @@
+{
+  "id": "COMBINATORIAL_ENUMERATION-1790357744180-2",
+  "skill": "COMBINATORIAL_ENUMERATION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:50:04+00:00",
+  "code": "P24_K_PICK_SUM_RANGE",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, k, lo, hi = map(int, data[:4])\n    a = list(map(int, data[4:4 + n]))\n    count = 0\n    for mask in range(1 << n):\n        if bin(mask).count('1') != k:\n            continue\n        s = 0\n        for i in range(n):\n            if (mask >> i) & 1:\n                s += a[i]\n        if lo <= s <= hi:\n            count += 1\n    print(count)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read().split()[0])\nr = random.Random(seed)\nn = r.randint(1, 10)\nk = r.randint(1, n)\na = [r.randint(-10, 10) for _ in range(n)]\nlo = r.randint(-30, 30)\nhi = lo + r.randint(0, 20)\nprint(n, k, lo, hi)\nprint(' '.join(map(str, a)))\n",
+  "stressInputGenerator": null
+}

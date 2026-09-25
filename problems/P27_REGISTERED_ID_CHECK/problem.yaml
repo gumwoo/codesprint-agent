@@ -1,0 +1,41 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P27_REGISTERED_ID_CHECK
+title: 등록 번호 조회
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 300
+referenceComplexity: O(N + Q)
+statement: |
+  등록된 번호 N개와 조회할 번호 Q개가 주어진다. 각 조회 번호가 등록된 번호 중에 있으면 1, 없으면 0을 출력한다. 등록된 번호에는 같은 값이 여러 번 나올 수 있다.
+
+  입력 형식
+  첫째 줄에 N (1 <= N <= 100000).
+  둘째 줄에 등록된 번호 N개가 공백으로 구분되어 주어진다. 각 번호는 -1000000000 이상 1000000000 이하의 정수다.
+  셋째 줄에 Q (1 <= Q <= 100000).
+  넷째 줄에 조회할 번호 Q개가 공백으로 구분되어 주어진다. 범위는 등록된 번호와 같다.
+
+  출력 형식
+  조회 번호가 주어진 순서대로 한 줄에 하나씩, 등록되어 있으면 1, 아니면 0을 출력한다. 총 Q줄이다.
+
+  인덱스 기준
+  번호의 위치를 출력하지 않으므로 인덱스를 쓰지 않는다. 조회 결과는 입력 순서(첫 번째 조회부터)대로 출력한다.
+skills:
+- code: HASH_SET_MEMBERSHIP
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: INPUT_PARSE
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 등록 번호를 리스트로 두고 조회마다 리스트 전체를 처음부터 선형 탐색한다.

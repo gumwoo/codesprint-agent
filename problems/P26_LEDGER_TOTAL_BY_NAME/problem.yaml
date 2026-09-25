@@ -1,0 +1,35 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P26_LEDGER_TOTAL_BY_NAME
+title: 이름별 거래 집계
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(N)
+statement: |
+  거래 기록 N 개가 순서대로 주어진다. 각 기록은 이름 하나와 금액 하나로 이루어진다. 서로 다른 이름마다 거래 횟수와 금액 합계를 구하라.
+
+  입력
+  첫 줄에 정수 N (1 ≤ N ≤ 100000) 이 주어진다.
+  다음 N 개의 줄에 이름과 금액이 공백 하나로 구분되어 주어진다. 이름은 영어 소문자로만 이루어진 길이 1 이상 10 이하의 문자열이다. 금액은 1 이상 1000 이하의 정수다.
+
+  출력
+  서로 다른 이름마다 한 줄에 '이름 거래횟수 금액합계' 를 공백 하나로 구분하여 출력한다. 이름은 입력에서 처음 등장한 순서대로 출력한다.
+
+  기록의 순서는 입력에 나온 순서이며, 출력에 인덱스는 쓰지 않는다. 설명에서 기록 번호를 말할 때는 1 부터 센다.
+skills:
+- code: HASH_MAP_COUNTING
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- OUTPUT_FORMAT
+- INPUT_PARSE
+negativeControl:
+  mistake: OUTPUT_FORMAT
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 서로 다른 이름을 리스트에 모은 뒤(in 으로 중복 확인), 이름마다 기록 전체를 다시 훑어 횟수와 합계를 센다.

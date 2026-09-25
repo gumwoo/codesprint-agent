@@ -1,0 +1,11 @@
+{
+  "id": "HASH_SET_MEMBERSHIP-1790357520906-1",
+  "skill": "HASH_SET_MEMBERSHIP",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:50:59+00:00",
+  "code": "P27_REGISTERED_ID_CHECK",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    registered = [int(x) for x in data[1:1 + n]]\n    q = int(data[1 + n])\n    queries = [int(x) for x in data[2 + n:2 + n + q]]\n    for x in queries:\n        found = 0\n        for i in range(n):\n            if registered[i] == x:\n                found = 1\n                break\n        print(found)\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nq = rng.randint(1, 12)\nlo, hi = -10, 10\nregistered = [rng.randint(lo, hi) for _ in range(n)]\nqueries = [rng.randint(lo, hi) for _ in range(q)]\nprint(n)\nprint(*registered)\nprint(q)\nprint(*queries)\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 55000\nq = 55000\nregistered = [2 * rng.randint(0, 499999) for _ in range(n)]\nqueries = [2 * rng.randint(0, 499999) + 1 for _ in range(q)]\nprint(n)\nprint(*registered)\nprint(q)\nprint(*queries)\n"
+}

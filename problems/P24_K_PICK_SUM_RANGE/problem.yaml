@@ -1,0 +1,32 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P24_K_PICK_SUM_RANGE
+title: 합이 구간에 드는 K개 고르기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(C(N, K)) — 재귀로 조합을 만들며 합을 누적
+statement: |
+  정수 N개가 주어진다. 서로 다른 위치(인덱스) K개를 고르는 방법 중에서, 고른 수의 합이 L 이상 R 이하인 방법의 수를 구한다. 고르는 순서는 구분하지 않는다. 값이 같아도 위치가 다르면 다른 수로 본다.
+
+  입력 형식:
+  첫째 줄에 N, K, L, R 이 공백으로 구분되어 주어진다. (1 <= K <= N <= 15, -10^7 <= L <= R <= 10^7)
+  둘째 줄에 정수 a_0, a_1, ..., a_{N-1} 이 공백으로 구분되어 주어진다. (-10^6 <= a_i <= 10^6)
+  인덱스는 0부터 센다.
+
+  출력 형식:
+  조건을 만족하는 인덱스 조합의 개수를 한 줄에 출력한다.
+skills:
+- code: COMBINATORIAL_ENUMERATION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

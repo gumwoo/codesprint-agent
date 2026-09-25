@@ -1,0 +1,11 @@
+{
+  "id": "HASH_MAP_COUNTING-1790357527019-1",
+  "skill": "HASH_MAP_COUNTING",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:50:14+00:00",
+  "code": "P25_ORDER_TALLY_BY_PRODUCT",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    ids = [int(data[1 + 2 * i]) for i in range(n)]\n    qs = [int(data[2 + 2 * i]) for i in range(n)]\n    lines = []\n    for i in range(n):\n        first = True\n        for j in range(i):\n            if ids[j] == ids[i]:\n                first = False\n                break\n        if not first:\n            continue\n        c = 0\n        t = 0\n        for j in range(n):\n            if ids[j] == ids[i]:\n                c += 1\n                t += qs[j]\n        lines.append(f\"{ids[i]} {c} {t}\")\n    print(\"\\n\".join(lines))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(1, 30)\nlines = [str(n)]\nfor _ in range(n):\n    lines.append(f\"{r.randint(1, 6)} {r.randint(1, 10)}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nr = random.Random(7)\nn = 100000\nlines = [str(n)]\nfor _ in range(n):\n    lines.append(f\"{r.randint(1, 30000)} {r.randint(1, 9)}\")\nprint(\"\\n\".join(lines))\n"
+}

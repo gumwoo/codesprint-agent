@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "2\napple:3*120, pear : 2*50\n pear:1 * 50,apple : -1*120",
+      "expectedOutput": "apple 240\npear 150\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "1\nfig:4*25",
+      "expectedOutput": "fig 100\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1\na:1*1",
+      "expectedOutput": "a 1\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1\n  apple : -3 * 7  ",
+      "expectedOutput": "apple -21\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "3\napple:2*10, apple :1*10\n pear:3*5,apple:-3*10\npear : 1 * 5",
+      "expectedOutput": "apple 0\npear 20\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "2\nkiwi:5*100 ,  kiwi:-5*100\nfig:1*1,  kiwi :0*9",
+      "expectedOutput": "kiwi 0\nfig 1\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "1\nabcdefghij:100*1000,abcdefghij:100*1000,abcdefghij:-100*1000",
+      "expectedOutput": "abcdefghij 100000\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "2\nlime:-100*1000 , plum:100*1\nlime:100*999",
+      "expectedOutput": "lime -100\nplum 100\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4\n apple: 6* 86 ,  kiwi  :10  *59  , pear: -6*57  \n a  : 6*88,apple : 6*  29 \n  pear:  0*  80,  pear :  -8  * 52 \n  pear:-10  * 83 , kiwi: 2* 87 ,  kiwi:6 * 74,  pear :-10 *29  \n",
+      "expectedOutput": "apple 690\nkiwi 1208\npear -1878\na 528\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4\n fig: -1* 82  \n  a  :  8*  16  , kiwi  : -5  *71  ,  apple : -7 *77  ,fig: 9  *59  \napple:  -9* 70  ,  lime  :  3 * 64\n kiwi :  -5 *7 ,  fig :3*80,fig:-5 *82,  apple  : 8 * 80 \n",
+      "expectedOutput": "fig 279\na 128\nkiwi -390\napple -529\nlime 192\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4\nkiwi :  -4 * 10 ,lime :-5  *  32  , apple :  -8*  79 \n a:  10 *  62  ,fig : 6  *19  , pear  :-8 *  22\napple :  -10  * 58, kiwi: 4* 60\n  kiwi:6*  8 , pear: -8 *  43,  kiwi  :-2 * 72 ,  kiwi: 6* 16  \n",
+      "expectedOutput": "kiwi 200\nlime -160\napple -1212\na 620\nfig 114\npear -520\n",
+      "probes": []
+    }
+  ]
+}

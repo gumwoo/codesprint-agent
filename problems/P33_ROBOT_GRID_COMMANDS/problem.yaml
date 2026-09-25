@@ -1,0 +1,48 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P33_ROBOT_GRID_COMMANDS
+title: 격자 로봇 명령 실행
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N*M + K)
+statement: |
+  N행 M열 격자에 로봇 한 대가 있다. 각 칸은 '.'(빈 칸) 또는 '#'(벽)이다. 행과 열 번호는 0부터 센다. 맨 위 행이 0행, 맨 왼쪽 열이 0열이다. 로봇은 처음에 (r, c) 칸에서 방향 d 를 바라본다. 방향은 N(위, 행 감소), E(오른쪽, 열 증가), S(아래, 행 증가), W(왼쪽, 열 감소) 중 하나다.
+
+  명령 문자열의 문자를 앞에서부터 하나씩 실행한다.
+  - L: 제자리에서 왼쪽으로 90도 돈다.
+  - R: 제자리에서 오른쪽으로 90도 돈다.
+  - F: 바라보는 방향으로 한 칸 이동한다. 이동할 칸이 격자 밖이거나 '#' 이면 이 명령은 무시하고 제자리에 있는다.
+
+  모든 명령을 실행한 뒤 로봇의 행, 열, 방향을 출력한다.
+
+  입력 형식
+  첫째 줄: N M (1 <= N, M <= 50)
+  다음 N 줄: 길이 M 의 문자열. '.' 또는 '#' 로만 이루어진다.
+  다음 줄: r c d (0 <= r < N, 0 <= c < M, d 는 N, E, S, W 중 하나). (r, c) 는 항상 '.' 이다.
+  다음 줄: K (1 <= K <= 100000)
+  다음 줄: 길이 K 의 명령 문자열. 'L', 'R', 'F' 로만 이루어진다.
+
+  출력 형식
+  최종 행, 열, 방향 문자를 공백으로 구분해 한 줄에 출력한다. 행과 열은 0부터 센다.
+skills:
+- code: SIMULATION_STATE
+  role: PRIMARY
+  weight: 0.7
+- code: GRID_COORDINATE
+  role: SECONDARY
+  weight: 0.15
+- code: GRID_BOUNDARY_CHECK
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- BOUNDARY_CHECK
+- INDEX_ERROR
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: RUNTIME_ERROR
+skillControl: null

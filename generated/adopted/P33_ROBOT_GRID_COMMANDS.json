@@ -1,0 +1,11 @@
+{
+  "id": "SIMULATION_STATE-1790357443736-2",
+  "skill": "SIMULATION_STATE",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:52:22+00:00",
+  "code": "P33_ROBOT_GRID_COMMANDS",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\ndef main():\n    lines = sys.stdin.read().split('\\n')\n    n, m = map(int, lines[0].split())\n    free = set()\n    for i in range(n):\n        row = lines[1 + i].strip()\n        for j in range(m):\n            if row[j] == '.':\n                free.add((i, j))\n    parts = lines[1 + n].split()\n    pos = (int(parts[0]), int(parts[1]))\n    vectors = {'N': (-1, 0), 'E': (0, 1), 'S': (1, 0), 'W': (0, -1)}\n    names = {v: k for k, v in vectors.items()}\n    vec = vectors[parts[2]]\n    cmds = lines[3 + n].strip()\n    for ch in cmds:\n        if ch == 'R':\n            vec = (vec[1], -vec[0])\n        elif ch == 'L':\n            vec = (-vec[1], vec[0])\n        else:\n            nxt = (pos[0] + vec[0], pos[1] + vec[1])\n            if nxt in free:\n                pos = nxt\n    print(pos[0], pos[1], names[vec])\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\ndef main():\n    seed = int(sys.stdin.read().split()[0])\n    rng = random.Random(seed)\n    n = rng.randint(1, 6)\n    m = rng.randint(1, 6)\n    grid = [['#' if rng.random() < 0.25 else '.' for _ in range(m)] for _ in range(n)]\n    r = rng.randrange(n)\n    c = rng.randrange(m)\n    grid[r][c] = '.'\n    d = rng.choice('NESW')\n    k = rng.randint(1, 20)\n    cmds = ''.join(rng.choice('LRFFF') for _ in range(k))\n    out = [f\"{n} {m}\"]\n    for row in grid:\n        out.append(''.join(row))\n    out.append(f\"{r} {c} {d}\")\n    out.append(str(k))\n    out.append(cmds)\n    print('\\n'.join(out))\n\nmain()\n",
+  "stressInputGenerator": null
+}

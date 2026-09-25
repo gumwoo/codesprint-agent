@@ -1,0 +1,11 @@
+{
+  "id": "HASH_MAP_COUNTING-1790357573454-2",
+  "skill": "HASH_MAP_COUNTING",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:50:37+00:00",
+  "code": "P26_LEDGER_TOTAL_BY_NAME",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    names = [data[1 + 2 * i] for i in range(n)]\n    amounts = [int(data[2 + 2 * i]) for i in range(n)]\n    lines = []\n    for i in range(n):\n        seen_before = False\n        for j in range(i):\n            if names[j] == names[i]:\n                seen_before = True\n                break\n        if seen_before:\n            continue\n        c = 0\n        s = 0\n        for j in range(n):\n            if names[j] == names[i]:\n                c += 1\n                s += amounts[j]\n        lines.append(f\"{names[i]} {c} {s}\")\n    print(\"\\n\".join(lines))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\npool = [\"a\", \"b\", \"ab\", \"ba\", \"kim\", \"lee\", \"x\"]\nused = rng.sample(pool, rng.randint(1, len(pool)))\nprint(n)\nfor _ in range(n):\n    print(rng.choice(used), rng.randint(1, 1000))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 80000\nd = 40000\n\n\ndef encode(k):\n    chars = []\n    for _ in range(4):\n        chars.append(chr(ord(\"a\") + k % 26))\n        k //= 26\n    return \"\".join(chars)\n\n\nnames = [encode(k * 7 + 3) for k in range(d)]\nrows = names + [rng.choice(names) for _ in range(n - d)]\nrng.shuffle(rows)\nlines = [str(n)] + [f\"{name} {rng.randint(1, 1000)}\" for name in rows]\nprint(\"\\n\".join(lines))\n"
+}

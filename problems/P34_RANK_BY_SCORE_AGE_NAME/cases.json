@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5\nkim 90 20\nlee 85 22\nahn 90 20\npark 90 19\nchoi 85 22\n",
+      "expectedOutput": "park\nahn\nkim\nchoi\nlee\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4\nb 70 30\nab 70 30\na 70 30\nc 100 50\n",
+      "expectedOutput": "c\na\nab\nb\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1\na 0 1\n",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "4\nd 50 30\nc 50 30\nb 50 30\na 50 30\n",
+      "expectedOutput": "a\nb\nc\nd\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "5\nzed 10 5\namy 10 5\nzed 10 5\namy 10 4\nzed 9 1\n",
+      "expectedOutput": "amy\namy\nzed\nzed\nzed\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "4\nx 0 100\ny 100 1\nw 0 1\nv 100 100\n",
+      "expectedOutput": "y\nv\nw\nx\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "6\nabc 60 20\nab 60 20\na 60 20\nabcd 60 19\nb 61 99\nba 60 20\n",
+      "expectedOutput": "b\nabcd\na\nab\nabc\nba\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\nbba 1 1\ncb 4 1\ncc 5 1\nbac 3 4\na 1 1\na 4 1\nbca 2 2\nacb 0 3\n",
+      "expectedOutput": "cc\na\ncb\nbac\nbca\na\nbba\nacb\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\ncc 5 3\nb 0 3\nbc 3 2\nacc 1 4\nab 1 1\naac 5 3\nbaa 0 2\nb 3 1\n",
+      "expectedOutput": "aac\ncc\nb\nbc\nab\nacc\nbaa\nb\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\nbba 0 1\ncb 2 3\naa 1 4\nc 5 1\nbbc 0 4\nac 3 3\nc 2 2\ncaa 3 3\n",
+      "expectedOutput": "c\nac\ncaa\nc\ncb\naa\nbba\nbbc\n",
+      "probes": []
+    }
+  ]
+}

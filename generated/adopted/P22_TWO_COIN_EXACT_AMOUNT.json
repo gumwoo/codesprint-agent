@@ -1,0 +1,11 @@
+{
+  "id": "BRUTE_FORCE_ENUMERATION-1790357770718-2",
+  "skill": "BRUTE_FORCE_ENUMERATION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:49:43+00:00",
+  "code": "P22_TWO_COIN_EXACT_AMOUNT",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    a, b, c, p, q = map(int, sys.stdin.read().split())\n    count = 0\n    for x in range(p + 1):\n        for y in range(q + 1):\n            if a * x + b * y == c:\n                count += 1\n    print(count)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\na = rng.randint(1, 10)\nb = rng.randint(1, 10)\np = rng.randint(0, 20)\nq = rng.randint(0, 20)\nc = rng.randint(0, a * p + b * q + 5)\nprint(a, b, c, p, q)\n",
+  "stressInputGenerator": null
+}

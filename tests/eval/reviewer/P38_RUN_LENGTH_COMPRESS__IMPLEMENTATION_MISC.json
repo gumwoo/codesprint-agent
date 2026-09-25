@@ -1,0 +1,30 @@
+{
+  "problemCode": "P38_RUN_LENGTH_COMPRESS",
+  "problemTitle": "연속 문자 압축",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "STRING_MANIPULATION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    out = []\n    prev = s[0]\n    cnt = 1\n    for c in s[1:]:\n        if c == prev:\n            cnt += 1\n        else:\n            out.append(prev + (str(cnt) if cnt > 1 else ''))\n            prev = c\n            cnt = 1\n    print(''.join(out))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  "probes": {}
+}

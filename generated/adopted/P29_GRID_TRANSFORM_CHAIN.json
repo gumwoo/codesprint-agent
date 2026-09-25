@@ -1,0 +1,11 @@
+{
+  "id": "MATRIX_TRANSFORM-1790357304613-1",
+  "skill": "MATRIX_TRANSFORM",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:51:41+00:00",
+  "code": "P29_GRID_TRANSFORM_CHAIN",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    tok = sys.stdin.read().split()\n    h = int(tok[0])\n    w = int(tok[1])\n    g = [list(tok[2 + i]) for i in range(h)]\n    q = int(tok[2 + h])\n    ops = tok[3 + h] if q > 0 else ''\n    for ch in ops:\n        n = len(g)\n        m = len(g[0])\n        if ch == 'T':\n            ng = [[g[i][j] for i in range(n)] for j in range(m)]\n        elif ch == 'R':\n            ng = [[g[n - 1 - i][j] for i in range(n)] for j in range(m)]\n        elif ch == 'L':\n            ng = [[g[i][m - 1 - j] for i in range(n)] for j in range(m)]\n        elif ch == 'V':\n            ng = [[g[n - 1 - i][j] for j in range(m)] for i in range(n)]\n        else:\n            ng = [[g[i][m - 1 - j] for j in range(m)] for i in range(n)]\n        g = ng\n    out = []\n    for row in g:\n        out.append(''.join(row))\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\ndata = sys.stdin.read().split()\nseed = int(data[0])\nrnd = random.Random(seed)\nh = rnd.randint(1, 5)\nw = rnd.randint(1, 5)\nq = rnd.randint(1, 6)\nlines = [str(h) + ' ' + str(w)]\nfor _ in range(h):\n    lines.append(''.join(rnd.choice('abcdefghij') for _ in range(w)))\nlines.append(str(q))\nlines.append(''.join(rnd.choice('TRLVM') for _ in range(q)))\nsys.stdout.write('\\n'.join(lines) + '\\n')\n",
+  "stressInputGenerator": null
+}
