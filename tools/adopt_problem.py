@@ -407,12 +407,25 @@ def materialize(draft: dict, skill: str, sample_inputs: list[str], edge_cases: l
     return code
 
 
-def run_repo_checks(code: str) -> None:
+def problem_check_failures() -> set[str]:
+    """check_problems 가 지금 내는 실패 줄들. 비어 있으면 통과다."""
     check = subprocess.run([sys.executable, "tools/check_problems.py"], cwd=ROOT,
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if check.returncode != 0:
-        lines = [line.strip() for line in check.stdout.splitlines() if code in line]
-        raise Rejected("문제 데이터 검사", lines[:6] or check.stdout.strip().splitlines()[-4:])
+    if check.returncode == 0:
+        return set()
+    return {line.strip() for line in check.stdout.splitlines() if line.strip().startswith("- [")}
+
+
+def run_repo_checks(code: str, before: set[str]) -> None:
+    """이 초안이 **새로 만든** 실패만 거절 사유다.
+
+    문제은행 전체의 실패(아직 문제가 없는 Skill 같은)로 거절하면, 새 도메인을 열 때 문제가
+    하나도 없는 상태에서 시작하므로 **어떤 초안도 채택되지 않는다.** 실제로 CORE-1 초안 23개가
+    전부 "다른 Skill 에 문제가 없다" 로 거절됐다. 들이기 전과 뒤의 실패를 비교한다.
+    """
+    added = sorted(problem_check_failures() - before)
+    if added:
+        raise Rejected("문제 데이터 검사", added[:6])
 
     verify = subprocess.run([sys.executable, "tools/verify_problems.py", code], cwd=ROOT,
                             capture_output=True, text=True, encoding="utf-8", errors="replace")
@@ -447,9 +460,10 @@ def adopt(envelope_path: pathlib.Path, records: pathlib.Path = RECORDS) -> dict:
         all_inputs = sample_inputs + [e["input"] for e in edge_cases] + random_inputs
         expected = cross_check(draft, all_inputs)
         control = check_skill_control(draft, skill, all_inputs, expected)
+        before = problem_check_failures()
         code = materialize(draft, skill, sample_inputs, edge_cases, random_inputs, expected,
                            control)
-        run_repo_checks(code)
+        run_repo_checks(code, before)
     except Exception as error:
         if code is not None:
             # 들어갔다가 막힌 문제는 흔적 없이 걷는다. 검사 밖의 예외(TypeError 등)도

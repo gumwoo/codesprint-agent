@@ -108,11 +108,30 @@ def unmeasurable_skill_as_secondary(draft):
     draft["secondarySkills"] = ["PYTHON_DEQUE_BASIC"]
 
 
+class UnrelatedBankFailure:
+    """초안과 관계없는 기존 문제를 잠깐 깨 둔다. 문제은행 전체의 실패로 초안을 거절하면
+    새 도메인을 열 때 어떤 초안도 들어오지 못한다 - CORE-1 초안 23개가 실제로 그랬다."""
+
+    target = ROOT / "problems" / "P02_GRID_TRAVERSAL" / "hints.yaml"
+
+    def __enter__(self):
+        self.original = self.target.read_bytes()
+        doc = yaml.safe_load(self.original.decode("utf-8"))
+        doc["hints"][1]["text"] = doc["hints"][0]["text"]   # 같은 힌트가 두 단계에
+        self.target.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False),
+                               encoding="utf-8", newline="")
+        return self
+
+    def __exit__(self, *exc):
+        self.target.write_bytes(self.original)
+
+
 # (설명, 고정 초안, 망가뜨리는 방법, 기대 단계) - 기대 단계가 None 이면 채택돼야 한다.
 # 기대 단계 자리에 (단계, 사유 조각) 을 주면 사유까지 본다. 같은 단계의 다른 검사가 대신
 # 막아도 통과하면, 그 검사를 지워도 초록이다.
 CASES = [
     ("정상 초안은 채택된다", "list", None, None),
+    ("다른 문제가 검사에 걸려 있어도 정상 초안은 채택된다", "list+noise", None, None),
     ("계약을 어기면", "list", contract_breaks, "계약"),
     ("SYSTEM 이 부여하는 실수를 적으면", "list", system_mistake, "참조"),
     # 이 검사를 꺼도 뒤의 문제 데이터 검사가 막는다(검증 에이전트) - 그래서 사유까지 본다.
@@ -143,7 +162,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as work:
         work = pathlib.Path(work)
         for index, (name, fixture, mutate, expected) in enumerate(CASES):
-            base, skill = FIXTURES[fixture]
+            base, skill = FIXTURES[fixture.split("+")[0]]
             draft = copy.deepcopy(base)
             if mutate:
                 mutate(draft)
@@ -153,7 +172,11 @@ def main() -> int:
                 "promptVersion": "fixture", "generatedAt": "2026-09-15T00:00:00Z",
                 "draft": draft}, ensure_ascii=False), encoding="utf-8")
 
-            outcome = adopt_problem.adopt(envelope, records=work / "records")
+            if fixture.endswith("+noise"):
+                with UnrelatedBankFailure():
+                    outcome = adopt_problem.adopt(envelope, records=work / "records")
+            else:
+                outcome = adopt_problem.adopt(envelope, records=work / "records")
             got = outcome.get("stage")
 
             if expected is None:
