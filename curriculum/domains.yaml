@@ -129,7 +129,7 @@ domains:
     order: 19
     name: Bit Manipulation / Bitmask
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: DFS
     order: 20
@@ -189,13 +189,13 @@ domains:
     order: 29
     name: LIS / LCS / Sequence DP
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: KNAPSACK
     order: 30
     name: Knapsack / Subset DP
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: STATE_SPACE
     order: 31
@@ -207,13 +207,13 @@ domains:
     order: 32
     name: Coordinate Compression
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: MONOTONIC
     order: 33
     name: Monotonic Stack / Queue
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: TRIE
     order: 34
