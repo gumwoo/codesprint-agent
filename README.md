@@ -36,7 +36,7 @@
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     API · LLM · Judge 계약 (JSON Schema) — 전부 contracts/README.md 표에 있다
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스 + Judge Worker
-problems/      검증된 문제 36개 (전부 개발 fixture — ADR-0008)
+problems/      검증된 문제 33개 (전부 개발 fixture — ADR-0008)
 learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
 backend/       Spring Boot · PostgreSQL · Decision Engine · API · 화면(static/)
 reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
@@ -141,7 +141,7 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 그것도 "실패했는가" 가 아니라 **"의도한 이유로 실패했는가"** 를 본다 — 심어둔 실수와
 드러나야 할 판정을 `negativeControl` 에 데이터로 적어두고 대조한다.
 
-저장소의 문제 36개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
+저장소의 문제 33개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
 실서비스 문제은행은 여기 두지 않는다([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
 
 Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
@@ -151,7 +151,7 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 ```bash
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
-python tools/verify_problems.py           # 문제 36개를 실제로 채점
+python tools/verify_problems.py           # 문제 33개를 실제로 채점
 python learning/tests/test_mastery.py     # Mastery 산식 (Python oracle)
 python tools/gen_mastery_golden.py        # golden 이 oracle 과 일치하는가
 cd backend && gradle test                 # Java 구현이 oracle 과 같은 값을 내는가
@@ -176,10 +176,10 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 
 | | 상태 |
 | --- | --- |
-| Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
+| Skill Catalog (20개, 도메인 9개 활성) + 도메인 레지스트리 (46개) + 학습 트랙 4개 | 진행 중 (ADR-0034) |
 | 계약 + 검사 하네스 + 메타테스트 | 완료 |
 | Judge / Sandbox (Python 3.12) + Judge Worker / 큐 | 완료 |
-| 문제 · Test Case 36개 + 단계별 힌트 사다리 | 완료 |
+| 문제 · Test Case 33개 + 단계별 힌트 사다리 | 완료 |
 | Mastery / Evidence 산식 (Python oracle ↔ Java) | 완료 |
 | 초기 진단 · Decision Engine · 선수 관계 | 완료 |
 | 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |
