@@ -413,7 +413,13 @@ def problem_check_failures() -> set[str]:
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
     if check.returncode == 0:
         return set()
-    return {line.strip() for line in check.stdout.splitlines() if line.strip().startswith("- [")}
+    lines = {line.strip() for line in check.stdout.splitlines() if line.strip().startswith("- [")}
+    if not lines:
+        # 실패했는데 실패 줄이 없다 - 검사 자체가 죽었다. 빈 집합으로 두면 "새 실패 없음" 이
+        # 되어 통과한다(검증 에이전트). 검사가 끝까지 돌지 못한 것도 실패로 센다.
+        tail = (check.stdout + check.stderr).strip().splitlines()[-1:] or [""]
+        lines = {f"- [crash] check_problems 가 끝까지 돌지 못했다: {tail[0][:160]}"}
+    return lines
 
 
 def run_repo_checks(code: str, before: set[str]) -> None:

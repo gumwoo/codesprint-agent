@@ -142,6 +142,10 @@ CASES = [
     ("정답과 완전탐색이 갈라지면", "list", brute_disagrees, "교차 검증"),
     ("정답이 끝나지 않으면", "list", reference_hangs, "교차 검증"),
     ("힌트가 정답 코드를 담으면", "list", hint_leaks_the_reference, "문제 데이터 검사"),
+    # 기존 실패가 있어도 초안이 새로 만든 실패는 막는다. 위의 "기존 실패가 있어도 채택" 만 보면
+    # 이 단계가 아무것도 거르지 않아도 통과한다(검증 에이전트).
+    ("다른 문제가 검사에 걸려 있어도 힌트가 정답 코드를 담으면", "list+noise",
+     hint_leaks_the_reference, ("문제 데이터 검사", "reference.py 의 코드를 그대로")),
     ("오답이 통과하면", "list", wrong_is_correct, "실제 채점"),
     # ADR-0033 · 정답이 Skill 사용을 증명하지 않는 Skill
     ("큐 초안이 Skill 대조를 갖추면 채택된다", "queue", None, None),
