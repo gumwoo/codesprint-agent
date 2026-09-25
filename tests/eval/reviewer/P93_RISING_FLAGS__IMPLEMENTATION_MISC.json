@@ -1,0 +1,34 @@
+{
+  "problemCode": "P93_RISING_FLAGS",
+  "problemTitle": "높아지는 깃발",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "LIS_NLOGN",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\nfrom bisect import bisect_right\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    a = list(map(int, data[1:1 + n]))\n    tails = []\n    for x in a:\n        i = bisect_right(tails, x)\n        if i == len(tails):\n            tails.append(x)\n        else:\n            tails[i] = x\n    print(len(tails))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      6,
+      7,
+      9,
+      10,
+      11,
+      12
+    ],
+    "failedCaseIds": [
+      2,
+      4,
+      5,
+      8
+    ]
+  },
+  "probes": {}
+}

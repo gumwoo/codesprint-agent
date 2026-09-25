@@ -1,0 +1,36 @@
+{
+  "problemCode": "P100_TYPO_CORRECTION_COST",
+  "problemTitle": "오타 교정 비용",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "EDIT_DISTANCE",
+    "STRING_MANIPULATION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    a, b = data[0], data[1]\n    n, m = len(a), len(b)\n    prev = [0] * (m + 1)\n    for i in range(1, n + 1):\n        cur = [0] + [0] * m\n        ca = a[i - 1]\n        for j in range(1, m + 1):\n            if ca == b[j - 1]:\n                cur[j] = prev[j - 1]\n            else:\n                cur[j] = 1 + min(prev[j - 1], prev[j], cur[j - 1])\n        prev = cur\n    print(prev[m])\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      4,
+      7,
+      13
+    ],
+    "failedCaseIds": [
+      2,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11,
+      12,
+      14
+    ]
+  },
+  "probes": {}
+}
