@@ -1,0 +1,11 @@
+{
+  "id": "EDIT_DISTANCE-1790376946869-2",
+  "skill": "EDIT_DISTANCE",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:57:02+00:00",
+  "code": "P100_TYPO_CORRECTION_COST",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef dist(a, b):\n    if not a:\n        return len(b)\n    if not b:\n        return len(a)\n    return min(\n        dist(a[1:], b[1:]) + (0 if a[0] == b[0] else 1),\n        dist(a[1:], b) + 1,\n        dist(a, b[1:]) + 1,\n    )\n\n\ndef main():\n    data = sys.stdin.read().split()\n    print(dist(data[0], data[1]))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.read().split()[0])\nrng = random.Random(seed)\nalpha = \"abc\"[: rng.randint(2, 3)]\nn = rng.randint(1, 7)\nm = rng.randint(1, 7)\nprint(\"\".join(rng.choice(alpha) for _ in range(n)))\nprint(\"\".join(rng.choice(alpha) for _ in range(m)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nalpha = \"abcdefghijklmnopqrstuvwxyz\"\nprint(\"\".join(rng.choice(alpha) for _ in range(1000)))\nprint(\"\".join(rng.choice(alpha) for _ in range(1000)))\n"
+}

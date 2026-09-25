@@ -1,0 +1,39 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P96_WATER_LEVEL_SPAN
+title: 수위 기록의 연속 구간
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N)
+statement: |
+  한 관측소가 N 일 동안 매일 하천 수위를 기록했다. 날짜는 0 부터 N-1 까지 0-based 로 센다. i 번 날의 수위는 A_i 이다.
+
+  각 날 i 에 대해, i 번 날에서 끝나고 왼쪽으로 이어지는 연속된 날들 중 모든 날의 수위가 A_i 이하인 가장 긴 구간의 길이를 구하라. i 번 날 자신도 구간에 포함되므로 답은 항상 1 이상이다.
+
+  예를 들어 수위가 100 80 60 70 60 75 85 이면 5 번 날(수위 75)의 답은 4 이다. 5, 4, 3, 2 번 날의 수위 75, 60, 70, 60 은 모두 75 이하이고, 1 번 날의 수위 80 은 75 보다 크기 때문이다. 수위가 같은 날은 구간을 끊지 않는다.
+
+  입력
+  첫째 줄에 N 이 주어진다. (1 <= N <= 100000)
+  둘째 줄에 A_0, A_1, ..., A_{N-1} 이 공백으로 구분되어 주어진다. (1 <= A_i <= 1000000000)
+
+  출력
+  0 번 날부터 N-1 번 날까지 각 날의 답을 한 줄에 공백으로 구분하여 출력한다.
+skills:
+- code: MONOTONIC_STACK
+  role: PRIMARY
+  weight: 0.7
+- code: STACK_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 날마다 왼쪽으로 한 칸씩 이동하며 더 큰 수위를 만날 때까지 센다.

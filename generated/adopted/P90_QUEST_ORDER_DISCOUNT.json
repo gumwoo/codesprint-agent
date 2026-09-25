@@ -1,0 +1,11 @@
+{
+  "id": "BITMASK_DP-1790375108348-2",
+  "skill": "BITMASK_DP",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:49:32+00:00",
+  "code": "P90_QUEST_ORDER_DISCOUNT",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom itertools import permutations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    t = [int(x) for x in data[1:1 + n]]\n    p = 1 + n\n    d = [[int(x) for x in data[p + i * n:p + (i + 1) * n]] for i in range(n)]\n    best = None\n    for order in permutations(range(n)):\n        total = 0\n        for k, i in enumerate(order):\n            s = 0\n            for j in order[:k]:\n                s += d[j][i]\n            total += max(1, t[i] - s)\n        if best is None or total < best:\n            best = total\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 7)\nt = [rng.randint(1, 60) for _ in range(n)]\nprint(n)\nprint(*t)\nfor i in range(n):\n    row = [0 if i == j else rng.randint(0, 20) for j in range(n)]\n    print(*row)\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 15\nt = [rng.randint(300, 1000) for _ in range(n)]\nprint(n)\nprint(*t)\nfor i in range(n):\n    row = [0 if i == j else rng.randint(0, 100) for j in range(n)]\n    print(*row)\n"
+}

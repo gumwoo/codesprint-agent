@@ -1,0 +1,11 @@
+{
+  "id": "LIS_NLOGN-1790375038605-1",
+  "skill": "LIS_NLOGN",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:50:29+00:00",
+  "code": "P93_RISING_FLAGS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    a = list(map(int, data[1:1 + n]))\n    best = 0\n    for mask in range(1, 1 << n):\n        prev = None\n        count = 0\n        ok = True\n        for i in range(n):\n            if mask >> i & 1:\n                if prev is not None and a[i] <= prev:\n                    ok = False\n                    break\n                prev = a[i]\n                count += 1\n        if ok and count > best:\n            best = count\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nhi = rng.choice([3, 10, 1000000])\nprint(n)\nprint(' '.join(str(rng.randint(1, hi)) for _ in range(n)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 100000\nprint(n)\nprint(' '.join(str(rng.randint(1, 1000000)) for _ in range(n)))\n"
+}

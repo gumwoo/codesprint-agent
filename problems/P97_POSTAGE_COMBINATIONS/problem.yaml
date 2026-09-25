@@ -1,0 +1,44 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P97_POSTAGE_COMBINATIONS
+title: 우표 금액 맞추기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N * M)
+statement: |
+  우체국에 N 종류의 우표가 있다. i번째 종류의 우표 한 장의 금액은 c_i 원이고, 각 종류는 장수 제한 없이 몇 장이든 쓸 수 있다(0장도 된다). 우표 금액의 합이 정확히 M 원이 되도록 우표를 고르는 방법의 수를 구한다.
+
+  두 방법은 어떤 종류의 우표를 쓴 장수가 하나라도 다르면 서로 다른 방법이다. 붙이는 순서는 따지지 않는다. 예를 들어 금액이 1, 2 인 우표로 3원을 만드는 방법은 {1,1,1}, {1,2} 의 2가지다. {1,2} 와 {2,1} 은 같은 방법이다.
+
+  방법의 수가 클 수 있으므로 1,000,000,007 로 나눈 나머지를 출력한다.
+
+  입력 형식
+  - 첫 줄에 정수 N, M 이 공백으로 구분되어 주어진다.
+  - 둘째 줄에 정수 c_1, c_2, ..., c_N 이 공백으로 구분되어 주어진다.
+
+  출력 형식
+  - 방법의 수를 1,000,000,007 로 나눈 나머지를 한 줄에 출력한다. 만들 수 없으면 0 을 출력한다.
+
+  제약
+  - 1 <= N <= 50
+  - 1 <= M <= 20000
+  - 1 <= c_i <= 20000
+  - c_i 는 모두 서로 다르다.
+
+  인덱스 기준: 우표 종류는 입력 순서대로 1번부터 센다. 출력에는 번호가 쓰이지 않는다.
+skills:
+- code: UNBOUNDED_KNAPSACK
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 금액 표 없이 각 종류를 몇 장 쓸지 명시적 스택으로 모두 나열하며 하나씩 센다.

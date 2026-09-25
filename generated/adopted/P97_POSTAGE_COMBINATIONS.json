@@ -1,0 +1,11 @@
+{
+  "id": "UNBOUNDED_KNAPSACK-1790375191226-2",
+  "skill": "UNBOUNDED_KNAPSACK",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:52:11+00:00",
+  "code": "P97_POSTAGE_COMBINATIONS",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\nMOD = 1_000_000_007\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    coins = [int(x) for x in data[2:2 + n]]\n\n    def go(i, rem):\n        if i == n:\n            return 1 if rem == 0 else 0\n        total = 0\n        k = 0\n        while k * coins[i] <= rem:\n            total += go(i + 1, rem - k * coins[i])\n            k += 1\n        return total\n\n    print(go(0, m) % MOD)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 5)\ncoins = rng.sample(range(1, 16), n)\nm = rng.randint(1, 25)\nprint(n, m)\nprint(' '.join(map(str, coins)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50\ncoins = rng.sample(range(1, 401), n)\nm = rng.randint(19000, 20000)\nprint(n, m)\nprint(' '.join(map(str, coins)))\n"
+}

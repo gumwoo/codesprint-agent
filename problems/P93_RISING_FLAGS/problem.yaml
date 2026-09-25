@@ -1,0 +1,45 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P93_RISING_FLAGS
+title: 높아지는 깃발
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N log N)
+statement: |
+  산길을 따라 깃대 N개가 순서대로 서 있고, 앞에서부터 i번째 깃대의 높이는 A_i 이다. 몇 개의 깃대를 골라 깃발을 단다. 고른 깃대는 원래 순서를 유지한 채 앞에서부터 보았을 때 높이가 매번 엄격하게 높아져야 한다. 높이가 같은 깃대는 연달아 고를 수 없다. 깃발을 달 수 있는 깃대 개수의 최댓값을 구한다.
+
+  예: 높이가 2 2 3 3 3 1 4 이면 2, 3, 4 를 고를 수 있어 답은 3 이다. 2, 2, 3 처럼 같은 높이가 이어지면 안 된다.
+
+  입력 형식
+  첫째 줄에 깃대 수 N 이 주어진다.
+  둘째 줄에 A_1 부터 A_N 까지 N개의 정수가 공백으로 구분되어 주어진다.
+
+  출력 형식
+  깃발을 달 수 있는 깃대 개수의 최댓값을 한 줄에 정수 하나로 출력한다.
+
+  제약
+  1 ≤ N ≤ 100000
+  1 ≤ A_i ≤ 1000000
+
+  인덱스 기준
+  깃대 번호는 설명을 위해 1부터 센다. 출력에는 번호가 쓰이지 않는다.
+skills:
+- code: LIS_NLOGN
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 각 깃대마다 앞의 모든 깃대를 확인해 그 깃대로 끝나는 최대 개수를 구하는 O(N^2) 동적 계획법.

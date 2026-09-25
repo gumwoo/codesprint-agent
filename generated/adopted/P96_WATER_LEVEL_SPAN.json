@@ -1,0 +1,11 @@
+{
+  "id": "MONOTONIC_STACK-1790375336240-2",
+  "skill": "MONOTONIC_STACK",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:51:37+00:00",
+  "code": "P96_WATER_LEVEL_SPAN",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    a = [int(v) for v in data[1:1 + n]]\n    res = []\n    for i in range(n):\n        last = -1\n        for j in range(i):\n            if a[j] > a[i]:\n                last = j\n        res.append(i - last)\n    print(\" \".join(str(v) for v in res))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 30)\nhi = rng.choice([3, 10, 1000, 1000000000])\nvals = [rng.randint(1, hi) for _ in range(n)]\nprint(n)\nprint(\" \".join(map(str, vals)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nN = 100000\nvals = []\nb = 0\nwhile len(vals) < N:\n    length = min(rng.randint(5000, 15000), N - len(vals))\n    base = 9000000 - b * 200000\n    v = base + rng.randint(0, 1000)\n    for _ in range(length):\n        v = max(base, v + rng.randint(-3, 10))\n        vals.append(v)\n    b += 1\nprint(N)\nprint(\" \".join(map(str, vals)))\n"
+}

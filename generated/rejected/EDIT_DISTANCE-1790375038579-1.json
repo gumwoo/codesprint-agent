@@ -1,0 +1,74 @@
+{
+  "id": "EDIT_DISTANCE-1790375038579-1",
+  "skill": "EDIT_DISTANCE",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:50:13+00:00",
+  "stage": "교차 검증",
+  "reasons": [
+    "완전탐색(bruteForce) 가 입력 8 에서 RUNTIME_ERROR - 입력 'abababababababababababababababababababababababababababababab' RecursionError: maximum recursion depth exceeded"
+  ],
+  "draft": {
+    "codeSuffix": "SEQUENCE_REPAIR",
+    "title": "서열 교정",
+    "statement": "소문자로만 이루어진 문자열 A 와 B 가 주어진다. A 에 다음 연산을 원하는 만큼 적용해 B 와 똑같이 만들려고 한다.\n- 삽입: A 의 임의 위치(맨 앞 · 맨 뒤 포함)에 소문자 하나를 넣는다.\n- 삭제: A 의 글자 하나를 지운다.\n- 교체: A 의 글자 하나를 다른 소문자로 바꾼다.\n각 연산은 1 회로 센다. A 를 B 로 만드는 데 필요한 최소 연산 횟수를 출력한다.\n예: A = kitten, B = sitting 이면 k 를 s 로 교체, e 를 i 로 교체, 끝에 g 를 삽입해 3 회다.\n\n입력\n첫째 줄에 A, 둘째 줄에 B 가 주어진다. 공백은 없다.\n\n출력\n최소 연산 횟수를 정수 하나로 출력한다.\n\n제약\n- 1 <= |A|, |B| <= 500\n- A, B 는 영어 소문자(a~z)로만 이루어진다.\n- 글자 위치는 문제 풀이에 따로 쓰이지 않으며, 설명에서 위치를 말할 때는 0 부터 센다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(|A| * |B|) 시간, O(|B|) 공간",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "표의 i 번째 행 · j 번째 열이 앞부분 길이를 뜻하는데 글자를 a[i-1], b[j-1] 대신 a[i], b[j] 로 읽어 마지막 행에서 IndexError 가 난다.",
+    "sampleInputs": [
+      "kitten\nsitting\n",
+      "sunday\nsaturday\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "a\nb\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "a\na\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "aaaa\naaaaaaa\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "abcdef\nfedcba\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "z\nabcdefghijklmnopqrstuvwxyz\n"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab\nbabababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababa\n"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nalphabet = \"abcd\"[: rng.randint(2, 4)]\na = \"\".join(rng.choice(alphabet) for _ in range(rng.randint(1, 7)))\nb = \"\".join(rng.choice(alphabet) for _ in range(rng.randint(1, 7)))\nprint(a)\nprint(b)\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    a, b = data[0], data[1]\n    n, m = len(a), len(b)\n    prev = list(range(m + 1))\n    for i in range(1, n + 1):\n        cur = [i] + [0] * m\n        ai = a[i - 1]\n        for j in range(1, m + 1):\n            if ai == b[j - 1]:\n                cur[j] = prev[j - 1]\n            else:\n                cur[j] = 1 + min(prev[j - 1], prev[j], cur[j - 1])\n        prev = cur\n    print(prev[m])\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef search(a, b):\n    # 두 문자열 모두 비면 0, 한쪽만 비면 남은 길이만큼 삽입 또는 삭제\n    if not a:\n        return len(b)\n    if not b:\n        return len(a)\n    # 마지막 글자를 두고 가능한 모든 선택을 다 해 본다\n    options = [\n        search(a[:-1], b) + 1,\n        search(a, b[:-1]) + 1,\n        search(a[:-1], b[:-1]) + (0 if a[-1] == b[-1] else 1),\n    ]\n    return min(options)\n\n\ndef main():\n    data = sys.stdin.read().split()\n    print(search(data[0], data[1]))\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    a, b = data[0], data[1]\n    n, m = len(a), len(b)\n    prev = list(range(m + 1))\n    for i in range(1, n + 1):\n        cur = [i] + [0] * m\n        ai = a[i]\n        for j in range(1, m + 1):\n            if ai == b[j]:\n                cur[j] = prev[j - 1]\n            else:\n                cur[j] = 1 + min(prev[j - 1], prev[j], cur[j - 1])\n        prev = cur\n    print(prev[m])\n\n\nmain()\n",
+    "hints": [
+      "A 전체를 B 전체로 바꾸는 방법은 A 의 앞 몇 글자를 B 의 앞 몇 글자로 바꾸는 더 작은 문제들로 나뉜다. 같은 작은 문제가 여러 갈래에서 반복해서 나온다.",
+      "작은 문제의 답을 저장해 두고 큰 문제에서 꺼내 쓰는 동적 계획법 문제다.",
+      "(A 의 앞 i 글자, B 의 앞 j 글자) 쌍마다 최소 연산 수를 하나씩 기록하는 (|A|+1) x (|B|+1) 표를 둔다. 한쪽이 빈 문자열인 칸은 다른 쪽 길이가 답이다.",
+      "두 앞부분의 마지막 글자가 같으면 둘 다 한 글자 짧은 쌍의 값을 그대로 쓴다. 다르면 마지막 글자를 삭제 · 삽입 · 교체하는 세 경우에 해당하는 이웃 칸 중 가장 작은 값에 1 을 더한다.",
+      "표[0][j] = j, 표[i][0] = i 로 채운다. i 를 1..|A|, j 를 1..|B| 순서로 돌며 A 의 i 번째 글자와 B 의 j 번째 글자(1 부터 셀 때)를 비교해 위 규칙으로 칸을 채운다. 답은 표[|A|][|B|]."
+    ],
+    "skillControl": {
+      "approach": "표 없이 앞에서부터 글자를 맞춰 가며 세 연산을 모두 재귀로 시도한다(같은 앞부분 쌍을 반복 계산).",
+      "solution": "import sys\n\n\ndef solve(a, b, i, j):\n    if i == len(a):\n        return len(b) - j\n    if j == len(b):\n        return len(a) - i\n    if a[i] == b[j]:\n        return solve(a, b, i + 1, j + 1)\n    return 1 + min(\n        solve(a, b, i + 1, j + 1),\n        solve(a, b, i + 1, j),\n        solve(a, b, i, j + 1),\n    )\n\n\ndef main():\n    sys.setrecursionlimit(10000)\n    data = sys.stdin.read().split()\n    print(solve(data[0], data[1], 0, 0))\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\na = \"\".join(rng.choice(\"abcdefghij\") for _ in range(500))\nb = \"\".join(rng.choice(\"abcdefghij\") for _ in range(480))\nprint(a)\nprint(b)\n"
+    }
+  }
+}
