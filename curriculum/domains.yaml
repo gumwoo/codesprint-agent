@@ -57,13 +57,13 @@ domains:
     order: 7
     name: Heap / Priority Queue
     tier: CORE
-    active: false
+    active: true
 
   - code: RECURSION
     order: 8
     name: Recursion
     tier: CORE
-    active: false
+    active: true
 
   - code: BRUTE_FORCE
     order: 9
@@ -75,25 +75,25 @@ domains:
     order: 10
     name: Backtracking
     tier: CORE
-    active: false
+    active: true
 
   - code: TWO_POINTER
     order: 11
     name: Two Pointer
     tier: CORE
-    active: false
+    active: true
 
   - code: SLIDING_WINDOW
     order: 12
     name: Sliding Window
     tier: CORE
-    active: false
+    active: true
 
   - code: PREFIX_SUM
     order: 13
     name: Prefix Sum / Difference Array
     tier: CORE
-    active: false
+    active: true
 
   - code: BINARY_SEARCH
     order: 14
