@@ -126,6 +126,23 @@ class DiagnosticTest {
         return submissionId;
     }
 
+    /**
+     * 진단을 끝낸다 - 진단이 가리키는 문제를 통과시키며 끝까지 따라간다.
+     *
+     * <p>슬라이스 1 은 그래프가 한 갈래라 P05 하나를 통과하면 진단이 끝났다. 도메인이 늘면
+     * 갈래마다 한 번씩 물어야 하므로 **몇 번인지 여기서 정하지 않는다**(ADR-0034).
+     */
+    private void finishDiagnostic() throws Exception {
+        for (int i = 0; i < 60; i++) {
+            JsonNode step = step();
+            if (step.get("done").asBoolean()) {
+                return;
+            }
+            solve(step.get("problem").get("code").asText(), "ACCEPTED", 6, 6);
+        }
+        throw new AssertionError("진단이 60 단계 안에 끝나지 않았다");
+    }
+
     @Test
     @DisplayName("신규 사용자에게 시작점을 준다")
     void aNewUserGetsSomewhereToStart() throws Exception {
@@ -157,12 +174,18 @@ class DiagnosticTest {
 
         solve(first.get("problem").get("code").asText(), "ACCEPTED", 6, 6);
 
-        // 최상위를 해냈으면 그 아래 전부가 함께 확인된 것이다. 한 문제로 끝난다.
+        // 최상위를 해냈으면 그 아래 전부가 함께 확인된 것이다. 한 문제로 그 갈래가 덮인다.
+        // 갈래가 여럿이므로 진단은 아직 끝나지 않고, 다음 질문은 **다른 갈래**에서 온다.
         JsonNode after = step();
-        assertThat(after.get("done").asBoolean()).as("한 문제로 그래프가 덮인다").isTrue();
-        assertThat(after.get("targetSkill").isNull()).isTrue();
-        assertThat(after.get("problem").isNull()).isTrue();
-        assertThat(after.get("assessed").asInt()).isEqualTo(after.get("total").asInt());
+        assertThat(after.get("assessed").asInt()).as("BFS 갈래 8 개가 한 문제로 덮인다")
+                .isGreaterThanOrEqualTo(8);
+        if (!after.get("done").asBoolean()) {
+            assertThat(after.get("targetSkill").asText())
+                    .as("덮인 갈래를 다시 묻지 않는다")
+                    .isNotIn("BFS_SHORTEST_PATH", "BFS_GRID_TRAVERSAL", "BFS_BASIC",
+                            "BFS_VISITED_MANAGEMENT", "GRID_BOUNDARY_CHECK", "GRID_COORDINATE",
+                            "PYTHON_DEQUE_BASIC", "PYTHON_LIST_BASIC");
+        }
     }
 
     @Test
@@ -243,8 +266,8 @@ class DiagnosticTest {
     @Test
     @DisplayName("진단이 끝나면 평소 결정으로 돌아온다")
     void afterTheDiagnosticTheNormalRulesResume() throws Exception {
-        // 한 문제로 그래프가 덮이는 경로다. 그 다음 제출부터는 진단이 개입하지 않는다.
-        solve(step().get("problem").get("code").asText(), "ACCEPTED", 6, 6);
+        // 진단을 끝낸다. 그 다음 제출부터는 진단이 개입하지 않는다.
+        finishDiagnostic();
         assertThat(step().get("done").asBoolean()).isTrue();
 
         long submissionId = solve("P02_GRID_TRAVERSAL", "WRONG_ANSWER", 1, 6);
@@ -265,7 +288,7 @@ class DiagnosticTest {
         //
         // 통과로 진단을 끝낸다. 함의된 Skill 들은 **Evidence 가 없다** - 진단이
         // "묻지 않기로" 했을 뿐 재 본 것이 아니다(ADR-0018).
-        solve(step().get("problem").get("code").asText(), "ACCEPTED", 6, 6);
+        finishDiagnostic();
         assertThat(step().get("done").asBoolean()).as("진단이 끝나야 한다").isTrue();
 
         // 그래서 그 중 하나를 실제로 풀어 보면 선수 조건이 막혀 있다. 함의는
@@ -285,7 +308,7 @@ class DiagnosticTest {
         // 한 단계만 보면 놓친다. 진단은 그래프를 내려가면서 **선수가 없는 뿌리 Skill**
         // 에도 닿는데, 그 Skill 에는 막힌 선수가 없어서 선수 조건 규칙이 아예 돌지
         // 않는다 - 진단이 개입할 자리도 같이 사라진다.
-        for (int step = 0; step < 10; step++) {
+        for (int step = 0; step < 60; step++) {
             JsonNode diagnostic = step();
             if (diagnostic.get("done").asBoolean()) {
                 return;
@@ -308,7 +331,7 @@ class DiagnosticTest {
                             expected, after.get("problem").get("code").asText())
                     .isEqualTo(after.get("problem").get("code").asText());
         }
-        throw new AssertionError("진단이 10 단계 안에 끝나지 않았다");
+        throw new AssertionError("진단이 60 단계 안에 끝나지 않았다");
     }
 
     @Test

@@ -92,7 +92,16 @@ public class DiagnosticPlanner {
         //
         // 동점이면 code 순. 진단이 사용자마다 달라지면 안 되는 것은 아니지만,
         // **같은 상태에서 같은 답** 이 나와야 재현하고 검사할 수 있다.
-        String next = remaining.stream()
+        //
+        // **단 실패한 갈래가 있으면 그 아래부터 묻는다.** 슬라이스 1 은 그래프가 한 갈래라
+        // "가장 많이 밝혀 주는 것" 이 곧 실패한 Skill 의 선수였다. 갈래가 여럿이 되면 그렇지
+        // 않다 - BFS 최단거리를 틀린 직후에 문자열 문제로 건너뛰게 된다. §57 의 "DFS 실패 →
+        // DFS 기초 확인" 을 규칙으로 적는다.
+        Set<String> belowFailures = belowFailedSkills(states, resolved);
+        List<String> candidates = belowFailures.isEmpty()
+                ? remaining
+                : remaining.stream().filter(belowFailures::contains).toList();
+        String next = candidates.stream()
                 .max(Comparator
                         .<String>comparingInt(code -> countUnresolvedBelow(code, resolved))
                         .thenComparing(Comparator.reverseOrder()))
@@ -163,6 +172,32 @@ public class DiagnosticPlanner {
             }
         }
         return implied;
+    }
+
+    /**
+     * 물어봤는데 해내지 못한 Skill 들의 아직 모르는 선수(이행적).
+     *
+     * <p>"해내지 못했다" 는 선수를 함의하지 못했다는 뜻이다 - 간선의 문턱을 하나라도 넘지
+     * 못했다. 함의와 같은 기준을 쓴다(진단 전용 상수를 만들지 않는다).
+     */
+    private Set<String> belowFailedSkills(List<SkillState> states, Set<String> resolved) {
+        Set<String> below = new LinkedHashSet<>();
+        for (SkillState state : states) {
+            if (state.evidenceCount() == 0) {
+                continue;
+            }
+            double mastery = state.mastery() == null ? 0.0 : state.mastery();
+            boolean failed = catalog.prerequisitesOf(state.skillCode()).stream()
+                    .anyMatch(edge -> mastery < edge.minimumMastery());
+            if (failed) {
+                for (String code : prerequisitesBelow(state.skillCode())) {
+                    if (!resolved.contains(code)) {
+                        below.add(code);
+                    }
+                }
+            }
+        }
+        return below;
     }
 
     /** 이 Skill 아래의 선수 전부(이행적). 자기 자신은 넣지 않는다. */

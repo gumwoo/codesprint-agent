@@ -115,6 +115,24 @@ class ReviewLoopTest {
                 "review-" + System.nanoTime() + "@codesprint.dev", "복습테스트", "JOB")).id();
     }
 
+    /**
+     * 진단을 끝낸다 - 진단이 가리키는 문제를 통과시키며 끝까지 따라간다.
+     *
+     * <p>슬라이스 1 은 P05 하나를 통과하면 진단이 끝났다. 갈래가 늘면 갈래마다 묻는다 -
+     * 몇 번인지 여기서 정하지 않는다(ADR-0034).
+     */
+    private void finishDiagnostic() throws Exception {
+        for (int i = 0; i < 60; i++) {
+            JsonNode step = MAPPER.readTree(mvc.perform(get("/api/users/{id}/diagnostic", userId))
+                    .andReturn().getResponse().getContentAsString());
+            if (step.get("done").asBoolean()) {
+                return;
+            }
+            solve(step.get("problem").get("code").asText(), "ACCEPTED");
+        }
+        throw new AssertionError("진단이 60 단계 안에 끝나지 않았다");
+    }
+
     /** 제출하고 채점 결과까지 반영한다. 제출 시각은 지금 시계다. */
     private long solve(String problemCode, String judgeStatus) throws Exception {
         long submissionId = submit(problemCode);
@@ -165,6 +183,8 @@ class ReviewLoopTest {
      * "잘할 것 같다" 와 "그 판단을 믿을 수 있다" 를 나눠 두었기 때문이다.
      */
     private void reachTheThreshold() throws Exception {
+        // 진단 중에는 다음 행동을 진단이 소유한다(ADR-0019). 복습 규칙을 보려면 먼저 끝낸다.
+        finishDiagnostic();
         for (int i = 0; i < 9; i++) {
             solve("P05_SHORTEST_PATH", "ACCEPTED");
             clock.advance(Duration.ofHours(1));
