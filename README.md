@@ -36,7 +36,7 @@
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     API · LLM · Judge 계약 (JSON Schema) — 전부 contracts/README.md 표에 있다
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스 + Judge Worker
-problems/      슬라이스 1 의 검증된 문제 18개 (전부 개발 fixture — ADR-0008)
+problems/      검증된 문제 36개 (전부 개발 fixture — ADR-0008)
 learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
 backend/       Spring Boot · PostgreSQL · Decision Engine · API · 화면(static/)
 reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
@@ -141,7 +141,7 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 그것도 "실패했는가" 가 아니라 **"의도한 이유로 실패했는가"** 를 본다 — 심어둔 실수와
 드러나야 할 판정을 `negativeControl` 에 데이터로 적어두고 대조한다.
 
-저장소의 문제 18개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
+저장소의 문제 36개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
 실서비스 문제은행은 여기 두지 않는다([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
 
 Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
@@ -151,7 +151,7 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 ```bash
 docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
-python tools/verify_problems.py           # 문제 18개를 실제로 채점
+python tools/verify_problems.py           # 문제 36개를 실제로 채점
 python learning/tests/test_mastery.py     # Mastery 산식 (Python oracle)
 python tools/gen_mastery_golden.py        # golden 이 oracle 과 일치하는가
 cd backend && gradle test                 # Java 구현이 oracle 과 같은 값을 내는가
@@ -179,7 +179,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | Skill Catalog (8개) + 도메인 레지스트리 (46개) | 완료 |
 | 계약 + 검사 하네스 + 메타테스트 | 완료 |
 | Judge / Sandbox (Python 3.12) + Judge Worker / 큐 | 완료 |
-| 문제 · Test Case 18개 + 단계별 힌트 사다리 | 완료 |
+| 문제 · Test Case 36개 + 단계별 힌트 사다리 | 완료 |
 | Mastery / Evidence 산식 (Python oracle ↔ Java) | 완료 |
 | 초기 진단 · Decision Engine · 선수 관계 | 완료 |
 | 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |
@@ -187,7 +187,9 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | Reviewer + 실제 모델 평가 (25건 · 오확정 0) | 완료 — 기본은 꺼져 있다 |
 | 내 PC 실행 경로 (`scripts/local.sh`) | 완료 |
 
-슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이다.
+슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 지금은
+PRD 끝까지 웨이브로 넓히는 중이다([ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md)) - CORE-1 로
+도메인 아홉 · Skill 스물이 켜져 있고, 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
 도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개
 Registry Entry**다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
 `skills.yaml`로 승격한다.
