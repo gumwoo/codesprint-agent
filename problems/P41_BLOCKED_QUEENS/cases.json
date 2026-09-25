@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4\n....\n....\n....\n....",
+      "expectedOutput": "2\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5\n.....\n..#..\n.....\n#...#\n.....",
+      "expectedOutput": "4\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1\n.",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1\n#",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "5\n.....\n.....\n#####\n.....\n.....",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "6\n......\n......\n......\n......\n......\n......",
+      "expectedOutput": "4\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "8\n........\n........\n........\n........\n........\n........\n........\n........",
+      "expectedOutput": "92\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "8\n#.......\n........\n...#....\n........\n....#...\n........\n.......#\n........",
+      "expectedOutput": "62\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7\n.......\n.......\n.......\n.......\n.......\n.......\n.......\n",
+      "expectedOutput": "40\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7\n.#...##\n...##..\n...#...\n.......\n.#.....\n##..###\n#......\n",
+      "expectedOutput": "2\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "10\n......##.#\n........#.\n..........\n..........\n..........\n.......#..\n....#.....\n.......#..\n......#...\n..........\n",
+      "expectedOutput": "296\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "10\n..........\n........##\n..#.......\n.#...#....\n.......#..\n......#...\n...#......\n....#.#...\n..........\n....#....#\n",
+      "expectedOutput": "227\n",
+      "probes": []
+    },
+    {
+      "id": 13,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "9\n.....#...\n.#.......\n.........\n.........\n....#.#.#\n.........\n.........\n.........\n.........\n",
+      "expectedOutput": "174\n",
+      "probes": []
+    },
+    {
+      "id": 14,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "10\n..........\n..........\n..........\n..........\n..........\n..........\n..........\n..........\n..........\n..........\n",
+      "expectedOutput": "724\n",
+      "probes": []
+    }
+  ]
+}

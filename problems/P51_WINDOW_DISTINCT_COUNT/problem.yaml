@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P51_WINDOW_DISTINCT_COUNT
+title: 구간별 서로 다른 값의 수
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N)
+statement: |
+  길이 N 인 정수 수열 A 와 정수 K 가 주어진다. 길이가 K 인 연속 구간은 시작 위치 0, 1, ..., N-K 에 하나씩 모두 N-K+1 개다(인덱스는 0 부터 센다). 시작 위치가 작은 구간부터 차례로, 각 구간에 들어 있는 서로 다른 값의 개수를 구하라.
+
+  입력
+  첫 줄에 N 과 K 가 공백으로 구분되어 주어진다. (1 <= K <= N <= 100000)
+  둘째 줄에 A[0], A[1], ..., A[N-1] 이 공백으로 구분되어 주어진다. (1 <= A[i] <= 1000000000)
+
+  출력
+  시작 위치 0 인 구간부터 N-K 인 구간까지, 각 구간의 서로 다른 값의 개수를 한 줄에 공백으로 구분하여 출력한다.
+skills:
+- code: SLIDING_WINDOW
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 구간마다 슬라이스를 set 으로 만들어 크기를 처음부터 다시 센다.

@@ -1,0 +1,71 @@
+{
+  "id": "PREFIX_SUM-1790361672127-2",
+  "skill": "PREFIX_SUM",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:45:54+00:00",
+  "stage": "중복",
+  "reasons": [
+    "P46_RANGE_SUM_QUERIES 와 제목이 같다"
+  ],
+  "draft": {
+    "codeSuffix": "RANGE_SUM_QUERY",
+    "title": "구간 합 질의",
+    "statement": "길이 N 인 정수 수열 A_1, A_2, ..., A_N 이 주어진다. 이어서 Q 개의 질의가 주어지며, 각 질의는 두 정수 l, r 로 이루어진다. 각 질의마다 A_l + A_{l+1} + ... + A_r 의 값을 구한다.\n\n인덱스는 1 부터 센다.\n\n입력 형식\n- 첫째 줄에 N 과 Q 가 공백으로 구분되어 주어진다. (1 ≤ N ≤ 100000, 1 ≤ Q ≤ 100000)\n- 둘째 줄에 A_1 부터 A_N 까지 N 개의 정수가 공백으로 구분되어 주어진다. (-10^9 ≤ A_i ≤ 10^9)\n- 다음 Q 개의 줄에 각 질의의 l 과 r 이 공백으로 구분되어 주어진다. (1 ≤ l ≤ r ≤ N)\n\n출력 형식\n- 질의가 주어진 순서대로, 각 질의의 구간 합을 한 줄에 하나씩 출력한다.",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(N + Q)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "구간 합을 p[r] - p[l] 로 계산해 왼쪽 끝 원소 A_l 을 빠뜨린다.",
+    "sampleInputs": [
+      "5 3\n3 -1 4 1 5\n1 3\n2 5\n3 3\n",
+      "4 2\n10 20 30 40\n1 4\n2 3\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n7\n1 1\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "6 3\n1 2 3 4 5 6\n1 6\n1 1\n6 6\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5 3\n4 4 4 4 4\n1 5\n2 4\n3 3\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "5 3\n-1000000000 -1000000000 -1000000000 -1000000000 -1000000000\n1 5\n2 3\n4 5\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "4 3\n2 -3 5 -7\n2 4\n2 4\n1 4\n"
+      }
+    ],
+    "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 10)\nq = rng.randint(1, 10)\na = [rng.randint(-10, 10) for _ in range(n)]\nprint(n, q)\nprint(*a)\nfor _ in range(q):\n    l = rng.randint(1, n)\n    r = rng.randint(l, n)\n    print(l, r)\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    p = [0] * (n + 1)\n    for i in range(n):\n        p[i + 1] = p[i] + int(data[2 + i])\n    out = []\n    idx = 2 + n\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        idx += 2\n        out.append(p[r] - p[l - 1])\n    sys.stdout.write('\\n'.join(map(str, out)) + '\\n')\n\n\nmain()\n",
+    "bruteForce": "import sys\n\ntokens = sys.stdin.read().split()\nn = int(tokens[0])\nq = int(tokens[1])\na = [int(x) for x in tokens[2:2 + n]]\npos = 2 + n\nfor _ in range(q):\n    l = int(tokens[pos])\n    r = int(tokens[pos + 1])\n    pos += 2\n    total = 0\n    for i in range(l - 1, r):\n        total += a[i]\n    print(total)\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    p = [0] * (n + 1)\n    for i in range(n):\n        p[i + 1] = p[i] + int(data[2 + i])\n    out = []\n    idx = 2 + n\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        idx += 2\n        out.append(p[r] - p[l])\n    sys.stdout.write('\\n'.join(map(str, out)) + '\\n')\n\n\nmain()\n",
+    "hints": [
+      "질의 수와 수열 길이가 모두 최대 100000 이다. 질의마다 l 부터 r 까지 더하면 최악에 약 10^10 번의 덧셈이 필요하다.",
+      "알고리즘 범주는 누적 합이다. 전처리를 한 번 해 두고 각 질의는 상수 시간에 답한다.",
+      "길이 N+1 인 배열 P 를 둔다. P[0] 은 0 이고, P[i] 는 앞에서부터 i 개 원소의 합이다.",
+      "P[i] 는 P[i-1] 에 A_i 를 더해 얻는다. 구간 [l, r] 의 합은 앞 r 개의 합에서 앞 l-1 개의 합을 뺀 값이다.",
+      "P[0] = 0\ni = 1..N: P[i] = P[i-1] + A_i\n각 질의 (l, r): 출력 P[r] - P[l-1]"
+    ],
+    "skillControl": {
+      "approach": "질의마다 리스트 슬라이스 A[l-1:r] 를 만들어 sum 으로 더한다.",
+      "solution": "import sys\n\ntokens = sys.stdin.buffer.read().split()\nn = int(tokens[0])\nq = int(tokens[1])\na = [int(x) for x in tokens[2:2 + n]]\npos = 2 + n\nout = []\nfor _ in range(q):\n    l = int(tokens[pos])\n    r = int(tokens[pos + 1])\n    pos += 2\n    out.append(sum(a[l - 1:r]))\nsys.stdout.write('\\n'.join(map(str, out)) + '\\n')\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 100000\nq = 50000\nparts = [f'{n} {q}', ' '.join(str(rng.randint(1, 9)) for _ in range(n))]\nfor _ in range(q):\n    parts.append(f'{rng.randint(1, 10)} {rng.randint(n - 9, n)}')\nprint('\\n'.join(parts))\n"
+    }
+  }
+}

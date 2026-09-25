@@ -1,0 +1,33 @@
+{
+  "problemCode": "P53_SUBARRAY_SUM_AT_MOST",
+  "problemTitle": "합이 S 이하인 연속 구간 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "TWO_POINTER",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    s = int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    left = 0\n    total = 0\n    count = 0\n    for right in range(n):\n        total += a[right]\n        while total >= s:\n            total -= a[left]\n            left += 1\n        count += right - left + 1\n    print(count)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      4,
+      7
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

@@ -1,0 +1,11 @@
+{
+  "id": "SLIDING_WINDOW-1790361565260-1",
+  "skill": "SLIDING_WINDOW",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:47:00+00:00",
+  "code": "P51_WINDOW_DISTINCT_COUNT",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = [int(v) for v in data[2:2 + n]]\n    res = []\n    for s in range(n - k + 1):\n        w = sorted(a[s:s + k])\n        c = 1\n        for j in range(1, k):\n            if w[j] != w[j - 1]:\n                c += 1\n        res.append(c)\n    print(' '.join(map(str, res)))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(1, 12)\nk = r.randint(1, n)\nprint(n, k)\nprint(' '.join(str(r.randint(1, 5)) for _ in range(n)))\n",
+  "stressInputGenerator": "import random\n\nr = random.Random(7)\nn = 150000\nk = 75000\nprint(n, k)\nprint(' '.join(str(r.randint(1, 9999)) for _ in range(n)))\n"
+}

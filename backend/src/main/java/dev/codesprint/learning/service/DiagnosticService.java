@@ -46,7 +46,10 @@ public class DiagnosticService {
 
     @Transactional(readOnly = true)
     public Step nextStep(Long userId) {
-        return nextStep(mastery.statesOf(userId));
+        // 한 번 읽고 트랙으로 거른다. 두 번 읽으면 한 응답 안에 두 시점이 섞인다.
+        List<SkillState> all = mastery.allStatesOf(userId);
+        java.util.Set<String> active = mastery.activeSkills(userId);
+        return nextStep(all.stream().filter(s -> active.contains(s.skillCode())).toList(), all);
     }
 
     /**
@@ -57,7 +60,12 @@ public class DiagnosticService {
      * <b>한 응답 안에서 서로 다른 시점의 상태를 보게 된다.</b>
      */
     public Step nextStep(List<SkillState> states) {
-        Plan plan = planner.plan(states);
+        return nextStep(states, states);
+    }
+
+    /** @param all 함의를 구할 전체 상태(ADR-0035 §3-1). 물을 범위는 {@code states} 다. */
+    public Step nextStep(List<SkillState> states, List<SkillState> all) {
+        Plan plan = planner.plan(states, all);
         int total = plan.resolved().size() + plan.remaining().size();
 
         if (plan.done()) {

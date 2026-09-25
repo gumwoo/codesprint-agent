@@ -1,0 +1,37 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P42_RANGE_ADD_FINAL_ARRAY
+title: 구간 더하기 후 최종 배열
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(N + M)
+statement: |
+  길이 N 의 정수 배열 A 가 있다. 처음에는 모든 원소가 0 이다. 갱신 M 개가 차례로 주어진다. 각 갱신 l r v 는 A[l], A[l+1], ..., A[r] 에 v 를 더한다. 모든 갱신을 반영한 뒤의 배열 A 를 출력한다.
+
+  입력 형식
+  - 첫 줄: N M (1 <= N <= 50000, 1 <= M <= 100000)
+  - 다음 M 줄: l r v (1 <= l <= r <= N, -1000 <= v <= 1000)
+  - 인덱스는 1 부터 센다.
+
+  출력 형식
+  - A[1] 부터 A[N] 까지 공백 하나로 구분해 한 줄에 출력한다.
+skills:
+- code: DIFFERENCE_ARRAY
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 갱신마다 l 부터 r 까지 모든 칸에 v 를 직접 더한다.

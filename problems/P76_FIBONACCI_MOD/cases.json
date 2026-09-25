@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "10 1000\n",
+      "expectedOutput": "55\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "50 1000000000\n",
+      "expectedOutput": "586269025\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "0 1\n",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "0 5\n",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1 7\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "2 2\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "1000 999983\n",
+      "expectedOutput": "851319\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "90 1000000000\n",
+      "expectedOutput": "370816120\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "777 123456789\n",
+      "expectedOutput": "101673358\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "1000000000000000000 1000000000\n",
+      "expectedOutput": "560546875\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "999999998765432109 999999937\n",
+      "expectedOutput": "288965997\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "987654321987654321 999999937\n",
+      "expectedOutput": "148657307\n",
+      "probes": []
+    }
+  ]
+}

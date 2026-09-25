@@ -1,0 +1,32 @@
+{
+  "problemCode": "P46_RANGE_SUM_QUERIES",
+  "problemTitle": "구간 합 질의",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PREFIX_SUM",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, q = int(data[0]), int(data[1])\n    pre = [0] * (n + 1)\n    for i in range(n):\n        pre[i + 1] = pre[i] + int(data[2 + i])\n    out = []\n    idx = 2 + n\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        idx += 2\n        out.append(pre[r] - pre[l])\n    sys.stdout.write('\\n'.join(map(str, out)) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

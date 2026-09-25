@@ -1,0 +1,35 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P53_SUBARRAY_SUM_AT_MOST
+title: 합이 S 이하인 연속 구간 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N)
+statement: |
+  양의 정수 N 개로 이루어진 수열 a_0, a_1, ..., a_{N-1} 과 정수 S 가 주어진다. 0 <= l <= r <= N-1 인 인덱스 쌍 (l, r) 중에서 a_l + a_{l+1} + ... + a_r <= S 를 만족하는 쌍의 개수를 구한다. 인덱스는 0 부터 센다. 서로 다른 (l, r) 은 원소 값이 같아도 다른 구간으로 센다.
+
+  입력 형식
+  첫째 줄: N S (1 <= N <= 200000, 1 <= S <= 1000000000)
+  둘째 줄: a_0 a_1 ... a_{N-1} 을 공백으로 구분 (1 <= a_i <= 10000)
+
+  출력 형식
+  조건을 만족하는 구간의 개수를 정수 하나로 출력한다.
+skills:
+- code: TWO_POINTER
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 시작 위치마다 오른쪽으로 합을 누적하다가 S 를 넘으면 멈추는 이중 반복문.

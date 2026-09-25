@@ -1,0 +1,11 @@
+{
+  "id": "PREFIX_SUM-1790361628324-1",
+  "skill": "PREFIX_SUM",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:45:32+00:00",
+  "code": "P46_RANGE_SUM_QUERIES",
+  "crossCheckedInputs": 37,
+  "bruteForce": "def main():\n    n, q = map(int, input().split())\n    a = list(map(int, input().split()))\n    for _ in range(q):\n        l, r = map(int, input().split())\n        total = 0\n        i = l\n        while i <= r:\n            total += a[i - 1]\n            i += 1\n        print(total)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(1, 8)\na = [rng.randint(-20, 20) for _ in range(n)]\nprint(n, q)\nprint(*a)\nfor _ in range(q):\n    l = rng.randint(1, n)\n    r = rng.randint(l, n)\n    print(l, r)\n",
+  "stressInputGenerator": "n = 100000\nq = 60000\nlines = [f'{n} {q}', ' '.join(str(i % 10) for i in range(n))]\nfor i in range(q):\n    lines.append(f'{1 + i % 10} {n - i % 10}')\nprint('\\n'.join(lines))\n"
+}

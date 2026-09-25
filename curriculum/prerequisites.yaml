@@ -104,3 +104,40 @@ prerequisites:
   - skill: COMBINATORIAL_ENUMERATION
     requires: BRUTE_FORCE_ENUMERATION
     minimum_mastery: 0.65
+
+  # ── W3 · CORE-2 (ADR-0034) ──────────────────────────────────────────
+  - skill: HEAP_PRIORITY
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: RECURSION_BASIC
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: DIVIDE_AND_CONQUER
+    requires: RECURSION_BASIC
+    minimum_mastery: 0.65
+
+  - skill: BACKTRACKING
+    requires: RECURSION_BASIC
+    minimum_mastery: 0.65
+
+  - skill: BACKTRACKING
+    requires: COMBINATORIAL_ENUMERATION
+    minimum_mastery: 0.65
+
+  - skill: TWO_POINTER
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: SLIDING_WINDOW
+    requires: HASH_MAP_COUNTING
+    minimum_mastery: 0.65
+
+  - skill: PREFIX_SUM
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: DIFFERENCE_ARRAY
+    requires: PREFIX_SUM
+    minimum_mastery: 0.65

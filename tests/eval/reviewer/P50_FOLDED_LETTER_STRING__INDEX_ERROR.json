@@ -1,0 +1,31 @@
+{
+  "problemCode": "P50_FOLDED_LETTER_STRING",
+  "problemTitle": "접힌 문자열의 k번째 글자",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "RECURSION_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef solve(n, k):\n    if n == 1:\n        return 'a'\n    half = (1 << (n - 1)) - 1\n    if k < half:\n        return solve(n - 1, k)\n    if k == half:\n        return chr(ord('a') + n - 1)\n    return solve(n - 1, k - half)\n\n\nn, k = map(int, sys.stdin.read().split())\nprint(solve(n, k))\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      5,
+      6,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      7,
+      8,
+      9
+    ]
+  },
+  "probes": {}
+}

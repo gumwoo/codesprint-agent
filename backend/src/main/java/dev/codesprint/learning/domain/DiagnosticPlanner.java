@@ -64,9 +64,25 @@ public class DiagnosticPlanner {
      *     Skill 도 들어 있어야 한다 - 빠지면 그것을 "모른다" 로 셀 수 없다.
      */
     public Plan plan(List<SkillState> states) {
+        return plan(states, states);
+    }
+
+    /**
+     * 트랙으로 거른 범위를 묻되, <b>함의는 전체 Evidence 에서 구한다</b>(ADR-0035 §3-1).
+     *
+     * <p>트랙 안만 보고 함의하면 트랙 밖 Skill 을 풀어 확인된 선수가 "모른다" 로 돌아온다.
+     * JOB 으로 진단을 끝낸 사용자가 INTRO 로 바꾸자 진단이 다시 열렸다 - BACKTRACKING 을
+     * 통과해 함의된 RECURSION_BASIC 이, BACKTRACKING 이 INTRO 에 없어서 사라졌다.
+     *
+     * @param states 물을 범위(트랙). 손대지 않은 Skill 도 들어 있어야 한다.
+     * @param all 전체 Skill 상태. 함의와 "실패한 갈래" 판단에 쓴다.
+     */
+    public Plan plan(List<SkillState> states, List<SkillState> all) {
+        Set<String> scope = new LinkedHashSet<>();
+        states.forEach(state -> scope.add(state.skillCode()));
         Set<String> assessed = assessedSkills(states);
         Set<String> resolved = new LinkedHashSet<>(assessed);
-        resolved.addAll(impliedSkills(states));
+        impliedSkills(all).stream().filter(scope::contains).forEach(resolved::add);
         List<String> remaining = states.stream()
                 .map(SkillState::skillCode)
                 .filter(code -> !resolved.contains(code))
@@ -97,7 +113,10 @@ public class DiagnosticPlanner {
         // "가장 많이 밝혀 주는 것" 이 곧 실패한 Skill 의 선수였다. 갈래가 여럿이 되면 그렇지
         // 않다 - BFS 최단거리를 틀린 직후에 문자열 문제로 건너뛰게 된다. §57 의 "DFS 실패 →
         // DFS 기초 확인" 을 규칙으로 적는다.
-        Set<String> belowFailures = belowFailedSkills(states, resolved);
+        Set<String> belowFailures = belowFailedSkills(all, resolved);
+        // 물을 수 있는 것은 트랙 안뿐이다. 트랙 밖 실패의 선수가 트랙 밖에만 있으면 후보가 비어
+        // 진단이 예외로 멈췄다 - 제출 반영까지 막혀 채점이 끝나지 않았다(검증 에이전트).
+        belowFailures.retainAll(scope);
         List<String> candidates = belowFailures.isEmpty()
                 ? remaining
                 : remaining.stream().filter(belowFailures::contains).toList();

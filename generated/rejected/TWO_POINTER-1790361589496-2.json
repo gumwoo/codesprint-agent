@@ -1,0 +1,73 @@
+{
+  "id": "TWO_POINTER-1790361589496-2",
+  "skill": "TWO_POINTER",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:48:49+00:00",
+  "stage": "검증 검토",
+  "code": "P54_COUNT_SUBARRAY_SUM_AT_MOST",
+  "reasons": [
+    "채택 검사를 전부 통과했지만 P53_SUBARRAY_SUM_AT_MOST 와 같은 문제다 - 연산 · 질의 · 출력이 같고 문장 · 값 범위만 다르다",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "COUNT_SUBARRAY_SUM_AT_MOST",
+    "title": "합이 S 이하인 연속 구간의 개수",
+    "statement": "양의 정수 N 개로 이루어진 수열 A_1, A_2, ..., A_N 과 정수 S 가 주어진다. 1 ≤ l ≤ r ≤ N 인 연속 구간 [l, r] 중에서 A_l + A_{l+1} + ... + A_r 이 S 이하인 구간의 개수를 구한다. 인덱스는 1 부터 센다. l 이나 r 가 다르면 서로 다른 구간이다.\n\n입력 형식\n첫째 줄에 N 과 S 가 공백으로 구분되어 주어진다. (1 ≤ N ≤ 200000, 1 ≤ S ≤ 1000000000)\n둘째 줄에 A_1 부터 A_N 까지 N 개의 정수가 공백으로 구분되어 주어진다. (1 ≤ A_i ≤ 10000)\n\n출력 형식\n조건을 만족하는 구간의 개수를 정수 하나로 출력한다. 조건을 만족하는 구간이 없으면 0 을 출력한다.",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(N)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "구간 합이 S 와 같을 때도 왼쪽 끝을 줄여서 합이 정확히 S 인 구간을 세지 않는다.",
+    "sampleInputs": [
+      "5 5\n1 2 3 2 1\n",
+      "6 7\n3 1 4 1 5 9\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n1\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1 5\n10\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5 3\n2 2 2 2 2\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "4 10\n1 2 3 4\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6 5\n10 1 1 10 2 3\n"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\ns = rng.randint(1, 30)\na = [rng.randint(1, 10) for _ in range(n)]\nprint(n, s)\nprint(' '.join(map(str, a)))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    s = int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    left = 0\n    total = 0\n    count = 0\n    for right in range(n):\n        total += a[right]\n        while total > s:\n            total -= a[left]\n            left += 1\n        count += right - left + 1\n    print(count)\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    s = int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    count = 0\n    for l in range(n):\n        for r in range(l, n):\n            if sum(a[l:r + 1]) <= s:\n                count += 1\n    print(count)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    s = int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    left = 0\n    total = 0\n    count = 0\n    for right in range(n):\n        total += a[right]\n        while left <= right and total >= s:\n            total -= a[left]\n            left += 1\n        count += right - left + 1\n    print(count)\n\n\nmain()\n",
+    "hints": [
+      "모든 수가 양수다. 구간의 오른쪽 끝을 늘리면 합은 커지기만 하고, 왼쪽 끝을 늘리면 합은 작아지기만 한다.",
+      "연속 구간을 다루는 투 포인터(슬라이딩 윈도우) 문제다. 모든 (l, r) 쌍을 확인하면 N 이 클 때 시간 안에 끝나지 않는다.",
+      "왼쪽 끝 위치, 오른쪽 끝 위치, 두 위치 사이 구간의 합, 지금까지 센 개수 네 가지만 유지하면 된다.",
+      "오른쪽 끝을 한 칸 늘린 뒤 합이 S 를 넘는 동안 왼쪽 끝을 오른쪽으로 옮긴다. 왼쪽 끝은 절대 뒤로 가지 않는다. 그때 오른쪽 끝에서 끝나는 조건을 만족하는 구간 수는 (오른쪽 끝 - 왼쪽 끝 + 1) 이다.",
+      "L = 0, 합 = 0, 답 = 0\n각 R = 0..N-1 에 대해:\n  합에 A[R] 을 더한다\n  합 > S 인 동안: 합에서 A[L] 을 빼고 L 을 1 늘린다\n  답에 R - L + 1 을 더한다\n답을 출력한다"
+    ],
+    "skillControl": {
+      "approach": "각 시작 위치 l 마다 오른쪽으로 합을 누적하며 S 를 넘을 때까지 세는 이중 반복문 (O(N^2)).",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    s = int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    count = 0\n    for l in range(n):\n        total = 0\n        for r in range(l, n):\n            total += a[r]\n            if total > s:\n                break\n            count += 1\n    print(count)\n\n\nmain()\n",
+      "stressInputGenerator": "n = 200000\ns = 1000000000\nprint(n, s)\nprint(' '.join(['1'] * n))\n"
+    }
+  }
+}

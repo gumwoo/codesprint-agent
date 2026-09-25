@@ -1,0 +1,31 @@
+{
+  "problemCode": "P49_STAIR_FRACTAL",
+  "problemTitle": "계단 프랙탈",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "RECURSION_BASIC",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef draw(grid, k, r, c):\n    if k == 0:\n        grid[c][r] = '#'\n        return\n    h = 1 << (k - 1)\n    draw(grid, k - 1, r, c)\n    draw(grid, k - 1, r, c + h)\n    draw(grid, k - 1, r + h, c + h)\n\n\ndef main():\n    k = int(sys.stdin.readline())\n    n = 1 << k\n    grid = [['.'] * n for _ in range(n)]\n    draw(grid, k, 0, 0)\n    sys.stdout.write('\\n'.join(''.join(row) for row in grid) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "probes": {}
+}

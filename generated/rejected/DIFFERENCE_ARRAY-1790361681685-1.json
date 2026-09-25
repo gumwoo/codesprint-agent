@@ -1,0 +1,74 @@
+{
+  "id": "DIFFERENCE_ARRAY-1790361681685-1",
+  "skill": "DIFFERENCE_ARRAY",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:43:44+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "정답이 큰 입력에서 OUTPUT_LIMIT"
+  ],
+  "draft": {
+    "codeSuffix": "RANGE_ADD_FINAL_BRIGHTNESS",
+    "title": "구간 밝기 조절",
+    "statement": "복도에 전등 N개가 한 줄로 놓여 있고, 왼쪽부터 1번, 2번, ..., N번으로 번호가 붙어 있다(1-based). 처음 모든 전등의 밝기는 0이다.\n\n조절 명령 Q개가 순서대로 주어진다. 각 명령은 세 정수 l, r, v로 이루어지며, l번부터 r번까지(양 끝 포함) 모든 전등의 밝기에 v를 더한다. v는 음수일 수 있다.\n\n모든 명령을 적용한 뒤 각 전등의 최종 밝기를 구하라.\n\n입력 형식\n- 첫 줄: N Q\n- 다음 Q줄: 각 줄에 l r v\n\n출력 형식\n- 1번부터 N번 전등의 최종 밝기를 공백으로 구분해 한 줄에 출력한다.\n\n제약\n- 1 <= N <= 200000\n- 0 <= Q <= 200000\n- 1 <= l <= r <= N\n- -1000 <= v <= 1000",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N + Q)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "구간 끝 표시를 r+1번이 아니라 r번 위치에 기록해 각 구간의 마지막 전등에 v가 반영되지 않는다.",
+    "sampleInputs": [
+      "5 3\n1 3 2\n2 5 1\n4 4 -3\n",
+      "6 2\n2 4 5\n1 6 -1\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1\n1 1 5\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "5 1\n3 3 -7\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5 2\n1 5 3\n5 5 2\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "4 3\n2 3 1\n2 3 1\n2 3 1\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6 3\n1 6 1000\n1 6 -1000\n2 5 -1000\n"
+      },
+      {
+        "type": "MINIMUM",
+        "input": "3 0\n"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(0, 6)\nlines = [f'{n} {q}']\nfor _ in range(q):\n    l = rng.randint(1, n)\n    r = rng.randint(l, n)\n    v = rng.randint(-10, 10)\n    lines.append(f'{l} {r} {v}')\nprint('\\n'.join(lines))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    diff = [0] * (n + 1)\n    idx = 2\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        v = int(data[idx + 2])\n        idx += 3\n        diff[l - 1] += v\n        diff[r] -= v\n    out = []\n    s = 0\n    for i in range(n):\n        s += diff[i]\n        out.append(s)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    ops = []\n    for k in range(q):\n        l = int(data[2 + 3 * k])\n        r = int(data[3 + 3 * k])\n        v = int(data[4 + 3 * k])\n        ops.append((l, r, v))\n    result = []\n    for pos in range(1, n + 1):\n        total = 0\n        for l, r, v in ops:\n            if l <= pos <= r:\n                total += v\n        result.append(str(total))\n    print(' '.join(result))\n\n\nmain()\n",
+    "wrong": "# 구간 끝 표시를 r+1번이 아니라 r번 위치에 기록해 각 구간의 마지막 전등에 v가 반영되지 않는다.\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    diff = [0] * (n + 1)\n    idx = 2\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        v = int(data[idx + 2])\n        idx += 3\n        diff[l - 1] += v\n        diff[r - 1] -= v\n    out = []\n    s = 0\n    for i in range(n):\n        s += diff[i]\n        out.append(s)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "hints": [
+      "명령마다 l번부터 r번까지 하나씩 더하면 N과 Q가 모두 클 때 연산이 N*Q번까지 늘어난다. 명령 하나가 바꾸는 것은 구간의 시작과 끝 두 지점뿐이라는 점을 본다.",
+      "구간 갱신을 양 끝의 변화량으로만 기록해 두고, 모든 명령이 끝난 뒤 앞에서부터 한 번 누적하는 차분 배열 기법을 쓴다.",
+      "길이 N+1의 정수 리스트 하나를 변화량 기록용으로 두고, 누적 합을 담을 변수 하나를 둔다. 끝 표시가 N번 다음 칸을 가리킬 수 있어 한 칸을 더 둔다.",
+      "명령 (l, r, v)는 시작 칸에 +v, 구간이 끝난 바로 다음 칸에 -v를 기록한다. 이후 왼쪽부터 기록값을 더해 가면 그 시점의 누적값이 해당 전등의 밝기가 된다.",
+      "변화량 리스트를 0으로 채운다 -> 각 명령마다 0-based 시작 위치에 v를 더하고 0-based로 끝 위치+1 칸에서 v를 뺀다 -> 누적값을 0으로 두고 0번 칸부터 N-1번 칸까지 기록값을 더하며 결과 목록에 넣는다 -> 결과를 공백으로 이어 출력한다."
+    ],
+    "skillControl": {
+      "approach": "명령마다 l번부터 r번까지 전등을 하나씩 돌며 v를 더한다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    arr = [0] * n\n    idx = 2\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        v = int(data[idx + 2])\n        idx += 3\n        for i in range(l - 1, r):\n            arr[i] += v\n    print(' '.join(map(str, arr)))\n\n\nmain()\n",
+      "stressInputGenerator": "import sys\n\nn = 200000\nq = 80000\nparts = [f'{n} {q}\\n']\nline = f'1 {n} 5\\n'\nparts.append(line * q)\nsys.stdout.write(''.join(parts))\n"
+    }
+  }
+}

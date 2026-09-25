@@ -1,0 +1,11 @@
+{
+  "id": "TWO_POINTER-1790361546232-1",
+  "skill": "TWO_POINTER",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:47:44+00:00",
+  "code": "P53_SUBARRAY_SUM_AT_MOST",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    s = int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    count = 0\n    for i in range(n):\n        for j in range(i, n):\n            if sum(a[i:j + 1]) <= s:\n                count += 1\n    print(count)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 30)\ns = rng.randint(1, 60)\na = [rng.randint(1, 10) for _ in range(n)]\nprint(n, s)\nprint(*a)\n",
+  "stressInputGenerator": "n = 200000\nprint(n, 1000000000)\nprint(' '.join(['1'] * n))\n"
+}

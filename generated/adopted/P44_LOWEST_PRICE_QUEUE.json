@@ -1,0 +1,11 @@
+{
+  "id": "HEAP_PRIORITY-1790361451173-1",
+  "skill": "HEAP_PRIORITY",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:44:46+00:00",
+  "code": "P44_LOWEST_PRICE_QUEUE",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    lines = sys.stdin.read().split(\"\\n\")\n    n = int(lines[0])\n    counts = {}\n    out = []\n    for k in range(1, n + 1):\n        parts = lines[k].split()\n        if parts[0] == \"1\":\n            x = int(parts[1])\n            counts[x] = counts.get(x, 0) + 1\n        else:\n            if not counts:\n                out.append(\"-1\")\n                continue\n            best = None\n            for key in counts:\n                if best is None or key < best:\n                    best = key\n            counts[best] -= 1\n            if counts[best] == 0:\n                del counts[best]\n            out.append(str(best))\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(1, 12)\nops = []\nfor _ in range(n):\n    if r.random() < 0.55:\n        ops.append(\"1 %d\" % r.randint(1, 20))\n    else:\n        ops.append(\"2\")\nif \"2\" not in ops:\n    ops.append(\"2\")\nprint(len(ops))\nprint(\"\\n\".join(ops))\n",
+  "stressInputGenerator": "import sys\n\nk = 50000\nlines = [str(2 * k)]\nfor j in range(k):\n    lines.append(\"1 %d\" % (100000 - j))\nfor _ in range(k):\n    lines.append(\"2\")\nsys.stdout.write(\"\\n\".join(lines) + \"\\n\")\n"
+}

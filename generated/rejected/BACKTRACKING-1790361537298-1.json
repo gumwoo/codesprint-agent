@@ -1,0 +1,75 @@
+{
+  "id": "BACKTRACKING-1790361537298-1",
+  "skill": "BACKTRACKING",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:43:12+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "대조 풀이(skillControl) 가 38개 중 6개만 돌고 멈췄다 (case 1 WRONG_ANSWER)"
+  ],
+  "draft": {
+    "codeSuffix": "BLOCKED_QUEENS",
+    "title": "막힌 칸이 있는 체스판의 퀸 배치",
+    "statement": "N×N 체스판이 주어진다. 각 칸은 '.'(빈 칸) 또는 '#'(막힌 칸)이다. 퀸 N개를 빈 칸에만 놓되, 어떤 두 퀸도 같은 행, 같은 열, 같은 대각선(양 방향)에 있으면 안 된다. 막힌 칸은 퀸을 놓을 수 없을 뿐 공격을 가로막지 않는다. 가능한 배치의 수를 구하라. 두 배치는 퀸이 놓인 칸의 집합이 다르면 다른 배치다.\n\n입력 형식: 첫 줄에 정수 N (1 ≤ N ≤ 10). 다음 N줄에 길이 N인 문자열이 주어진다. i번째 줄(0부터 셈)의 j번째 문자(0부터 셈)는 i행 j열 칸이다.\n\n출력 형식: 배치의 수를 정수 하나로 한 줄에 출력한다.",
+    "secondarySkills": [
+      "RECURSION_BASIC"
+    ],
+    "referenceComplexity": "최악 O(N!), 열·대각선 충돌과 막힌 칸에서 가지를 끊어 실제 탐색 노드는 훨씬 적다",
+    "expectedSolveSeconds": 1200,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "r-c 방향 대각선 충돌을 검사하지 않아 한쪽 대각선으로 공격하는 배치까지 센다.",
+    "sampleInputs": [
+      "4\n....\n....\n....\n....\n",
+      "5\n.#...\n.....\n..#..\n.....\n...#.\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n.\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1\n#\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "3\n...\n...\n...\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "8\n........\n........\n........\n........\n........\n........\n........\n........\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "8\n#.......\n.#......\n..#.....\n...#....\n....#...\n.....#..\n......#.\n.......#\n"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "8\n.......#\n..#.....\n........\n.#....#.\n........\n....#...\n........\n#......#\n"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 7)\nprint(n)\nfor _ in range(n):\n    print(''.join('#' if rng.random() < 0.2 else '.' for _ in range(n)))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    g = data[1:1 + n]\n    cols = [False] * n\n    d1 = [False] * (2 * n)\n    d2 = [False] * (2 * n)\n    count = 0\n\n    def go(r):\n        nonlocal count\n        if r == n:\n            count += 1\n            return\n        row = g[r]\n        for c in range(n):\n            if row[c] == '#' or cols[c] or d1[r + c] or d2[r - c + n]:\n                continue\n            cols[c] = d1[r + c] = d2[r - c + n] = True\n            go(r + 1)\n            cols[c] = d1[r + c] = d2[r - c + n] = False\n\n    go(0)\n    print(count)\n\n\nmain()\n",
+    "bruteForce": "import sys\nfrom itertools import permutations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    g = data[1:1 + n]\n    total = 0\n    for p in permutations(range(n)):\n        if any(g[r][p[r]] == '#' for r in range(n)):\n            continue\n        if len({r + p[r] for r in range(n)}) != n:\n            continue\n        if len({r - p[r] for r in range(n)}) != n:\n            continue\n        total += 1\n    print(total)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    g = data[1:1 + n]\n    cols = [False] * n\n    d1 = [False] * (2 * n)\n    d2 = [False] * (2 * n)\n    count = 0\n\n    def go(r):\n        nonlocal count\n        if r == n:\n            count += 1\n            return\n        row = g[r]\n        for c in range(n):\n            if row[c] == '#' or cols[c] or d1[r + c]:\n                continue\n            cols[c] = d1[r + c] = d2[r - c + n] = True\n            go(r + 1)\n            cols[c] = d1[r + c] = d2[r - c + n] = False\n\n    go(0)\n    print(count)\n\n\nmain()\n",
+    "hints": [
+      "한 행에는 퀸이 정확히 하나 놓인다. 행 순서대로 한 개씩 놓아 가면 된다.",
+      "행마다 열 하나를 고르고, 충돌이 생기면 그 선택을 취소하고 다음 열을 시도하는 백트래킹이다. 이미 충돌한 배치는 더 아래 행으로 내려가지 않는다.",
+      "열 사용 여부, r+c 대각선 사용 여부, r-c 대각선 사용 여부를 각각 배열로 들고 있으면 충돌 검사가 O(1)이다. r-c 는 음수가 될 수 있으니 N을 더해 인덱스로 쓴다.",
+      "r행에서 빈 칸이고 세 표시가 모두 비어 있는 열 c만 고른다. 표시를 켜고 r+1행을 탐색한 뒤, 돌아오면 표시를 끈다. r이 N에 닿으면 배치 하나를 센다.",
+      "go(r): r == N 이면 답 += 1 후 반환 / 각 열 c 에 대해 막힘 또는 열·두 대각선 중 하나라도 사용 중이면 건너뜀 / 세 표시 설정 → go(r+1) → 세 표시 해제. go(0) 호출 후 답 출력."
+    ],
+    "skillControl": {
+      "approach": "각 행에서 빈 칸 열 하나씩 고르는 모든 조합을 itertools.product 로 만든 뒤, 열과 대각선 충돌을 마지막에 한꺼번에 거른다.",
+      "solution": "import sys\nfrom itertools import product\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    g = data[1:1 + n]\n    choices = [[c for c in range(n) if g[r][c] == '.'] for r in range(n)]\n    total = 0\n    for p in product(*choices):\n        if len(set(p)) != n:\n            continue\n        if len({r + p[r] for r in range(n)}) != n:\n            continue\n        if len({r - p[r] for r in range(n)}) != n:\n            continue\n        total += 1\n    print(total)\n\n\nmain()\n",
+      "stressInputGenerator": "n = 10\nprint(n)\nfor _ in range(n):\n    print('.' * n)\n"
+    }
+  }
+}
