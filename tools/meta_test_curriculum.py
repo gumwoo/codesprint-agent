@@ -65,6 +65,10 @@ def track_points_to_unknown_domain(doc):
     doc["tracks"][0]["domains"].append("NOT_A_REAL_DOMAIN")
 
 
+def track_code_too_long(doc):
+    doc["tracks"][0]["code"] = "A_TRACK_CODE_THAT_IS_LONGER_THAN_THIRTY"
+
+
 def track_activates_nothing(doc):
     doc["tracks"][0]["domains"] = ["GEOMETRY"]
 
@@ -249,6 +253,7 @@ CASES = [
     ("ADR-0033 · Skill 대조 필요 여부를 생략하면", "curriculum/skills.yaml", drop_skill_control_flag, "needs_skill_control 이 true/false 가 아니다"),
     ("ADR-0035 · 트랙이 선수 도메인을 빠뜨리면", "curriculum/tracks.yaml", track_drops_a_prerequisite_domain, "트랙 밖의 선수"),
     ("ADR-0035 · 트랙이 없는 domain 을 가리키면", "curriculum/tracks.yaml", track_points_to_unknown_domain, "domains.yaml 에 없는 domain"),
+    ("ADR-0035 · 트랙 code 가 DB 칼럼보다 길면", "curriculum/tracks.yaml", track_code_too_long, "30 자를 넘는다"),
     ("ADR-0035 · 트랙에 켜지는 Skill 이 없으면", "curriculum/tracks.yaml", track_activates_nothing, "켜지는 Skill 이 하나도 없다"),
 
     # -- 선수 관계 --

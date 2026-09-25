@@ -248,6 +248,9 @@ FILE_CASES = [
      "problems/P03_CONNECTED_COMPONENT/probes/INPUT_PARSE.py", "create",
      "commonMistakes 에 없다"),
 
+    ("같은 번호의 다른 문제가 있으면",
+     "problems/P05_OTHER_NUMBER", "mkdir-copy:P05_SHORTEST_PATH",
+     "와 문제 번호가 같다"),
     ("세 자리 번호에 앞 0 을 붙이면",
      "problems/P005_ZERO_PADDED", "mkdir-copy:P05_SHORTEST_PATH",
      "두 자리, 이상이면 세 자리로"),

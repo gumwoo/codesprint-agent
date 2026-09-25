@@ -66,7 +66,7 @@ tracks:
 
   - code: TOP_TIER
     name: 상위 기업 · 백준 Gold
-    description: CORE 에 최단 경로 · 유니온 파인드 · 위상 정렬 · 수열 DP 같은 INTERMEDIATE 대부분
+    description: CORE 에 최단 경로 · 유니온 파인드 · 위상 정렬 · 수열 DP 같은 INTERMEDIATE 전부
     tiers: [FOUNDATION, CORE, INTERMEDIATE]
     domains:
       - FOUNDATIONS

@@ -220,6 +220,9 @@ def check_tracks(tracks_doc, domain_codes: set[str], skills: dict[str, dict],
         if not code or not CODE_RE.match(code):
             fail("tracks", f"{code!r}: UPPER_SNAKE_CASE code 가 아니다")
             continue
+        if len(code) > 30:
+            # users.track 이 VARCHAR(30) 이다(V12). 넘으면 사용자를 만들 때 DB 가 거절한다.
+            fail("tracks", f"{code}: 트랙 code 가 30 자를 넘는다 (users.track VARCHAR(30))")
         if code in tracks:
             fail("tracks", f"{code}: 중복된 트랙 code")
             continue
