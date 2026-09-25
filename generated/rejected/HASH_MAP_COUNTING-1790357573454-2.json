@@ -1,0 +1,71 @@
+{
+  "id": "HASH_MAP_COUNTING-1790357573454-2",
+  "skill": "HASH_MAP_COUNTING",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:58:12+00:00",
+  "stage": "검증 검토",
+  "code": "P26_LEDGER_TOTAL_BY_NAME",
+  "reasons": [
+    "P25_ORDER_TALLY_BY_PRODUCT 와 같은 문제다 - 키별 횟수와 합계를 첫 등장 순으로 내는 것이 같고 키의 자료형만 다르다 (검증 에이전트)",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "LEDGER_TOTAL_BY_NAME",
+    "title": "이름별 거래 집계",
+    "statement": "거래 기록 N 개가 순서대로 주어진다. 각 기록은 이름 하나와 금액 하나로 이루어진다. 서로 다른 이름마다 거래 횟수와 금액 합계를 구하라.\n\n입력\n첫 줄에 정수 N (1 ≤ N ≤ 100000) 이 주어진다.\n다음 N 개의 줄에 이름과 금액이 공백 하나로 구분되어 주어진다. 이름은 영어 소문자로만 이루어진 길이 1 이상 10 이하의 문자열이다. 금액은 1 이상 1000 이하의 정수다.\n\n출력\n서로 다른 이름마다 한 줄에 '이름 거래횟수 금액합계' 를 공백 하나로 구분하여 출력한다. 이름은 입력에서 처음 등장한 순서대로 출력한다.\n\n기록의 순서는 입력에 나온 순서이며, 출력에 인덱스는 쓰지 않는다. 설명에서 기록 번호를 말할 때는 1 부터 센다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "OUTPUT_FORMAT",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "OUTPUT_FORMAT",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "집계는 맞지만 한 줄에 거래횟수와 금액합계의 순서를 바꿔 '이름 금액합계 거래횟수' 로 출력한다.",
+    "sampleInputs": [
+      "7\nkim 300\nlee 150\nkim 200\npark 50\nlee 150\nkim 100\nchoi 1000\n",
+      "3\nb 5\na 7\nb 5\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\nx 1\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "4\na 1\na 2\na 3\na 4\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "6\nb 3\na 2\nb 3\nc 1\na 1000\nb 1\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "5\nab 1\na 2\nabc 3\na 4\nab 5\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "3\nabcdefghij 1000\nz 1\nabcdefghij 1000\n"
+      }
+    ],
+    "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\npool = [\"a\", \"b\", \"ab\", \"ba\", \"kim\", \"lee\", \"x\"]\nused = rng.sample(pool, rng.randint(1, len(pool)))\nprint(n)\nfor _ in range(n):\n    print(rng.choice(used), rng.randint(1, 1000))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    count = {}\n    total = {}\n    for i in range(n):\n        name = data[1 + 2 * i]\n        amount = int(data[2 + 2 * i])\n        if name in count:\n            count[name] += 1\n            total[name] += amount\n        else:\n            count[name] = 1\n            total[name] = amount\n    out = [f\"{name} {count[name]} {total[name]}\" for name in count]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    names = [data[1 + 2 * i] for i in range(n)]\n    amounts = [int(data[2 + 2 * i]) for i in range(n)]\n    lines = []\n    for i in range(n):\n        seen_before = False\n        for j in range(i):\n            if names[j] == names[i]:\n                seen_before = True\n                break\n        if seen_before:\n            continue\n        c = 0\n        s = 0\n        for j in range(n):\n            if names[j] == names[i]:\n                c += 1\n                s += amounts[j]\n        lines.append(f\"{names[i]} {c} {s}\")\n    print(\"\\n\".join(lines))\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    count = {}\n    total = {}\n    for i in range(n):\n        name = data[1 + 2 * i]\n        amount = int(data[2 + 2 * i])\n        if name in count:\n            count[name] += 1\n            total[name] += amount\n        else:\n            count[name] = 1\n            total[name] = amount\n    out = [f\"{name} {total[name]} {count[name]}\" for name in count]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "N 이 10만이고 서로 다른 이름도 수만 개일 수 있다. 이름마다 기록 전체를 다시 훑으면 이름 수 × N 번의 비교가 필요하다.",
+      "기록을 처음부터 끝까지 한 번만 읽으면서 이름별 값을 누적하는 집계 문제다.",
+      "이름을 키로 하는 사전을 두고, 값으로 거래 횟수와 금액 합계를 저장한다. Python 3.7 이후 dict 는 키를 넣은 순서를 유지하므로 처음 등장한 순서를 따로 기록하지 않아도 된다.",
+      "기록 하나를 읽을 때 그 이름이 사전에 없으면 횟수 1, 합계는 그 금액으로 새로 넣고, 있으면 횟수에 1 을, 합계에 금액을 더한다.",
+      "사전 cnt, tot 를 비운다 / 각 기록 (name, amount) 에 대해: name 이 없으면 cnt[name]=0, tot[name]=0 / cnt[name] 을 1 늘리고 tot[name] 에 amount 를 더한다 / 사전의 키 순서대로 name, cnt, tot 를 한 줄씩 출력한다"
+    ],
+    "skillControl": {
+      "approach": "서로 다른 이름을 리스트에 모은 뒤(in 으로 중복 확인), 이름마다 기록 전체를 다시 훑어 횟수와 합계를 센다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    names = data[1:1 + 2 * n:2]\n    amounts = [int(x) for x in data[2:2 + 2 * n:2]]\n    distinct = []\n    for name in names:\n        if name not in distinct:\n            distinct.append(name)\n    lines = []\n    for name in distinct:\n        c = 0\n        s = 0\n        for j in range(n):\n            if names[j] == name:\n                c += 1\n                s += amounts[j]\n        lines.append(f\"{name} {c} {s}\")\n    print(\"\\n\".join(lines))\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 80000\nd = 40000\n\n\ndef encode(k):\n    chars = []\n    for _ in range(4):\n        chars.append(chr(ord(\"a\") + k % 26))\n        k //= 26\n    return \"\".join(chars)\n\n\nnames = [encode(k * 7 + 3) for k in range(d)]\nrows = names + [rng.choice(names) for _ in range(n - d)]\nrng.shuffle(rows)\nlines = [str(n)] + [f\"{name} {rng.randint(1, 1000)}\" for name in rows]\nprint(\"\\n\".join(lines))\n"
+    }
+  }
+}

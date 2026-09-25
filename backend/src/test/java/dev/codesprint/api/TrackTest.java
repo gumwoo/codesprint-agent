@@ -236,6 +236,16 @@ class TrackTest {
             solve(userId, "P14_GRAPH_REACHABLE", "ACCEPTED");
             solve(userId, "P09_BFS_VARIANT_A", "ACCEPTED");
         }
+        // 진단 중이면 다음 행동을 진단이 소유한다(ADR-0019). 보려는 것은 선수 판단이므로 끝낸다.
+        // JOB 범위로 끝내면 그 안에 든 INTRO 범위도 함께 끝난다.
+        for (int i = 0; i < 60; i++) {
+            JsonNode step = MAPPER.readTree(mvc.perform(get("/api/users/{id}/diagnostic", userId))
+                    .andReturn().getResponse().getContentAsString());
+            if (step.get("done").asBoolean()) {
+                break;
+            }
+            solve(userId, step.get("problem").get("code").asText(), "ACCEPTED");
+        }
         mvc.perform(put("/api/users/{id}/track", userId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"track\": \"" + finalTrack + "\"}"));

@@ -1,0 +1,30 @@
+{
+  "problemCode": "P39_LEDGER_RECORD_PARSE",
+  "problemTitle": "거래 기록 합산",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INPUT_PARSE",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "STRING_PARSING"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    bal = {}\n    for rec in s.split(','):\n        rec = rec.strip()\n        name = rec[:-2]\n        num = int(rec[-1])\n        if rec[-2] == '-':\n            num = -num\n        bal[name] = bal.get(name, 0) + num\n    out = [f'{k} {v}' for k, v in bal.items()]\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "probes": {}
+}

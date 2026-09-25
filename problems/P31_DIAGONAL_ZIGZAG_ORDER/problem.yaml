@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P31_DIAGONAL_ZIGZAG_ORDER
+title: 대각선 지그재그 순회
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(R*C)
+statement: |
+  R행 C열 정수 격자가 주어진다. 모든 칸을 반대대각선 지그재그 순서로 정확히 한 번씩 방문한 결과를 출력한다.
+
+  행 번호 r 은 0 부터 R-1, 열 번호 c 는 0 부터 C-1 까지이다(0-based).
+
+  칸 (r, c) 가 속한 대각선 번호는 d = r + c 이며, d 는 0 부터 R+C-2 까지이다. 번호가 작은 대각선부터 차례로 방문한다.
+  - d 가 짝수인 대각선은 행 번호가 큰 칸부터 작은 칸 순서로 방문한다(왼쪽 아래 -> 오른쪽 위).
+  - d 가 홀수인 대각선은 행 번호가 작은 칸부터 큰 칸 순서로 방문한다(오른쪽 위 -> 왼쪽 아래).
+
+  입력 형식: 첫 줄에 R 과 C 가 공백으로 구분되어 주어진다 (1 <= R <= 50, 1 <= C <= 50). 이어지는 R 개의 줄에 각 행의 정수 C 개가 공백으로 구분되어 주어진다 (-1000 <= 각 값 <= 1000).
+
+  출력 형식: 방문 순서대로 R*C 개의 정수를 한 줄에 공백 하나로 구분해 출력한다.
+skills:
+- code: MATRIX_TRAVERSAL
+  role: PRIMARY
+  weight: 0.7
+- code: GRID_COORDINATE
+  role: SECONDARY
+  weight: 0.15
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- BOUNDARY_CHECK
+- INDEX_ERROR
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: RUNTIME_ERROR
+skillControl: null

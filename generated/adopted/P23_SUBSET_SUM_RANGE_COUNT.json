@@ -1,0 +1,11 @@
+{
+  "id": "COMBINATORIAL_ENUMERATION-1790357710592-1",
+  "skill": "COMBINATORIAL_ENUMERATION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:49:53+00:00",
+  "code": "P23_SUBSET_SUM_RANGE_COUNT",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, l, r = int(data[0]), int(data[1]), int(data[2])\n    a = list(map(int, data[3:3 + n]))\n    count = 0\n    for mask in range(1, 1 << n):\n        s = 0\n        for i in range(n):\n            if mask >> i & 1:\n                s += a[i]\n        if l <= s <= r:\n            count += 1\n    print(count)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 10)\na = [rng.randint(1, 20) for _ in range(n)]\ntotal = sum(a)\nl = rng.randint(1, total)\nr = rng.randint(l, min(1500, total + 5))\nprint(n, l, r)\nprint(' '.join(map(str, a)))\n",
+  "stressInputGenerator": null
+}

@@ -1,0 +1,73 @@
+{
+  "id": "MATRIX_TRANSFORM-1790357468330-2",
+  "skill": "MATRIX_TRANSFORM",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:54:48+00:00",
+  "stage": "검증 검토",
+  "code": "P30_MATRIX_OP_SEQUENCE",
+  "reasons": [
+    "채택 검사를 전부 통과했지만 P29_GRID_TRANSFORM_CHAIN 와 같은 문제다 - 명령 · 순서 규칙이 같고 이름과 문장만 다르다",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "MATRIX_OP_SEQUENCE",
+    "title": "변환 명령 적용",
+    "statement": "N행 M열 정수 배열 A 와 길이 K 의 명령 문자열 S 가 주어진다. S 의 문자를 왼쪽부터 차례로 하나씩 현재 배열에 적용한 뒤 최종 배열을 출력한다. 행과 열은 0 부터 센다. 현재 배열이 h행 w열일 때 각 명령이 만드는 새 배열 B 는 다음과 같다.\n- R: 시계 방향 90도 회전. B 는 w행 h열, B[i][j] = A[h-1-j][i]\n- L: 반시계 방향 90도 회전. B 는 w행 h열, B[i][j] = A[j][w-1-i]\n- H: 좌우 뒤집기. B 는 h행 w열, B[i][j] = A[i][w-1-j]\n- V: 상하 뒤집기. B 는 h행 w열, B[i][j] = A[h-1-i][j]\n- T: 전치. B 는 w행 h열, B[i][j] = A[j][i]\n\n입력 형식\n첫 줄에 N M 이 공백으로 주어진다. (1 <= N, M <= 100)\n다음 N 줄에 각 행의 정수 M 개가 공백으로 주어진다. (-10^9 <= 값 <= 10^9)\n다음 줄에 K 가 주어진다. (1 <= K <= 100)\n다음 줄에 R, L, H, V, T 로만 이루어진 길이 K 의 문자열 S 가 주어진다.\n\n출력 형식\n최종 배열을 행 순서대로 출력한다. 한 줄에 한 행을 출력하고, 같은 행의 값은 공백 하나로 구분한다.",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(K·N·M)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "R 회전에서 원래 배열의 열 인덱스를 i 대신 w-1-i 로 써서 회전 결과의 행 순서가 뒤집힌다.",
+    "sampleInputs": [
+      "2 3\n1 2 3\n4 5 6\n1\nR\n",
+      "3 3\n1 2 3\n4 5 6\n7 8 9\n3\nTHL\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "SINGLE",
+        "input": "1 1\n7\n3\nRLT\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "1 4\n1 2 3 4\n1\nR\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "3 1\n1\n2\n3\n2\nLH\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "2 2\n5 5\n5 5\n2\nRV\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "2 3\n1 2 3\n4 5 6\n4\nRRRR\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "3 2\n1 1\n2 2\n1 1\n3\nTTH\n"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 5)\nm = rng.randint(1, 5)\nprint(n, m)\nfor _ in range(n):\n    print(' '.join(str(rng.randint(-9, 9)) for _ in range(m)))\nk = rng.randint(1, 8)\nprint(k)\nprint(''.join(rng.choice('RLHVT') for _ in range(k)))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    idx = 2\n    a = []\n    for _ in range(n):\n        a.append([int(x) for x in data[idx:idx + m]])\n        idx += m\n    ops = data[idx + 1]\n    for c in ops:\n        h = len(a)\n        w = len(a[0])\n        if c == 'R':\n            a = [[a[h - 1 - j][i] for j in range(h)] for i in range(w)]\n        elif c == 'L':\n            a = [[a[j][w - 1 - i] for j in range(h)] for i in range(w)]\n        elif c == 'H':\n            a = [[a[i][w - 1 - j] for j in range(w)] for i in range(h)]\n        elif c == 'V':\n            a = [[a[h - 1 - i][j] for j in range(w)] for i in range(h)]\n        else:\n            a = [[a[j][i] for j in range(h)] for i in range(w)]\n    print('\\n'.join(' '.join(map(str, row)) for row in a))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    vals = [int(x) for x in data[2:2 + n * m]]\n    ops = data[2 + n * m + 1]\n    h, w = n, m\n    pos = [(r, c) for r in range(n) for c in range(m)]\n    for op in ops:\n        moved = []\n        for r, c in pos:\n            if op == 'R':\n                moved.append((c, h - 1 - r))\n            elif op == 'L':\n                moved.append((w - 1 - c, r))\n            elif op == 'H':\n                moved.append((r, w - 1 - c))\n            elif op == 'V':\n                moved.append((h - 1 - r, c))\n            else:\n                moved.append((c, r))\n        pos = moved\n        if op in 'RLT':\n            h, w = w, h\n    grid = [[None] * w for _ in range(h)]\n    for k in range(n * m):\n        r, c = pos[k]\n        grid[r][c] = vals[k]\n    out = []\n    for r in range(h):\n        out.append(' '.join(str(grid[r][c]) for c in range(w)))\n    print('\\n'.join(out))\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    idx = 2\n    a = []\n    for _ in range(n):\n        a.append([int(x) for x in data[idx:idx + m]])\n        idx += m\n    ops = data[idx + 1]\n    for c in ops:\n        h = len(a)\n        w = len(a[0])\n        if c == 'R':\n            a = [[a[h - 1 - j][w - 1 - i] for j in range(h)] for i in range(w)]\n        elif c == 'L':\n            a = [[a[j][w - 1 - i] for j in range(h)] for i in range(w)]\n        elif c == 'H':\n            a = [[a[i][w - 1 - j] for j in range(w)] for i in range(h)]\n        elif c == 'V':\n            a = [[a[h - 1 - i][j] for j in range(w)] for i in range(h)]\n        else:\n            a = [[a[j][i] for j in range(h)] for i in range(w)]\n    print('\\n'.join(' '.join(map(str, row)) for row in a))\n\n\nmain()\n",
+    "hints": [
+      "명령 하나를 적용할 때마다 배열의 행 수와 열 수가 바뀔 수 있다. R, L, T 는 두 값을 맞바꾸고 H, V 는 그대로 둔다.",
+      "명령마다 새 배열 하나를 만드는 단순 구현이다. 최대 100 x 100 칸에 명령 100 개라 매번 새로 만들어도 충분하다.",
+      "현재 배열의 높이 h 와 너비 w 를 명령마다 다시 구하고, 새 배열은 변환 후 크기에 맞는 2차원 리스트로 둔다.",
+      "새 배열의 칸 (i, j) 마다 원래 배열의 어느 칸에서 값을 가져오는지 식으로 적는다. 예를 들어 시계 방향 회전은 새 칸의 행 번호가 원래 칸의 열 번호가 되고, 새 칸의 열 번호가 커질수록 원래 칸의 행 번호는 아래에서 위로 올라간다.",
+      "배열 읽기 -> S 의 문자마다: h, w 구하기 -> 명령에 맞는 새 크기로 빈 배열 만들기 -> 모든 새 칸 (i, j) 에 대응하는 원래 칸 값 넣기 -> 현재 배열을 새 배열로 교체 -> 끝나면 행마다 공백으로 이어 출력"
+    ],
+    "skillControl": null
+  }
+}

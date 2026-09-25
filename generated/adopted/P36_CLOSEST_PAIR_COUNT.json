@@ -1,0 +1,11 @@
+{
+  "id": "SORT_THEN_SCAN-1790357620820-1",
+  "skill": "SORT_THEN_SCAN",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:52:54+00:00",
+  "code": "P36_CLOSEST_PAIR_COUNT",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    a = [int(x) for x in data[1:1 + n]]\n    best = None\n    count = 0\n    for i in range(n):\n        for j in range(i + 1, n):\n            d = abs(a[i] - a[j])\n            if best is None or d < best:\n                best = d\n                count = 1\n            elif d == best:\n                count += 1\n    print(best, count)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(2, 8)\nhi = rng.choice([3, 10, 50, 1000000000])\nvalues = [rng.randint(0, hi) for _ in range(n)]\nprint(n)\nprint(' '.join(map(str, values)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 100000\nvalues = [rng.randint(0, 999999) for _ in range(n)]\nprint(n)\nprint(' '.join(map(str, values)))\n"
+}

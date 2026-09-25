@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "aaabccddddde",
+      "expectedOutput": "a3bc2d5e\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "Hello",
+      "expectedOutput": "Hel2o\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "a",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "zzzzzzzzzzzz",
+      "expectedOutput": "z12\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "abababab",
+      "expectedOutput": "abababab\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "aAaAAAa",
+      "expectedOutput": "aAaA3a\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "aabbbccccbbbaa",
+      "expectedOutput": "a2b3c4b3a2\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "ababcaaBBaaabBcBBaabbbBacBBaa\n",
+      "expectedOutput": "ababca2B2a3bBcB2a2b3BacB2a2\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "aaacBaabaababcacBacacbbBaaaccc\n",
+      "expectedOutput": "a3cBa2ba2babcacBacacb2Ba3c3\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "baacbBBcbaabBaacBaaaBBacBbaaac\n",
+      "expectedOutput": "ba2cbB2cba2bBa2cBa3B2acBba3c\n",
+      "probes": []
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "STACK_BASIC-1790357672530-2",
+  "skill": "STACK_BASIC",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:53:27+00:00",
+  "stage": "중복",
+  "reasons": [
+    "P37_BRACKET_FIRST_ERROR 와 code 가 겹친다"
+  ],
+  "draft": {
+    "codeSuffix": "BRACKET_FIRST_ERROR",
+    "title": "괄호 문자열의 첫 오류 위치",
+    "statement": "세 종류의 괄호 '()', '[]', '{}' 로만 이루어진 문자열 S 가 주어진다. 올바른 괄호 문자열은 모든 여는 괄호가 같은 종류의 닫는 괄호와 짝을 이루고, 짝들이 서로 엇갈리지 않는 문자열이다.\n\nS 를 왼쪽부터 한 글자씩 읽을 때, 앞에 짝지을 여는 괄호가 없거나 가장 최근에 열린 채 남은 괄호와 종류가 다른 닫는 괄호가 처음 나오는 위치를 구한다.\n\n- 그런 닫는 괄호가 있으면 그 위치를 출력한다.\n- 그런 닫는 괄호가 없지만 끝까지 읽은 뒤 닫히지 않은 여는 괄호가 남아 있으면 N 을 출력한다.\n- S 가 올바른 괄호 문자열이면 -1 을 출력한다.\n\n위치는 0 부터 센다.\n\n입력 형식\n첫째 줄에 문자열 길이 N (1 ≤ N ≤ 200000) 이 주어진다.\n둘째 줄에 길이 N 인 문자열 S 가 주어진다. S 는 '(', ')', '[', ']', '{', '}' 로만 이루어진다.\n\n출력 형식\n정수 하나를 한 줄에 출력한다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "닫는 괄호를 만났을 때 스택이 비었는지 확인하지 않고 pop 해서, 짝 없는 닫는 괄호에서 IndexError 가 난다.",
+    "sampleInputs": [
+      "8\n{[()()]}",
+      "5\n([]})"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n)"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1\n("
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6\n([)]{}"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "4\n(((("
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "4\n()]]"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "6\n[][][]"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read().split()[0])\nrng = random.Random(seed)\nn = rng.randint(1, 12)\npairs = {'(': ')', '[': ']', '{': '}'}\nif rng.random() < 0.4:\n    st = []\n    out = []\n    while len(out) < n:\n        if st and (rng.random() < 0.5 or len(out) + len(st) >= n):\n            out.append(pairs[st.pop()])\n        else:\n            o = rng.choice('([{')\n            st.append(o)\n            out.append(o)\n    s = ''.join(out)\nelse:\n    s = ''.join(rng.choice('()[]{}') for _ in range(n))\nprint(len(s))\nprint(s)\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    s = data[1]\n    match = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for i, c in enumerate(s):\n        if c in '([{':\n            stack.append(c)\n        else:\n            if not stack or stack[-1] != match[c]:\n                print(i)\n                return\n            stack.pop()\n    print(n if stack else -1)\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef reduce_pairs(s):\n    while True:\n        t = s.replace('()', '').replace('[]', '').replace('{}', '')\n        if t == s:\n            return s\n        s = t\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    s = data[1]\n    for k in range(1, n + 1):\n        r = reduce_pairs(s[:k])\n        if any(c in ')]}' for c in r):\n            print(k - 1)\n            return\n    print(-1 if reduce_pairs(s) == '' else n)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    s = data[1]\n    match = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for i, c in enumerate(s):\n        if c in '([{':\n            stack.append(c)\n        else:\n            if stack.pop() != match[c]:\n                print(i)\n                return\n    print(n if stack else -1)\n\n\nmain()\n",
+    "hints": [
+      "닫는 괄호가 올바른지는 그 앞에서 아직 닫히지 않은 괄호 중 가장 마지막에 열린 것 하나만 보면 결정된다.",
+      "나중에 열린 괄호를 먼저 닫는 후입선출(LIFO) 처리 문제다.",
+      "아직 닫히지 않은 여는 괄호들을 열린 순서대로 쌓아 두는 스택 하나를 상태로 둔다.",
+      "여는 괄호는 스택에 넣는다. 닫는 괄호는 스택이 비어 있거나 맨 위가 같은 종류가 아니면 그 위치가 답이고, 같은 종류면 맨 위를 꺼낸다. 끝까지 읽은 뒤 스택이 남아 있으면 N, 비어 있으면 -1 이다.",
+      "스택 = 빈 스택 / 각 위치 i, 문자 c 에 대해: c 가 여는 괄호면 쌓기, 아니면 (스택이 비었거나 맨 위가 c 의 짝이 아니면 i 출력 후 종료, 아니면 맨 위 제거) / 반복이 끝나면 스택이 남았는지에 따라 N 또는 -1 출력"
+    ],
+    "skillControl": null
+  }
+}

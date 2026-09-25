@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P25_ORDER_TALLY_BY_PRODUCT
+title: 상품별 주문 집계
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(N)
+statement: |
+  주문 기록 N개가 주어진다. 각 기록은 상품 번호 id 와 주문 수량 q 로 이루어진다. 상품마다 주문 횟수와 수량 합계를 구하라.
+
+  출력 순서는 각 상품 번호가 입력에서 처음 나온 순서다. 기록 번호는 입력 순서를 따르며, 출력에는 기록 번호가 쓰이지 않는다.
+
+  입력 형식
+  - 첫 줄에 정수 N (1 ≤ N ≤ 100000)
+  - 다음 N줄에 정수 id, q 가 공백으로 구분되어 주어진다 (1 ≤ id ≤ 1000000000, 1 ≤ q ≤ 1000)
+
+  출력 형식
+  - 서로 다른 상품 번호마다 한 줄씩 "id 주문횟수 수량합계" 를 공백으로 구분해 출력한다.
+  - 줄의 순서는 그 상품 번호가 입력에서 처음 등장한 순서다.
+skills:
+- code: HASH_MAP_COUNTING
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- OUTPUT_FORMAT
+- INPUT_PARSE
+negativeControl:
+  mistake: OUTPUT_FORMAT
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 등장 순서를 list 로 기록하고, 상품마다 전체 기록을 다시 훑어 횟수와 합계를 센다.

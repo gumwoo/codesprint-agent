@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "{[()<>]}",
+      "expectedOutput": "-1\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "([]{)}",
+      "expectedOutput": "4\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "(",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": ")",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "([)]",
+      "expectedOutput": "2\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "()](",
+      "expectedOutput": "2\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "((<[{",
+      "expectedOutput": "5\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "<><><>",
+      "expectedOutput": "-1\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "[)[>>>}<[>\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "{]>[(>)<<>\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "{[]<>()<>}\n",
+      "expectedOutput": "-1\n",
+      "probes": []
+    }
+  ]
+}

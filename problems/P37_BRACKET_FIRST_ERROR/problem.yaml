@@ -1,0 +1,37 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P37_BRACKET_FIRST_ERROR
+title: 괄호 오류 위치
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(N)
+statement: |
+  괄호 문자 '(', ')', '[', ']', '{', '}', '<', '>' 로만 이루어진 문자열 S 가 주어진다. 여는 괄호는 같은 종류의 닫는 괄호와 짝을 이루고, 나중에 열린 괄호가 먼저 닫혀야 한다.
+
+  S 를 왼쪽부터 읽을 때 처음으로 규칙이 깨지는 위치를 구한다.
+  - 닫는 괄호를 읽었는데 아직 닫히지 않은 여는 괄호가 없거나, 가장 최근에 열린 괄호가 다른 종류이면 그 닫는 괄호의 위치가 답이다.
+  - 끝까지 읽는 동안 위 경우가 없었지만 닫히지 않은 여는 괄호가 남아 있으면 S 의 길이 N 이 답이다.
+  - 올바른 괄호 문자열이면 -1 이 답이다.
+
+  입력: 첫 줄에 문자열 S (1 <= N <= 100000).
+  출력: 답인 정수 하나를 출력한다.
+  위치는 0 부터 센다.
+skills:
+- code: STACK_BASIC
+  role: PRIMARY
+  weight: 0.7
+- code: STRING_PARSING
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INDEX_ERROR
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: RUNTIME_ERROR
+skillControl: null

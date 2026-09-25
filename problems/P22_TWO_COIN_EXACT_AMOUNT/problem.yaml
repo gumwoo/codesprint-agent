@@ -1,0 +1,31 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P22_TWO_COIN_EXACT_AMOUNT
+title: 두 종류 동전으로 정확한 금액 만들기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(P)
+statement: |
+  A원짜리 동전이 최대 P개, B원짜리 동전이 최대 Q개 있다. A원 동전을 x개, B원 동전을 y개 사용해 합이 정확히 C원이 되도록 하려 한다. 0 <= x <= P, 0 <= y <= Q 인 정수 쌍 (x, y) 중 A*x + B*y = C 를 만족하는 쌍의 개수를 구한다. x 와 y 는 사용한 동전의 개수이므로 0 부터 센다. 두 수 중 하나 또는 둘 다 0 이어도 된다.
+
+  입력 형식: 첫째 줄에 정수 A, B, C, P, Q 가 공백으로 구분되어 주어진다.
+  - 1 <= A, B <= 1000
+  - 0 <= C <= 1000000
+  - 0 <= P, Q <= 1000
+
+  출력 형식: 조건을 만족하는 (x, y) 쌍의 개수를 한 줄에 출력한다.
+skills:
+- code: BRUTE_FORCE_ENUMERATION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

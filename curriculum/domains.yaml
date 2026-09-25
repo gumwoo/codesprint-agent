@@ -27,31 +27,31 @@ domains:
     order: 2
     name: Array / Matrix
     tier: CORE
-    active: false
+    active: true
 
   - code: STRING
     order: 3
     name: String
     tier: CORE
-    active: false
+    active: true
 
   - code: HASH
     order: 4
     name: Hash / Set / Map
     tier: CORE
-    active: false
+    active: true
 
   - code: SORTING
     order: 5
     name: Sorting
     tier: CORE
-    active: false
+    active: true
 
   - code: STACK_QUEUE
     order: 6
     name: Stack / Queue / Deque
     tier: CORE
-    active: false
+    active: true
 
   - code: HEAP
     order: 7
@@ -69,7 +69,7 @@ domains:
     order: 9
     name: Brute Force / Enumeration
     tier: CORE
-    active: false
+    active: true
 
   - code: BACKTRACKING
     order: 10

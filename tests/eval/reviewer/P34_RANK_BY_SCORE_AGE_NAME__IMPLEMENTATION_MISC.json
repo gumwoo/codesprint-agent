@@ -1,0 +1,31 @@
+{
+  "problemCode": "P34_RANK_BY_SCORE_AGE_NAME",
+  "problemTitle": "점수 · 나이 · 이름 순위표",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SORT_CUSTOM_KEY"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    people = []\n    for i in range(n):\n        name = data[1 + 3 * i]\n        score = int(data[2 + 3 * i])\n        age = int(data[3 + 3 * i])\n        people.append((name, score, age))\n    people.sort(key=lambda p: (-p[1], p[2]))\n    sys.stdout.write(\"\\n\".join(p[0] for p in people) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      6,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      7,
+      8,
+      9
+    ]
+  },
+  "probes": {}
+}

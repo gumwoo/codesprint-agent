@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "3 4\n....\n.#..\n....\n1 2 E\n5\nFFLFF\n",
+      "expectedOutput": "0 3 N\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4 5\n.....\n..#..\n.....\n#....\n3 1 N\n8\nFFRFFRFF\n",
+      "expectedOutput": "3 1 S\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 1\n.\n0 0 S\n1\nF\n",
+      "expectedOutput": "0 0 S\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1 5\n.....\n0 0 E\n6\nFFFFFF\n",
+      "expectedOutput": "0 4 E\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "2 3\n...\n...\n1 2 S\n3\nFRF\n",
+      "expectedOutput": "1 1 W\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "2 2\n..\n..\n0 0 N\n4\nRRRR\n",
+      "expectedOutput": "0 0 N\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "3 3\n###\n#.#\n###\n1 1 W\n7\nFLFLFLF\n",
+      "expectedOutput": "1 1 N\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "5 4\n....\n..##\n....\n....\n.#..\n1 1 S\n18\nLLFFLFFFRFFFLFFFLF\n",
+      "expectedOutput": "1 0 S\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "6 6\n..#..#\n..#.##\n...#..\n.#...#\n#.#...\n....#.\n4 1 N\n1\nF\n",
+      "expectedOutput": "4 1 N\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "6 4\n..##\n....\n#..#\n..#.\n....\n#...\n4 2 E\n17\nRLFFLFLRFRFFLRLFR\n",
+      "expectedOutput": "3 3 E\n",
+      "probes": []
+    }
+  ]
+}

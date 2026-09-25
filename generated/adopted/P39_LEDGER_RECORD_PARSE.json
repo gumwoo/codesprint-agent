@@ -1,0 +1,11 @@
+{
+  "id": "STRING_PARSING-1790357514551-1",
+  "skill": "STRING_PARSING",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:53:38+00:00",
+  "code": "P39_LEDGER_RECORD_PARSE",
+  "crossCheckedInputs": 36,
+  "bruteForce": "import sys\n\ns = sys.stdin.readline().strip() + ','\nnames = []\nvals = []\nname = ''\nsign = ''\nnum = ''\nfor c in s:\n    if c == ' ':\n        continue\n    if c == ',':\n        v = int(num)\n        if sign == '-':\n            v = -v\n        found = False\n        for j in range(len(names)):\n            if names[j] == name:\n                vals[j] += v\n                found = True\n        if not found:\n            names.append(name)\n            vals.append(v)\n        name = ''\n        sign = ''\n        num = ''\n    elif c == '+' or c == '-':\n        sign = c\n    elif '0' <= c <= '9':\n        num += c\n    else:\n        name += c\nfor j in range(len(names)):\n    print(names[j], vals[j])\n",
+  "inputGenerator": "import random\nseed = int(input())\nr = random.Random(seed)\npool = ['a', 'ab', 'kim', 'lee', 'bob', 'zz']\nrecs = []\nfor _ in range(r.randint(1, 8)):\n    rec = r.choice(pool) + r.choice('+-') + str(r.randint(0, 999))\n    recs.append(' ' * r.randint(0, 2) + rec + ' ' * r.randint(0, 2))\nprint(','.join(recs))\n",
+  "stressInputGenerator": null
+}

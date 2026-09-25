@@ -1,0 +1,32 @@
+{
+  "problemCode": "P40_ORDER_LINE_TOTALS",
+  "problemTitle": "주문 줄 합산",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INPUT_PARSE",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "STRING_PARSING"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    lines = sys.stdin.read().splitlines()\n    n = int(lines[0])\n    totals = {}\n    for line in lines[1:1 + n]:\n        for item in line.split(','):\n            name, rest = item.split(':')\n            qty, price = rest.split('*')\n            totals[name] = totals.get(name, 0) + int(qty) * int(price)\n    for name, total in totals.items():\n        print(name, total)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      7
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

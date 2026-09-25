@@ -1,0 +1,32 @@
+{
+  "problemCode": "P25_ORDER_TALLY_BY_PRODUCT",
+  "problemTitle": "상품별 주문 집계",
+  "problemSource": "DEV_FIXTURE",
+  "label": "OUTPUT_FORMAT",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "HASH_MAP_COUNTING"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    cnt = {}\n    tot = {}\n    for i in range(n):\n        k = int(data[1 + 2 * i])\n        q = int(data[2 + 2 * i])\n        if k in cnt:\n            cnt[k] += 1\n            tot[k] += q\n        else:\n            cnt[k] = 1\n            tot[k] = q\n    out = [f\"{k} {cnt[k]} {tot[k]}\" for k in sorted(cnt)]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

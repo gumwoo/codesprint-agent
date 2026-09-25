@@ -1,0 +1,11 @@
+{
+  "id": "STRING_MANIPULATION-1790357458281-1",
+  "skill": "STRING_MANIPULATION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:53:27+00:00",
+  "code": "P38_RUN_LENGTH_COMPRESS",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\nfrom itertools import groupby\n\ns = sys.stdin.readline().strip()\nres = ''\nfor ch, g in groupby(s):\n    k = len(list(g))\n    res += ch\n    if k > 1:\n        res += str(k)\nprint(res)\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 30)\nprint(''.join(r.choice('aabBc') for _ in range(n)))\n",
+  "stressInputGenerator": null
+}

@@ -44,10 +44,17 @@ class NextSkillSelectorTest {
     @Test
     @DisplayName("이번 숙달이 실제로 연 Skill 로 간다")
     void theSkillThisMasteryOpened() {
-        // PYTHON_LIST_BASIC 을 숙달하면 GRID_COORDINATE 가 열린다.
+        // PYTHON_LIST_BASIC 을 숙달하면 그것 하나만 요구하던 Skill 들이 열린다. 여럿이 열리면
+        // code 순이다(ADR-0022) - 어느 것인지보다 **이번 숙달이 연 것 중 하나**인지가 규칙이다.
+        List<String> opened = catalog.allPrerequisites().stream()
+                .filter(edge -> edge.requires().equals("PYTHON_LIST_BASIC"))
+                .map(CurriculumCatalog.Prerequisite::skillCode)
+                .filter(code -> catalog.prerequisitesOf(code).size() == 1)
+                .sorted().toList();
+        assertThat(opened).contains("GRID_COORDINATE");
         assertThat(selector.after("PYTHON_LIST_BASIC",
                 states(Map.of("PYTHON_LIST_BASIC", 0.90), "PYTHON_LIST_BASIC")))
-                .contains("GRID_COORDINATE");
+                .contains(opened.get(0));
     }
 
     @Test
@@ -74,8 +81,11 @@ class NextSkillSelectorTest {
                 "BFS_GRID_TRAVERSAL", 0.90,
                 "BFS_SHORTEST_PATH", 0.95));
 
-        assertThat(selector.after("BFS_SHORTEST_PATH",
-                states(masteries, "BFS_SHORTEST_PATH")))
+        // 슬라이스 1 의 여덟 Skill 만 본다. 다른 갈래의 아직 손대지 않은 Skill(mastery 없음)이
+        // 섞이면 그쪽이 더 뒤처진 것이 되어, 이 규칙이 아니라 그래프 크기를 재게 된다.
+        List<SkillState> slice1 = states(masteries, "BFS_SHORTEST_PATH").stream()
+                .filter(state -> masteries.containsKey(state.skillCode())).toList();
+        assertThat(selector.after("BFS_SHORTEST_PATH", slice1))
                 .as("잘하는 것을 더 잘하게 만드는 것보다 못하는 것을 끌어올린다")
                 .contains("BFS_VISITED_MANAGEMENT");
     }

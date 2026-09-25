@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "2 3\nabc\ndef\n2\nRV\n",
+      "expectedOutput": "fc\neb\nda\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "3 3\nabc\ndef\nghi\n3\nTMV\n",
+      "expectedOutput": "ifc\nheb\ngda\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 1\na\n1\nT\n",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1 4\nabcd\n2\nRR\n",
+      "expectedOutput": "dcba\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "3 3\naaa\naaa\naaa\n5\nTRLVM\n",
+      "expectedOutput": "aaa\naaa\naaa\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "2 3\nabc\ndef\n4\nRRRR\n",
+      "expectedOutput": "abc\ndef\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "4 2\nab\ncd\nef\ngh\n100\nTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVMTRLVM\n",
+      "expectedOutput": "ab\ncd\nef\ngh\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4 5\neccaf\nihjbf\nijagc\nhgccd\n3\nTTR\n",
+      "expectedOutput": "hiie\ngjhc\ncajc\ncgba\ndcff\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4 5\nhijdc\nihjcb\nhecbi\najghj\n4\nRMTM\n",
+      "expectedOutput": "cdjih\nbcjhi\nibceh\njhgja\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "5 4\nfeci\nebad\nggei\nfgci\nacdc\n3\nMMR\n",
+      "expectedOutput": "afgef\ncggbe\ndceac\nciidi\n",
+      "probes": []
+    }
+  ]
+}

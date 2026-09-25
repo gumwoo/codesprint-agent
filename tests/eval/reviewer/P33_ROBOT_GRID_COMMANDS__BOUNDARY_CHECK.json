@@ -1,0 +1,33 @@
+{
+  "problemCode": "P33_ROBOT_GRID_COMMANDS",
+  "problemTitle": "격자 로봇 명령 실행",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SIMULATION_STATE",
+    "GRID_COORDINATE",
+    "GRID_BOUNDARY_CHECK"
+  ],
+  "sourceCode": "\nimport sys\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    grid = data[2:2 + n]\n    r, c = int(data[2 + n]), int(data[3 + n])\n    d = \"NESW\".index(data[4 + n])\n    cmds = data[6 + n]\n    dr = [-1, 0, 1, 0]\n    dc = [0, 1, 0, -1]\n    for ch in cmds:\n        if ch == 'L':\n            d = (d + 3) % 4\n        elif ch == 'R':\n            d = (d + 1) % 4\n        else:\n            nr, nc = r + dr[d], c + dc[d]\n            if grid[nr][nc] == '.':\n                r, c = nr, nc\n    print(r, c, \"NESW\"[d])\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 24, in <module>\n    main()\n  File \"solution.py\", line 20, in main\n    if grid[nr][nc] == '.':\n       ~~~~~~~~^^^^\nIndexError: string index out of range\n",
+    "passedCaseIds": [
+      2,
+      6,
+      7,
+      9
+    ],
+    "failedCaseIds": [
+      1,
+      3,
+      4,
+      5,
+      8,
+      10
+    ]
+  },
+  "probes": {}
+}

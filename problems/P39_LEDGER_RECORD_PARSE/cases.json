@@ -1,0 +1,76 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "apple+12, pear-3,apple-5",
+      "expectedOutput": "apple 7\npear -3\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "  kim+100 ,lee-7,  kim-250,lee+7  ",
+      "expectedOutput": "kim -150\nlee 0\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "a+0",
+      "expectedOutput": "a 0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "x+1,x+1,x+1,x-3,x+9",
+      "expectedOutput": "x 9\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "abcdefghij-999,  z+999  ,abcdefghij+001",
+      "expectedOutput": "abcdefghij -998\nz 999\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "  ab+07 ,a-10,ab-070,  b+5,a+10  ",
+      "expectedOutput": "ab -63\na 0\nb 5\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "bob-273,  zz+346 ,  bob+342  , zz+745,  zz-974 ,ab+243,  ab+792 , zz+941\n",
+      "expectedOutput": "bob 69\nzz 1058\nab 1035\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "  bob-462  ,  ab+823 , zz+96 ,  ab+551  , a-987  ,zz+638  ,a+36, bob+796 \n",
+      "expectedOutput": "bob 334\nab 1374\nzz 734\na -951\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": " kim-146,  kim-280 ,zz+571  , bob+450,  kim+60, a-697,  a+839  , ab+433\n",
+      "expectedOutput": "kim -366\nzz 571\nbob 450\na 142\nab 433\n",
+      "probes": []
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "problemCode": "P22_TWO_COIN_EXACT_AMOUNT",
+  "problemTitle": "두 종류 동전으로 정확한 금액 만들기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BRUTE_FORCE_ENUMERATION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    a, b, c, p, q = map(int, sys.stdin.read().split())\n    count = 0\n    for x in range(p):\n        rest = c - a * x\n        if rest < 0:\n            break\n        if rest % b == 0 and rest // b <= q:\n            count += 1\n    print(count)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      9
+    ],
+    "failedCaseIds": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  },
+  "probes": {}
+}

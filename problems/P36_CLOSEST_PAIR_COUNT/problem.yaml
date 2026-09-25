@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P36_CLOSEST_PAIR_COUNT
+title: 가장 가까운 두 수와 그 쌍의 개수
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N log N)
+statement: |
+  정수 N개가 주어진다. 서로 다른 두 위치 i < j (0-based)를 골랐을 때 |a_i - a_j| 의 최솟값 D를 구하고, |a_i - a_j| = D 를 만족하는 위치 쌍 (i, j), i < j 의 개수 C를 구하라. 값이 같더라도 위치가 다르면 다른 원소로 센다.
+
+  입력 형식
+  - 첫째 줄: N (2 ≤ N ≤ 100000)
+  - 둘째 줄: 공백으로 구분된 정수 a_0, a_1, ..., a_{N-1} (0 ≤ a_i ≤ 1000000000)
+
+  출력 형식
+  - D와 C를 공백 하나로 구분해 한 줄에 출력한다.
+
+  인덱스는 0부터 센다.
+skills:
+- code: SORT_THEN_SCAN
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 정렬 없이 모든 위치 쌍의 차이를 직접 계산해 최솟값과 개수를 구한다.

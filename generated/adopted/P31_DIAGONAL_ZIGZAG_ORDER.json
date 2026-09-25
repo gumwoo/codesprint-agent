@@ -1,0 +1,11 @@
+{
+  "id": "MATRIX_TRAVERSAL-1790357304613-1",
+  "skill": "MATRIX_TRAVERSAL",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T17:52:01+00:00",
+  "code": "P31_DIAGONAL_ZIGZAG_ORDER",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    r = int(data[0])\n    c = int(data[1])\n    nums = [int(x) for x in data[2:2 + r * c]]\n\n    cells = []\n    for p in range(r * c):\n        i = p // c\n        j = p % c\n        d = i + j\n        inner = i if d % 2 == 1 else -i\n        cells.append((d, inner, nums[p]))\n\n    cells.sort(key=lambda t: (t[0], t[1]))\n    print(\" \".join(str(t[2]) for t in cells))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\n\ndef main():\n    seed = int(sys.stdin.read().split()[0])\n    rnd = random.Random(seed)\n    r = rnd.randint(1, 6)\n    c = rnd.randint(1, 6)\n    lines = [f\"{r} {c}\"]\n    for _ in range(r):\n        lines.append(\" \".join(str(rnd.randint(-99, 99)) for _ in range(c)))\n    sys.stdout.write(\"\\n\".join(lines) + \"\\n\")\n\n\nmain()\n",
+  "stressInputGenerator": null
+}

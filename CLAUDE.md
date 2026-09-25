@@ -227,8 +227,8 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 
 ## 현재 상태
 
-Vertical Slice 1 진행 중. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제
-18개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
+PRD 끝까지 웨이브로 넓히는 중([ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md)). 지금 도메인 9 ·
+Skill 20. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제 33개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
 제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
 LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않으면 분석 없이 나머지가
 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
@@ -444,7 +444,8 @@ gradle evalReviewer                               # 진짜 모델을 부른다 (
 평가 집합을 보고 프롬프트를 고치지 않는다. 그러면 그 집합에만 맞춘 프롬프트가 된다 -
 프롬프트를 바꿀 때는 새 파일을 만들고 두 버전을 같은 집합으로 재서 비교한다.
 
-슬라이스 1 범위: Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴.
+슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 그 뒤 웨이브는
+ADR-0034 가 정한다 - 새 도메인은 Skill 정의 · 선수 · 개념 자료 · 문제 · 검증 에이전트 검토를 함께 갖춰야 켜진다.
 정본은 [docs/_archive/](docs/_archive/) 의 Addendum PART III.
 
 ## 문서

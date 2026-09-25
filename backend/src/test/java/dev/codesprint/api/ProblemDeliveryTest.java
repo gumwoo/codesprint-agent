@@ -168,6 +168,24 @@ class ProblemDeliveryTest {
         return submitAndJudge(problemCode, judgeStatus);
     }
 
+    /**
+     * 진단을 끝낸다 - 진단이 가리키는 문제를 통과시키며 끝까지 따라간다.
+     *
+     * <p>슬라이스 1 은 P05 하나를 통과하면 진단이 끝났다. 갈래가 늘면 갈래마다 묻는다 -
+     * 몇 번인지 여기서 정하지 않는다(ADR-0034).
+     */
+    private void finishDiagnostic() throws Exception {
+        for (int i = 0; i < 60; i++) {
+            JsonNode step = MAPPER.readTree(mvc.perform(get("/api/users/{id}/diagnostic", userId))
+                    .andReturn().getResponse().getContentAsString());
+            if (step.get("done").asBoolean()) {
+                return;
+            }
+            submitAndJudge(step.get("problem").get("code").asText(), "ACCEPTED");
+        }
+        throw new AssertionError("진단이 60 단계 안에 끝나지 않았다");
+    }
+
     private long submitAndJudge(String problemCode, String judgeStatus) throws Exception {
         String body = """
                 {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
@@ -291,9 +309,8 @@ class ProblemDeliveryTest {
      */
     private String retryVariantPick() throws Exception {
         // 진단 중에는 다음 Skill 이동을 진단이 소유한다(ADR-0019). 여기서 보려는 것은
-        // 그 뒤의 문제 선택이므로, 먼저 진단을 끝낸다 - P05 를 통과하면 그래프가
-        // 한 번에 덮인다.
-        submitAndJudge("P05_SHORTEST_PATH", "ACCEPTED");
+        // 그 뒤의 문제 선택이므로, 먼저 진단을 끝낸다.
+        finishDiagnostic();
 
         submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
         long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
@@ -369,7 +386,7 @@ class ProblemDeliveryTest {
     @DisplayName("세 번째 연속 실패는 대상 Skill의 개념 자료로 이어진다")
     void repeatedFailureYieldsTheTargetSkillsConcept() throws Exception {
         // 진단을 먼저 끝내지 않으면 다음 이동은 진단이 소유한다(ADR-0019).
-        submitAndJudge("P05_SHORTEST_PATH", "ACCEPTED");
+        finishDiagnostic();
         submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
         submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");
         long submissionId = submitAndJudge("P02_GRID_TRAVERSAL", "WRONG_ANSWER");

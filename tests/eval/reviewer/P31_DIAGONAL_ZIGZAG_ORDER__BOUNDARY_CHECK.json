@@ -1,0 +1,34 @@
+{
+  "problemCode": "P31_DIAGONAL_ZIGZAG_ORDER",
+  "problemTitle": "대각선 지그재그 순회",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MATRIX_TRAVERSAL",
+    "GRID_COORDINATE",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    pos = 0\n    r = int(data[pos]); pos += 1\n    c = int(data[pos]); pos += 1\n    grid = []\n    for _ in range(r):\n        grid.append([int(data[pos + j]) for j in range(c)])\n        pos += c\n\n    out = []\n    for d in range(r + c - 1):\n        lo = max(0, d - c + 1)\n        hi = d\n        diag = [grid[i][d - i] for i in range(lo, hi + 1)]\n        if d % 2 == 0:\n            diag.reverse()\n        out.extend(diag)\n\n    print(\" \".join(str(v) for v in out))\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 27, in <module>\n    main()\n  File \"solution.py\", line 19, in main\n    diag = [grid[i][d - i] for i in range(lo, hi + 1)]\n            ~~~~^^^\nIndexError: list index out of range\n",
+    "passedCaseIds": [
+      3,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

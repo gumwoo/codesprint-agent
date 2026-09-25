@@ -54,3 +54,53 @@ prerequisites:
   - skill: BFS_SHORTEST_PATH
     requires: BFS_GRID_TRAVERSAL
     minimum_mastery: 0.70
+
+  # ── W2 · CORE-1 (ADR-0034) ──────────────────────────────────────────
+  # 기본값 0.65(Addendum §76). 슬라이스 1 과 같은 문턱을 쓴다 - 새 값을 만들 근거가 없다.
+  - skill: SIMULATION_STATE
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: MATRIX_TRANSFORM
+    requires: GRID_COORDINATE
+    minimum_mastery: 0.65
+
+  - skill: MATRIX_TRAVERSAL
+    requires: GRID_BOUNDARY_CHECK
+    minimum_mastery: 0.65
+
+  - skill: STRING_MANIPULATION
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: STRING_PARSING
+    requires: STRING_MANIPULATION
+    minimum_mastery: 0.65
+
+  - skill: HASH_SET_MEMBERSHIP
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: HASH_MAP_COUNTING
+    requires: HASH_SET_MEMBERSHIP
+    minimum_mastery: 0.65
+
+  - skill: SORT_CUSTOM_KEY
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: SORT_THEN_SCAN
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: STACK_BASIC
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: BRUTE_FORCE_ENUMERATION
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: COMBINATORIAL_ENUMERATION
+    requires: BRUTE_FORCE_ENUMERATION
+    minimum_mastery: 0.65

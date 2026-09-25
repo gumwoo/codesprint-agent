@@ -1,0 +1,73 @@
+{
+  "id": "HASH_SET_MEMBERSHIP-1790357572025-2",
+  "skill": "HASH_SET_MEMBERSHIP",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:58:12+00:00",
+  "stage": "검증 검토",
+  "code": "P28_ENTRY_LIST_CHECK",
+  "reasons": [
+    "P27_REGISTERED_ID_CHECK 와 같은 문제다 - 명단에 대해 존재를 묻는 질의가 같고 출력 표기(1/0 · YES/NO)와 값 범위만 다르다 (검증 에이전트)",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "ENTRY_LIST_CHECK",
+    "title": "출입 명단 확인",
+    "statement": "건물 출입 명단에 사원 번호 N개가 등록되어 있다. 같은 번호가 여러 번 등록되어 있을 수 있다. 출입을 요청한 사원 번호 Q개가 순서대로 주어질 때, 각 요청 번호가 명단에 있으면 YES, 없으면 NO를 출력한다.\n\n입력 형식\n- 첫째 줄: 정수 N (1 <= N <= 100000)\n- 둘째 줄: 명단의 사원 번호 N개 a_0 ... a_{N-1}, 공백으로 구분 (1 <= a_i <= 10^9)\n- 셋째 줄: 정수 Q (1 <= Q <= 100000)\n- 넷째 줄: 요청 번호 Q개 q_0 ... q_{Q-1}, 공백으로 구분 (1 <= q_j <= 10^9)\n\n출력 형식\n- Q줄을 출력한다. j번째 줄(0부터 센다)에는 q_j가 명단에 있으면 YES, 없으면 NO를 대문자로 출력한다.\n\n인덱스는 0부터 센다. 출력 순서는 요청 순서와 같다.",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(N + Q)",
+    "expectedSolveSeconds": 300,
+    "commonMistakes": [
+      "OUTPUT_FORMAT",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "OUTPUT_FORMAT",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "존재 판정은 맞지만 YES/NO 대신 소문자 yes/no를 출력한다.",
+    "sampleInputs": [
+      "5\n3 8 1 8 20\n4\n8 2 20 5\n",
+      "3\n100 200 300\n3\n300 100 400\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n1\n1\n1\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1\n7\n1\n8\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "3\n1 1000000000 500000000\n4\n1000000000 999999999 1 2\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "6\n4 4 4 9 9 2\n5\n4 9 2 4 3\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "4\n5 5 5 5\n4\n5 5 6 5\n"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(1, 8)\nhi = rng.randint(1, 15)\nregistered = [rng.randint(1, hi) for _ in range(n)]\nqueries = [rng.randint(1, hi + 3) for _ in range(q)]\nprint(n)\nprint(*registered)\nprint(q)\nprint(*queries)\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    registered = set(map(int, data[1:1 + n]))\n    q = int(data[1 + n])\n    queries = map(int, data[2 + n:2 + n + q])\n    out = [\"YES\" if x in registered else \"NO\" for x in queries]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    registered = [int(v) for v in data[1:1 + n]]\n    q = int(data[1 + n])\n    queries = [int(v) for v in data[2 + n:2 + n + q]]\n    for x in queries:\n        count = 0\n        for v in registered:\n            if v == x:\n                count += 1\n        if count > 0:\n            print(\"YES\")\n        else:\n            print(\"NO\")\n\n\nmain()\n",
+    "wrong": "# 존재 판정은 맞지만 YES/NO 대신 소문자 yes/no를 출력한다.\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    registered = set(map(int, data[1:1 + n]))\n    q = int(data[1 + n])\n    queries = map(int, data[2 + n:2 + n + q])\n    out = [\"yes\" if x in registered else \"no\" for x in queries]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "질의가 최대 100000개이고 명단도 최대 100000개다. 질의마다 명단 전체를 확인하면 비교 횟수가 얼마나 되는지 계산해 본다.",
+      "각 질의는 '이 값이 있는가'만 묻는다. 순서나 개수는 필요 없으므로 조회 비용이 평균 O(1)인 방법을 찾는다.",
+      "명단을 해시 기반 집합에 한 번 담아 둔다. 중복 등록은 집합에 넣으면 저절로 하나로 합쳐진다.",
+      "명단 구성은 입력을 읽을 때 한 번만 한다. 이후 각 질의는 집합에 대한 포함 검사 한 번으로 답이 정해진다.",
+      "명단 N개를 읽어 집합 S를 만든다 → Q개의 요청 번호를 차례로 본다 → 번호가 S에 속하면 YES, 아니면 NO를 결과 목록에 추가한다 → 결과를 줄 단위로 한 번에 출력한다."
+    ],
+    "skillControl": {
+      "approach": "명단을 리스트로 두고 질의마다 리스트를 처음부터 훑어 존재를 확인한다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    registered = list(map(int, data[1:1 + n]))\n    q = int(data[1 + n])\n    queries = map(int, data[2 + n:2 + n + q])\n    out = [\"YES\" if x in registered else \"NO\" for x in queries]\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+      "stressInputGenerator": "n = 60000\nq = 60000\nregistered = [2 * i for i in range(1, n + 1)]\nqueries = [2 * i + 1 for i in range(1, q + 1)]\nprint(n)\nprint(*registered)\nprint(q)\nprint(*queries)\n"
+    }
+  }
+}

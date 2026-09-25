@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P38_RUN_LENGTH_COMPRESS
+title: 연속 문자 압축
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 480
+referenceComplexity: O(N)
+statement: |
+  영문 대소문자로만 이루어진 문자열 S 가 주어진다. S 를 앞에서부터 읽으며 같은 문자가 연속으로 이어진 구간마다 하나로 압축한다. 구간의 길이가 1 이면 그 문자만 쓰고, 2 이상이면 문자 뒤에 구간 길이를 10진수로 붙인다. 대문자와 소문자는 서로 다른 문자로 본다. 압축한 결과를 원래 순서대로 이어 붙여 출력한다.
+
+  입력 형식: 첫 줄에 문자열 S 가 주어진다. 1 <= |S| <= 1000, S 는 영문 대문자와 소문자로만 이루어진다.
+
+  출력 형식: 압축한 문자열을 한 줄에 출력한다.
+
+  인덱스: 문자 위치를 입력하거나 출력하지 않는다. 풀이에서 위치를 다룰 때는 0부터 센다.
+
+  예: aaabcc 는 a3bc2 가 된다. aAa 는 aAa 가 된다.
+skills:
+- code: STRING_MANIPULATION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null
