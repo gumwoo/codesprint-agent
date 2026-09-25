@@ -1,0 +1,11 @@
+{
+  "id": "DP_1D-1790364096813-1",
+  "skill": "DP_1D",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:28:41+00:00",
+  "code": "P59_CRACKED_STEPPING_STONES",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    a = [int(x) for x in data[1:n + 2]]\n    inner = list(range(1, n))\n    count = 0\n    for mask in range(1 << len(inner)):\n        path = [0]\n        for b in range(len(inner)):\n            if mask >> b & 1:\n                path.append(inner[b])\n        path.append(n)\n        ok = True\n        for k in range(len(path)):\n            if a[path[k]] == 1:\n                ok = False\n                break\n            if k > 0 and path[k] - path[k - 1] > 3:\n                ok = False\n                break\n        if ok:\n            count += 1\n    print(count % 1000000007)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 14)\na = [0] + [1 if rng.random() < 0.25 else 0 for _ in range(n - 1)] + [0]\nprint(n)\nprint(' '.join(map(str, a)))\n",
+  "stressInputGenerator": "n = 80\nprint(n)\nprint(' '.join(['0'] * (n + 1)))\n"
+}

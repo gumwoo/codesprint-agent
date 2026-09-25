@@ -1,0 +1,46 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P58_DFS_FIRST_PATH_DIRECTED
+title: 깊이 우선 탐색이 처음 찾는 경로
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N + M log M)
+statement: |
+  정점 N개와 방향 간선 M개로 이루어진 방향 그래프가 있다. 정점 번호는 1부터 N까지다(1-based). 간선 u v 는 u 에서 v 로만 갈 수 있다.
+
+  정점 S 에서 다음 규칙으로 깊이 우선 탐색을 한다.
+  - 현재 정점에서 아직 방문하지 않은 나가는 이웃이 있으면, 그중 번호가 가장 작은 정점으로 들어간다.
+  - 방문하지 않은 나가는 이웃이 없으면 직전 정점으로 돌아간다.
+  - 한 번 방문한 정점은 되돌아온 뒤에도 다시 들어가지 않는다.
+
+  정점 T 를 처음 방문한 순간 탐색을 멈춘다. 그 순간 S 에서 T 까지 현재 들어와 있는 정점들을 순서대로 출력한다. S 와 T 가 같으면 S 하나만 출력한다. T 를 끝내 방문하지 못하면 -1 을 출력한다.
+
+  입력 형식
+  첫 줄에 N M S T 가 공백으로 구분되어 주어진다.
+  다음 M 줄에 간선 u v 가 한 줄에 하나씩 주어진다.
+
+  출력 형식
+  경로의 정점 번호를 한 줄에 공백으로 구분하여 출력한다. 도달하지 못하면 -1 을 출력한다.
+
+  제한
+  1 <= N <= 1000
+  0 <= M <= 5000
+  1 <= S, T <= N
+  u != v 이고, 같은 (u, v) 간선은 두 번 주어지지 않는다.
+skills:
+- code: DFS_TRAVERSAL
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- OUTPUT_FORMAT
+- NO_VISITED
+- INPUT_PARSE
+negativeControl:
+  mistake: OUTPUT_FORMAT
+  expectedStatus: WRONG_ANSWER
+skillControl: null

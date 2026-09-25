@@ -1,0 +1,11 @@
+{
+  "id": "GREEDY_CHOICE-1790363771456-1",
+  "skill": "GREEDY_CHOICE",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:31:05+00:00",
+  "code": "P67_MEETING_ROOM_MAX",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    meetings = [(int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)]\n    best = 0\n    for mask in range(1 << n):\n        chosen = [meetings[i] for i in range(n) if mask >> i & 1]\n        if len(chosen) <= best:\n            continue\n        chosen.sort()\n        ok = True\n        for k in range(1, len(chosen)):\n            if chosen[k][0] < chosen[k - 1][1]:\n                ok = False\n                break\n        if ok:\n            best = len(chosen)\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nprint(n)\nfor _ in range(n):\n    s = rng.randint(0, 15)\n    e = rng.randint(s + 1, s + 8)\n    print(s, e)\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nlines = [str(n)]\nfor _ in range(n):\n    s = rng.randint(0, 99990)\n    e = s + rng.randint(1, 9)\n    lines.append(str(s) + ' ' + str(e))\nprint('\\n'.join(lines))\n"
+}

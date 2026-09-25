@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "13 2",
+      "expectedOutput": "11\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "2024 16",
+      "expectedOutput": "2279\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "0 2",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "35 36",
+      "expectedOutput": "35\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "100 10",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "1000000000000000000 36",
+      "expectedOutput": "3808106083902928795\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "1000000000000000000 2",
+      "expectedOutput": "2673027240059\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "41739417170837527 13\n",
+      "expectedOutput": "47071670228827735\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "398716945584379567 20\n",
+      "expectedOutput": "648879506752778744\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "333420797150241858 3\n",
+      "expectedOutput": "49097674180791650\n",
+      "probes": []
+    }
+  ]
+}

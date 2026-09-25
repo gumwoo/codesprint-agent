@@ -1,0 +1,31 @@
+{
+  "problemCode": "P55_RANGE_COUNT_SORTED",
+  "problemTitle": "정렬된 수열의 구간 개수 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BINARY_SEARCH_BOUNDS"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef lower_bound(a, x):\n    lo, hi = 0, len(a)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] < x:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, q = int(data[0]), int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    p = 2 + n\n    out = []\n    for _ in range(q):\n        l, r = int(data[p]), int(data[p + 1])\n        p += 2\n        out.append(lower_bound(a, r) - lower_bound(a, l))\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

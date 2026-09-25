@@ -1,0 +1,11 @@
+{
+  "id": "GRAPH_CYCLE_DETECTION-1790363994179-1",
+  "skill": "GRAPH_CYCLE_DETECTION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:30:02+00:00",
+  "code": "P63_DIRECTED_CYCLE_CHECK",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    edges = []\n    for k in range(m):\n        u = int(data[2 + 2 * k])\n        v = int(data[3 + 2 * k])\n        adj[u].append(v)\n        edges.append((u, v))\n    for u, v in edges:\n        seen = [False] * (n + 1)\n        seen[v] = True\n        dq = deque([v])\n        while dq:\n            x = dq.popleft()\n            if x == u:\n                print('YES')\n                return\n            for y in adj[x]:\n                if not seen[y]:\n                    seen[y] = True\n                    dq.append(y)\n    print('NO')\n\n\nmain()\n",
+  "inputGenerator": "import random\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 7)\nm = r.randint(0, 10)\nperm = list(range(1, n + 1))\nr.shuffle(perm)\ndag = r.random() < 0.5\nedges = []\nfor _ in range(m):\n    a = r.randint(0, n - 1)\n    b = r.randint(0, n - 1)\n    if dag:\n        if a == b:\n            continue\n        if a > b:\n            a, b = b, a\n    edges.append((perm[a], perm[b]))\nprint(n, len(edges))\nfor u, v in edges:\n    print(u, v)\n",
+  "stressInputGenerator": null
+}

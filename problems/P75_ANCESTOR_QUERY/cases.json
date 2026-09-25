@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "6 1\n1 2\n1 3\n2 4\n5 2\n3 6\n4\n1 5\n2 5\n3 4\n4 4\n",
+      "expectedOutput": "YES\nYES\nNO\nYES\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5 4\n1 2\n2 3\n3 4\n4 5\n3\n4 1\n1 4\n5 3\n",
+      "expectedOutput": "YES\nNO\nNO\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 1\n1\n1 1\n",
+      "expectedOutput": "YES\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "5 3\n1 2\n1 3\n1 4\n1 5\n4\n3 2\n1 2\n3 3\n2 3\n",
+      "expectedOutput": "YES\nYES\nYES\nNO\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "7 4\n2 1\n3 2\n4 3\n4 5\n6 5\n7 6\n4\n4 1\n4 7\n3 5\n1 1\n",
+      "expectedOutput": "YES\nYES\nNO\nYES\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "4 1\n2 1\n3 2\n4 3\n3\n1 4\n4 1\n2 3\n",
+      "expectedOutput": "YES\nNO\nYES\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "3 2\n1 2\n2 3\n3\n1 3\n1 3\n2 1\n",
+      "expectedOutput": "NO\nNO\nYES\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8 6\n3 8\n5 6\n4 8\n6 2\n1 3\n8 6\n3 7\n6\n4 7\n2 5\n4 7\n5 6\n1 4\n1 7\n",
+      "expectedOutput": "NO\nNO\nNO\nNO\nNO\nNO\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8 5\n7 5\n8 6\n4 7\n8 5\n3 1\n3 7\n2 5\n6\n4 2\n7 8\n2 7\n3 6\n3 1\n3 2\n",
+      "expectedOutput": "NO\nNO\nNO\nNO\nYES\nNO\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7 7\n5 2\n4 1\n6 5\n2 7\n6 3\n1 5\n6\n6 1\n3 4\n1 5\n7 4\n6 5\n2 6\n",
+      "expectedOutput": "NO\nNO\nNO\nYES\nNO\nYES\n",
+      "probes": []
+    }
+  ]
+}

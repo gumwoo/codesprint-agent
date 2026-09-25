@@ -1,0 +1,32 @@
+{
+  "problemCode": "P57_DFS_ENTER_EXIT_ORDER",
+  "problemTitle": "깊이 우선 탐색의 진입 순서와 종료 순서",
+  "problemSource": "DEV_FIXTURE",
+  "label": "NO_VISITED",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DFS_TRAVERSAL",
+    "STACK_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, s = int(data[0]), int(data[1]), int(data[2])\n    adj = [[] for _ in range(n + 1)]\n    for k in range(m):\n        u = int(data[3 + 2 * k])\n        v = int(data[4 + 2 * k])\n        adj[u].append(v)\n        adj[v].append(u)\n    for a in adj:\n        a.sort()\n    pre = []\n    post = []\n\n    def dfs(u):\n        pre.append(u)\n        for v in adj[u]:\n            dfs(v)\n        post.append(u)\n\n    dfs(s)\n    print(' '.join(map(str, pre)))\n    print(' '.join(map(str, post)))\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 30, in <module>\n    main()\n  File \"solution.py\", line 25, in main\n    dfs(s)\n  File \"solution.py\", line 22, in dfs\n    dfs(v)\n  File \"solution.py\", line 22, in dfs\n    dfs(v)\n  File \"solution.py\", line 22, in dfs\n    dfs(v)\n  [Previous line repeated 995 more times]\nRecursionError: maximum recursion depth exceeded\n",
+    "passedCaseIds": [
+      3,
+      4
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  "probes": {}
+}

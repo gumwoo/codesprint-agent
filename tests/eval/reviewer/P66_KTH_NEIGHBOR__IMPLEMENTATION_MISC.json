@@ -1,0 +1,33 @@
+{
+  "problemCode": "P66_KTH_NEIGHBOR",
+  "problemTitle": "k번째 이웃",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GRAPH_REPRESENTATION",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    idx = 2\n    adj = [[] for _ in range(n + 1)]\n    for _ in range(m):\n        u, v = int(data[idx]), int(data[idx + 1])\n        idx += 2\n        adj[u].append(v)\n    for lst in adj:\n        lst.sort()\n    q = int(data[idx])\n    idx += 1\n    out = []\n    for _ in range(q):\n        v, k = int(data[idx]), int(data[idx + 1])\n        idx += 2\n        out.append(adj[v][k - 1] if k <= len(adj[v]) else -1)\n    sys.stdout.write('\\n'.join(map(str, out)) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

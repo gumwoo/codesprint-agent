@@ -1,0 +1,33 @@
+{
+  "problemCode": "P67_MEETING_ROOM_MAX",
+  "problemTitle": "회의실 최대 배정",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GREEDY_CHOICE",
+    "SORT_CUSTOM_KEY"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    meetings = []\n    for i in range(n):\n        s = int(data[1 + 2 * i])\n        e = int(data[2 + 2 * i])\n        meetings.append((s, e))\n    meetings.sort()\n    count = 0\n    last_end = -1\n    for s, e in meetings:\n        if s >= last_end:\n            count += 1\n            last_end = e\n    print(count)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      6,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      7,
+      8,
+      9,
+      11
+    ]
+  },
+  "probes": {}
+}

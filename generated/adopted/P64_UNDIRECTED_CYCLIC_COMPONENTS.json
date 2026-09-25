@@ -1,0 +1,11 @@
+{
+  "id": "GRAPH_CYCLE_DETECTION-1790364038321-2",
+  "skill": "GRAPH_CYCLE_DETECTION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:30:12+00:00",
+  "code": "P64_UNDIRECTED_CYCLIC_COMPONENTS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom collections import deque\n\n\ndef connected(n, edges, skip, a, b):\n    adj = [[] for _ in range(n + 1)]\n    for i, (u, v) in enumerate(edges):\n        if i == skip:\n            continue\n        adj[u].append(v)\n        adj[v].append(u)\n    seen = [False] * (n + 1)\n    seen[a] = True\n    q = deque([a])\n    while q:\n        x = q.popleft()\n        if x == b:\n            return True\n        for y in adj[x]:\n            if not seen[y]:\n                seen[y] = True\n                q.append(y)\n    return False\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    edges = [(int(data[2 + 2 * i]), int(data[3 + 2 * i])) for i in range(m)]\n    comp = [0] * (n + 1)\n    c = 0\n    for s in range(1, n + 1):\n        if comp[s] == 0:\n            c += 1\n            for t in range(1, n + 1):\n                if comp[t] == 0 and connected(n, edges, -1, s, t):\n                    comp[t] = c\n    cyclic = set()\n    for i, (u, v) in enumerate(edges):\n        if u == v or connected(n, edges, i, u, v):\n            cyclic.add(comp[u])\n    print(len(cyclic))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 8)\nm = r.randint(0, n + 2)\nprint(n, m)\nfor _ in range(m):\n    u = r.randint(1, n)\n    v = r.randint(1, n)\n    print(u, v)\n",
+  "stressInputGenerator": null
+}

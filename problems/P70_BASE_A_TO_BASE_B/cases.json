@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "10 16\n255",
+      "expectedOutput": "FF\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "16 2\n1A",
+      "expectedOutput": "11010\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "2 36\n0",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "36 2\nZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+      "expectedOutput": "10010010100100110101001101101101001100110111111000101011100011110001001101100010001111001000010110110111000111001011011101100000110000011110000111111001110101110110000111011100100010001100000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "10 10\n1000",
+      "expectedOutput": "1000\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "2 36\n1",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "36 10\nZ",
+      "expectedOutput": "35\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "16 16\nFF",
+      "expectedOutput": "FF\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4 29\n3303001\n",
+      "expectedOutput": "IE9\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "4 35\n303010211\n",
+      "expectedOutput": "4UQT\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "6 24\n21340324\n",
+      "expectedOutput": "1LMH4\n",
+      "probes": []
+    }
+  ]
+}

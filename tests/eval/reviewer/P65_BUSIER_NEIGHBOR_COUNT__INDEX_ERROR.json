@@ -1,0 +1,32 @@
+{
+  "problemCode": "P65_BUSIER_NEIGHBOR_COUNT",
+  "problemTitle": "더 바쁜 이웃 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "GRAPH_REPRESENTATION",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n)]\n    idx = 2\n    for _ in range(m):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    deg = [len(nb) for nb in adj]\n    out = []\n    for v in range(1, n + 1):\n        d = deg[v]\n        c = 0\n        for w in adj[v]:\n            if deg[w] > d:\n                c += 1\n        out.append(c)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 28, in <module>\n    main()\n  File \"solution.py\", line 15, in main\n    adj[b].append(a)\n    ~~~^^^\nIndexError: list index out of range\n",
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

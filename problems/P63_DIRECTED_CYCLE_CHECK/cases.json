@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4 4\n1 2\n1 3\n2 4\n3 4\n",
+      "expectedOutput": "NO\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4 4\n1 2\n2 3\n3 4\n4 2\n",
+      "expectedOutput": "YES\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 0\n",
+      "expectedOutput": "NO\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1 1\n1 1\n",
+      "expectedOutput": "YES\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "2 2\n1 2\n1 2\n",
+      "expectedOutput": "NO\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "2 2\n1 2\n2 1\n",
+      "expectedOutput": "YES\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "3 2\n2 1\n3 1\n",
+      "expectedOutput": "NO\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "5 4\n1 2\n2 3\n4 5\n5 4\n",
+      "expectedOutput": "YES\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7 8\n3 4\n1 7\n2 7\n6 3\n5 7\n1 7\n3 4\n4 1\n",
+      "expectedOutput": "NO\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "1 9\n1 1\n1 1\n1 1\n1 1\n1 1\n1 1\n1 1\n1 1\n1 1\n",
+      "expectedOutput": "YES\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "6 8\n5 1\n5 4\n6 1\n1 3\n4 1\n4 6\n5 1\n3 2\n",
+      "expectedOutput": "NO\n",
+      "probes": []
+    }
+  ]
+}

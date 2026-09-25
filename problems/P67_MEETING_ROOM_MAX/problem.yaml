@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P67_MEETING_ROOM_MAX
+title: 회의실 최대 배정
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N log N)
+statement: |
+  회의실 하나에 회의 N개의 사용 신청이 들어왔다. i번째 회의는 시각 s_i에 시작해 e_i에 끝난다. 한 회의가 끝나는 시각에 다른 회의가 바로 시작할 수 있다. 즉 e_a <= s_b 이면 회의 a 다음에 회의 b를 열 수 있다. 시간이 겹치는 두 회의는 함께 고를 수 없다. 겹치지 않게 고를 수 있는 회의의 최대 개수를 구하라.
+
+  입력 형식
+  - 첫 줄에 정수 N (1 <= N <= 50000)
+  - 다음 N줄에 정수 s_i, e_i가 공백으로 구분되어 주어진다 (0 <= s_i < e_i <= 1000000000)
+  - 회의 번호는 입력 순서대로 1부터 센다. 출력에는 번호를 쓰지 않는다.
+
+  출력 형식
+  - 고를 수 있는 회의의 최대 개수를 한 줄에 출력한다.
+skills:
+- code: GREEDY_CHOICE
+  role: PRIMARY
+  weight: 0.7
+- code: SORT_CUSTOM_KEY
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 끝나는 시각 순으로 놓고, 각 회의를 마지막으로 고르는 경우의 최대 개수를 앞의 모든 회의와 비교해 구하는 O(N^2) 동적
+    계획법.

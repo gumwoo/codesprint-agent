@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P60_REST_TWO_DAYS
+title: 이틀 쉬는 아르바이트
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(n)
+statement: |
+  n 일 동안 하루 단위 아르바이트가 있다. 날짜는 0 번부터 n-1 번까지다(0-based). i 번 날에 일하면 a_i 원을 번다. 하루 일하면 그다음 이틀은 반드시 쉬어야 한다. 즉 일하는 두 날의 번호 차이는 3 이상이어야 한다. 일할 날을 골라 벌 수 있는 금액의 최댓값을 구하라. 하루도 일하지 않아도 된다.
+
+  입력 형식
+  첫째 줄에 정수 n (1 <= n <= 100000).
+  둘째 줄에 정수 n 개 a_0, a_1, ..., a_{n-1} 이 공백으로 구분되어 주어진다 (1 <= a_i <= 10000).
+
+  출력 형식
+  벌 수 있는 금액의 최댓값을 정수 하나로 한 줄에 출력한다.
+skills:
+- code: DP_1D
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 각 날마다 일한다 / 쉰다 두 갈래로 나누는 재귀를 결과 저장 없이 그대로 수행한다.

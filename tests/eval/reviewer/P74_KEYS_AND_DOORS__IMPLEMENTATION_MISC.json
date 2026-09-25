@@ -1,0 +1,34 @@
+{
+  "problemCode": "P74_KEYS_AND_DOORS",
+  "problemTitle": "열쇠를 모아 문 열기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "STATE_SPACE_BFS",
+    "BFS_GRID_TRAVERSAL",
+    "BFS_SHORTEST_PATH"
+  ],
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    grid = data[2:2 + n]\n    sr = sc = -1\n    for r in range(n):\n        for c in range(m):\n            if grid[r][c] == 'S':\n                sr, sc = r, c\n    dist = [[[-1] * 64 for _ in range(m)] for _ in range(n)]\n    dist[sr][sc][0] = 0\n    q = deque([(sr, sc, 0)])\n    while q:\n        r, c, mask = q.popleft()\n        d = dist[r][c][mask]\n        if grid[r][c] == 'T':\n            print(d)\n            return\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if not (0 <= nr < n and 0 <= nc < m):\n                continue\n            ch = grid[nr][nc]\n            if ch == '#':\n                continue\n            if 'A' <= ch <= 'F' and not (mask >> (ord(ch) - ord('A'))) & 1:\n                continue\n            nmask = mask\n            if 'a' <= ch <= 'f':\n                nmask = mask | (1 << (ord(ch) - ord('a')))\n            if all(x == -1 for x in dist[nr][nc]):\n                dist[nr][nc][nmask] = d + 1\n                q.append((nr, nc, nmask))\n    print(-1)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      9,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      8,
+      11
+    ]
+  },
+  "probes": {}
+}

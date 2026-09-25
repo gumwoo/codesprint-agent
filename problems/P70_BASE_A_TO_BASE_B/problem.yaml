@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P70_BASE_A_TO_BASE_B
+title: 진법 변환
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(L^2) (L = S 의 길이, 큰 정수 곱셈 · 나눗셈 포함)
+statement: |
+  A 진법으로 적힌 음이 아닌 정수 S 를 B 진법으로 바꿔 출력한다. 10 이상의 자릿값은 대문자 A(10), B(11), ..., Z(35) 로 적는다.
+
+  입력 형식:
+  첫 줄에 정수 A, B 가 공백으로 구분되어 주어진다. (2 <= A, B <= 36)
+  둘째 줄에 A 진법 수 S 가 주어진다. S 는 길이 1 이상 60 이하이고 0-9 와 대문자 A-Z 로만 이루어지며, 각 자리의 값은 A 미만이다. S 가 "0" 이 아니면 S 는 0 으로 시작하지 않는다.
+
+  출력 형식:
+  S 를 B 진법으로 나타낸 문자열을 한 줄에 출력한다. 선행 0 을 붙이지 않으며, 값이 0 이면 0 을 출력한다. 10 이상의 자릿값은 대문자로 출력한다.
+
+  인덱스: 이 문제는 위치 인덱스를 입력이나 출력에 쓰지 않는다. 자릿값은 0 부터 센다(가장 오른쪽 자리가 A 의 0 제곱 자리).
+skills:
+- code: NUMBER_BASE_CONVERSION
+  role: PRIMARY
+  weight: 0.7
+- code: STRING_MANIPULATION
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- OUTPUT_FORMAT
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: OUTPUT_FORMAT
+  expectedStatus: WRONG_ANSWER
+skillControl: null

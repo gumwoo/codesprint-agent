@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P62_LCS_INT_SEQUENCE
+title: 두 수열의 최장 공통 부분 수열
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N * M) 시간, O(M) 추가 메모리
+statement: |
+  길이 N 인 정수 수열 A 와 길이 M 인 정수 수열 B 가 주어진다. 어떤 수열에서 원소 몇 개를 지우고 남은 원소를 원래 순서대로 이어 붙인 것을 그 수열의 부분 수열이라 한다(원소를 하나도 지우지 않은 것도 포함한다). A 의 부분 수열이면서 B 의 부분 수열인 수열 가운데 가장 긴 것의 길이를 구한다. 공통 부분 수열이 비어 있는 경우만 있으면 0 을 출력한다.
+
+  입력 형식:
+  첫 줄에 N 과 M 이 공백으로 구분되어 주어진다. (1 <= N, M <= 1000)
+  둘째 줄에 A 의 원소 N 개가 공백으로 구분되어 주어진다.
+  셋째 줄에 B 의 원소 M 개가 공백으로 구분되어 주어진다.
+  모든 원소는 1 이상 1000000000 이하의 정수이다.
+
+  출력 형식:
+  최장 공통 부분 수열의 길이를 정수 하나로 출력한다.
+
+  인덱스 기준: 수열의 위치는 0 부터 센다. 답은 길이이므로 인덱스 기준과 무관하다.
+skills:
+- code: DP_2D
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- BOUNDARY_CHECK
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 메모 없이 (i, j) 위치에서 두 갈래로 재귀하며 모든 경로를 따라간다.

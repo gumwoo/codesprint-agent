@@ -1,0 +1,11 @@
+{
+  "id": "PARAMETRIC_SEARCH-1790363844092-2",
+  "skill": "PARAMETRIC_SEARCH",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:32:51+00:00",
+  "code": "P72_MACHINE_PRODUCTION_TIME",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nimport heapq\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    t = list(map(int, data[2:2 + n]))\n    heap = [(x, x) for x in t]\n    heapq.heapify(heap)\n    last = 0\n    for _ in range(m):\n        finish, x = heapq.heappop(heap)\n        last = finish\n        heapq.heappush(heap, (finish + x, x))\n    print(last)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    n = rng.randint(1, 5)\n    m = rng.randint(1, 20)\n    t = [rng.randint(1, 10) for _ in range(n)]\n    print(n, m)\n    print(*t)\n\n\nmain()\n",
+  "stressInputGenerator": "import random\n\n\ndef main():\n    rng = random.Random(20260926)\n    n = 10000\n    m = 1000000000\n    t = [rng.randint(500000000, 1000000000) for _ in range(n)]\n    print(n, m)\n    print(*t)\n\n\nmain()\n"
+}

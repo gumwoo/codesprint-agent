@@ -1,0 +1,11 @@
+{
+  "id": "BINARY_SEARCH_BOUNDS-1790363771484-1",
+  "skill": "BINARY_SEARCH_BOUNDS",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:27:30+00:00",
+  "code": "P55_RANGE_COUNT_SORTED",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, q = int(data[0]), int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    p = 2 + n\n    for _ in range(q):\n        l, r = int(data[p]), int(data[p + 1])\n        p += 2\n        cnt = 0\n        for x in a:\n            if l <= x and x <= r:\n                cnt += 1\n        print(cnt)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(1, 5)\na = sorted(rng.randint(-5, 5) for _ in range(n))\nlines = [f\"{n} {q}\", \" \".join(map(str, a))]\nfor _ in range(q):\n    l = rng.randint(-6, 6)\n    r = rng.randint(l, 6)\n    lines.append(f\"{l} {r}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(12345)\nn = 50000\nq = 50000\na = sorted(rng.randint(0, 99999) for _ in range(n))\nlines = [f\"{n} {q}\", \" \".join(map(str, a))]\nfor _ in range(q):\n    l = rng.randint(0, 99999)\n    r = rng.randint(l, 99999)\n    lines.append(f\"{l} {r}\")\nprint(\"\\n\".join(lines))\n"
+}

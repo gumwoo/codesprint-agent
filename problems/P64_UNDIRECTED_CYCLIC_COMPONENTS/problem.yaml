@@ -1,0 +1,35 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P64_UNDIRECTED_CYCLIC_COMPONENTS
+title: 사이클을 품은 연결 요소 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(N + M)
+statement: |
+  정점 N개와 간선 M개로 이루어진 무방향 그래프가 주어진다. 정점 번호는 1부터 N까지다(1-based). 간선 u v 는 정점 u 와 정점 v 를 잇는 무방향 간선이다. 같은 두 정점을 잇는 간선이 여러 개 있을 수 있고, u = v 인 자기 루프도 있을 수 있다. 자기 루프 하나는 사이클이다. 같은 두 정점을 잇는 간선 두 개도 사이클이다. 연결 요소 가운데 사이클을 하나 이상 포함하는 연결 요소의 개수를 출력한다.
+
+  입력 형식
+  첫 줄에 N M 이 공백으로 구분되어 주어진다. (1 ≤ N ≤ 100000, 0 ≤ M ≤ 100000)
+  다음 M개 줄에 각 간선의 두 끝점 u v 가 주어진다. (1 ≤ u, v ≤ N)
+
+  출력 형식
+  사이클을 포함하는 연결 요소의 개수를 정수 하나로 출력한다.
+skills:
+- code: GRAPH_CYCLE_DETECTION
+  role: PRIMARY
+  weight: 0.7
+- code: DFS_TRAVERSAL
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl: null

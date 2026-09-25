@@ -1,0 +1,37 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P55_RANGE_COUNT_SORTED
+title: 정렬된 수열의 구간 개수 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O((N + Q) log N)
+statement: |
+  비내림차순으로 정렬된 정수 N개로 이루어진 수열 a가 주어진다. 질의 Q개가 주어지며, 각 질의는 정수 L, R (L <= R)이다. 각 질의마다 L <= a[i] <= R 을 만족하는 원소의 개수를 출력한다.
+
+  입력 형식
+  첫째 줄에 N, Q가 공백으로 구분되어 주어진다. (1 <= N <= 200000, 1 <= Q <= 200000)
+  둘째 줄에 a[0], a[1], ..., a[N-1]이 공백으로 구분되어 주어진다. 수열은 비내림차순이다. (-1000000000 <= a[i] <= 1000000000)
+  다음 Q개의 줄에 각 질의의 L, R이 공백으로 구분되어 주어진다. (-1000000000 <= L <= R <= 1000000000)
+
+  출력 형식
+  질의마다 한 줄에 조건을 만족하는 원소의 개수를 입력 순서대로 출력한다.
+
+  인덱스 기준
+  수열의 인덱스는 0부터 센다. 출력은 개수이므로 인덱스 기준에 영향을 받지 않는다.
+skills:
+- code: BINARY_SEARCH_BOUNDS
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 질의마다 수열을 앞에서부터 훑어 R 초과 원소를 만나면 멈추며 L 이상인 원소를 센다.

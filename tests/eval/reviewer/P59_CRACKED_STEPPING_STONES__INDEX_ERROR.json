@@ -1,0 +1,33 @@
+{
+  "problemCode": "P59_CRACKED_STEPPING_STONES",
+  "problemTitle": "금 간 징검다리",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DP_1D",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    a = [int(x) for x in data[1:n + 2]]\n    MOD = 1000000007\n    dp = [0] * (n + 1)\n    dp[0] = 1\n    for i in range(1, n):\n        if a[i] == 1:\n            continue\n        total = dp[i - 1]\n        if i >= 2:\n            total += dp[i - 2]\n        if i >= 3:\n            total += dp[i - 3]\n        dp[i] = total % MOD\n    print(dp[n])\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

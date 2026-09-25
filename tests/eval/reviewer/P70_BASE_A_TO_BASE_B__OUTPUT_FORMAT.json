@@ -1,0 +1,33 @@
+{
+  "problemCode": "P70_BASE_A_TO_BASE_B",
+  "problemTitle": "진법 변환",
+  "problemSource": "DEV_FIXTURE",
+  "label": "OUTPUT_FORMAT",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "NUMBER_BASE_CONVERSION",
+    "STRING_MANIPULATION"
+  ],
+  "sourceCode": "\nimport sys\n\nDIGITS = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\n\ndef main():\n    data = sys.stdin.read().split()\n    a, b, s = int(data[0]), int(data[1]), data[2]\n    value = 0\n    for ch in s:\n        value = value * a + DIGITS.index(ch)\n    if value == 0:\n        print(\"0\")\n        return\n    out = []\n    while value > 0:\n        value, r = divmod(value, b)\n        out.append(DIGITS[r].lower())\n    print(\"\".join(reversed(out)))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "failedCaseIds": [
+      1,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

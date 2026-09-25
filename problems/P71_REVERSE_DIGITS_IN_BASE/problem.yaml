@@ -1,0 +1,31 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P71_REVERSE_DIGITS_IN_BASE
+title: 진법 자릿수 뒤집기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 600
+referenceComplexity: O(log_B N)
+statement: |
+  음이 아닌 정수 N 과 진법 B 가 10 진법으로 주어진다. N 을 B 진법으로 적은 뒤 그 자릿수의 순서를 뒤집는다. 뒤집은 결과를 B 진법 수로 읽은 값을 10 진법으로 출력한다. 뒤집은 결과의 맨 앞에 오는 0 은 값에 영향을 주지 않는다. N = 0 이면 B 진법 표기는 0 한 자리다.
+
+  입력 형식: 한 줄에 정수 N, B 가 공백으로 구분되어 주어진다. (0 <= N <= 10^18, 2 <= B <= 36)
+
+  출력 형식: 뒤집은 B 진법 수의 값을 10 진법 정수 하나로 출력한다.
+
+  인덱스: 이 문제는 위치 번호를 입력이나 출력에 쓰지 않는다. 자릿수는 가장 높은 자리부터 적은 표기를 기준으로 뒤집는다.
+skills:
+- code: NUMBER_BASE_CONVERSION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- OUTPUT_FORMAT
+- INPUT_PARSE
+negativeControl:
+  mistake: OUTPUT_FORMAT
+  expectedStatus: WRONG_ANSWER
+skillControl: null
