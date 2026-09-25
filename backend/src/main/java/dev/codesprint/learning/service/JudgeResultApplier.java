@@ -346,7 +346,7 @@ public class JudgeResultApplier {
                 submissions.conceptAlreadyShown(userId, submission.problemId()),
                 reviewSchedules.isScheduled(userId, primarySkill),
                 masteries,
-                pendingDiagnosticSkill(states),
+                pendingDiagnosticSkill(states, allStates),
                 // 방금 이 제출로 복습을 끝냈다면 그 일정은 더 이상 만기가 아니다 -
                 // 위에서 다음 간격으로 밀어 두었으므로 여기서 다시 걸리지 않는다.
                 reviewSchedules.nextDue(userId)
@@ -382,8 +382,8 @@ public class JudgeResultApplier {
      * 가리키면 Decision Engine 이 갈 곳 없는 행동을 내고, 사용자는 다음 문제를
      * 못 받는다.
      */
-    private String pendingDiagnosticSkill(List<SkillState> states) {
-        DiagnosticService.Step step = diagnostic.nextStep(states);
+    private String pendingDiagnosticSkill(List<SkillState> states, List<SkillState> all) {
+        DiagnosticService.Step step = diagnostic.nextStep(states, all);
         return step.done() || step.problem() == null ? null : step.targetSkill();
     }
 
