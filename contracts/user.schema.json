@@ -9,6 +9,6 @@
   "properties": {
     "userId": { "type": "integer", "minimum": 1 },
     "nickname": { "type": "string", "minLength": 1, "maxLength": 100 },
-    "track": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" }
+    "track": { "type": "string", "maxLength": 30, "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$" }
   }
 }

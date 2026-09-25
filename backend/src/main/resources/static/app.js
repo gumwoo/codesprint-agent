@@ -1229,6 +1229,9 @@ async function loadTracks() {
 async function refreshUserTrack() {
   const userId = Number($("userId").value);
   if (!userId) {
+    // 사용자가 없으면 이전 사용자의 목표를 남기지 않는다 - 그대로 "새로 시작" 하면 그 목표로 만들어진다.
+    invalidateView("userTrack");
+    $("track").value = "";
     return;
   }
   const mine = claimView("userTrack");
@@ -1257,16 +1260,26 @@ async function changeTrack() {
     return;
   }
   const mine = claimView("userTrack");
-  const response = await fetch(`/api/users/${userId}/track`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ track: $("track").value }),
-  });
+  // 바꾸는 동안 다시 바꾸지 못하게 막는다. PUT 두 개가 나란히 나가면 화면은 두 번째를
+  // 보여 주는데 서버에는 늦게 처리된 쪽이 남을 수 있다(검증 에이전트).
+  $("track").disabled = true;
+  let response;
+  try {
+    response = await fetch(`/api/users/${userId}/track`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ track: $("track").value }),
+    });
+  } catch (error) {
+    response = null;
+  } finally {
+    $("track").disabled = false;
+  }
   if (!mine()) {
     return;
   }
-  if (!response.ok) {
-    $("footNote").textContent = `목표를 바꾸지 못했다 (${response.status})`;
+  if (!response || !response.ok) {
+    $("footNote").textContent = `목표를 바꾸지 못했다 (${response ? response.status : "연결 실패"})`;
     refreshUserTrack();
     return;
   }
