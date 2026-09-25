@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mistake-summary.schema.json",
+  "title": "MistakeSummary",
+  "description": "GET /api/users/{id}/mistakes - 최근 제출에서 Reviewer 가 PRIMARY 로 탐지한 실수의 개수(PRD §123, ADR-0038). **탐지는 확정이 아니다**(ADR-0014) - confirmed 가 시스템이 확정한 횟수이고, 나머지는 주장이다. 둘을 나눠 보여 주지 않으면 확정되지 않은 분석이 사실처럼 읽힌다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["userId", "submissions", "mistakes"],
+  "properties": {
+    "userId": { "type": "integer", "minimum": 1 },
+    "submissions": { "type": "integer", "minimum": 0, "maximum": 50, "description": "센 제출 수. 최근 50개까지다." },
+    "mistakes": {
+      "type": "array",
+      "description": "많은 것부터, 같으면 code 순. 화면이 정렬하지 않는다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mistakeCode", "total", "confirmed"],
+        "properties": {
+          "mistakeCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "total": { "type": "integer", "minimum": 1 },
+          "confirmed": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

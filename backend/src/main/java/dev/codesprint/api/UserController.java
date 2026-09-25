@@ -57,7 +57,12 @@ public class UserController {
     }
 
     /** 계약: contracts/user.schema.json. */
-    public record UserView(long userId, String nickname, String track) {
+    /**
+     * @param dailyMinutes 하루 공부 시간(분). 정하지 않았으면 null
+     * @param examDate 시험일(YYYY-MM-DD). 없으면 null
+     */
+    public record UserView(long userId, String nickname, String track, Integer dailyMinutes,
+            String examDate) {
     }
 
     public record ChangeTrackRequest(@NotBlank String track) {
@@ -115,7 +120,39 @@ public class UserController {
                 .toList());
     }
 
+    @PutMapping("/users/{userId}/settings")
+    @Transactional
+    public ResponseEntity<UserView> changeSettings(@PathVariable Long userId,
+            @RequestBody com.fasterxml.jackson.databind.JsonNode body) {
+        // 두 키가 모두 있어야 한다. 생략은 "모른다", null 은 "정하지 않았다" 다.
+        if (body == null || !body.has("dailyMinutes") || !body.has("examDate")) {
+            return ResponseEntity.badRequest().build();
+        }
+        Integer minutes = body.get("dailyMinutes").isNull() ? null
+                : body.get("dailyMinutes").isInt() ? body.get("dailyMinutes").asInt() : -1;
+        if (minutes != null && (minutes < 10 || minutes > 720)) {
+            return ResponseEntity.badRequest().build();
+        }
+        java.time.LocalDate exam;
+        if (!body.get("examDate").isNull() && (!body.get("examDate").isTextual()
+                || !body.get("examDate").asText().matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"))) {
+            // "+10000-01-01" 처럼 LocalDate 는 받지만 계약(YYYY-MM-DD)과 DB 가 받지 못하는 값.
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            exam = body.get("examDate").isNull() ? null
+                    : java.time.LocalDate.parse(body.get("examDate").asText());
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return users.findById(userId).map(user -> {
+            user.changeSettings(minutes, exam);
+            return ResponseEntity.ok(view(users.save(user)));
+        }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     private static UserView view(UserRow user) {
-        return new UserView(user.id(), user.nickname(), user.track());
+        return new UserView(user.id(), user.nickname(), user.track(), user.dailyMinutes(),
+                user.examDate() == null ? null : user.examDate().toString());
     }
 }

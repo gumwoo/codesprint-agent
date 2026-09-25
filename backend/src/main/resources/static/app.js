@@ -163,11 +163,13 @@ function showLeft(bodyId) {
   if (bodyId !== "statementBody") {
     invalidateView("problem");
   }
-  for (const id of ["picker", "statementBody", "skillsBody"]) {
+  for (const id of ["picker", "statementBody", "skillsBody", "todayBody"]) {
     $(id).hidden = id !== bodyId;
   }
   $("tabSkills").classList.toggle("active", bodyId === "skillsBody");
-  $("tabProblem").classList.toggle("active", bodyId !== "skillsBody");
+  $("tabToday").classList.toggle("active", bodyId === "todayBody");
+  $("tabProblem").classList.toggle("active",
+      bodyId === "picker" || bodyId === "statementBody");
 }
 
 /**
@@ -202,8 +204,26 @@ async function showSkills() {
     }
 
     rows.replaceChildren();
-    for (const state of map.skills) {
+    // 도메인으로 묶어 보여 준다(PRD §122). 묶는 것은 보여 주는 방식이지 판단이 아니다 -
+    // 도메인은 커리큘럼이 정한 값 그대로다.
+    const byDomain = [...map.skills].sort((a, b) => {
+      const da = (defined.get(a.skillCode) || {}).domain || "";
+      const db = (defined.get(b.skillCode) || {}).domain || "";
+      return da === db ? 0 : da < db ? -1 : 1;
+    });
+    let lastDomain = null;
+    for (const state of byDomain) {
       const skill = defined.get(state.skillCode) || {};
+      if (skill.domain !== lastDomain) {
+        lastDomain = skill.domain;
+        const head = document.createElement("tr");
+        head.className = "domain";
+        const cell = document.createElement("td");
+        cell.colSpan = 4;
+        cell.textContent = skill.domain || "";
+        head.append(cell);
+        rows.append(head);
+      }
       const tr = document.createElement("tr");
 
       const name = document.createElement("td");
@@ -248,6 +268,163 @@ async function showSkills() {
   }
 }
 
+/** 할 일 종류. 원문 code 를 지우지 않고 옆에 한국어를 붙인다. */
+const BLOCK_LABEL = {
+  DIAGNOSE: "진단", REVIEW: "복습", PRACTICE: "연습", LEARN: "학습", MIXED: "혼합",
+};
+
+/**
+ * 오늘의 계획과 최근 오답(PRD §80 · §121 · §123).
+ *
+ * **여기서 무엇을 할지 고르지 않는다.** 블록 · 순서 · 분은 서버가 정했다(ADR-0038).
+ * 화면이 블록을 다시 고르거나 분을 나누면 서버의 계획과 갈리고, 사용자가 보는 쪽이 이긴다.
+ */
+async function showToday() {
+  showLeft("todayBody");
+  const userId = Number($("userId").value);
+  const mine = claimView("today");
+  const rows = $("planRows");
+  const mistakeRows = $("mistakeRows");
+  if (!userId) {
+    $("todaySummary").textContent = "사용자를 먼저 만든다.";
+    $("settingsNote").textContent = "";
+    $("todayReason").textContent = "";
+    $("mistakeNote").textContent = "";
+    rows.replaceChildren();
+    mistakeRows.replaceChildren();
+    return;
+  }
+  try {
+    const [user, today, mistakes] = await Promise.all([
+      getJson(`/api/users/${userId}`),
+      getJson(`/api/users/${userId}/today`),
+      getJson(`/api/users/${userId}/mistakes`),
+    ]);
+    if (!mine()) {
+      return;
+    }
+    $("dailyMinutes").value = user.dailyMinutes === null ? "" : user.dailyMinutes;
+    $("examDate").value = user.examDate === null ? "" : user.examDate;
+
+    const parts = [];
+    if (today.examInDays !== null) {
+      parts.push(`시험 D-${today.examInDays}`);
+    }
+    parts.push(today.totalMinutes === null ? "하루 시간 미정" : `오늘 ${today.totalMinutes}분`);
+    parts.push(`숙달 ${today.mastered} / ${today.total}`);
+    if (today.mode === "EXAM") {
+      parts.push("EXAM");
+    }
+    $("todaySummary").textContent = parts.join(" · ");
+    $("todayReason").textContent = today.reason;
+
+    rows.replaceChildren();
+    for (const block of today.blocks) {
+      const tr = document.createElement("tr");
+      const kind = document.createElement("td");
+      const label = document.createElement("div");
+      label.textContent = BLOCK_LABEL[block.type] || block.type;
+      const code = document.createElement("div");
+      code.className = "code what";
+      code.textContent = block.skillCode ? `${block.type} · ${block.skillCode}` : block.type;
+      const why = document.createElement("div");
+      why.className = "what";
+      why.textContent = block.reason;
+      kind.append(label, code, why);
+
+      const problem = document.createElement("td");
+      if (block.problem) {
+        const open = document.createElement("button");
+        open.type = "button";
+        open.className = "link";
+        open.textContent = block.problem.title;
+        open.title = block.problem.code;
+        open.addEventListener("click", () => openProblem(block.problem.code));
+        problem.append(open);
+      } else {
+        problem.textContent = "–";
+      }
+
+      const minutes = document.createElement("td");
+      minutes.className = "num";
+      minutes.textContent = block.minutes;
+      tr.append(kind, problem, minutes);
+      rows.append(tr);
+    }
+
+    mistakeRows.replaceChildren();
+    $("mistakeNote").textContent = mistakes.mistakes.length === 0
+        ? `최근 제출 ${mistakes.submissions}개에서 탐지된 실수가 없다.`
+        : `최근 제출 ${mistakes.submissions}개. 확정되지 않은 탐지는 주장일 뿐이다.`;
+    for (const m of mistakes.mistakes) {
+      const tr = document.createElement("tr");
+      const name = document.createElement("td");
+      name.className = "code";
+      name.textContent = m.mistakeCode;
+      const total = document.createElement("td");
+      total.className = "num";
+      total.textContent = m.total;
+      const confirmed = document.createElement("td");
+      confirmed.className = "num";
+      confirmed.textContent = m.confirmed;
+      tr.append(name, total, confirmed);
+      mistakeRows.append(tr);
+    }
+  } catch (error) {
+    if (!mine()) {
+      return;
+    }
+    $("todaySummary").textContent = `계획을 불러오지 못했다: ${error.message}`;
+    rows.replaceChildren();
+    mistakeRows.replaceChildren();
+  }
+}
+
+/** 하루 시간과 시험일을 저장한다. 비우면 null(정하지 않았다)로 보낸다. */
+async function saveSettings() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    $("settingsNote").textContent = "사용자를 먼저 만든다.";
+    return;
+  }
+  // 잘못 입력하면 입력칸의 값이 "" 가 된다. 그대로 보내면 "정하지 않았다" 로 저장되어 기존
+  // 설정이 지워진다 - 생략과 null 을 나눈 이유(ADR-0038 §4)가 화면에서 흐려진다(검증 에이전트).
+  if ($("dailyMinutes").validity.badInput || $("examDate").validity.badInput) {
+    // 앞서 보낸 저장이 늦게 도착해 이 안내를 "저장했다" 로 덮지 않게 먼저 무효화한다.
+    invalidateView("settings");
+    $("settingsNote").textContent = "입력한 값을 읽지 못했다 - 저장하지 않았다";
+    return;
+  }
+  const mine = claimView("settings");
+  const minutes = $("dailyMinutes").value.trim();
+  const exam = $("examDate").value.trim();
+  let response;
+  try {
+    response = await fetch(`/api/users/${userId}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dailyMinutes: minutes === "" ? null : Number(minutes),
+        examDate: exam === "" ? null : exam,
+      }),
+    });
+  } catch (error) {
+    response = null;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!response || !response.ok) {
+    const why = !response ? "연결 실패"
+        : response.status === 400 ? "400 - 하루 시간은 10~720 분, 시험일은 YYYY-MM-DD 다"
+        : String(response.status);
+    $("settingsNote").textContent = `설정을 저장하지 못했다 (${why})`;
+    return;
+  }
+  $("settingsNote").textContent = "저장했다.";
+  showToday();
+}
+
 /**
  * 초기 진단.
  *
@@ -271,8 +448,9 @@ function switchedUser() {
   cancelActivePolling();
   cancelActiveRun();
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
-  // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다.
+  // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다. 설정 저장 결과도 그렇다.
   $("footNote").textContent = "";
+  $("settingsNote").textContent = "";
   // 띄워 둔 힌트도 이전 사용자가 연 것이다. 새 사용자는 그 문제에서 아직
   // 아무것도 보지 않았는데, 남겨 두면 본 것처럼 보이고 채점 기록과 어긋난다.
   resetHints();
@@ -283,6 +461,9 @@ function switchedUser() {
   refreshReviews();
   if (!$("skillsBody").hidden) {
     showSkills();
+  }
+  if (!$("todayBody").hidden) {
+    showToday();
   }
 }
 
@@ -1072,6 +1253,9 @@ function render(submissionId, view) {
   if (!$("skillsBody").hidden) {
     showSkills();
   }
+  if (!$("todayBody").hidden) {
+    showToday();
+  }
   // 진단과 복습도 같이 움직인다 - 방금 낸 것이 다음 질문과 일정을 바꾼다.
   refreshDiagnostic();
   refreshReviews();
@@ -1350,6 +1534,8 @@ $("tabProblem").addEventListener("click", () => {
   showLeft(currentProblem ? "statementBody" : "picker");
 });
 $("tabSkills").addEventListener("click", showSkills);
+$("tabToday").addEventListener("click", showToday);
+$("saveSettings").addEventListener("click", saveSettings);
 $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);
 $("hintButton").addEventListener("click", revealNextHint);

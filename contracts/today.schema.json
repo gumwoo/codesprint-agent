@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/today.schema.json",
+  "title": "Today",
+  "description": "GET /api/users/{id}/today - 오늘의 학습 계획과 대시보드 숫자(PRD §80 · §115 · §121, ADR-0038). **계획은 시스템이 정한다** - LLM 을 부르지 않고, 화면은 블록을 다시 고르거나 분을 나누지 않는다. 블록 순서가 곧 할 순서다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["userId", "date", "examInDays", "totalMinutes", "mode", "blocks", "reason", "mastered", "total"],
+  "properties": {
+    "userId": { "type": "integer", "minimum": 1 },
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "서버가 본 오늘(UTC)." },
+    "examInDays": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "시험까지 남은 날. 시험일이 없거나 지났으면 null 이다."
+    },
+    "totalMinutes": {
+      "type": ["integer", "null"],
+      "minimum": 10,
+      "description": "하루 공부 시간. 정하지 않았으면 null - 그때 계획은 시간을 나누지 않고 앞의 몇 블록만 순서대로 준다."
+    },
+    "mode": {
+      "enum": ["NORMAL", "EXAM"],
+      "description": "EXAM 은 시험이 7일 이하로 남았을 때다(PRD §82). 새 Skill 을 배우지 않고 굳힌다."
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "skillCode", "problem", "minutes", "reason"],
+        "properties": {
+          "type": { "enum": ["DIAGNOSE", "REVIEW", "PRACTICE", "LEARN", "MIXED"] },
+          "skillCode": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]*$", "description": "MIXED 면 null 이다." },
+          "problem": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["code", "title"],
+            "description": "이 블록에서 풀 문제. 다음 행동과 같은 규칙으로 고른다. MIXED 면 null 이다.",
+            "properties": {
+              "code": { "type": "string", "pattern": "^P[0-9]{2,3}_[A-Z0-9_]+$" },
+              "title": { "type": "string", "minLength": 1 }
+            }
+          },
+          "minutes": { "type": "integer", "minimum": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "reason": { "type": "string", "minLength": 1, "description": "계획을 어떻게 채웠는가." },
+    "mastered": { "type": "integer", "minimum": 0, "description": "트랙 안에서 MASTERED 인 Skill 수." },
+    "total": { "type": "integer", "minimum": 1, "description": "트랙 안 Skill 수." }
+  }
+}

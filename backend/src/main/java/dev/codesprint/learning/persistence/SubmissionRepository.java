@@ -71,6 +71,14 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             @Param("submissionId") Long submissionId,
             Pageable page);
 
+    /** 이 사용자의 최근 제출 id. 새것부터다. 오답 분석(PRD §123)의 창이다. */
+    @Query("""
+            select s.id from SubmissionRow s
+            where s.userId = :userId
+            order by s.submittedAt desc, s.id desc
+            """)
+    List<Long> recentSubmissionIds(@Param("userId") Long userId, Pageable page);
+
     /**
      * 이 사용자가 <b>스스로</b> 풀어낸 문제들.
      *
