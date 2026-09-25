@@ -83,6 +83,9 @@ class TrackTest {
     private CurriculumCatalog catalog;
 
     @Autowired
+    private dev.codesprint.problem.ProblemCatalog problemCatalog;
+
+    @Autowired
     private UserRepository users;
 
     @Autowired
@@ -267,5 +270,34 @@ class TrackTest {
                 .isEqualTo("RETRY_VARIANT");
         assertThat(intro.get("action").asText())
                 .as("트랙만 달라졌다 - 판단은 같아야 한다").isEqualTo(job.get("action").asText());
+    }
+
+    @Test
+    @DisplayName("트랙 밖에서 실패한 Skill 이 있어도 진단과 채점 반영이 멈추지 않는다")
+    void anOutsideFailureDoesNotBreakTheDiagnostic() throws Exception {
+        // 검증 에이전트가 재현했다. JOB 사용자가 트랙 밖이 될 Skill(분할 정복)에서 틀리고 INTRO 로
+        // 바꾸면, 그 실패의 선수(재귀)가 트랙 밖에만 있어 진단 후보가 비고 예외로 멈췄다. 다음
+        // 제출의 반영도 같은 예외로 실패해 채점이 영원히 끝나지 않았다.
+        long userId = users.save(new UserRow(
+                "outside-fail-" + System.nanoTime() + "@codesprint.dev", "밖실패", "JOB")).id();
+        // 분할 정복 → 재귀 → 리스트. 리스트(P11)를 풀면 트랙 안의 선수는 다 풀리고, 남은 선수(재귀)는
+        // 트랙 밖에만 있다 - 후보가 비는 모양이다.
+        String outside = "DIVIDE_AND_CONQUER";
+        assertThat(catalog.skillCodesFor("INTRO")).doesNotContain(outside, "RECURSION_BASIC")
+                .contains("PYTHON_LIST_BASIC");
+        String problem = problemCatalog.byPrimarySkill(outside, "NORMAL").get(0).code();
+        solve(userId, problem, "WRONG_ANSWER");
+        solve(userId, "P11_LIST_BASIC", "ACCEPTED");
+        mvc.perform(put("/api/users/{id}/track", userId)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"track\": \"INTRO\"}"));
+
+        int status = mvc.perform(get("/api/users/{id}/diagnostic", userId))
+                .andReturn().getResponse().getStatus();
+        assertThat(status).as(outside + " 에서 틀린 뒤 INTRO 의 진단").isEqualTo(200);
+        solve(userId, "P11_LIST_BASIC", "ACCEPTED");
+        assertThat(jdbc.queryForObject(
+                "select count(*) from judge_jobs j join submissions s on s.id = j.submission_id"
+                        + " where s.user_id = ? and j.status = 'DONE' and j.applied_at is null",
+                Integer.class, userId)).as("반영되지 않은 제출이 남지 않는다").isZero();
     }
 }

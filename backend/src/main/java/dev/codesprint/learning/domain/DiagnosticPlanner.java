@@ -114,6 +114,9 @@ public class DiagnosticPlanner {
         // 않다 - BFS 최단거리를 틀린 직후에 문자열 문제로 건너뛰게 된다. §57 의 "DFS 실패 →
         // DFS 기초 확인" 을 규칙으로 적는다.
         Set<String> belowFailures = belowFailedSkills(all, resolved);
+        // 물을 수 있는 것은 트랙 안뿐이다. 트랙 밖 실패의 선수가 트랙 밖에만 있으면 후보가 비어
+        // 진단이 예외로 멈췄다 - 제출 반영까지 막혀 채점이 끝나지 않았다(검증 에이전트).
+        belowFailures.retainAll(scope);
         List<String> candidates = belowFailures.isEmpty()
                 ? remaining
                 : remaining.stream().filter(belowFailures::contains).toList();
