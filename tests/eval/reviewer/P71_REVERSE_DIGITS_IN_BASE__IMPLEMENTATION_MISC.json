@@ -2,12 +2,12 @@
   "problemCode": "P71_REVERSE_DIGITS_IN_BASE",
   "problemTitle": "진법 자릿수 뒤집기",
   "problemSource": "DEV_FIXTURE",
-  "label": "OUTPUT_FORMAT",
+  "label": "IMPLEMENTATION_MISC",
   "labelSource": "negativeControl",
   "skillCodes": [
     "NUMBER_BASE_CONVERSION"
   ],
-  "sourceCode": "\nimport sys\n\nD = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\n\ndef main():\n    n, b = map(int, sys.stdin.read().split())\n    if n == 0:\n        print(0)\n        return\n    s = []\n    while n > 0:\n        s.append(D[n % b])\n        n //= b\n    print(\"\".join(s))\n\n\nmain()\n",
+  "sourceCode": "\n\nimport sys\n\nD = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\n\ndef main():\n    n, b = map(int, sys.stdin.read().split())\n    if n == 0:\n        print(0)\n        return\n    s = []\n    while n > 0:\n        s.append(D[n % b])\n        n //= b\n    print(\"\".join(s))\n\n\nmain()\n",
   "judge": {
     "status": "WRONG_ANSWER",
     "failedCaseId": 1,

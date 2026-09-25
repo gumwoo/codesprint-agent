@@ -5,8 +5,7 @@
   "label": "INDEX_ERROR",
   "labelSource": "negativeControl",
   "skillCodes": [
-    "GRAPH_CYCLE_DETECTION",
-    "DFS_TRAVERSAL"
+    "GRAPH_CYCLE_DETECTION"
   ],
   "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    for i in range(m):\n        u = int(data[2 + 2 * i])\n        v = int(data[3 + 2 * i])\n        adj[u].append((v, i))\n        adj[v].append((u, i))\n    visited = [False] * (n + 1)\n    count = 0\n    for s in range(1, n):\n        if visited[s]:\n            continue\n        visited[s] = True\n        has_cycle = False\n        stack = [(s, -1)]\n        while stack:\n            x, parent_edge = stack.pop()\n            for y, e in adj[x]:\n                if e == parent_edge:\n                    continue\n                if visited[y]:\n                    has_cycle = True\n                else:\n                    visited[y] = True\n                    stack.append((y, e))\n        if has_cycle:\n            count += 1\n    print(count)\n\n\nmain()\n",
   "judge": {
@@ -22,7 +21,8 @@
       8,
       9,
       10,
-      11
+      11,
+      12
     ],
     "failedCaseIds": [
       4,

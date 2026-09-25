@@ -5,8 +5,7 @@
   "label": "INPUT_PARSE",
   "labelSource": "negativeControl",
   "skillCodes": [
-    "TREE_TRAVERSAL",
-    "DFS_TRAVERSAL"
+    "TREE_TRAVERSAL"
   ],
   "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    r = int(data[1])\n    idx = 2\n    adj = [[] for _ in range(n + 1)]\n    for _ in range(n - 1):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n    tin = [0] * (n + 1)\n    tout = [0] * (n + 1)\n    visited = [False] * (n + 1)\n    it = [0] * (n + 1)\n    timer = 1\n    tin[r] = timer\n    visited[r] = True\n    stack = [r]\n    while stack:\n        v = stack[-1]\n        if it[v] < len(adj[v]):\n            w = adj[v][it[v]]\n            it[v] += 1\n            if not visited[w]:\n                visited[w] = True\n                timer += 1\n                tin[w] = timer\n                stack.append(w)\n        else:\n            tout[v] = timer\n            stack.pop()\n    q = int(data[idx])\n    idx += 1\n    out = []\n    for _ in range(q):\n        u = int(data[idx])\n        v = int(data[idx + 1])\n        idx += 2\n        out.append('YES' if tin[u] <= tin[v] <= tout[u] else 'NO')\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
   "judge": {
@@ -25,7 +24,8 @@
       7,
       8,
       9,
-      10
+      10,
+      11
     ]
   },
   "probes": {}

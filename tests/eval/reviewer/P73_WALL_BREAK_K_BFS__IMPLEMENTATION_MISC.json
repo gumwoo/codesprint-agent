@@ -26,7 +26,9 @@
     ],
     "failedCaseIds": [
       7,
-      9
+      9,
+      11,
+      12
     ]
   },
   "probes": {}
