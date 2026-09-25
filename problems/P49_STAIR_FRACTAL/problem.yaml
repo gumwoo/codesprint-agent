@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P49_STAIR_FRACTAL
+title: 계단 프랙탈
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(4^K)
+statement: |
+  정수 K 가 주어질 때 크기 2^K × 2^K 의 패턴 P(K) 를 출력한다.
+
+  P(0) 은 '#' 한 칸이다.
+  K ≥ 1 이면 P(K) 를 가로 · 세로로 반씩 나누어 크기 2^(K-1) × 2^(K-1) 인 블록 네 개로 만든다. 왼쪽 위, 오른쪽 위, 오른쪽 아래 블록은 각각 P(K-1) 이고, 왼쪽 아래 블록은 모두 '.' 이다.
+
+  행은 위에서 아래로, 열은 왼쪽에서 오른쪽으로 0 부터 센다. 행 번호가 커질수록 아래쪽이다.
+
+  입력 형식: 첫 줄에 정수 K (0 ≤ K ≤ 7).
+  출력 형식: 2^K 개의 줄을 출력한다. i 번째 줄(0-based)은 P(K) 의 i 행이며, '#' 와 '.' 로만 이루어진 길이 2^K 의 문자열이다. 공백을 넣지 않는다.
+skills:
+- code: RECURSION_BASIC
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl: null

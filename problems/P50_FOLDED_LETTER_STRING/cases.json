@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "3 4",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4 10",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 0",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "20 524287",
+      "expectedOutput": "t\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "20 1048574",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "5 15",
+      "expectedOutput": "e\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "18 131072",
+      "expectedOutput": "a\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "10 261\n",
+      "expectedOutput": "b\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "10 841\n",
+      "expectedOutput": "b\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8 156\n",
+      "expectedOutput": "a\n",
+      "probes": []
+    }
+  ]
+}

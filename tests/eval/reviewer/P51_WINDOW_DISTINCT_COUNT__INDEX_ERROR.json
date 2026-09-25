@@ -1,0 +1,33 @@
+{
+  "problemCode": "P51_WINDOW_DISTINCT_COUNT",
+  "problemTitle": "구간별 서로 다른 값의 수",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SLIDING_WINDOW"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    cnt = {}\n    for x in a[:k]:\n        cnt[x] = cnt.get(x, 0) + 1\n    res = [len(cnt)]\n    for i in range(k, n):\n        x = a[i]\n        cnt[x] = cnt.get(x, 0) + 1\n        y = a[i - k + 1]\n        c = cnt[y] - 1\n        if c:\n            cnt[y] = c\n        else:\n            del cnt[y]\n        res.append(len(cnt))\n    print(' '.join(map(str, res)))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      5,
+      6,
+      9
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      7,
+      8,
+      10,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}

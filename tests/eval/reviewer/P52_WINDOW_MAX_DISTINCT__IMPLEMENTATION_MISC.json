@@ -1,0 +1,33 @@
+{
+  "problemCode": "P52_WINDOW_MAX_DISTINCT",
+  "problemTitle": "길이 K 구간의 최대 종류 수",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SLIDING_WINDOW"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    cnt = {}\n    for i in range(k):\n        cnt[a[i]] = cnt.get(a[i], 0) + 1\n    best = len(cnt)\n    pos = 0\n    for i in range(k, n):\n        x = a[i]\n        cnt[x] = cnt.get(x, 0) + 1\n        y = a[i - k]\n        cnt[y] = cnt[y] - 1\n        if len(cnt) > best:\n            best = len(cnt)\n            pos = i - k + 1\n    print(best, pos)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      9,
+      10,
+      11,
+      12
+    ],
+    "failedCaseIds": [
+      2,
+      6,
+      8
+    ]
+  },
+  "probes": {}
+}

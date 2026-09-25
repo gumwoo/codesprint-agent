@@ -1,0 +1,11 @@
+{
+  "id": "DIVIDE_AND_CONQUER-1790361501742-2",
+  "skill": "DIVIDE_AND_CONQUER",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:44:24+00:00",
+  "code": "P43_GEOMETRIC_SUM_MOD",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    a, n, m = map(int, sys.stdin.read().split())\n    total = 0\n    value = 1\n    for _ in range(n):\n        total += value\n        value *= a\n    print(total % m)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read())\nr = random.Random(seed)\na = r.randint(1, 20)\nn = r.randint(1, 2000)\nm = r.randint(1, 1000)\nprint(a, n, m)\n",
+  "stressInputGenerator": "print(2, 1000000000000000000, 1000000007)\n"
+}

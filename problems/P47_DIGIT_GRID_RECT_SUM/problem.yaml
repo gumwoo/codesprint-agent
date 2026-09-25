@@ -1,0 +1,40 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P47_DIGIT_GRID_RECT_SUM
+title: 숫자 격자의 직사각형 합
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N*M + Q)
+statement: |
+  N행 M열 격자의 각 칸에 0 이상 9 이하의 숫자가 하나씩 적혀 있다. Q개의 질의가 주어진다. 각 질의는 왼쪽 위 칸 (r1, c1)과 오른쪽 아래 칸 (r2, c2)로 정해지는 직사각형이다. 직사각형 안(경계 포함)에 있는 모든 칸의 숫자 합을 구한다.
+
+  행과 열 번호는 1부터 센다. (r, c)는 위에서 r번째 행, 왼쪽에서 c번째 열이다.
+
+  입력 형식
+  - 첫째 줄: N M (1 <= N, M <= 500)
+  - 다음 N줄: 길이 M인 숫자 문자열. i번째 줄의 j번째 문자가 (i, j) 칸의 값이다. 공백 없이 붙어 있다.
+  - 다음 줄: Q (1 <= Q <= 40000)
+  - 다음 Q줄: r1 c1 r2 c2 (1 <= r1 <= r2 <= N, 1 <= c1 <= c2 <= M)
+
+  출력 형식
+  - 질의마다 한 줄에 직사각형 안 숫자의 합을 정수로 출력한다. 질의 순서대로 출력한다.
+skills:
+- code: PREFIX_SUM_2D
+  role: PRIMARY
+  weight: 0.7
+- code: GRID_COORDINATE
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 질의마다 직사각형에 걸친 각 행의 구간을 잘라 sum 으로 더한다.

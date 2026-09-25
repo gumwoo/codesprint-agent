@@ -1,0 +1,34 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P50_FOLDED_LETTER_STRING
+title: 접힌 문자열의 k번째 글자
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(n)
+statement: |
+  문자열 S(n)을 다음과 같이 정의한다.
+  - S(1) = "a"
+  - n ≥ 2 이면 S(n) = S(n-1) + (알파벳 소문자 중 n번째 글자) + S(n-1)
+
+  예를 들어 S(2) = "aba", S(3) = "abacaba" 이다. S(n)의 길이는 2^n - 1 이다.
+
+  n과 k가 주어질 때 S(n)의 k번째 글자를 출력한다. k는 0부터 센다(0-based). 즉 k = 0 은 첫 글자다.
+
+  입력 형식: 첫 줄에 정수 n, k가 공백으로 구분되어 주어진다. (1 ≤ n ≤ 26, 0 ≤ k ≤ 2^n - 2)
+  출력 형식: S(n)의 k번째 글자(소문자 하나)를 한 줄에 출력한다.
+skills:
+- code: RECURSION_BASIC
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl: null

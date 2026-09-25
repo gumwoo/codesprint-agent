@@ -1,0 +1,11 @@
+{
+  "id": "BACKTRACKING-1790361589722-2",
+  "skill": "BACKTRACKING",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:43:23+00:00",
+  "code": "P41_BLOCKED_QUEENS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom itertools import permutations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    grid = data[1:1 + n]\n    count = 0\n    for perm in permutations(range(n)):\n        ok = all(grid[r][perm[r]] == '.' for r in range(n))\n        for a in range(n):\n            if not ok:\n                break\n            for b in range(a + 1, n):\n                if abs(perm[a] - perm[b]) == b - a:\n                    ok = False\n                    break\n        if ok:\n            count += 1\n    print(count)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 7)\np = rng.choice([0.0, 0.1, 0.2, 0.3])\nprint(n)\nfor _ in range(n):\n    print(''.join('#' if rng.random() < p else '.' for _ in range(n)))\n",
+  "stressInputGenerator": "n = 10\nprint(n)\nfor _ in range(n):\n    print('.' * n)\n"
+}

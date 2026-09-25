@@ -1,0 +1,11 @@
+{
+  "id": "RECURSION_BASIC-1790361451177-1",
+  "skill": "RECURSION_BASIC",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:46:38+00:00",
+  "code": "P49_STAIR_FRACTAL",
+  "crossCheckedInputs": 36,
+  "bruteForce": "import sys\n\nk = int(sys.stdin.readline())\nn = 2 ** k\nlines = []\nfor r in range(n):\n    row = []\n    for c in range(n):\n        filled = True\n        for b in range(k):\n            if (r >> b) & 1 == 1 and (c >> b) & 1 == 0:\n                filled = False\n        row.append('#' if filled else '.')\n    lines.append(''.join(row))\nprint('\\n'.join(lines))\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read().split()[0])\nrng = random.Random(seed)\nprint(rng.randint(0, 6))\n",
+  "stressInputGenerator": null
+}

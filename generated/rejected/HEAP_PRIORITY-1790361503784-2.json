@@ -1,0 +1,75 @@
+{
+  "id": "HEAP_PRIORITY-1790361503784-2",
+  "skill": "HEAP_PRIORITY",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:48:49+00:00",
+  "stage": "검증 검토",
+  "code": "P45_MIN_PRIORITY_QUEUE_OPS",
+  "reasons": [
+    "채택 검사를 전부 통과했지만 P44_LOWEST_PRICE_QUEUE 와 같은 문제다 - 연산 · 질의 · 출력이 같고 문장 · 값 범위만 다르다",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "MIN_PRIORITY_QUEUE_OPS",
+    "title": "가장 작은 값 꺼내기",
+    "statement": "비어 있는 모음에 연산 N개를 차례로 수행한다. 연산은 두 종류다.\n- `1 x` : 정수 x를 모음에 넣는다.\n- `2` : 모음에서 가장 작은 값 하나를 꺼내 출력하고 모음에서 지운다. 같은 값이 여러 개면 그중 하나만 지운다. 모음이 비어 있으면 -1을 출력하고 아무것도 지우지 않는다.\n\n입력 형식\n첫 줄에 연산 수 N이 주어진다. 다음 N줄에 연산이 한 줄에 하나씩 주어진다.\n\n출력 형식\n`2` 연산마다 결과를 한 줄에 하나씩, 연산이 주어진 순서대로 출력한다.\n\n제약\n- 1 ≤ N ≤ 200000\n- 1 ≤ x ≤ 1000000000\n- `2` 연산은 적어도 한 번 주어진다.\n- 연산은 입력 순서대로 수행하며, 문제에서 인덱스를 쓰는 부분은 없다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N log N)",
+    "expectedSolveSeconds": 600,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "모음이 비어 있을 때 -1을 출력하지 않고 빈 힙에서 바로 꺼내 IndexError가 난다.",
+    "sampleInputs": [
+      "7\n1 5\n1 3\n2\n1 8\n2\n2\n2\n",
+      "6\n1 4\n1 4\n1 2\n2\n2\n2\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "SINGLE",
+        "input": "1\n2\n"
+      },
+      {
+        "type": "MINIMUM",
+        "input": "2\n1 1\n2\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5\n1 7\n1 7\n1 7\n2\n2\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "4\n1 1000000000\n1 1\n2\n2\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6\n2\n1 9\n2\n2\n1 3\n2\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "6\n1 5\n1 2\n1 5\n2\n2\n2\n"
+      }
+    ],
+    "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 30)\nops = []\nfor _ in range(n):\n    if r.random() < 0.55:\n        ops.append(\"1 \" + str(r.randint(1, 20)))\n    else:\n        ops.append(\"2\")\nif \"2\" not in ops:\n    ops[-1] = \"2\"\nprint(n)\nprint(\"\\n\".join(ops))\n",
+    "reference": "import sys\nimport heapq\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    i = 1\n    heap = []\n    out = []\n    for _ in range(n):\n        if data[i] == b\"1\":\n            heapq.heappush(heap, int(data[i + 1]))\n            i += 2\n        else:\n            i += 1\n            if heap:\n                out.append(str(heapq.heappop(heap)))\n            else:\n                out.append(\"-1\")\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    i = 1\n    values = []\n    alive = []\n    out = []\n    for _ in range(n):\n        if data[i] == \"1\":\n            values.append(int(data[i + 1]))\n            alive.append(True)\n            i += 2\n        else:\n            i += 1\n            best = -1\n            for j in range(len(values)):\n                if alive[j] and (best == -1 or values[j] < values[best]):\n                    best = j\n            if best == -1:\n                out.append(\"-1\")\n            else:\n                alive[best] = False\n                out.append(str(values[best]))\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+    "wrong": "# 모음이 비어 있을 때 -1을 출력하지 않고 빈 힙에서 바로 꺼내 IndexError가 난다.\nimport sys\nimport heapq\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    i = 1\n    heap = []\n    out = []\n    for _ in range(n):\n        if data[i] == b\"1\":\n            heapq.heappush(heap, int(data[i + 1]))\n            i += 2\n        else:\n            i += 1\n            out.append(str(heapq.heappop(heap)))\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "넣기와 꺼내기가 섞여 있고 모음 크기가 최대 200000까지 커진다. 꺼낼 때마다 모음 전체를 훑으면 연산 수와 모음 크기를 곱한 만큼 걸린다.",
+      "가장 작은 값을 빠르게 꺼내는 우선순위 큐 문제다.",
+      "최솟값이 항상 맨 앞에 오는 최소 힙 하나를 상태로 둔다. Python에서는 heapq 모듈이 리스트를 최소 힙으로 다룬다.",
+      "`1 x`는 힙에 x를 넣고, `2`는 힙이 비었는지 먼저 확인한 뒤 비었으면 -1, 아니면 힙에서 꺼낸 값을 결과에 추가한다. 두 연산 모두 O(log N)이다.",
+      "힙 = 빈 리스트\n결과 = 빈 리스트\n연산마다:\n  넣기면 힙에 x 추가(heappush)\n  꺼내기면 힙이 비었으면 결과에 -1, 아니면 결과에 heappop 값\n결과를 줄마다 출력"
+    ],
+    "skillControl": {
+      "approach": "리스트에 값을 모아 두고 꺼낼 때마다 min()으로 최솟값을 찾아 remove()로 지운다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    i = 1\n    arr = []\n    out = []\n    for _ in range(n):\n        if data[i] == b\"1\":\n            arr.append(int(data[i + 1]))\n            i += 2\n        else:\n            i += 1\n            if arr:\n                m = min(arr)\n                arr.remove(m)\n                out.append(str(m))\n            else:\n                out.append(\"-1\")\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+      "stressInputGenerator": "import random\nimport sys\n\nr = random.Random(20260926)\nm = 100000\nlines = [str(2 * m)]\nfor _ in range(m):\n    lines.append(\"1 \" + str(r.randint(100, 999)))\nlines.extend([\"2\"] * m)\nsys.stdout.write(\"\\n\".join(lines) + \"\\n\")\n"
+    }
+  }
+}

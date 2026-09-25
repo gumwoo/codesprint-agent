@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "2 5 1000",
+      "expectedOutput": "31\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "3 4 7",
+      "expectedOutput": "5\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1 1 1",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "7 1 100",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "1 2000 1000",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "1000000000 1000 1000000000",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "999999999 1023 999999937",
+      "expectedOutput": "345746878\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "3 1999 1000000000",
+      "expectedOutput": "685073333\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "11 1942 155\n",
+      "expectedOutput": "42\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "15 1256 383\n",
+      "expectedOutput": "254\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "15 1774 574\n",
+      "expectedOutput": "472\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "2 1000000000000000000 1000000007\n",
+      "expectedOutput": "719476259\n",
+      "probes": []
+    }
+  ]
+}

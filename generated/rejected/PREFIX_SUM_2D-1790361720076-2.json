@@ -1,0 +1,73 @@
+{
+  "id": "PREFIX_SUM_2D-1790361720076-2",
+  "skill": "PREFIX_SUM_2D",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T18:48:49+00:00",
+  "stage": "검증 검토",
+  "code": "P48_RECT_SUM_QUERY",
+  "reasons": [
+    "채택 검사를 전부 통과했지만 P47_DIGIT_GRID_RECT_SUM 와 같은 문제다 - 연산 · 질의 · 출력이 같고 문장 · 값 범위만 다르다",
+    "본문 글자 유사도가 0.75 아래라 기계 중복 검사를 지났다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "RECT_SUM_QUERY",
+    "title": "직사각형 영역 합 질의",
+    "statement": "N행 M열 격자의 각 칸에 정수가 하나씩 적혀 있다. 질의 Q개가 주어진다. 각 질의는 왼쪽 위 칸 (r1, c1)과 오른쪽 아래 칸 (r2, c2)로 정해지는 직사각형 영역이다. 영역에 포함된 모든 칸의 값의 합을 구한다.\n\n행과 열 번호는 1부터 센다. (r, c)는 r번째 행, c번째 열의 칸이다.\n\n입력\n첫 줄에 N, M, Q가 공백으로 구분되어 주어진다. (1 <= N, M <= 500, 1 <= Q <= 100000)\n다음 N줄에 각 행의 값 M개가 공백으로 구분되어 주어진다. 각 값은 -1000 이상 1000 이하의 정수다.\n다음 Q줄에 질의 r1 c1 r2 c2가 공백으로 구분되어 주어진다. (1 <= r1 <= r2 <= N, 1 <= c1 <= c2 <= M)\n\n출력\n질의 순서대로 한 줄에 하나씩 영역의 합을 출력한다.",
+    "secondarySkills": [
+      "GRID_COORDINATE"
+    ],
+    "referenceComplexity": "O(NM + Q)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "포함-배제에서 r1-1, c1-1 대신 r1, c1을 빼서 영역의 첫 행과 첫 열이 합에서 빠진다.",
+    "sampleInputs": [
+      "3 4 3\n1 2 3 4\n5 6 7 8\n9 10 11 12\n1 1 3 4\n2 2 3 3\n3 1 3 4\n",
+      "2 2 2\n-5 3\n7 -1\n1 2 2 2\n2 1 2 1\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 1 1\n7\n1 1 1 1\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1 5 3\n3 -1 4 -1 5\n1 1 1 5\n1 2 1 4\n1 5 1 5\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "3 3 3\n1000 1000 1000\n1000 1000 1000\n1000 1000 1000\n1 1 3 3\n2 2 3 3\n2 1 2 3\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "4 3 3\n1 2 3\n4 5 6\n7 8 9\n10 11 12\n4 3 4 3\n1 3 4 3\n4 1 4 3\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "2 3 2\n-1000 -1000 -1000\n-1000 1000 -1000\n1 1 2 3\n2 2 2 2\n"
+      }
+    ],
+    "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nm = rng.randint(1, 6)\nq = rng.randint(1, 6)\nlines = [f\"{n} {m} {q}\"]\nfor _ in range(n):\n    lines.append(\" \".join(str(rng.randint(-20, 20)) for _ in range(m)))\nfor _ in range(q):\n    r1 = rng.randint(1, n)\n    r2 = rng.randint(r1, n)\n    c1 = rng.randint(1, m)\n    c2 = rng.randint(c1, m)\n    lines.append(f\"{r1} {c1} {r2} {c2}\")\nprint(\"\\n\".join(lines))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, q = int(data[0]), int(data[1]), int(data[2])\n    idx = 3\n    pre = [[0] * (m + 1) for _ in range(n + 1)]\n    for i in range(1, n + 1):\n        row = pre[i]\n        above = pre[i - 1]\n        run = 0\n        for j in range(1, m + 1):\n            run += int(data[idx])\n            idx += 1\n            row[j] = above[j] + run\n    out = []\n    for _ in range(q):\n        r1 = int(data[idx])\n        c1 = int(data[idx + 1])\n        r2 = int(data[idx + 2])\n        c2 = int(data[idx + 3])\n        idx += 4\n        out.append(pre[r2][c2] - pre[r1 - 1][c2] - pre[r2][c1 - 1] + pre[r1 - 1][c1 - 1])\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, q = int(data[0]), int(data[1]), int(data[2])\n    idx = 3\n    grid = []\n    for _ in range(n):\n        grid.append([int(x) for x in data[idx:idx + m]])\n        idx += m\n    for _ in range(q):\n        r1, c1, r2, c2 = (int(x) for x in data[idx:idx + 4])\n        idx += 4\n        total = 0\n        for r in range(n):\n            for c in range(m):\n                if r1 - 1 <= r <= r2 - 1 and c1 - 1 <= c <= c2 - 1:\n                    total += grid[r][c]\n        print(total)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, q = int(data[0]), int(data[1]), int(data[2])\n    idx = 3\n    pre = [[0] * (m + 1) for _ in range(n + 1)]\n    for i in range(1, n + 1):\n        row = pre[i]\n        above = pre[i - 1]\n        run = 0\n        for j in range(1, m + 1):\n            run += int(data[idx])\n            idx += 1\n            row[j] = above[j] + run\n    out = []\n    for _ in range(q):\n        r1 = int(data[idx])\n        c1 = int(data[idx + 1])\n        r2 = int(data[idx + 2])\n        c2 = int(data[idx + 3])\n        idx += 4\n        out.append(pre[r2][c2] - pre[r1][c2] - pre[r2][c1] + pre[r1][c1])\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "질의 수가 많다. 질의마다 영역의 칸을 하나씩 더하면 질의 하나에 최대 N*M번 더한다. 격자 값은 질의 사이에 바뀌지 않는다.",
+      "미리 계산해 두는 누적 합 기법을 2차원으로 확장한다. 한 번 전처리하고 각 질의는 상수 시간에 답한다.",
+      "(N+1) x (M+1) 크기의 2차원 배열 S를 둔다. S[i][j]는 (1,1)부터 (i,j)까지 직사각형의 합이다. 0번 행과 0번 열은 0으로 채워 경계 처리를 없앤다.",
+      "S[i][j]는 위쪽 S[i-1][j]와 왼쪽 S[i][j-1]을 더하고 두 번 더해진 S[i-1][j-1]을 빼고 칸 값을 더한다. 질의 (r1,c1)-(r2,c2)의 합은 S[r2][c2]에서 영역 바로 위까지의 합과 바로 왼쪽까지의 합을 빼고, 두 번 빠진 왼쪽 위 모서리를 다시 더한다. 빼는 쪽은 r1, c1이 아니라 r1-1, c1-1이다.",
+      "S를 0으로 초기화\nfor i in 1..N:\n  for j in 1..M:\n    S[i][j] = 칸(i,j) + 위 + 왼쪽 - 왼쪽위\nfor 각 질의 (r1,c1,r2,c2):\n  답 = S[r2][c2] - S[r1-1][c2] - S[r2][c1-1] + S[r1-1][c1-1]\n  출력"
+    ],
+    "skillControl": {
+      "approach": "질의마다 영역의 각 행을 슬라이스해서 더한다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, q = int(data[0]), int(data[1]), int(data[2])\n    idx = 3\n    grid = []\n    for _ in range(n):\n        grid.append([int(x) for x in data[idx:idx + m]])\n        idx += m\n    out = []\n    for _ in range(q):\n        r1 = int(data[idx])\n        c1 = int(data[idx + 1])\n        r2 = int(data[idx + 2])\n        c2 = int(data[idx + 3])\n        idx += 4\n        total = 0\n        for r in range(r1 - 1, r2):\n            total += sum(grid[r][c1 - 1:c2])\n        out.append(total)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+      "stressInputGenerator": "import random\nimport sys\n\nrng = random.Random(20260926)\nn = 500\nm = 500\nq = 30000\nparts = [f\"{n} {m} {q}\\n\"]\nfor _ in range(n):\n    parts.append(\" \".join(str(rng.randint(0, 9)) for _ in range(m)))\n    parts.append(\"\\n\")\nquery = f\"1 1 {n} {m}\\n\"\nparts.append(query * q)\nsys.stdout.write(\"\".join(parts))\n"
+    }
+  }
+}

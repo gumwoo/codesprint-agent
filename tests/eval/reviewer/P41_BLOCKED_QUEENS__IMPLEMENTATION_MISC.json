@@ -1,0 +1,34 @@
+{
+  "problemCode": "P41_BLOCKED_QUEENS",
+  "problemTitle": "막힌 칸이 있는 퀸 배치",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BACKTRACKING",
+    "RECURSION_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    grid = data[1:1 + n]\n    used_col = [False] * n\n    used_d1 = [False] * (2 * n)\n    used_d2 = [False] * (2 * n)\n    count = 0\n\n    def place(r):\n        nonlocal count\n        if r == n:\n            count += 1\n            return\n        row = grid[r]\n        for c in range(n):\n            if row[c] == '#' or used_col[c] or used_d1[r + c] or used_d2[r - c + n]:\n                continue\n            used_col[c] = used_d1[r + c] = used_d2[r - c + n] = True\n            place(r + 1)\n\n    place(0)\n    print(count)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}
