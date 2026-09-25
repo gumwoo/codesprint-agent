@@ -181,13 +181,11 @@ class DiagnosticTest {
                 .isGreaterThanOrEqualTo(8);
         // 갈래가 여럿이므로 한 문제로 끝나면 안 된다 - 끝났다면 다른 갈래를 묻지 않은 것이다.
         assertThat(after.get("done").asBoolean()).as("다른 갈래가 남아 있다").isFalse();
-        {
-            assertThat(after.get("targetSkill").asText())
-                    .as("덮인 갈래를 다시 묻지 않는다")
-                    .isNotIn("BFS_SHORTEST_PATH", "BFS_GRID_TRAVERSAL", "BFS_BASIC",
-                            "BFS_VISITED_MANAGEMENT", "GRID_BOUNDARY_CHECK", "GRID_COORDINATE",
-                            "PYTHON_DEQUE_BASIC", "PYTHON_LIST_BASIC");
-        }
+        assertThat(after.get("targetSkill").asText())
+                .as("덮인 갈래를 다시 묻지 않는다")
+                .isNotIn("BFS_SHORTEST_PATH", "BFS_GRID_TRAVERSAL", "BFS_BASIC",
+                        "BFS_VISITED_MANAGEMENT", "GRID_BOUNDARY_CHECK", "GRID_COORDINATE",
+                        "PYTHON_DEQUE_BASIC", "PYTHON_LIST_BASIC");
     }
 
     @Test
