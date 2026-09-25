@@ -92,7 +92,20 @@ def control_is_just_wrong(draft):
     draft["skillControl"]["solution"] = draft["wrong"]
 
 
+def reference_slow_on_stress(draft):
+    # 정답이 큰 입력에서 제한에 붙어 있다. 대조 풀이와의 차이가 기계 속도에 묻힌다.
+    # 작은 입력에서는 빠르므로 교차 검증은 지나간다 - Skill 측정의 시간 예산만 잡을 수 있다.
+    draft["reference"] = draft["reference"].replace(
+        "print(cards[0])", "if n > 1000:\n    import time\n    time.sleep(1.3)\nprint(cards[0])")
+
+
+def stress_generator_is_empty(draft):
+    draft["skillControl"]["stressInputGenerator"] = "pass\n"
+
+
 # (설명, 고정 초안, 망가뜨리는 방법, 기대 단계) - 기대 단계가 None 이면 채택돼야 한다.
+# 기대 단계 자리에 (단계, 사유 조각) 을 주면 사유까지 본다. 같은 단계의 다른 검사가 대신
+# 막아도 통과하면, 그 검사를 지워도 초록이다.
 CASES = [
     ("정상 초안은 채택된다", "list", None, None),
     ("계약을 어기면", "list", contract_breaks, "계약"),
@@ -108,6 +121,10 @@ CASES = [
     ("잴 수 없는 Skill 인데 대조 풀이가 없으면", "queue", queue_without_control, "Skill 측정"),
     ("그 Skill 없이도 시간 안에 풀리면", "queue", control_is_efficient, "Skill 측정"),
     ("대조 풀이가 그냥 틀리면", "queue", control_is_just_wrong, "Skill 측정"),
+    ("정답이 큰 입력에서 느리면", "queue", reference_slow_on_stress, ("Skill 측정", "ms 안에")),
+    # 단계만 보면 안 된다 - 이 검사를 꺼도 정답이 빈 입력에서 터져 같은 단계에 걸렸다(대조군).
+    ("큰 입력 생성기가 아무것도 내지 않으면", "queue", stress_generator_is_empty,
+     ("Skill 측정", "아무 입력도")),
 ]
 
 
@@ -137,8 +154,9 @@ def main() -> int:
                     shutil.rmtree(adopt_problem.PROBLEMS / outcome["code"], ignore_errors=True)
                 detail = outcome.get("code") or f"{got}: {outcome.get('reasons')}"
             else:
-                ok = got == expected
-                detail = f"{got}" + ("" if ok else f" (기대 {expected}) {outcome.get('reasons')}")
+                stage, fragment = expected if isinstance(expected, tuple) else (expected, "")
+                ok = got == stage and any(fragment in r for r in outcome.get("reasons", [""]))
+                detail = f"{got}" + ("" if ok else f" (기대 {stage} {fragment!r}) {outcome.get('reasons')}")
                 if "code" in outcome:
                     # 거절돼야 할 초안이 채택됐다. 여기서 치우지 않으면 그 문제가 남아
                     # 뒤 케이스들이 전부 "중복" 으로 막혀 연쇄로 실패한다 - 대조군을
