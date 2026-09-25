@@ -1168,6 +1168,10 @@ async function createUser() {
   // **여기가 소유권이 가장 큰 변경이다.** 사용자를 바꾸면 화면 전체가 따라간다.
   // 두 번 누르면 늦게 온 응답이 나중에 만든 사용자를 덮어쓰고, 그 사이 사용자가
   // id 를 직접 고쳤어도 덮는다.
+  if (!$("track").value) {
+    $("footNote").textContent = "목표를 먼저 고른다";
+    return;
+  }
   const mine = claimView("user");
   const response = await fetch("/api/users", {
     method: "POST",
@@ -1204,13 +1208,20 @@ async function loadTracks() {
   if (!mine()) {
     return;
   }
-  $("track").replaceChildren(...view.tracks.map((track) => {
+  // 첫 칸은 "고르지 않음" 이다. 첫 트랙이 골라진 채로 두면 고르지 않은 사용자가 그 트랙으로
+  // 만들어진다 - 서버가 기본값을 없앤 이유(ADR-0035 §4)가 화면에서 다시 생긴다.
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "목표를 고른다";
+  none.disabled = true;
+  $("track").replaceChildren(none, ...view.tracks.map((track) => {
     const option = document.createElement("option");
     option.value = track.code;
     option.textContent = `${track.name} · Skill ${track.skillCount}`;
     option.title = track.description;
     return option;
   }));
+  $("track").value = "";
   refreshUserTrack();
 }
 
@@ -1221,12 +1232,18 @@ async function refreshUserTrack() {
     return;
   }
   const mine = claimView("userTrack");
-  const response = await fetch(`/api/users/${userId}`);
-  if (!mine() || !response.ok) {
+  let user = null;
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    user = response.ok ? await response.json() : null;
+  } catch (error) {
+    user = null;
+  }
+  if (!mine()) {
     return;
   }
-  const user = await response.json();
-  $("track").value = user.track;
+  // 없는 사용자면 이전 사용자의 목표를 남기지 않는다.
+  $("track").value = user ? user.track : "";
 }
 
 /**
@@ -1254,6 +1271,9 @@ async function changeTrack() {
     return;
   }
   const user = await response.json();
+  if (!mine()) {
+    return;
+  }
   $("track").value = user.track;
   // 켜지는 범위가 바뀌었다. 보고 있는 진단 · Skill 표 · 결과를 전부 다시 읽는다.
   switchedUser();

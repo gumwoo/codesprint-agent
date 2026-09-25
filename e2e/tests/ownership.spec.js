@@ -135,6 +135,7 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
 
   await page.goto("/index.html");
   await page.locator("#problemList button").first().waitFor();
+  await page.selectOption("#track", "JOB");
   await page.click("#createUser");
   await page.click("#createUser");
   await expect(page.locator("#userId")).toHaveValue("12");
@@ -315,4 +316,21 @@ test("늦게 온 이전 사용자의 목표가 지금 사용자의 목표를 덮
 
   await releaseAndSettle(page, slow, "/api/users/1");
   await expect(page.locator("#track")).toHaveValue("INTRO");
+});
+
+test("목표를 고르지 않으면 새로 시작하지 않는다", async ({ page }) => {
+  // ADR-0035 §4. 첫 트랙이 골라진 채로 두면 고르지 않은 사용자가 그 트랙으로 만들어진다.
+  let created = 0;
+  await stubApi(page);
+  await page.route("**/api/users", (route) => {
+    created += 1;
+    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO" });
+  });
+
+  await page.goto("/index.html");
+  await page.locator("#track option[value=JOB]").waitFor({ state: "attached" });
+  await expect(page.locator("#track")).toHaveValue("");
+  await page.click("#createUser");
+  await expect(page.locator("#footNote")).toHaveText("목표를 먼저 고른다");
+  expect(created).toBe(0);
 });
