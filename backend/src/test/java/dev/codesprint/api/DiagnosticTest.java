@@ -179,7 +179,9 @@ class DiagnosticTest {
         JsonNode after = step();
         assertThat(after.get("assessed").asInt()).as("BFS 갈래 8 개가 한 문제로 덮인다")
                 .isGreaterThanOrEqualTo(8);
-        if (!after.get("done").asBoolean()) {
+        // 갈래가 여럿이므로 한 문제로 끝나면 안 된다 - 끝났다면 다른 갈래를 묻지 않은 것이다.
+        assertThat(after.get("done").asBoolean()).as("다른 갈래가 남아 있다").isFalse();
+        {
             assertThat(after.get("targetSkill").asText())
                     .as("덮인 갈래를 다시 묻지 않는다")
                     .isNotIn("BFS_SHORTEST_PATH", "BFS_GRID_TRAVERSAL", "BFS_BASIC",
@@ -232,8 +234,8 @@ class DiagnosticTest {
 
         assertThat(schema.validate(step())).as("진행 중 응답").isEmpty();
 
-        JsonNode first = step();
-        solve(first.get("problem").get("code").asText(), "ACCEPTED", 6, 6);
+        finishDiagnostic();
+        assertThat(step().get("done").asBoolean()).as("끝난 응답을 검사한다").isTrue();
 
         // 끝났을 때는 targetSkill 과 problem 이 null 이다. **그 모양도 계약이다** -
         // 생략해 버리면 화면은 "아직 안 정해졌다" 와 구분할 수 없다.
