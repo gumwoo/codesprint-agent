@@ -25,7 +25,7 @@ statement: |
   제한
   - 1 ≤ N ≤ 200000
   - 0 ≤ M ≤ 200000
-  - 1 ≤ Q ≤ 200000
+  - 1 ≤ Q ≤ 100000
 skills:
 - code: GRAPH_REPRESENTATION
   role: PRIMARY

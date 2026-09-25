@@ -14,8 +14,7 @@
     "stderr": null,
     "passedCaseIds": [
       3,
-      5,
-      11
+      5
     ],
     "failedCaseIds": [
       1,
@@ -25,7 +24,8 @@
       7,
       8,
       9,
-      10
+      10,
+      11
     ]
   },
   "probes": {}
