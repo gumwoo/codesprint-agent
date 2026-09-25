@@ -1,0 +1,39 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P73_WALL_BREAK_K_BFS
+title: 벽을 K번까지 부수며 이동하기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(N * M * (K + 1))
+statement: |
+  N행 M열 격자가 주어진다. 각 칸은 '0'(빈 칸) 또는 '1'(벽)이다. 행과 열 번호는 0부터 센다. (0, 0)에서 출발해 (N-1, M-1)에 도착하려 한다. 한 번의 이동으로 상하좌우로 인접한 칸 하나로 옮긴다. 격자 밖으로는 나갈 수 없다. 벽 칸으로 들어가려면 그 벽을 부숴야 하며, 이동 전체에서 벽은 최대 K개까지 부술 수 있다. 부순 벽 칸은 빈 칸처럼 지나간다. 도착에 필요한 최소 이동 횟수를 구한다.
+
+  입력 형식
+  첫 줄에 정수 N, M, K 가 공백으로 구분되어 주어진다. (1 <= N, M <= 200, 0 <= K <= 5)
+  다음 N줄에 길이 M인 '0'과 '1'로 이루어진 문자열이 한 줄씩 주어진다. (0, 0)과 (N-1, M-1)은 항상 '0'이다.
+
+  출력 형식
+  최소 이동 횟수를 한 줄에 출력한다. 출발 칸과 도착 칸이 같으면 0이다. 도착할 수 없으면 -1을 출력한다.
+skills:
+- code: STATE_SPACE_BFS
+  role: PRIMARY
+  weight: 0.7
+- code: BFS_SHORTEST_PATH
+  role: SECONDARY
+  weight: 0.15
+- code: GRID_BOUNDARY_CHECK
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- IMPLEMENTATION_MISC
+- BOUNDARY_CHECK
+- VISITED_TIMING
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

@@ -1,0 +1,35 @@
+{
+  "problemCode": "P73_WALL_BREAK_K_BFS",
+  "problemTitle": "벽을 K번까지 부수며 이동하기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "STATE_SPACE_BFS",
+    "BFS_SHORTEST_PATH",
+    "GRID_BOUNDARY_CHECK"
+  ],
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    grid = data[3:3 + n]\n    seen = [[False] * m for _ in range(n)]\n    seen[0][0] = True\n    q = deque([(0, 0, 0, 0)])\n    while q:\n        r, c, b, d = q.popleft()\n        if r == n - 1 and c == m - 1:\n            print(d)\n            return\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < n and 0 <= nc < m:\n                nb = b + (grid[nr][nc] == '1')\n                if nb <= k and not seen[nr][nc]:\n                    seen[nr][nc] = True\n                    q.append((nr, nc, nb, d + 1))\n    print(-1)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 7,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      10
+    ],
+    "failedCaseIds": [
+      7,
+      9,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}

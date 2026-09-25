@@ -1,0 +1,35 @@
+{
+  "problemCode": "P61_GRID_MAX_PATH_BLOCKED",
+  "problemTitle": "막힌 칸이 있는 격자의 최대 합 경로",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DP_2D",
+    "GRID_COORDINATE",
+    "GRID_BOUNDARY_CHECK"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    g = [list(map(int, data[2 + i * m:2 + (i + 1) * m])) for i in range(n)]\n    dp = [[-1] * m for _ in range(n)]\n    for i in range(n - 1, -1, -1):\n        row = g[i]\n        cur = dp[i]\n        for j in range(m - 1, -1, -1):\n            v = row[j]\n            if v < 0:\n                continue\n            if i == n - 1 and j == m - 1:\n                cur[j] = v\n                continue\n            best = -1\n            if dp[i + 1][j] > best:\n                best = dp[i + 1][j]\n            if cur[j + 1] > best:\n                best = cur[j + 1]\n            if best >= 0:\n                cur[j] = best + v\n    print(dp[0][0])\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 30, in <module>\n    main()\n  File \"solution.py\", line 21, in main\n    if dp[i + 1][j] > best:\n       ~~^^^^^^^\nIndexError: list index out of range\n",
+    "passedCaseIds": [
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}

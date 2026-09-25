@@ -1,0 +1,33 @@
+{
+  "problemCode": "P72_MACHINE_PRODUCTION_TIME",
+  "problemTitle": "기계 생산 시간",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PARAMETRIC_SEARCH"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    t = list(map(int, data[2:2 + n]))\n    lo, hi = 1, m\n    while lo < hi:\n        mid = (lo + hi) // 2\n        made = 0\n        for x in t:\n            made += mid // x\n            if made >= m:\n                break\n        if made >= m:\n            hi = mid\n        else:\n            lo = mid + 1\n    print(lo)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      6,
+      7,
+      9,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      5,
+      8,
+      10,
+      12
+    ]
+  },
+  "probes": {}
+}

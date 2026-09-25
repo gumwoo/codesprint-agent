@@ -87,6 +87,41 @@ class DiagnosticTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private dev.codesprint.curriculum.CurriculumCatalog catalog;
+
+    @Autowired
+    private dev.codesprint.problem.ProblemCatalog problemCatalog;
+
+    /** 이 Skill 아래의 선수 전부(이행적). 진단 규칙을 커리큘럼에서 다시 계산해 기대값으로 쓴다. */
+    private java.util.Set<String> below(String skill) {
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        java.util.Deque<String> queue = new java.util.ArrayDeque<>(java.util.List.of(skill));
+        while (!queue.isEmpty()) {
+            for (var edge : catalog.prerequisitesOf(queue.poll())) {
+                if (seen.add(edge.requires())) {
+                    queue.add(edge.requires());
+                }
+            }
+        }
+        return seen;
+    }
+
+    /**
+     * 아무것도 모를 때 가장 많이 밝혀 주는 Skill - 트랙 안에서 선수를 가장 많이 거느린 것.
+     * 도메인이 늘 때마다 이 이름이 바뀌므로 **고정하지 않고 커리큘럼에서 구한다**(ADR-0034).
+     *
+     * <p>후보는 트랙 안에서 고르지만 선수는 트랙으로 거르지 않고 센다 - 운영 코드
+     * ({@code countUnresolvedBelow})가 그렇다. 트랙은 선수에 대해 닫혀 있어(check_tracks) 지금은
+     * 같은 값이지만, 기대값이 운영과 다른 식으로 세면 둘이 갈라지는 날 테스트가 틀린 쪽을 편든다.
+     */
+    private String mostInformative() {
+        return catalog.skillCodesFor("JOB").stream()
+                .max(java.util.Comparator.<String>comparingInt(code -> 1 + below(code).size())
+                        .thenComparing(java.util.Comparator.reverseOrder()))
+                .orElseThrow();
+    }
+
     private MockMvc mvc;
     private Long userId;
 
@@ -163,29 +198,31 @@ class DiagnosticTest {
     void theFirstQuestionIsTheMostInformativeOne() throws Exception {
         // 뿌리부터 하나씩 올라가면 그래프 깊이만큼 문제를 내야 하는데, 그건 진단이
         // 아니라 학습이다. 위에서 시작해 통과하면 아래가 함께 확인된다.
-        assertThat(step().get("targetSkill").asText()).isEqualTo("BFS_SHORTEST_PATH");
+        String expected = mostInformative();
+        assertThat(below(expected)).as("선수가 있는 Skill 이어야 이 규칙을 본다").isNotEmpty();
+        assertThat(step().get("targetSkill").asText()).isEqualTo(expected);
     }
 
     @Test
     @DisplayName("통과하면 그 아래는 묻지 않는다")
     void passingImpliesThePrerequisites() throws Exception {
         JsonNode first = step();
-        assertThat(first.get("targetSkill").asText()).isEqualTo("BFS_SHORTEST_PATH");
+        assertThat(first.get("targetSkill").asText()).isEqualTo(mostInformative());
 
         solve(first.get("problem").get("code").asText(), "ACCEPTED", 6, 6);
 
         // 최상위를 해냈으면 그 아래 전부가 함께 확인된 것이다. 한 문제로 그 갈래가 덮인다.
         // 갈래가 여럿이므로 진단은 아직 끝나지 않고, 다음 질문은 **다른 갈래**에서 온다.
         JsonNode after = step();
-        assertThat(after.get("assessed").asInt()).as("BFS 갈래 8 개가 한 문제로 덮인다")
-                .isGreaterThanOrEqualTo(8);
+        int covered = 1 + below(first.get("targetSkill").asText()).size();
+        assertThat(after.get("assessed").asInt()).as("그 갈래가 한 문제로 덮인다")
+                .isGreaterThanOrEqualTo(covered);
         // 갈래가 여럿이므로 한 문제로 끝나면 안 된다 - 끝났다면 다른 갈래를 묻지 않은 것이다.
         assertThat(after.get("done").asBoolean()).as("다른 갈래가 남아 있다").isFalse();
+        java.util.Set<String> branch = new java.util.HashSet<>(below(first.get("targetSkill").asText()));
+        branch.add(first.get("targetSkill").asText());
         assertThat(after.get("targetSkill").asText())
-                .as("덮인 갈래를 다시 묻지 않는다")
-                .isNotIn("BFS_SHORTEST_PATH", "BFS_GRID_TRAVERSAL", "BFS_BASIC",
-                        "BFS_VISITED_MANAGEMENT", "GRID_BOUNDARY_CHECK", "GRID_COORDINATE",
-                        "PYTHON_DEQUE_BASIC", "PYTHON_LIST_BASIC");
+                .as("덮인 갈래를 다시 묻지 않는다").isNotIn(branch);
     }
 
     @Test
@@ -203,12 +240,39 @@ class DiagnosticTest {
         assertThat(after.get("targetSkill").asText())
                 .as("실패한 Skill 을 다시 묻지 않는다").isNotEqualTo(failed);
 
-        // **BFS_GRID_TRAVERSAL 이 아니다.** 제출 하나는 그 문제의 SECONDARY Skill 에도
-        // Evidence 를 남기므로, P05 를 낸 순간 바로 아래 셋은 이미 물어본 것이 된다.
-        // 진단이 채우는 것은 **모르는 칸**이지, 아는 것을 다시 확인하는 것이 아니다.
-        // 그래서 한 단계가 아니라 Evidence 가 닿지 않은 곳까지 내려간다.
-        assertThat(after.get("targetSkill").asText())
-                .as("Evidence 가 닿지 않은 곳까지 내려간다").isEqualTo("BFS_BASIC");
+        // 다음 질문은 **실패한 Skill 의 선수 가운데** 아직 Evidence 가 없는 것이다. 다른 갈래로
+        // 건너뛰지 않는다(ADR-0036 §3). 제출 하나는 SECONDARY 에도 Evidence 를 남기므로, 바로
+        // 아래가 이미 물어본 것이면 Evidence 가 닿지 않은 곳까지 내려간다.
+        String next = after.get("targetSkill").asText();
+        assertThat(below(failed)).as("실패한 갈래의 선수로 내려간다").contains(next);
+        JsonNode map = MAPPER.readTree(mvc.perform(get("/api/users/{id}/skills", userId))
+                .andReturn().getResponse().getContentAsString());
+        JsonNode target = null;
+        for (JsonNode skill : map.get("skills")) {
+            if (skill.get("skillCode").asText().equals(next)) {
+                target = skill;
+            }
+        }
+        // 찾지 못하면 아무것도 단언하지 않고 지나가게 된다 - 먼저 찾았는지부터 본다.
+        assertThat(target).as("다음 질문의 Skill 이 Skill 지도에 있다").isNotNull();
+        assertThat(target.get("evidenceCount").asInt()).as("Evidence 가 닿지 않은 곳이다").isZero();
+    }
+
+    @Test
+    @DisplayName("작은 갈래에서 틀리면 큰 갈래로 건너뛰지 않고 그 선수부터 묻는다")
+    void aFailureInASmallBranchStaysInThatBranch() throws Exception {
+        // ADR-0036 §3. 위 테스트는 가장 큰 갈래의 꼭대기에서 틀리므로, 규칙이 없어도 "가장 많이
+        // 밝혀 주는 것" 이 그 갈래 안에 있어 통과한다 - 대조군으로 규칙을 빼 보자 실제로 통과했다.
+        // 그래서 작은 갈래(조합 → 완전 탐색 → 리스트)에서 틀린다. 규칙이 없으면 다음 질문은
+        // 가장 큰 갈래의 꼭대기로 간다.
+        String failed = "COMBINATORIAL_ENUMERATION";
+        String problem = problemCatalog.byPrimarySkill(failed, "NORMAL").get(0).code();
+        solve(problem, "WRONG_ANSWER", 0, 6);
+
+        String next = step().get("targetSkill").asText();
+        assertThat(mostInformative()).as("대조: 규칙이 없으면 가는 곳은 다른 갈래다")
+                .isNotIn(below(failed));
+        assertThat(below(failed)).as("틀린 갈래의 선수를 묻는다").contains(next);
     }
 
     @Test

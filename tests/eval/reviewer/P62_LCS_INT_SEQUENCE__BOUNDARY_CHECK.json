@@ -1,0 +1,33 @@
+{
+  "problemCode": "P62_LCS_INT_SEQUENCE",
+  "problemTitle": "두 수열의 최장 공통 부분 수열",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DP_2D"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    b = list(map(int, data[2 + n:2 + n + m]))\n    dp = [[0] * m for _ in range(n)]\n    for i in range(n):\n        for j in range(m):\n            if a[i] == b[j]:\n                dp[i][j] = dp[i - 1][j - 1] + 1\n            else:\n                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])\n    print(dp[n - 1][m - 1])\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      7,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      5,
+      6,
+      8,
+      9,
+      10,
+      12
+    ]
+  },
+  "probes": {}
+}

@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "6\n4 1 2 7 5 3\n",
+      "expectedOutput": "11\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5\n5 9 5 1 5\n",
+      "expectedOutput": "14\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1\n1\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1\n10000\n",
+      "expectedOutput": "10000\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "7\n3 3 3 3 3 3 3\n",
+      "expectedOutput": "9\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "3\n1 1 10000\n",
+      "expectedOutput": "10000\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "4\n3 4 1 3\n",
+      "expectedOutput": "6\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "15\n10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000 10000\n",
+      "expectedOutput": "50000\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "13\n1321 7947 4287 604 8 2386 9609 7705 6114 5233 359 4468 8010\n",
+      "expectedOutput": "30799\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\n7630 7403 8321 9624 3112 3026 8388 7795\n",
+      "expectedOutput": "25642\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "15\n2478 4258 1664 5365 9388 2776 443 6743 6665 1229 1692 2050 5229 7773 9514\n",
+      "expectedOutput": "31953\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "90\n5306 2472 6469 792 1187 8780 1543 5992 9549 951 8314 3518 615 1409 7105 6852 1145 3944 1487 9029 6956 969 9265 2029 3658 9552 1014 9456 9594 6500 813 3623 764 9121 2182 4745 6868 2364 8859 1930 9354 5055 9180 2962 1689 9529 9359 3079 6102 1597 8975 1029 9247 977 3375 8134 8712 7006 5147 7629 9594 7425 5925 4912 4071 2946 4000 1342 9412 4920 8605 8112 5628 7354 4718 9978 1200 1935 8388 6851 2703 5605 2491 8012 6910 643 1272 9144 9389 5141\n",
+      "expectedOutput": "207905\n",
+      "probes": []
+    }
+  ]
+}

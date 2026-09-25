@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P57_DFS_ENTER_EXIT_ORDER
+title: 깊이 우선 탐색의 진입 순서와 종료 순서
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N + M log M)
+statement: |
+  정점 N개와 간선 M개로 이루어진 무방향 그래프가 있다. 정점 번호는 1부터 N까지다(1-based). 정점 S에서 깊이 우선 탐색을 한다. 현재 정점에서 아직 방문하지 않은 이웃이 여럿이면 번호가 가장 작은 이웃으로 먼저 들어간다. 방문하지 않은 이웃이 없으면 그 정점의 탐색을 마치고 직전 정점으로 돌아간다.
+
+  정점에 처음 들어간 순서(진입 순서)와 정점의 탐색을 마친 순서(종료 순서)를 구한다. S에서 도달할 수 없는 정점은 두 순서 모두에 넣지 않는다.
+
+  입력 형식
+  첫 줄에 N M S가 공백으로 구분되어 주어진다.
+  다음 M줄에 간선의 두 끝점 u v가 주어진다(u != v). 같은 두 정점을 잇는 간선이 여러 번 주어질 수 있다.
+
+  제약
+  1 <= N <= 80000, 0 <= M <= 200000, 1 <= S <= N, 1 <= u, v <= N
+
+  출력 형식
+  첫째 줄에 진입 순서대로 정점 번호를 공백으로 구분해 출력한다.
+  둘째 줄에 종료 순서대로 정점 번호를 공백으로 구분해 출력한다.
+skills:
+- code: DFS_TRAVERSAL
+  role: PRIMARY
+  weight: 0.7
+- code: STACK_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- NO_VISITED
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: NO_VISITED
+  expectedStatus: RUNTIME_ERROR
+skillControl: null

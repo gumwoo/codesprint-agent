@@ -1,0 +1,11 @@
+{
+  "id": "DFS_TRAVERSAL-1790364039147-2",
+  "skill": "DFS_TRAVERSAL",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:28:30+00:00",
+  "code": "P58_DFS_FIRST_PATH_DIRECTED",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\nfrom itertools import permutations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, s, t = int(data[0]), int(data[1]), int(data[2]), int(data[3])\n    edges = set()\n    idx = 4\n    for _ in range(m):\n        edges.add((int(data[idx]), int(data[idx + 1])))\n        idx += 2\n    if s == t:\n        print(s)\n        return\n    others = [x for x in range(1, n + 1) if x != s and x != t]\n    best = None\n    for k in range(len(others) + 1):\n        for mid in permutations(others, k):\n            path = [s, *mid, t]\n            if all((path[i], path[i + 1]) in edges for i in range(len(path) - 1)):\n                if best is None or path < best:\n                    best = path\n    if best is None:\n        print(-1)\n    else:\n        print(' '.join(map(str, best)))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 7)\ns = rng.randint(1, n)\nt = rng.randint(1, n)\np = rng.choice([0.2, 0.35, 0.5])\nedges = [(u, v) for u in range(1, n + 1) for v in range(1, n + 1) if u != v and rng.random() < p]\nrng.shuffle(edges)\nprint(n, len(edges), s, t)\nfor u, v in edges:\n    print(u, v)\n",
+  "stressInputGenerator": null
+}

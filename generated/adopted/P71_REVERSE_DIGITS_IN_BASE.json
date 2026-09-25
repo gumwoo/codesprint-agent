@@ -1,0 +1,11 @@
+{
+  "id": "NUMBER_BASE_CONVERSION-1790363946915-2",
+  "skill": "NUMBER_BASE_CONVERSION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:32:30+00:00",
+  "code": "P71_REVERSE_DIGITS_IN_BASE",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\nD = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\n\ndef main():\n    n, b = map(int, sys.stdin.read().split())\n    p = 1\n    while p * b <= n:\n        p *= b\n    s = []\n    while p >= 1:\n        d = 0\n        while n >= p:\n            n -= p\n            d += 1\n        s.append(D[d])\n        p //= b\n    print(int(\"\".join(reversed(s)), b))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.read().split()[0])\nr = random.Random(seed)\nn = r.randint(0, 10 ** r.randint(1, 18))\nb = r.randint(2, 36)\nprint(n, b)\n",
+  "stressInputGenerator": null
+}

@@ -1,0 +1,11 @@
+{
+  "id": "GREEDY_CHOICE-1790363835408-2",
+  "skill": "GREEDY_CHOICE",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:31:26+00:00",
+  "code": "P68_MIN_MAX_LATENESS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    t = [int(data[1 + 2 * i]) for i in range(n)]\n    d = [int(data[2 + 2 * i]) for i in range(n)]\n    full = 1 << n\n    total = [0] * full\n    dp = [0] * full\n    for mask in range(1, full):\n        low = mask & -mask\n        j = low.bit_length() - 1\n        total[mask] = total[mask ^ low] + t[j]\n        best = None\n        for k in range(n):\n            if mask >> k & 1:\n                cand = max(dp[mask ^ (1 << k)], total[mask] - d[k])\n                if best is None or cand < best:\n                    best = cand\n        dp[mask] = best\n    print(dp[full - 1])\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 7)\nlines = [str(n)]\nfor _ in range(n):\n    t = rng.randint(1, 10)\n    d = rng.randint(1, 40)\n    lines.append(f'{t} {d}')\nprint('\\n'.join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nout = [str(n)]\nfor _ in range(n):\n    out.append(f'{rng.randint(1, 1000)} {rng.randint(1, 100000000)}')\nprint('\\n'.join(out))\n"
+}

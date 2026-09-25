@@ -1,0 +1,32 @@
+{
+  "problemCode": "P58_DFS_FIRST_PATH_DIRECTED",
+  "problemTitle": "깊이 우선 탐색이 처음 찾는 경로",
+  "problemSource": "DEV_FIXTURE",
+  "label": "OUTPUT_FORMAT",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DFS_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, s, t = int(data[0]), int(data[1]), int(data[2]), int(data[3])\n    adj = [[] for _ in range(n + 1)]\n    idx = 4\n    for _ in range(m):\n        u = int(data[idx])\n        v = int(data[idx + 1])\n        idx += 2\n        adj[u].append(v)\n    for lst in adj:\n        lst.sort()\n    visited = [False] * (n + 1)\n    visited[s] = True\n    ptr = [0] * (n + 1)\n    stack = [s]\n    while stack:\n        u = stack[-1]\n        if u == t:\n            print(' '.join(map(str, reversed(stack))))\n            return\n        if ptr[u] < len(adj[u]):\n            v = adj[u][ptr[u]]\n            ptr[u] += 1\n            if not visited[v]:\n                visited[v] = True\n                stack.append(v)\n        else:\n            stack.pop()\n    print(-1)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

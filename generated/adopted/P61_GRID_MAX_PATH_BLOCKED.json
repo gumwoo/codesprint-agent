@@ -1,0 +1,11 @@
+{
+  "id": "DP_2D-1790364121424-1",
+  "skill": "DP_2D",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:29:21+00:00",
+  "code": "P61_GRID_MAX_PATH_BLOCKED",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\nsys.setrecursionlimit(10000)\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    g = [[int(data[2 + i * m + j]) for j in range(m)] for i in range(n)]\n    best = -1\n\n    def go(i, j, s):\n        nonlocal best\n        if i >= n or j >= m or g[i][j] < 0:\n            return\n        s += g[i][j]\n        if i == n - 1 and j == m - 1:\n            if s > best:\n                best = s\n            return\n        go(i + 1, j, s)\n        go(i, j + 1, s)\n\n    go(0, 0, 0)\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nm = rng.randint(1, 6)\ng = []\nfor i in range(n):\n    row = []\n    for j in range(m):\n        if rng.random() < 0.25:\n            row.append(-1)\n        else:\n            row.append(rng.randint(0, 20))\n    g.append(row)\nif g[0][0] < 0:\n    g[0][0] = rng.randint(0, 20)\nif g[n - 1][m - 1] < 0:\n    g[n - 1][m - 1] = rng.randint(0, 20)\nprint(n, m)\nfor row in g:\n    print(' '.join(map(str, row)))\n",
+  "stressInputGenerator": "n = 16\nm = 16\nprint(n, m)\nfor i in range(n):\n    print(' '.join(str((i * 7 + j * 3) % 10) for j in range(m)))\n"
+}

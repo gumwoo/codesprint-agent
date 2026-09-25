@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P59_CRACKED_STEPPING_STONES
+title: 금 간 징검다리
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(n) 시간, O(n) 공간
+statement: |
+  징검돌 n+1 개가 일렬로 놓여 있고 왼쪽부터 0 번, 1 번, ..., n 번이다(0-based). 일부 돌에는 금이 가 있어 밟을 수 없다. 0 번 돌에서 출발해 n 번 돌에 도착해야 한다. 한 번에 오른쪽으로 1 칸, 2 칸, 3 칸 중 하나를 뛸 수 있고, 금 간 돌에는 설 수 없다. 0 번 돌에서 n 번 돌까지 가는 서로 다른 방법의 수를 1000000007 로 나눈 나머지를 구한다. 밟은 돌의 순서가 다르면 다른 방법이다. 도착할 수 없으면 0 을 출력한다.
+
+  입력
+  첫째 줄에 정수 n 이 주어진다. (1 <= n <= 100000)
+  둘째 줄에 정수 n+1 개 a_0, a_1, ..., a_n 이 공백으로 구분되어 주어진다. a_i 가 1 이면 i 번 돌은 금이 가 있고, 0 이면 밟을 수 있다. a_0 과 a_n 은 항상 0 이다.
+
+  출력
+  방법의 수를 1000000007 로 나눈 나머지를 한 줄에 출력한다.
+skills:
+- code: DP_1D
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 저장 없이 i 번 돌까지의 방법 수를 i-1, i-2, i-3 에 대한 재귀 호출의 합으로 매번 다시 계산한다.

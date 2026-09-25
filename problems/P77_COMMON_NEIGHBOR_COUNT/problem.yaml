@@ -1,0 +1,56 @@
+# 정본 형식: contracts/problem.schema.json
+# 검증 에이전트가 P65(더 바쁜 이웃 세기)를 인접 리스트 없이 간선 목록 한 번 훑기로 풀어 철회한 뒤,
+# 임의 정점의 이웃 목록을 실제로 꺼내야 하는 문제로 손으로 썼다(ADR-0039). 이웃에 대한 합 · 개수처럼
+# 간선마다 나눠 셀 수 있는 값은 간선 목록만으로 풀린다 - 두 정점의 이웃을 맞대 보는 것은 그렇지 않다.
+# 정답은 인접 행렬로 세는 완전탐색과 무작위 입력 300 개에서 교차 검증했다.
+
+code: P77_COMMON_NEIGHBOR_COUNT
+title: 공통 이웃 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: "O(N + M + Q·min(deg u, deg v))"
+
+statement: |
+  정점 N개와 간선 M개로 이루어진 무방향 그래프가 주어진다. 정점 번호는 1부터 N까지다(1-based). 자기 자신으로 가는 간선과 같은 두 정점을 잇는 중복 간선은 없다.
+
+  질의 Q개가 주어진다. 각 질의는 서로 다른 두 정점 u, v다. u와도 간선으로 직접 연결되어 있고 v와도 간선으로 직접 연결되어 있는 정점의 수를 구한다.
+
+  입력 형식
+  - 첫 줄: N M
+  - 다음 M줄: 간선의 두 끝점 a b
+  - 다음 줄: Q
+  - 다음 Q줄: u v
+
+  제약
+  - 2 ≤ N ≤ 100000
+  - 0 ≤ M ≤ 100000
+  - 1 ≤ Q ≤ 10000
+  - 1 ≤ a, b ≤ N, a ≠ b
+  - 1 ≤ u, v ≤ N, u ≠ v
+  - 같은 두 정점을 묻는 질의는 두 번 주어지지 않는다(u v 와 v u 는 같은 질의로 본다)
+
+  출력 형식
+  - 질의마다 한 줄에 답 하나를 입력 순서대로 출력한다.
+
+skills:
+  - code: GRAPH_REPRESENTATION
+    role: PRIMARY
+    weight: 1.0
+
+commonMistakes:
+  - INDEX_ERROR
+  - INPUT_PARSE
+
+# wrong.py 가 무엇을 틀리게 했고 그 결과가 어떤 판정이어야 하는가.
+# 1-based 정점 번호에 이웃 목록을 N 칸만 만들어 정점 N 에서 IndexError
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: RUNTIME_ERROR
+
+# 간선 목록만 두고 질의마다 전체를 훑는 풀이는 작은 입력에서 같은 답을 내고, 큰 case 에서
+# 시간 안에 끝나지 않는다(ADR-0033).
+skillControl:
+  approach: 이웃 목록 없이 간선 목록만 두고, 질의마다 간선 전체를 훑어 u 와 v 의 이웃을 모은다

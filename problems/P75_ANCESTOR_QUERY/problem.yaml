@@ -1,0 +1,36 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P75_ANCESTOR_QUERY
+title: 조상 판정 질의
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(N + Q)
+statement: |
+  정점이 N개인 트리가 주어진다. 정점 번호는 1부터 N까지이다(1-based). 루트는 R번 정점이다. 간선은 방향이 없고, 한 줄의 두 수 중 어느 쪽이 부모인지는 정해져 있지 않다.
+
+  질의 Q개가 주어진다. 각 질의는 두 정점 u, v 이다. 루트 R에서 v까지 가는 경로 위에 u가 있으면 u는 v의 조상이다. u와 v가 같으면 조상으로 본다. 각 질의마다 u가 v의 조상이면 YES, 아니면 NO를 출력한다.
+
+  입력 형식
+  - 첫 줄: N R (1 <= N <= 100000, 1 <= R <= N)
+  - 다음 N-1줄: 간선의 두 끝점 a b (1 <= a, b <= N)
+  - 다음 줄: Q (1 <= Q <= 100000)
+  - 다음 Q줄: u v (1 <= u, v <= N)
+
+  출력 형식
+  - 질의 순서대로 한 줄에 하나씩 YES 또는 NO를 출력한다.
+skills:
+- code: TREE_TRAVERSAL
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INPUT_PARSE
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: INPUT_PARSE
+  expectedStatus: WRONG_ANSWER
+skillControl: null

@@ -1,0 +1,11 @@
+{
+  "id": "NUMBER_BASE_CONVERSION-1790363897883-1",
+  "skill": "NUMBER_BASE_CONVERSION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:32:20+00:00",
+  "code": "P70_BASE_A_TO_BASE_B",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\nDIGITS = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\ndata = sys.stdin.read().split()\na, b, s = int(data[0]), int(data[1]), data[2]\nvalue = 0\nplace = 1\nfor ch in reversed(s):\n    value += DIGITS.index(ch) * place\n    place *= a\npower = 1\ncount = 1\nwhile power * b <= value:\n    power *= b\n    count += 1\nres = []\nfor _ in range(count):\n    d = 0\n    while (d + 1) * power <= value:\n        d += 1\n    res.append(DIGITS[d])\n    value -= d * power\n    power //= b\nprint(\"\".join(res))\n",
+  "inputGenerator": "import random\nimport sys\n\nDIGITS = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\na = rng.randint(2, 36)\nb = rng.randint(2, 36)\nvalue = 0 if rng.random() < 0.1 else rng.randint(1, 10 ** 6)\nif value == 0:\n    s = \"0\"\nelse:\n    parts = []\n    while value > 0:\n        value, r = divmod(value, a)\n        parts.append(DIGITS[r])\n    s = \"\".join(reversed(parts))\nprint(a, b)\nprint(s)\n",
+  "stressInputGenerator": null
+}

@@ -1,0 +1,11 @@
+{
+  "id": "DP_2D-1790364182956-2",
+  "skill": "DP_2D",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:29:42+00:00",
+  "code": "P62_LCS_INT_SEQUENCE",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom itertools import combinations\n\n\ndef is_subsequence(seq, b):\n    it = iter(b)\n    return all(x in it for x in seq)\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    b = list(map(int, data[2 + n:2 + n + m]))\n    best = 0\n    for k in range(n, 0, -1):\n        found = False\n        for idx in combinations(range(n), k):\n            if is_subsequence([a[i] for i in idx], b):\n                found = True\n                break\n        if found:\n            best = k\n            break\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(1, 8)\nm = r.randint(1, 8)\nk = r.randint(1, 4)\na = [r.randint(1, k) for _ in range(n)]\nb = [r.randint(1, k) for _ in range(m)]\nprint(n, m)\nprint(*a)\nprint(*b)\n",
+  "stressInputGenerator": "n = 600\nm = 600\nprint(n, m)\nprint(' '.join(['1'] * n))\nprint(' '.join(['2'] * m))\n"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "DFS_TRAVERSAL-1790363985378-1",
+  "skill": "DFS_TRAVERSAL",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:28:18+00:00",
+  "code": "P57_DFS_ENTER_EXIT_ORDER",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, s = int(data[0]), int(data[1]), int(data[2])\n    g = [[False] * (n + 1) for _ in range(n + 1)]\n    for k in range(m):\n        u = int(data[3 + 2 * k])\n        v = int(data[4 + 2 * k])\n        g[u][v] = True\n        g[v][u] = True\n    seen = [False] * (n + 1)\n    seen[s] = True\n    pre = [s]\n    post = []\n    path = [s]\n    while path:\n        u = path[-1]\n        nxt = 0\n        for v in range(1, n + 1):\n            if g[u][v] and not seen[v]:\n                nxt = v\n                break\n        if nxt:\n            seen[nxt] = True\n            pre.append(nxt)\n            path.append(nxt)\n        else:\n            post.append(path.pop())\n    print(' '.join(map(str, pre)))\n    print(' '.join(map(str, post)))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 8)\ns = r.randint(1, n)\nedges = []\nif n >= 2:\n    for _ in range(r.randint(0, 12)):\n        u = r.randint(1, n)\n        v = r.randint(1, n)\n        while v == u:\n            v = r.randint(1, n)\n        edges.append((u, v))\nprint(n, len(edges), s)\nfor u, v in edges:\n    print(u, v)\n",
+  "stressInputGenerator": null
+}

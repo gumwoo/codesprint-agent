@@ -1,0 +1,74 @@
+{
+  "id": "GRAPH_REPRESENTATION-1790363908345-1",
+  "skill": "GRAPH_REPRESENTATION",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:30:23+00:00",
+  "stage": "Skill 측정",
+  "code": "P65_BUSIER_NEIGHBOR_COUNT",
+  "reasons": [
+    "P65_BUSIER_NEIGHBOR_COUNT 으로 채택됐다가 CORE-3 PR 검토에서 철회했다",
+    "이웃에 대한 비교는 간선마다 나눠 셀 수 있다 - 인접 리스트 없이 간선 목록을 한 번 훑는 O(N + M) 풀이가 실제 채점에서 ACCEPTED. GRAPH_REPRESENTATION 을 재지 못한다",
+    "대조 풀이(정점마다 간선 전체를 훑는다)만 느렸고, 그보다 나은 간선 목록 풀이를 채택 검사가 보지 못했다. 대신 두 정점의 이웃을 맞대야 하는 P77 을 손으로 썼다(ADR-0039)"
+  ],
+  "draft": {
+    "codeSuffix": "BUSIER_NEIGHBOR_COUNT",
+    "title": "더 바쁜 이웃 세기",
+    "statement": "정점 N개와 간선 M개로 이루어진 무방향 그래프가 주어진다. 정점 번호는 1부터 N까지다(1-based). 정점의 차수는 그 정점에 연결된 간선의 수다. 각 정점 v에 대해, v와 간선으로 직접 연결된 이웃 중에서 차수가 v의 차수보다 엄격히 큰 이웃의 수를 구한다.\n\n입력 형식\n- 첫 줄에 N과 M이 공백으로 구분되어 주어진다.\n- 다음 M개의 줄에 간선의 두 끝점 a, b가 공백으로 구분되어 주어진다.\n\n제약\n- 1 <= N <= 200000\n- 0 <= M <= 200000\n- 1 <= a, b <= N, a != b\n- 같은 정점 쌍을 잇는 간선은 두 번 이상 주어지지 않는다.\n\n출력 형식\n- 한 줄에 정점 1부터 N까지의 답을 순서대로 공백 하나로 구분하여 출력한다.",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(N + M)",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "1-based 정점 번호를 그대로 쓰면서 인접 리스트를 N칸으로만 만들어 정점 N에서 IndexError가 난다.",
+    "sampleInputs": [
+      "5 5\n1 2\n1 3\n2 3\n3 4\n4 5\n",
+      "6 4\n1 6\n2 6\n3 6\n4 5\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1 0\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "2 1\n1 2\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "5 4\n1 2\n1 3\n1 4\n1 5\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "4 6\n1 2\n1 3\n1 4\n2 3\n2 4\n3 4\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "6 2\n2 6\n5 6\n"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\npairs = [(a, b) for a in range(1, n + 1) for b in range(a + 1, n + 1)]\nm = rng.randint(0, len(pairs))\nedges = rng.sample(pairs, m)\nlines = [f'{n} {m}']\nfor a, b in edges:\n    if rng.random() < 0.5:\n        a, b = b, a\n    lines.append(f'{a} {b}')\nprint('\\n'.join(lines))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    idx = 2\n    for _ in range(m):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    deg = [len(nb) for nb in adj]\n    out = []\n    for v in range(1, n + 1):\n        d = deg[v]\n        c = 0\n        for w in adj[v]:\n            if deg[w] > d:\n                c += 1\n        out.append(c)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    mat = [[0] * (n + 1) for _ in range(n + 1)]\n    for i in range(m):\n        a = int(data[2 + 2 * i])\n        b = int(data[3 + 2 * i])\n        mat[a][b] = 1\n        mat[b][a] = 1\n    deg = [sum(row) for row in mat]\n    out = []\n    for v in range(1, n + 1):\n        c = 0\n        for w in range(1, n + 1):\n            if mat[v][w] == 1 and deg[w] > deg[v]:\n                c += 1\n        out.append(c)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n)]\n    idx = 2\n    for _ in range(m):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    deg = [len(nb) for nb in adj]\n    out = []\n    for v in range(1, n + 1):\n        d = deg[v]\n        c = 0\n        for w in adj[v]:\n            if deg[w] > d:\n                c += 1\n        out.append(c)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+    "hints": [
+      "각 정점의 답은 그 정점의 이웃들과 그 이웃들의 차수만으로 정해진다.",
+      "그래프 표현 문제다. 간선 목록을 정점 기준으로 다시 정리해 두면 이웃과 차수를 바로 얻을 수 있다.",
+      "정점마다 이웃 번호를 모아 두는 인접 리스트를 쓴다. 무방향이므로 간선 하나를 양쪽 끝점 모두에 기록하고, 정점 번호가 1부터이므로 크기를 N+1로 잡는다. 차수는 각 이웃 목록의 길이다.",
+      "모든 간선을 한 번씩 넣어 인접 리스트와 차수를 완성한 뒤, 각 정점 v의 이웃 목록만 훑으며 차수가 v보다 큰 이웃을 센다. 이웃 목록 길이의 총합이 2M이므로 전체가 O(N + M)이다.",
+      "인접 리스트 adj를 N+1칸으로 만든다 -> 간선 (a, b)마다 adj[a]에 b, adj[b]에 a를 추가 -> deg[v] = adj[v]의 길이 -> v = 1..N마다 adj[v]의 w 중 deg[w] > deg[v]인 개수를 센다 -> 결과를 공백으로 이어 한 줄에 출력."
+    ],
+    "skillControl": {
+      "approach": "인접 리스트 없이 간선 목록만 저장하고, 정점마다 간선 전체를 훑어 이웃을 찾는다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = []\n    deg = [0] * (n + 1)\n    idx = 2\n    for _ in range(m):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        edges.append((a, b))\n        deg[a] += 1\n        deg[b] += 1\n    out = []\n    for v in range(1, n + 1):\n        c = 0\n        for a, b in edges:\n            if a == v:\n                w = b\n            elif b == v:\n                w = a\n            else:\n                continue\n            if deg[w] > deg[v]:\n                c += 1\n        out.append(c)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nm = 70000\nseen = set()\nedges = []\nwhile len(edges) < m:\n    a = rng.randint(1, n)\n    b = rng.randint(1, n)\n    if a == b:\n        continue\n    if a > b:\n        a, b = b, a\n    if (a, b) in seen:\n        continue\n    seen.add((a, b))\n    edges.append((a, b))\nlines = [f'{n} {m}']\nfor a, b in edges:\n    lines.append(f'{a} {b}')\nprint('\\n'.join(lines))\n"
+    }
+  }
+}

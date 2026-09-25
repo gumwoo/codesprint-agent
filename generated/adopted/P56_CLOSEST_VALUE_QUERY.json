@@ -1,0 +1,11 @@
+{
+  "id": "BINARY_SEARCH_BOUNDS-1790363827919-2",
+  "skill": "BINARY_SEARCH_BOUNDS",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:27:54+00:00",
+  "code": "P56_CLOSEST_VALUE_QUERY",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, q = int(data[0]), int(data[1])\n    a = [int(v) for v in data[2:2 + n]]\n    xs = [int(v) for v in data[2 + n:2 + n + q]]\n    for x in xs:\n        best = None\n        for v in a:\n            if best is None or (abs(v - x), v) < (abs(best - x), best):\n                best = v\n        print(best)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(1, 8)\na = sorted(rng.randint(-20, 20) for _ in range(n))\nxs = [rng.randint(-25, 25) for _ in range(q)]\nprint(n, q)\nprint(\" \".join(map(str, a)))\nprint(\" \".join(map(str, xs)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(7)\nn = 60000\nq = 60000\na = [2 * i for i in range(n)]\nxs = [rng.randint(110000, 119999) for _ in range(q)]\nprint(n, q)\nprint(\" \".join(map(str, a)))\nprint(\" \".join(map(str, xs)))\n"
+}

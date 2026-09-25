@@ -1,0 +1,11 @@
+{
+  "id": "MATH_GCD_LCM-1790363884484-1",
+  "skill": "MATH_GCD_LCM",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:31:47+00:00",
+  "code": "P69_SQUARE_TILE_GCD_LCM",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for i in range(q):\n        a = int(data[1 + 2 * i])\n        b = int(data[2 + 2 * i])\n        best = 1\n        for d in range(1, min(a, b) + 1):\n            if a % d == 0 and b % d == 0:\n                best = d\n        side = a\n        while side % b != 0:\n            side += a\n        out.append(f\"{best} {side}\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nq = r.randint(1, 5)\nlines = [str(q)]\nfor _ in range(q):\n    k = r.randint(1, 12)\n    a = k * r.randint(1, 20)\n    b = k * r.randint(1, 20)\n    lines.append(f\"{a} {b}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "q = 1000\nlines = [str(q)]\nfor i in range(q):\n    a = 10 ** 12 - i\n    b = a - 1\n    lines.append(f\"{a} {b}\")\nprint(\"\\n\".join(lines))\n"
+}

@@ -1,0 +1,32 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P68_MIN_MAX_LATENESS
+title: 마감 지연 최소화
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N log N)
+statement: |
+  기계 한 대로 작업 N개를 모두 처리한다. 기계는 시각 0에 일을 시작하고, 한 번에 작업 하나만 처리하며, 시작한 작업은 끝날 때까지 멈추지 않는다. 작업 사이에 쉬지 않는다. i번째 작업은 처리 시간이 t_i 이고 마감이 d_i 이다. 작업이 끝난 시각을 C_i 라 할 때 그 작업의 지연은 max(0, C_i - d_i) 이다. 작업 순서를 자유롭게 정할 수 있을 때, 모든 작업의 지연 중 최댓값이 가장 작아지도록 하고 그 최댓값을 출력한다.
+
+  입력 형식: 첫 줄에 N (1 <= N <= 200000). 다음 N개 줄 중 i번째 줄(i는 1부터 센다)에 정수 t_i, d_i 가 공백으로 구분되어 주어진다. 1 <= t_i <= 10000, 1 <= d_i <= 1000000000.
+
+  출력 형식: 가능한 최대 지연의 최솟값을 정수 하나로 출력한다.
+
+  작업 번호는 1부터 세지만 출력에는 쓰이지 않는다.
+skills:
+- code: GREEDY_CHOICE
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 정렬 기준 없이 가능한 모든 처리 순서(순열)를 만들어 각각의 최대 지연을 계산하고 최솟값을 고른다.

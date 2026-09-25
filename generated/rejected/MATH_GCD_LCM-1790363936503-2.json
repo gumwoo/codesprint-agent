@@ -1,0 +1,70 @@
+{
+  "id": "MATH_GCD_LCM-1790363936503-2",
+  "skill": "MATH_GCD_LCM",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:32:07+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "대조 풀이(skillControl) 가 37개 중 5개만 돌고 멈췄다 (case 1 WRONG_ANSWER)"
+  ],
+  "draft": {
+    "codeSuffix": "FRACTION_SUM_REDUCE",
+    "title": "두 분수의 합을 기약분수로",
+    "statement": "질의 Q 개가 주어진다. 각 질의는 양의 정수 a, b, c, d 로 이루어지며 두 분수 a/b 와 c/d 를 뜻한다. 각 질의마다 a/b + c/d 를 기약분수 p/q 로 나타냈을 때의 p 와 q 를 구한다. p 와 q 는 1 이외의 공약수가 없는 양의 정수이며, 합이 정수이면 q 는 1 이다.\n\n입력 형식\n- 첫 줄에 질의 수 Q (1 <= Q <= 10000).\n- 다음 Q 줄에 각각 정수 a b c d 가 공백으로 구분되어 주어진다 (1 <= a, b, c, d <= 10^18).\n\n출력 형식\n- 질의 순서대로 한 줄에 하나씩 p 와 q 를 공백 하나로 구분해 출력한다.\n\n인덱스 기준\n- 이 문제는 위치 인덱스를 쓰지 않는다. 질의는 입력 순서대로 처리한다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(Q * log(max(a, b, c, d)))",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "두 분모의 최소공배수로 통분해 더한 뒤, 분자와 분모를 최대공약수로 나누는 약분을 하지 않는다.",
+    "sampleInputs": [
+      "3\n1 2 1 3\n1 6 1 3\n3 4 5 4\n",
+      "2\n7 10 3 15\n1 1 1 1\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n1 1 1 1\n"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "1\n1000000000000000000 1000000000000000000 1000000000000000000 1000000000000000000\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "2\n1 999999999999999989 1 1000000000000000000\n999999999999999999 1000000000000000000 1 999999999999999989\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "2\n1 3 2 3\n5 12 7 12\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "3\n2 8 2 8\n2 8 2 8\n6 9 4 6\n"
+      }
+    ],
+    "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nq = rng.randint(1, 5)\nlines = [str(q)]\nfor _ in range(q):\n    a = rng.randint(1, 50)\n    b = rng.randint(1, 50)\n    c = rng.randint(1, 50)\n    d = rng.randint(1, 50)\n    lines.append(f\"{a} {b} {c} {d}\")\nprint(\"\\n\".join(lines))\n",
+    "reference": "import sys\n\n\ndef gcd(x, y):\n    while y:\n        x, y = y, x % y\n    return x\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    out = []\n    idx = 1\n    for _ in range(q):\n        a, b, c, d = map(int, data[idx:idx + 4])\n        idx += 4\n        den = b // gcd(b, d) * d\n        num = a * (den // b) + c * (den // d)\n        g = gcd(num, den)\n        out.append(f\"{num // g} {den // g}\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+    "bruteForce": "import sys\nfrom fractions import Fraction\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for i in range(q):\n        a, b, c, d = (int(v) for v in data[1 + 4 * i:5 + 4 * i])\n        total = Fraction(a * d + c * b, b * d)\n        out.append(f\"{total.numerator} {total.denominator}\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef gcd(x, y):\n    while y:\n        x, y = y, x % y\n    return x\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    out = []\n    idx = 1\n    for _ in range(q):\n        a, b, c, d = map(int, data[idx:idx + 4])\n        idx += 4\n        den = b // gcd(b, d) * d\n        num = a * (den // b) + c * (den // d)\n        out.append(f\"{num} {den}\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+    "hints": [
+      "분모끼리 곱해서 통분하면 수가 커지고 약분이 따로 필요하다. 1/6 + 1/3 처럼 통분해 더한 결과가 아직 약분되는 경우를 손으로 확인해 보자.",
+      "두 분모의 최소공배수로 통분하고, 결과를 분자와 분모의 최대공약수로 나눈다. 최대공약수는 유클리드 호제법으로 구한다. 수가 10^18 까지 커서 약수를 하나씩 시험하면 끝나지 않는다.",
+      "질의마다 필요한 값은 공통 분모, 그 분모에 맞춘 분자, 그리고 분자와 분모의 최대공약수 세 가지뿐이다. 정수 두 개만 들고 반복하는 함수 하나로 최대공약수를 구할 수 있다.",
+      "gcd(x, y) = gcd(y, x mod y) 이고 y 가 0 이 되면 x 가 답이다. 최소공배수는 b / gcd(b, d) * d 로 구하면 중간값이 불필요하게 커지지 않는다. 합의 분자는 a * (L / b) + c * (L / d) 이다.",
+      "각 질의에 대해: L <- b 를 gcd(b, d) 로 나눈 몫에 d 를 곱한 값; N <- a * (L / b) + c * (L / d); G <- gcd(N, L); N / G 와 L / G 를 출력. gcd 는 y 가 0 이 아닐 동안 (x, y) 를 (y, x mod y) 로 바꾸고 x 를 돌려준다."
+    ],
+    "skillControl": {
+      "approach": "두 수 중 작은 값부터 1 까지 내려가며 둘을 모두 나누는 첫 수를 최대공약수로 삼는다.",
+      "solution": "import sys\n\n\ndef slow_gcd(x, y):\n    k = min(x, y)\n    while k > 1:\n        if x % k == 0 and y % k == 0:\n            return k\n        k -= 1\n    return 1\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    idx = 1\n    for _ in range(q):\n        a, b, c, d = map(int, data[idx:idx + 4])\n        idx += 4\n        den = b // slow_gcd(b, d) * d\n        num = a * (den // b) + c * (den // d)\n        g = slow_gcd(num, den)\n        out.append(f\"{num // g} {den // g}\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nq = 2000\nlines = [str(q)]\nfor _ in range(q):\n    a = rng.randint(10 ** 17, 10 ** 18)\n    b = rng.randint(10 ** 17, 10 ** 18)\n    c = rng.randint(10 ** 17, 10 ** 18)\n    d = rng.randint(10 ** 17, 10 ** 18)\n    lines.append(f\"{a} {b} {c} {d}\")\nprint(\"\\n\".join(lines))\n"
+    }
+  }
+}

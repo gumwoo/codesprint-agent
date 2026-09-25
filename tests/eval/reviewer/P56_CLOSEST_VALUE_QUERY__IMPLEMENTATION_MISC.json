@@ -1,0 +1,33 @@
+{
+  "problemCode": "P56_CLOSEST_VALUE_QUERY",
+  "problemTitle": "가장 가까운 값 찾기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BINARY_SEARCH_BOUNDS"
+  ],
+  "sourceCode": "\nimport sys\nfrom bisect import bisect_left\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, q = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    xs = data[2 + n:2 + n + q]\n    out = []\n    for t in xs:\n        x = int(t) ^ (out[-1] if out else 0)  # 직전 답과 xor\n        i = bisect_left(a, x)\n        if i == n:\n            out.append(a[n - 1])\n        elif i == 0:\n            out.append(a[0])\n        else:\n            lo = a[i - 1]\n            hi = a[i]\n            out.append(lo if x - lo < hi - x else hi)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      6,
+      12
+    ]
+  },
+  "probes": {}
+}

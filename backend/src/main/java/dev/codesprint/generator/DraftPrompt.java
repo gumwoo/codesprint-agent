@@ -85,6 +85,29 @@ public final class DraftPrompt {
         return values;
     }
 
+    /**
+     * 이번 실행에서 앞서 만든 초안을 기존 문제 목록 뒤에 붙인다. 값은 새 맵으로 돌려준다.
+     *
+     * @param drafts {@link #summary} 로 만든 줄들. 비어 있으면 그대로다.
+     */
+    public static Map<String, String> withDrafts(Map<String, String> values, String drafts) {
+        if (drafts.isBlank()) {
+            return values;
+        }
+        Map<String, String> copy = new LinkedHashMap<>(values);
+        String existing = values.get("existingProblems");
+        copy.put("existingProblems",
+                ("(없음)".equals(existing) ? "" : existing + "\n") + drafts.strip());
+        return copy;
+    }
+
+    /** 기존 문제 목록과 같은 모양의 한 줄 - 제목과 본문 앞부분. */
+    public static String summary(String code, String title, String statement) {
+        String flat = oneLine(statement);
+        return "- " + code + " " + title + ": " + flat.substring(0, Math.min(flat.length(), 160))
+                + "\n";
+    }
+
     /** 이 Skill 을 쓰는 기존 문제의 제목과 본문 앞부분. 겹치지 않게 하려고 보여준다. */
     @SuppressWarnings("unchecked")
     static String existingProblems(Path repoRoot, String skillCode) {

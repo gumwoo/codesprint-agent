@@ -1,0 +1,32 @@
+{
+  "problemCode": "P69_SQUARE_TILE_GCD_LCM",
+  "problemTitle": "정사각형 타일과 정사각형 판",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MATH_GCD_LCM"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef gcd(a, b):\n    while b:\n        a, b = b, a % b\n    return a\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for i in range(q):\n        a = int(data[1 + 2 * i])\n        b = int(data[2 + 2 * i])\n        g = gcd(a, b)\n        out.append(f\"{g} {a * b}\")\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

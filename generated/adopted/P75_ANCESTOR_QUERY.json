@@ -1,0 +1,11 @@
+{
+  "id": "TREE_TRAVERSAL-1790364094203-2",
+  "skill": "TREE_TRAVERSAL",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:33:43+00:00",
+  "code": "P75_ANCESTOR_QUERY",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    r = int(data[1])\n    idx = 2\n    adj = [[] for _ in range(n + 1)]\n    for _ in range(n - 1):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    parent = [-1] * (n + 1)\n    parent[r] = 0\n    dq = deque([r])\n    while dq:\n        x = dq.popleft()\n        for y in adj[x]:\n            if parent[y] == -1:\n                parent[y] = x\n                dq.append(y)\n    q = int(data[idx])\n    idx += 1\n    out = []\n    for _ in range(q):\n        u = int(data[idx])\n        v = int(data[idx + 1])\n        idx += 2\n        ans = 'NO'\n        x = v\n        while x != 0:\n            if x == u:\n                ans = 'YES'\n                break\n            x = parent[x]\n        out.append(ans)\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nr = rng.randint(1, n)\nperm = list(range(1, n + 1))\nrng.shuffle(perm)\nedges = []\nfor i in range(1, n):\n    p = perm[rng.randrange(i)]\n    c = perm[i]\n    edges.append((p, c) if rng.random() < 0.5 else (c, p))\nrng.shuffle(edges)\nq = rng.randint(1, 6)\nlines = [f'{n} {r}']\nlines += [f'{a} {b}' for a, b in edges]\nlines.append(str(q))\nlines += [f'{rng.randint(1, n)} {rng.randint(1, n)}' for _ in range(q)]\nprint('\\n'.join(lines))\n",
+  "stressInputGenerator": null
+}

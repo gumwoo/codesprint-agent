@@ -398,3 +398,185 @@ concepts:
           running += diff[i]
           values[i] += running
     self_check: 갱신 두 개 [0,2]+1, [1,3]+2 를 diff로 적고 누적해 보세요.
+
+  # ── W4 · CORE-3 (ADR-0034) ──────────────────────────────────────────
+  - skill_code: BINARY_SEARCH_BOUNDS
+    title: 처음 나오는 위치를 절반씩 좁혀 찾기
+    summary: 정렬된 배열에서 "값 이상이 처음 나오는 위치"는 범위를 절반씩 줄이며 log N 번 만에 찾는다.
+    key_points:
+      - bisect_left는 값 이상이 처음 나오는 위치, bisect_right는 값 초과가 처음 나오는 위치다.
+      - 값의 개수는 bisect_right - bisect_left로 구한다.
+      - 직접 짤 때는 lo, hi의 의미(닫힌 구간인지 반열린 구간인지)를 하나로 정해 끝까지 지킨다.
+    example: |
+      from bisect import bisect_left, bisect_right
+      count = bisect_right(values, x) - bisect_left(values, x)
+    self_check: 정렬된 [1, 2, 2, 5]에서 bisect_left(2)와 bisect_right(2)가 각각 무엇인지 말해 보세요.
+
+  - skill_code: PARAMETRIC_SEARCH
+    title: 답을 정하고 가능한지 묻기
+    summary: '"답이 x일 때 가능한가"가 x가 커질수록 한 번 바뀌고 다시 돌아오지 않으면, 답 자체를 이분 탐색할 수 있다.'
+    key_points:
+      - 가능 여부를 판단하는 함수를 먼저 따로 만든다.
+      - 가능/불가능이 한 번만 바뀌는지(단조성) 확인하고, 가능한 쪽의 끝을 찾는다.
+      - 탐색 범위의 양 끝(최소 · 최대 답)을 문제 조건에서 정한다.
+    example: |
+      lo, hi = 1, max_answer
+      while lo < hi:
+          mid = (lo + hi) // 2
+          if possible(mid): hi = mid
+          else: lo = mid + 1
+    self_check: 위 코드가 "가능한 가장 작은 답"을 찾는 이유를 설명해 보세요.
+
+  - skill_code: GREEDY_CHOICE
+    title: 지금 가장 좋은 것을 고르는 규칙
+    summary: 그리디는 정렬 기준 하나로 매 단계 선택을 확정한다. 그 선택이 나중의 최적해를 망치지 않는다는 근거가 있어야 맞는다.
+    key_points:
+      - 회의실 배정처럼 끝나는 시각이 빠른 것을 먼저 고르면 남은 시간이 가장 길다.
+      - 반례를 작은 입력으로 직접 찾아본다. 반례가 있으면 그리디가 아니라 다른 방법이 필요하다.
+      - 정렬 기준에서 동점 처리 규칙이 결과를 바꾸는지 확인한다.
+    example: |
+      meetings.sort(key=lambda m: (m.end, m.start))
+      last_end, count = 0, 0
+      for m in meetings:
+          if m.start >= last_end:
+              count, last_end = count + 1, m.end
+    self_check: 시작 시각이 빠른 회의부터 고르면 틀리는 예를 하나 만들어 보세요.
+
+  - skill_code: MATH_GCD_LCM
+    title: 유클리드 호제법
+    summary: gcd(a, b) = gcd(b, a % b)를 b가 0이 될 때까지 반복하면 큰 수도 몇십 번 만에 끝난다.
+    key_points:
+      - math.gcd가 같은 일을 한다.
+      - lcm(a, b) = a // gcd(a, b) * b 로 구한다. 곱을 먼저 하면 수가 커진다(파이썬은 넘치지 않지만 느려진다).
+      - 작은 수부터 하나씩 나눠 보면 수가 10^12일 때 너무 오래 걸린다.
+    example: |
+      def gcd(a, b):
+          while b:
+              a, b = b, a % b
+          return a
+    self_check: gcd(48, 18)을 호제법으로 단계별로 계산해 보세요.
+
+  - skill_code: NUMBER_BASE_CONVERSION
+    title: 자릿수와 진법 바꾸기
+    summary: 10진수를 b진법으로 바꾸려면 b로 나눈 나머지를 모으고 몫으로 계속 나눈다. 모은 나머지를 거꾸로 읽는다.
+    key_points:
+      - 0은 따로 처리한다. 반복문이 한 번도 돌지 않는다.
+      - b진법 문자열을 10진수로 바꿀 때는 앞에서부터 value = value * b + digit 으로 쌓는다.
+      - 10보다 큰 자릿값은 A, B, ... 처럼 약속한 문자로 쓴다.
+    example: |
+      DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      digits = []
+      while n > 0:
+          digits.append(n % base)
+          n //= base
+      print("".join(DIGITS[d] for d in reversed(digits)) or "0")
+    self_check: 13을 2진법으로 바꾸는 과정을 나머지로 적어 보세요.
+
+  - skill_code: GRAPH_REPRESENTATION
+    title: 인접 리스트
+    summary: 정점마다 이웃 목록을 만들어 두면 한 정점의 이웃을 바로 꺼낼 수 있다.
+    key_points:
+      - 무방향 그래프는 간선 하나를 양쪽 목록에 모두 넣는다.
+      - 정점 번호가 1부터면 목록을 N+1 칸 만들어 인덱스를 그대로 쓴다.
+      - 이웃을 찾을 때마다 간선 전체를 훑으면 정점 수 × 간선 수만큼 본다.
+    example: |
+      graph = [[] for _ in range(n + 1)]
+      for u, v in edges:
+          graph[u].append(v)
+          graph[v].append(u)
+    self_check: 간선 M개인 무방향 그래프에서 이웃 목록 길이의 합이 얼마인지 말해 보세요.
+
+  - skill_code: DFS_TRAVERSAL
+    title: 끝까지 들어갔다 돌아오기
+    summary: DFS는 한 이웃으로 갈 수 있는 데까지 내려간 뒤 돌아와 다음 이웃으로 간다. 재귀나 스택으로 구현한다.
+    key_points:
+      - 방문 표시는 정점에 들어가는 순간 한다.
+      - 이웃을 번호 순으로 보라는 조건이 있으면 목록을 정렬해 둔다.
+      - 재귀가 깊으면 파이썬 재귀 한도를 늘리거나 스택으로 바꾼다.
+    example: |
+      def dfs(node):
+          visited[node] = True
+          order.append(node)
+          for nxt in graph[node]:
+              if not visited[nxt]:
+                  dfs(nxt)
+    self_check: 같은 그래프에서 DFS와 BFS의 방문 순서가 달라지는 예를 들어 보세요.
+
+  - skill_code: GRAPH_CYCLE_DETECTION
+    title: 사이클 찾기
+    summary: 방향 그래프에서는 "지금 탐색 중인 경로 위의 정점"을 다시 만나면 사이클이다. 이미 끝난 정점을 만나는 것은 사이클이 아니다.
+    key_points:
+      - 상태를 셋으로 둔다. 방문 전, 탐색 중, 탐색 완료.
+      - 무방향 그래프에서는 바로 온 부모 정점으로 돌아가는 간선을 사이클로 세지 않는다.
+      - 연결되지 않은 부분이 있으면 모든 시작점에서 한 번씩 확인한다.
+      - 진입 차수를 줄여 가는 방법(방향)이나 union-find(무방향)로도 같은 판정을 낼 수 있다.
+    example: |
+      def has_cycle(node):
+          state[node] = 1
+          for nxt in graph[node]:
+              if state[nxt] == 1 or (state[nxt] == 0 and has_cycle(nxt)):
+                  return True
+          state[node] = 2
+          return False
+    self_check: 방향 그래프에서 "탐색 완료" 정점을 다시 만나도 사이클이 아닌 이유를 설명해 보세요.
+
+  - skill_code: TREE_TRAVERSAL
+    title: 루트에서 내려가며 트리 정보 모으기
+    summary: 루트에서 DFS나 BFS로 내려가면 부모와 깊이가 정해지고, 돌아오면서 서브트리 크기를 모은다.
+    key_points:
+      - 간선이 방향 없이 주어지면 부모로 돌아가는 간선을 건너뛴다.
+      - 서브트리 크기는 자식들의 크기를 모두 더한 뒤 자기 자신 1을 더한다.
+      - 리프는 부모를 뺀 이웃이 없는 정점이다.
+    example: |
+      def walk(node, parent):
+          size[node] = 1
+          for child in graph[node]:
+              if child != parent:
+                  depth[child] = depth[node] + 1
+                  walk(child, node)
+                  size[node] += size[child]
+    self_check: 루트를 바꾸면 깊이와 서브트리 크기 중 무엇이 달라지는지 설명해 보세요.
+
+  - skill_code: DP_1D
+    title: 작은 답을 저장해 다시 쓰기
+    summary: dp[i]가 무엇을 뜻하는지 한 문장으로 정하고, dp[i]를 더 작은 i의 값으로 나타내는 점화식을 세운다.
+    key_points:
+      - 상태 정의, 점화식, 시작값, 계산 순서를 차례로 적는다.
+      - 메모 없이 재귀하면 같은 dp[i]를 여러 번 다시 계산해 지수 시간이 된다.
+      - 답이 dp[n]인지, dp 전체의 최댓값인지 문제에 맞게 고른다.
+    example: |
+      dp = [0] * (n + 1)
+      dp[0] = dp[1] = 1
+      for i in range(2, n + 1):
+          dp[i] = dp[i - 1] + dp[i - 2]
+    self_check: 계단을 한 칸 또는 두 칸씩 오르는 방법의 수를 dp로 정의해 보세요.
+
+  - skill_code: DP_2D
+    title: 두 상태를 표로 채우기
+    summary: 상태가 (행, 열)이나 (i, j) 두 개면 2차원 표를 만들고, 이미 채운 칸만 보고 새 칸을 채우는 순서로 돈다.
+    key_points:
+      - 첫 행과 첫 열처럼 다른 칸을 볼 수 없는 칸의 값을 먼저 정한다.
+      - 점화식이 참조하는 칸이 이미 채워진 순서(위에서 아래, 왼쪽에서 오른쪽)로 반복한다.
+      - 경로를 전부 따라가면 경로 수만큼 걸려 입력이 조금만 커져도 끝나지 않는다.
+    example: |
+      for r in range(n):
+          for c in range(m):
+              if r == 0 and c == 0: continue
+              up = dp[r - 1][c] if r else INF
+              left = dp[r][c - 1] if c else INF
+              dp[r][c] = grid[r][c] + min(up, left)
+    self_check: 오른쪽과 아래로만 가는 격자에서 경로의 수가 얼마나 빨리 늘어나는지 어림해 보세요.
+
+  - skill_code: STATE_SPACE_BFS
+    title: 위치에 상태를 더한 BFS
+    summary: 같은 칸이라도 벽을 부쉈는지, 열쇠를 가졌는지에 따라 다른 정점으로 본다. 방문 배열도 그 상태만큼 늘린다.
+    key_points:
+      - 정점을 (행, 열, 상태) 튜플로 둔다.
+      - visited를 [행][열][상태] 3차원으로 만든다. 칸만 보고 막으면 다른 상태의 더 좋은 경로를 버린다.
+      - 상태가 바뀌는 이동(벽 부수기, 열쇠 줍기)을 이동 규칙에 하나씩 적는다.
+    example: |
+      queue = deque([(0, 0, 0)])
+      dist[0][0][0] = 1
+      while queue:
+          r, c, broken = queue.popleft()
+    self_check: 칸 단위로만 방문을 표시하면 벽 부수기 문제에서 무엇이 틀리는지 설명해 보세요.

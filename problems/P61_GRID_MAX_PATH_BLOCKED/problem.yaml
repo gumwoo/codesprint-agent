@@ -1,0 +1,45 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P61_GRID_MAX_PATH_BLOCKED
+title: 막힌 칸이 있는 격자의 최대 합 경로
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N * M)
+statement: |
+  N행 M열 격자가 있다. 각 칸에는 정수가 하나 적혀 있고, -1 은 지나갈 수 없는 칸이다. 나머지 칸의 값은 0 이상 1000 이하이다. 행과 열 번호는 0 부터 센다.
+
+  (0, 0) 에서 출발해 (N-1, M-1) 에 도착해야 한다. 한 번에 오른쪽 (r, c) -> (r, c+1) 또는 아래쪽 (r, c) -> (r+1, c) 로만 한 칸 이동할 수 있고, 격자 밖이나 -1 칸으로는 이동할 수 없다. 경로의 점수는 지나간 모든 칸(출발 칸과 도착 칸 포함)의 값의 합이다.
+
+  얻을 수 있는 점수의 최댓값을 구하라. 도착할 수 있는 경로가 없으면 -1 을 출력한다.
+
+  입력 형식
+  - 첫 줄: N M (1 <= N, M <= 200)
+  - 다음 N줄: 각 줄에 M개의 정수가 공백으로 구분되어 주어진다. i번째 줄의 j번째 수가 (i, j) 칸의 값이다.
+  - (0, 0) 과 (N-1, M-1) 은 -1 이 아니다.
+
+  출력 형식
+  - 최대 점수를 정수 하나로 출력한다. 경로가 없으면 -1 을 출력한다.
+skills:
+- code: DP_2D
+  role: PRIMARY
+  weight: 0.7
+- code: GRID_COORDINATE
+  role: SECONDARY
+  weight: 0.15
+- code: GRID_BOUNDARY_CHECK
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- BOUNDARY_CHECK
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: RUNTIME_ERROR
+skillControl:
+  approach: (0, 0) 에서 재귀로 오른쪽 · 아래쪽 경로를 모두 따라가며 도착할 때마다 합의 최댓값을 갱신한다.

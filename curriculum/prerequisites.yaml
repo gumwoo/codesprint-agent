@@ -141,3 +141,56 @@ prerequisites:
   - skill: DIFFERENCE_ARRAY
     requires: PREFIX_SUM
     minimum_mastery: 0.65
+
+  # ── W4 · CORE-3 (ADR-0034) ──────────────────────────────────────────
+  - skill: BINARY_SEARCH_BOUNDS
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: PARAMETRIC_SEARCH
+    requires: BINARY_SEARCH_BOUNDS
+    minimum_mastery: 0.65
+
+  - skill: GREEDY_CHOICE
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: NUMBER_BASE_CONVERSION
+    requires: STRING_MANIPULATION
+    minimum_mastery: 0.65
+
+  - skill: GRAPH_REPRESENTATION
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: DFS_TRAVERSAL
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: DFS_TRAVERSAL
+    requires: RECURSION_BASIC
+    minimum_mastery: 0.65
+
+  - skill: GRAPH_CYCLE_DETECTION
+    requires: DFS_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: TREE_TRAVERSAL
+    requires: DFS_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: DP_1D
+    requires: RECURSION_BASIC
+    minimum_mastery: 0.65
+
+  - skill: DP_2D
+    requires: DP_1D
+    minimum_mastery: 0.65
+
+  - skill: DP_2D
+    requires: GRID_COORDINATE
+    minimum_mastery: 0.65
+
+  - skill: STATE_SPACE_BFS
+    requires: BFS_SHORTEST_PATH
+    minimum_mastery: 0.65

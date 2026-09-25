@@ -1,0 +1,75 @@
+{
+  "id": "PARAMETRIC_SEARCH-1790363771484-1",
+  "skill": "PARAMETRIC_SEARCH",
+  "promptVersion": "problem-v2",
+  "decidedAt": "2026-09-25T19:32:41+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "대조 풀이(skillControl) 가 38개 중 7개만 돌고 멈췄다 (case 1 WRONG_ANSWER)"
+  ],
+  "draft": {
+    "codeSuffix": "SPLIT_MAX_SUM",
+    "title": "작업 구간 나누기",
+    "statement": "N 개의 작업이 순서대로 놓여 있고, i 번째 작업의 소요 시간은 a_i 이다. 작업을 순서를 바꾸지 않고 K 개 이하의 연속된 구간으로 나눈다. 모든 작업은 정확히 한 구간에 속하고, 각 구간은 작업을 1 개 이상 포함한다. 한 구간의 비용은 그 구간에 속한 작업 소요 시간의 합이다. 가장 비용이 큰 구간의 비용을 최소로 만들 때 그 값을 출력한다.\n\n입력 형식\n첫째 줄에 정수 N, K 가 공백으로 구분되어 주어진다. (1 ≤ K ≤ N ≤ 20000)\n둘째 줄에 정수 a_1, a_2, ..., a_N 이 공백으로 구분되어 주어진다. (1 ≤ a_i ≤ 10^9)\n작업 번호는 1 부터 센다. 입력의 순서가 작업의 순서다.\n\n출력 형식\n가장 큰 구간 비용의 최솟값을 정수 하나로 출력한다.",
+    "secondarySkills": [
+      "PYTHON_LIST_BASIC"
+    ],
+    "referenceComplexity": "O(N log(sum a_i))",
+    "expectedSolveSeconds": 1200,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "이분 탐색의 하한을 max(a) 가 아니라 1 로 잡아, 작업 하나보다 작은 상한도 가능하다고 판정한다.",
+    "sampleInputs": [
+      "5 2\n1 2 3 4 5",
+      "7 3\n4 8 2 6 5 1 7"
+    ],
+    "edgeCases": [
+      {
+        "type": "SINGLE",
+        "input": "1 1\n7"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "2 2\n1 10"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5 5\n2 9 4 1 6"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "4 2\n3 3 3 3"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "5 1\n1000000000 1000000000 1000000000 1000000000 1000000000"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6 3\n1 1 1 1 1 100"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nk = rng.randint(1, n)\na = [rng.randint(1, 20) for _ in range(n)]\nprint(n, k)\nprint(*a)\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n\n    def groups_needed(limit):\n        count = 1\n        cur = 0\n        for v in a:\n            if cur + v > limit:\n                count += 1\n                cur = v\n            else:\n                cur += v\n        return count\n\n    lo, hi = max(a), sum(a)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if groups_needed(mid) <= k:\n            hi = mid\n        else:\n            lo = mid + 1\n    print(lo)\n\n\nmain()\n",
+    "bruteForce": "import sys\nfrom itertools import combinations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n    best = None\n    for cuts_count in range(0, k):\n        for cuts in combinations(range(1, n), cuts_count):\n            bounds = [0] + list(cuts) + [n]\n            worst = max(sum(a[bounds[i]:bounds[i + 1]]) for i in range(len(bounds) - 1))\n            if best is None or worst < best:\n                best = worst\n    print(best)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n\n    def groups_needed(limit):\n        count = 1\n        cur = 0\n        for v in a:\n            if cur + v > limit:\n                count += 1\n                cur = v\n            else:\n                cur += v\n        return count\n\n    lo, hi = 1, sum(a)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if groups_needed(mid) <= k:\n            hi = mid\n        else:\n            lo = mid + 1\n    print(lo)\n\n\nmain()\n",
+    "hints": [
+      "답이 될 수 있는 값 x 를 하나 정하면, 모든 구간 비용을 x 이하로 만들 수 있는지는 판단하기 쉽다. x 가 커질수록 가능해지기만 한다.",
+      "가능 여부가 x 에 대해 단조로우므로 답 자체를 이분 탐색하는 매개 변수 탐색 문제다.",
+      "상태는 탐색 구간의 하한 · 상한 두 정수다. 하한은 가장 큰 작업 하나, 상한은 모든 작업의 합이다. 하한을 이보다 작게 잡으면 판정이 틀어진다.",
+      "상한 x 가 정해지면 앞에서부터 합이 x 를 넘기 직전까지 한 구간에 몰아넣는 탐욕으로 필요한 최소 구간 수를 센다. 그 수가 K 이하면 x 는 가능하다.",
+      "lo = 최대 원소, hi = 전체 합\n반복 lo < hi:\n  mid = 가운데 값\n  mid 상한으로 탐욕 분할한 구간 수 <= K 이면 hi = mid\n  아니면 lo = mid + 1\nlo 출력"
+    ],
+    "skillControl": {
+      "approach": "x 를 max(a) 부터 1 씩 늘리며 탐욕 판정이 처음 성공하는 x 를 찾는다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, k = int(data[0]), int(data[1])\n    a = list(map(int, data[2:2 + n]))\n\n    def groups_needed(limit):\n        count = 1\n        cur = 0\n        for v in a:\n            if cur + v > limit:\n                count += 1\n                cur = v\n            else:\n                cur += v\n        return count\n\n    x = max(a)\n    while groups_needed(x) > k:\n        x += 1\n    print(x)\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 20000\nk = 2\na = [rng.randint(1, 10**9) for _ in range(n)]\nprint(n, k)\nprint(*a)\n"
+    }
+  }
+}
