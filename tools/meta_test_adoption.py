@@ -103,6 +103,11 @@ def stress_generator_is_empty(draft):
     draft["skillControl"]["stressInputGenerator"] = "pass\n"
 
 
+def unmeasurable_skill_as_secondary(draft):
+    # 보조 Skill 에는 대조 풀이가 붙지 않는다. P14 · P16 이 이 모양이었다(ADR-0033 §5).
+    draft["secondarySkills"] = ["PYTHON_DEQUE_BASIC"]
+
+
 # (설명, 고정 초안, 망가뜨리는 방법, 기대 단계) - 기대 단계가 None 이면 채택돼야 한다.
 # 기대 단계 자리에 (단계, 사유 조각) 을 주면 사유까지 본다. 같은 단계의 다른 검사가 대신
 # 막아도 통과하면, 그 검사를 지워도 초록이다.
@@ -110,6 +115,9 @@ CASES = [
     ("정상 초안은 채택된다", "list", None, None),
     ("계약을 어기면", "list", contract_breaks, "계약"),
     ("SYSTEM 이 부여하는 실수를 적으면", "list", system_mistake, "참조"),
+    # 이 검사를 꺼도 뒤의 문제 데이터 검사가 막는다(검증 에이전트) - 그래서 사유까지 본다.
+    ("잴 수 없는 Skill 을 보조로 두면", "list", unmeasurable_skill_as_secondary,
+     ("참조", "보조 Skill 로 둘 수 없다")),
     ("기존 문제와 본문이 같으면", "list", duplicate_statement, "중복"),
     ("입력 생성기가 터지면", "list", generator_crashes, "입력 생성기"),
     ("정답과 완전탐색이 갈라지면", "list", brute_disagrees, "교차 검증"),
