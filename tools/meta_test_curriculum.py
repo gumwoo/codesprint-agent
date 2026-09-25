@@ -221,9 +221,14 @@ def mistake_named_like_skill(doc):
 
 
 def domain_active_without_skill(doc):
+    # 고정된 도메인을 쓰지 않는다. 웨이브마다 도메인이 켜지므로 DP 를 켜 두면 이 케이스가
+    # 아무것도 깨뜨리지 못한다 - CORE-3 에서 DP 가 켜지자 실제로 FALSE NEGATIVE 가 났다.
+    # 아직 꺼져 있는 도메인 하나를 켠다.
     for d in doc["domains"]:
-        if d["code"] == "DP":
+        if not d["active"]:
             d["active"] = True
+            return
+    raise AssertionError("꺼진 도메인이 없다 - 이 케이스는 모든 도메인이 켜지면 다른 방법이 필요하다")
 
 
 def llm_schema_gains_next_action(schema):

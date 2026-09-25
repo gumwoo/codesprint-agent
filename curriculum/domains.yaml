@@ -99,19 +99,19 @@ domains:
     order: 14
     name: Binary Search / Parametric Search
     tier: CORE
-    active: false
+    active: true
 
   - code: GREEDY
     order: 15
     name: Greedy
     tier: CORE
-    active: false
+    active: true
 
   - code: MATH
     order: 16
     name: Mathematics
     tier: CORE
-    active: false
+    active: true
 
   - code: NUMBER_THEORY
     order: 17
@@ -135,7 +135,7 @@ domains:
     order: 20
     name: DFS
     tier: CORE
-    active: false
+    active: true
 
   - code: BFS
     order: 21
@@ -147,7 +147,7 @@ domains:
     order: 22
     name: Graph Fundamentals
     tier: CORE
-    active: false
+    active: true
 
   - code: SHORTEST_PATH
     order: 23
@@ -177,13 +177,13 @@ domains:
     order: 27
     name: Tree
     tier: CORE
-    active: false
+    active: true
 
   - code: DP
     order: 28
     name: Dynamic Programming
     tier: CORE
-    active: false
+    active: true
 
   - code: SEQUENCE_DP
     order: 29
@@ -201,7 +201,7 @@ domains:
     order: 31
     name: Grid / State Space Search
     tier: CORE
-    active: false
+    active: true
 
   - code: COORDINATE_COMPRESSION
     order: 32
