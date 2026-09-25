@@ -96,7 +96,7 @@ class SkillMapTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "skills-" + System.nanoTime() + "@codesprint.dev", "상태테스트")).id();
+                "skills-" + System.nanoTime() + "@codesprint.dev", "상태테스트", "JOB")).id();
     }
 
     private static JsonSchema schema(String name) throws Exception {

@@ -78,7 +78,7 @@ class SkillEvidencePersistenceTest {
     void createUser() {
         userId = (Long) entityManager
                 .createNativeQuery(
-                        "INSERT INTO users (email, nickname) VALUES (:email, 'tester') "
+                        "INSERT INTO users (email, nickname, track) VALUES (:email, 'tester', 'JOB') "
                                 + "RETURNING id")
                 .setParameter("email", "tester+" + System.nanoTime() + "@example.com")
                 .getSingleResult();

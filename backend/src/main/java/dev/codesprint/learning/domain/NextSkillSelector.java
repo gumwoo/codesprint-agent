@@ -61,6 +61,10 @@ public class NextSkillSelector {
                 .filter(edge -> edge.requires().equals(masteredSkill))
                 .map(Prerequisite::skillCode)
                 .distinct()
+                // 사용자의 트랙 밖은 고르지 않는다(ADR-0035). states 가 곧 켜진 범위다 -
+                // 선수 그래프는 트랙과 상관없이 전체라, 여기서 거르지 않으면 입문 사용자를
+                // BFS 로 보낸다.
+                .filter(byCode::containsKey)
                 .filter(code -> notMastered(byCode.get(code)))
                 .filter(code -> prerequisites.unmet(code, masteries).isEmpty())
                 .min(Comparator.naturalOrder());

@@ -112,7 +112,7 @@ class ReviewLoopTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "review-" + System.nanoTime() + "@codesprint.dev", "복습테스트")).id();
+                "review-" + System.nanoTime() + "@codesprint.dev", "복습테스트", "JOB")).id();
     }
 
     /** 제출하고 채점 결과까지 반영한다. 제출 시각은 지금 시계다. */

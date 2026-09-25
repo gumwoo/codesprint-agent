@@ -140,7 +140,7 @@ class ProblemDeliveryTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "pd-" + System.nanoTime() + "@codesprint.dev", "문제제공테스트")).id();
+                "pd-" + System.nanoTime() + "@codesprint.dev", "문제제공테스트", "JOB")).id();
         reviewer.scripted = null;
     }
 

@@ -100,7 +100,7 @@ class HintFlowTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "hint-" + System.nanoTime() + "@codesprint.dev", "힌트테스트")).id();
+                "hint-" + System.nanoTime() + "@codesprint.dev", "힌트테스트", "JOB")).id();
     }
 
     private MockHttpServletResponse ask(String problem, int level) throws Exception {

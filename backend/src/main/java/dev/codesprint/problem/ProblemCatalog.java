@@ -152,6 +152,21 @@ public class ProblemCatalog {
         return problems.get(code);
     }
 
+    /**
+     * 문제 번호 순. <b>글자 순이 아니다</b> - 세 자리 번호가 생기면 글자 순으로는 P100 이
+     * P11 앞에 온다(ADR-0035). 같은 상황에서 같은 문제가 나와야 하므로 순서가 곧 규칙이다.
+     */
+    public static final java.util.Comparator<String> BY_NUMBER = java.util.Comparator
+            .<String>comparingInt(code -> {
+                int end = code.indexOf('_');
+                try {
+                    return Integer.parseInt(code.substring(1, end < 0 ? code.length() : end));
+                } catch (RuntimeException e) {
+                    return Integer.MAX_VALUE;
+                }
+            })
+            .thenComparing(java.util.Comparator.naturalOrder());
+
     public List<String> codes() {
         return List.copyOf(problems.keySet());
     }
@@ -272,7 +287,7 @@ public class ProblemCatalog {
                 .filter(problem -> kind == null || kind.equals(problem.kind()))
                 .filter(problem -> problem.skills().stream().anyMatch(link ->
                         "PRIMARY".equals(link.role()) && link.skillCode().equals(skillCode)))
-                .sorted(java.util.Comparator.comparing(ProblemDefinition::code))
+                .sorted(java.util.Comparator.comparing(ProblemDefinition::code, BY_NUMBER))
                 .toList();
     }
 }
