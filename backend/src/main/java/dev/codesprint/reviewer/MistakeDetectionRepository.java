@@ -39,4 +39,21 @@ public interface MistakeDetectionRepository extends JpaRepository<MistakeDetecti
             @Param("problemIds") Collection<Long> problemIds);
 
     List<MistakeDetectionRow> findBySubmissionId(Long submissionId);
+
+    /**
+     * 주어진 제출들에서 PRIMARY 로 탐지된 Mistake 를 code · status 별로 센다(PRD §123).
+     *
+     * <p>SECONDARY 는 세지 않는다 - 확정 규칙과 같은 이유다. status 를 함께 돌려주는 것은
+     * <b>확정되지 않은 탐지를 확정된 것처럼 보이지 않게</b> 하기 위해서다(ADR-0014).
+     */
+    @Query("""
+            select d.mistakeCode, d.status, count(d)
+            from MistakeDetectionRow d
+            where d.userId = :userId
+              and d.role = 'PRIMARY'
+              and d.submissionId in :submissionIds
+            group by d.mistakeCode, d.status
+            """)
+    List<Object[]> countPrimaryByCodeAndStatus(@Param("userId") Long userId,
+            @Param("submissionIds") Collection<Long> submissionIds);
 }

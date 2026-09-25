@@ -26,6 +26,8 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | [diagnostic-step.schema.json](diagnostic-step.schema.json) | [ADR-0018](../docs/adr/0018-the-diagnostic-orders-problems-it-does-not-score.md) | 초기 진단의 현재 단계. 점수를 만들지 않는다 |
 | [reviews.schema.json](reviews.schema.json) | [ADR-0021](../docs/adr/0021-a-review-is-what-the-schedule-says-it-is.md) | 간격 복습 목록. **만기 여부는 서버가 정한다** |
 | [skill-catalog.schema.json](skill-catalog.schema.json) | [ADR-0012](../docs/adr/0012-curriculum-is-packaged-from-one-source.md) | 활성 Skill 정의. 사용자와 무관하다 |
+| [today.schema.json](today.schema.json) | [ADR-0038](../docs/adr/0038-the-plan-is-decided-not-generated.md) | 오늘의 학습 계획과 대시보드 숫자 |
+| [mistake-summary.schema.json](mistake-summary.schema.json) | [ADR-0038](../docs/adr/0038-the-plan-is-decided-not-generated.md) | 최근 제출의 오답 탐지 개수(확정 · 주장 구분) |
 | [track-list.schema.json](track-list.schema.json) | [ADR-0035](../docs/adr/0035-a-learning-track-scopes-the-skill-graph.md) | 고를 수 있는 학습 트랙과 켜지는 Skill 수 |
 | [user.schema.json](user.schema.json) | [ADR-0035](../docs/adr/0035-a-learning-track-scopes-the-skill-graph.md) | 사용자 자리와 그 트랙. 인증이 아니다 |
 | [skill-map.schema.json](skill-map.schema.json) | [ADR-0009](../docs/adr/0009-mastery-is-recomputed-from-evidence.md) | 한 사용자의 Skill 상태 전체. 활성 Skill 을 빠뜨리지 않는다 |

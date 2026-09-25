@@ -326,6 +326,30 @@ button:disabled { opacity: .45; cursor: default; }
 .pane-head .tab:hover { color: var(--ink); }
 .pane-head .tab.active { color: var(--ink); }
 
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.settings input[type=number] { width: 64px; }
+
+h3.sub {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 16px 0 4px;
+}
+
+table.skills tr.domain td {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding-top: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
 table.skills {
   width: 100%;
   border-collapse: collapse;

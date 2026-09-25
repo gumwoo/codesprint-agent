@@ -46,6 +46,7 @@
   <section class="pane left">
     <div class="pane-head">
       <button type="button" class="tab active" id="tabProblem">문제</button>
+      <button type="button" class="tab" id="tabToday">오늘</button>
       <button type="button" class="tab" id="tabSkills">내 Skill</button>
       <span class="meta" id="problemMeta"></span>
     </div>
@@ -105,6 +106,34 @@
       무엇을 모르는지 보여주는 자리. 점수는 서버가 정한 것을 그대로 옮긴다.
       아직 손대지 않은 Skill 도 빠짐없이 담는다 - 빠지면 "모른다" 가 안 보인다.
     -->
+    <!--
+      오늘의 계획(PRD §80 · §121). 무엇을 얼마나 할지는 서버가 정한다(ADR-0038) - 화면은
+      블록을 다시 고르거나 분을 나누지 않는다.
+    -->
+    <div class="pane-body" id="todayBody" hidden>
+      <div class="settings">
+        <label>하루 <input id="dailyMinutes" type="number" min="10" max="720" step="10"> 분</label>
+        <label>시험일 <input id="examDate" type="date"></label>
+        <button type="button" id="saveSettings" class="ghost">설정 저장</button>
+      </div>
+      <p class="note" id="todaySummary"></p>
+      <table class="skills">
+        <thead>
+          <tr><th>할 일</th><th>문제</th><th class="num">분</th></tr>
+        </thead>
+        <tbody id="planRows"></tbody>
+      </table>
+      <p class="note" id="todayReason"></p>
+      <h3 class="sub">최근 오답</h3>
+      <p class="note" id="mistakeNote"></p>
+      <table class="skills">
+        <thead>
+          <tr><th>실수</th><th class="num">탐지</th><th class="num">확정</th></tr>
+        </thead>
+        <tbody id="mistakeRows"></tbody>
+      </table>
+    </div>
+
     <div class="pane-body" id="skillsBody" hidden>
       <p class="note" id="skillsNote"></p>
       <table class="skills">

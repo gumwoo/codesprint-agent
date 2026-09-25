@@ -27,6 +27,14 @@ public class UserRow {
     @Column(nullable = false, length = 30)
     private String track;
 
+    /** 하루 공부 시간(분). 정하지 않았으면 null 이다(ADR-0038). */
+    @Column(name = "daily_minutes")
+    private Integer dailyMinutes;
+
+    /** 시험일. 없으면 null 이다. */
+    @Column(name = "exam_date")
+    private java.time.LocalDate examDate;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -57,5 +65,19 @@ public class UserRow {
 
     public void changeTrack(String track) {
         this.track = track;
+    }
+
+    public Integer dailyMinutes() {
+        return dailyMinutes;
+    }
+
+    public java.time.LocalDate examDate() {
+        return examDate;
+    }
+
+    /** 둘 다 바꾼다. null 은 "정하지 않았다" 로 적는다 - 생략과 같게 다루지 않는다. */
+    public void changeSettings(Integer dailyMinutes, java.time.LocalDate examDate) {
+        this.dailyMinutes = dailyMinutes;
+        this.examDate = examDate;
     }
 }
