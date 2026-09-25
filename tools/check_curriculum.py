@@ -202,6 +202,49 @@ def check_active_domains_have_skills(domains_doc, skills: dict[str, dict]) -> No
             fail("domains", f"{code}: Skill 이 있는데 active 가 false 다")
 
 
+
+def check_tracks(tracks_doc, domain_codes: set[str], skills: dict[str, dict],
+                 prereq_doc) -> dict[str, dict]:
+    """학습 트랙(목표별 활성 범위)이 스스로 닫혀 있는가. 정본: PRD §129, ADR-0035.
+
+    트랙 안의 Skill 이 트랙 밖의 선수를 요구하면 그 Skill 은 영원히 LOCKED 이고,
+    Decision Engine 은 선수를 채우러 사용자를 트랙 밖으로 보낸다. 증상이 데이터에서 멀리
+    떨어진 화면에 나타나므로 여기서 막는다.
+    """
+    if not tracks_doc or "tracks" not in tracks_doc:
+        fail("tracks", "tracks 키가 없다")
+        return {}
+    tracks: dict[str, dict] = {}
+    for t in tracks_doc["tracks"]:
+        code = t.get("code")
+        if not code or not CODE_RE.match(code):
+            fail("tracks", f"{code!r}: UPPER_SNAKE_CASE code 가 아니다")
+            continue
+        if code in tracks:
+            fail("tracks", f"{code}: 중복된 트랙 code")
+            continue
+        tracks[code] = t
+        for tier in t.get("tiers") or []:
+            if tier not in VALID_TIERS:
+                fail("tracks", f"{code}: 알 수 없는 tier {tier!r}")
+        for domain in t.get("domains") or []:
+            if domain not in domain_codes:
+                fail("tracks", f"{code}: domains.yaml 에 없는 domain {domain!r}")
+        if len(set(t.get("domains") or [])) != len(t.get("domains") or []):
+            fail("tracks", f"{code}: 같은 domain 이 두 번 들어 있다")
+
+        active = {s for s, d in skills.items()
+                  if d.get("domain") in (t.get("domains") or [])
+                  and d.get("tier") in (t.get("tiers") or [])}
+        if not active:
+            fail("tracks", f"{code}: 켜지는 Skill 이 하나도 없다 - 진단이 물을 것이 없다")
+        for row in (prereq_doc or {}).get("prerequisites", []):
+            if row.get("skill") in active and row.get("requires") not in active:
+                fail("tracks",
+                     f"{code}: {row.get('skill')} 가 트랙 밖의 선수 {row.get('requires')} 를 "
+                     f"요구한다 - 트랙 안에서 영원히 LOCKED 다")
+    return tracks
+
 # -- 3. 선수 관계 --------------------------------------------------------
 
 
@@ -726,6 +769,7 @@ def main() -> int:
     check_prerequisites(prereq_doc, skills)
     mistakes = check_mistakes(mistakes_doc, skills)
     concepts = check_concepts(concepts_doc, skills)
+    tracks = check_tracks(load_yaml("tracks.yaml"), domain_codes, skills, prereq_doc)
 
     # 계약 검사는 아래에서 위로 쌓인다.
     #   1단계 규격 자체가 유효한가      (JSON Schema meta-schema)
@@ -751,7 +795,7 @@ def main() -> int:
     print(
         f"[OK] 커리큘럼/계약 검사 통과 "
         f"(도메인 {len(domain_codes)} · Skill {len(skills)} · Mistake {len(mistakes)} "
-        f"· Concept {len(concepts)})"
+        f"· Concept {len(concepts)} · Track {len(tracks)})"
     )
     return 0
 
