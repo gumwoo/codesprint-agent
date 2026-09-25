@@ -9,7 +9,7 @@ def main():
     xs = data[2 + n:2 + n + q]
     out = []
     for t in xs:
-        x = int(t)
+        x = int(t) ^ (out[-1] if out else 0)  # 직전 답과 xor
         i = bisect_left(a, x)
         if i == n:
             out.append(a[n - 1])

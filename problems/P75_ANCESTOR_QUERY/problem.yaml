@@ -26,10 +26,7 @@ statement: |
 skills:
 - code: TREE_TRAVERSAL
   role: PRIMARY
-  weight: 0.7
-- code: DFS_TRAVERSAL
-  role: SECONDARY
-  weight: 0.3
+  weight: 1.0
 commonMistakes:
 - INPUT_PARSE
 - IMPLEMENTATION_MISC

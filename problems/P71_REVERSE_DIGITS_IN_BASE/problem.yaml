@@ -23,9 +23,9 @@ skills:
   role: PRIMARY
   weight: 1.0
 commonMistakes:
-- OUTPUT_FORMAT
+- IMPLEMENTATION_MISC
 - INPUT_PARSE
 negativeControl:
-  mistake: OUTPUT_FORMAT
+  mistake: IMPLEMENTATION_MISC
   expectedStatus: WRONG_ANSWER
 skillControl: null

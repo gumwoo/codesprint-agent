@@ -87,6 +87,14 @@
       "input": "5 4\n###.\nTCcB\n#...\nSCa#\nc#BB\n",
       "expectedOutput": "6\n",
       "probes": []
+    },
+    {
+      "id": 12,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "1 6\naS.bBT\n",
+      "expectedOutput": "4\n",
+      "probes": []
     }
   ]
 }

@@ -9,8 +9,9 @@ def main():
     a = [int(x) for x in data[2:2 + n]]
     p = 2 + n
     out = []
+    last = 0
     for _ in range(q):
-        l, r = int(data[p]), int(data[p + 1])
+        l, r = int(data[p]) ^ last, int(data[p + 1]) ^ last
         p += 2
         cnt = 0
         for x in a:
@@ -18,6 +19,7 @@ def main():
                 break
             if x >= l:
                 cnt += 1
+        last = cnt
         out.append(cnt)
     sys.stdout.write("\n".join(map(str, out)) + "\n")
 

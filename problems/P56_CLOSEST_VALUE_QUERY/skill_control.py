@@ -10,7 +10,7 @@ def main():
     xs = data[2 + n:2 + n + q]
     out = []
     for t in xs:
-        x = int(t)
+        x = int(t) ^ (out[-1] if out else 0)  # 직전 답과 xor
         i = 0
         while i < n and a[i] < x:
             i += 1
