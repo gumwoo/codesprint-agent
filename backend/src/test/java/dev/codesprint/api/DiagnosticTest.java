@@ -110,12 +110,14 @@ class DiagnosticTest {
     /**
      * 아무것도 모를 때 가장 많이 밝혀 주는 Skill - 트랙 안에서 선수를 가장 많이 거느린 것.
      * 도메인이 늘 때마다 이 이름이 바뀌므로 **고정하지 않고 커리큘럼에서 구한다**(ADR-0034).
+     *
+     * <p>후보는 트랙 안에서 고르지만 선수는 트랙으로 거르지 않고 센다 - 운영 코드
+     * ({@code countUnresolvedBelow})가 그렇다. 트랙은 선수에 대해 닫혀 있어(check_tracks) 지금은
+     * 같은 값이지만, 기대값이 운영과 다른 식으로 세면 둘이 갈라지는 날 테스트가 틀린 쪽을 편든다.
      */
     private String mostInformative() {
-        var scope = catalog.skillCodesFor("JOB");
-        return scope.stream()
-                .max(java.util.Comparator.<String>comparingInt(code -> 1 + (int) below(code).stream()
-                                .filter(scope::contains).count())
+        return catalog.skillCodesFor("JOB").stream()
+                .max(java.util.Comparator.<String>comparingInt(code -> 1 + below(code).size())
                         .thenComparing(java.util.Comparator.reverseOrder()))
                 .orElseThrow();
     }
@@ -245,12 +247,15 @@ class DiagnosticTest {
         assertThat(below(failed)).as("실패한 갈래의 선수로 내려간다").contains(next);
         JsonNode map = MAPPER.readTree(mvc.perform(get("/api/users/{id}/skills", userId))
                 .andReturn().getResponse().getContentAsString());
+        JsonNode target = null;
         for (JsonNode skill : map.get("skills")) {
             if (skill.get("skillCode").asText().equals(next)) {
-                assertThat(skill.get("evidenceCount").asInt())
-                        .as("Evidence 가 닿지 않은 곳이다").isZero();
+                target = skill;
             }
         }
+        // 찾지 못하면 아무것도 단언하지 않고 지나가게 된다 - 먼저 찾았는지부터 본다.
+        assertThat(target).as("다음 질문의 Skill 이 Skill 지도에 있다").isNotNull();
+        assertThat(target.get("evidenceCount").asInt()).as("Evidence 가 닿지 않은 곳이다").isZero();
     }
 
     @Test
