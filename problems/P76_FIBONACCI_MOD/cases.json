@@ -79,6 +79,22 @@
       "input": "1000000000000000000 1000000000\n",
       "expectedOutput": "560546875\n",
       "probes": []
+    },
+    {
+      "id": 11,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "1000000000000000000 999999937\n",
+      "expectedOutput": "218858812\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "999999999999999989 999999937\n",
+      "expectedOutput": "624235132\n",
+      "probes": []
     }
   ]
 }
