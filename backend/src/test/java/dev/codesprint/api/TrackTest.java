@@ -11,6 +11,12 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import dev.codesprint.curriculum.CurriculumCatalog;
+import dev.codesprint.judge.JudgeJobRepository;
+import dev.codesprint.judge.JudgeJobRow;
+import dev.codesprint.learning.persistence.UserRepository;
+import dev.codesprint.learning.persistence.UserRow;
+import dev.codesprint.learning.service.JudgeResultPoller;
+import dev.codesprint.support.JudgeResultFixture;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -74,6 +81,18 @@ class TrackTest {
 
     @Autowired
     private CurriculumCatalog catalog;
+
+    @Autowired
+    private UserRepository users;
+
+    @Autowired
+    private JudgeJobRepository jobs;
+
+    @Autowired
+    private JudgeResultPoller poller;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private MockMvc mvc;
 
@@ -183,5 +202,60 @@ class TrackTest {
         JsonNode read = MAPPER.readTree(mvc.perform(get("/api/users/{id}", userId))
                 .andReturn().getResponse().getContentAsString());
         assertThat(read.get("track").asText()).isEqualTo("INTRO");
+    }
+
+    private long solve(long userId, String problemCode, String judgeStatus) throws Exception {
+        String body = """
+                {"userId": %d, "language": "PYTHON", "sourceCode": "print(1)",
+                 "solveSeconds": 120}
+                """.formatted(userId);
+        long submissionId = MAPPER.readTree(
+                mvc.perform(post("/api/problems/{code}/submit", problemCode)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andReturn().getResponse().getContentAsString())
+                .get("submissionId").asLong();
+        JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
+        JudgeResultFixture.finish(jdbc,
+                """
+                {"status": "%s", "passed": 6, "total": 6, "executionMs": 100,
+                 "memoryKb": 20480, "failedCaseId": null, "stderr": null, "cases": []}
+                """.formatted(judgeStatus), job.id());
+        poller.applyFinishedJobs();
+        return submissionId;
+    }
+
+    /** 같은 Evidence 를 쌓고 마지막에 트랙만 바꾼 뒤 P15 를 처음 틀렸을 때의 다음 행동. */
+    private JsonNode actionAfterTheSameHistory(String finalTrack) throws Exception {
+        long userId = users.save(new UserRow(
+                "track-leak-" + System.nanoTime() + "@codesprint.dev", "누수", "JOB")).id();
+        for (String problem : List.of("P11_LIST_BASIC", "P01_QUEUE_BASIC",
+                "P12_GRID_COORDINATE", "P13_EDGE_CELLS")) {
+            solve(userId, problem, "ACCEPTED");
+        }
+        for (int i = 0; i < 6; i++) {
+            solve(userId, "P14_GRAPH_REACHABLE", "ACCEPTED");
+            solve(userId, "P09_BFS_VARIANT_A", "ACCEPTED");
+        }
+        mvc.perform(put("/api/users/{id}/track", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"track\": \"" + finalTrack + "\"}"));
+        long submissionId = solve(userId, "P15_MULTI_SOURCE_SPREAD", "WRONG_ANSWER");
+        return MAPPER.readTree(mvc.perform(get("/api/submissions/{id}/next-problem", submissionId))
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    @Test
+    @DisplayName("트랙 밖에서 숙달한 선수를 판단에서 0 으로 읽지 않는다")
+    void prerequisitesOutsideTheTrackStillCount() throws Exception {
+        // 검증 에이전트가 재현했다. 같은 Evidence 인데 트랙만 INTRO 로 바꾸면, mastery 0.93 인
+        // BFS_BASIC 이 "선수 미충족" 으로 읽혀 CHANGE_SKILL 이 나왔다. 선수 판단은 트랙이 아니라
+        // Evidence 로 한다 - 트랙은 보여 주고 고르는 범위다(ADR-0035).
+        JsonNode job = actionAfterTheSameHistory("JOB");
+        JsonNode intro = actionAfterTheSameHistory("INTRO");
+
+        assertThat(job.get("action").asText()).as("대조군: 같은 기록의 JOB 사용자")
+                .isEqualTo("RETRY_VARIANT");
+        assertThat(intro.get("action").asText())
+                .as("트랙만 달라졌다 - 판단은 같아야 한다").isEqualTo(job.get("action").asText());
     }
 }

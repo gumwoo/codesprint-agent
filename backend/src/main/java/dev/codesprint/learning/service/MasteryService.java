@@ -62,7 +62,24 @@ public class MasteryService {
      */
     @Transactional(readOnly = true)
     public List<SkillState> statesOf(Long userId) {
-        List<String> codes = activeSkills(userId).stream().sorted().toList();
+        return statesFor(userId, activeSkills(userId));
+    }
+
+    /**
+     * 트랙과 상관없는 <b>전체</b> Skill 상태. <b>판단</b>에 쓴다 - 보여 주는 데는
+     * {@link #statesOf} 를 쓴다(ADR-0035).
+     *
+     * <p>선수 조건은 트랙이 아니라 Evidence 로 판단한다. 걸러진 목록으로 판단하면 트랙 밖에서
+     * 이미 숙달한 선수가 0 으로 읽힌다 - 검증 에이전트가 재현했다. 같은 Evidence 인데
+     * JOB 사용자는 RETRY_VARIANT, INTRO 사용자는 mastery 0.93 인 선수로 CHANGE_SKILL 을 받았다.
+     */
+    @Transactional(readOnly = true)
+    public List<SkillState> allStatesOf(Long userId) {
+        return statesFor(userId, catalog.skillCodes());
+    }
+
+    private List<SkillState> statesFor(Long userId, java.util.Set<String> skillCodes) {
+        List<String> codes = skillCodes.stream().sorted().toList();
 
         Map<String, SkillState> fromEvidence = new java.util.LinkedHashMap<>();
         Map<String, Double> masteries = new HashMap<>();
