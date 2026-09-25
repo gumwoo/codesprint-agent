@@ -9,6 +9,7 @@ import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import dev.codesprint.learning.persistence.UserRepository;
 import dev.codesprint.learning.persistence.UserRow;
+import dev.codesprint.problem.ProblemCatalog;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -80,6 +81,9 @@ class HintFlowTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String PROBLEM = "P02_GRID_TRAVERSAL";
+
+    @Autowired
+    private ProblemCatalog problemCatalog;
 
     @Autowired
     private WebApplicationContext context;
@@ -294,7 +298,17 @@ class HintFlowTest {
         // 거기서 먼저 터진다 - 실제로 여덟 중 일곱이 그랬다.
         //
         // 그래서 아무도 건드리지 않은 상태를 만들고 시작한다.
-        String untouched = "P13_EDGE_CELLS";
+        //
+        // 고정된 문제를 쓰지 않는다. 테스트 DB 는 여러 테스트가 함께 쓰므로, 다른 테스트가 그
+        // 문제에 제출을 남겨 두면 problems 행을 지울 수 없다 - TrackTest 가 P13 을 풀자 실제로
+        // 여기서 외래 키 위반이 났다. **제출이 걸려 있지 않은** 문제를 고른다.
+        String untouched = problemCatalog.codes().stream()
+                .sorted(ProblemCatalog.BY_NUMBER)
+                .filter(code -> jdbc.queryForObject(
+                        "select count(*) from submissions s join problems p on p.id = s.problem_id"
+                                + " where p.code = ?", Integer.class, code) == 0)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("제출이 걸려 있지 않은 문제가 없다"));
         jdbc.update("delete from hint_usage where problem_id in "
                 + "(select id from problems where code = ?)", untouched);
         jdbc.update("delete from problems where code = ?", untouched);
