@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -247,6 +248,12 @@ FILE_CASES = [
      "problems/P03_CONNECTED_COMPONENT/probes/INPUT_PARSE.py", "create",
      "commonMistakes 에 없다"),
 
+    ("같은 번호의 다른 문제가 있으면",
+     "problems/P05_OTHER_NUMBER", "mkdir-copy:P05_SHORTEST_PATH",
+     "와 문제 번호가 같다"),
+    ("세 자리 번호에 앞 0 을 붙이면",
+     "problems/P005_ZERO_PADDED", "mkdir-copy:P05_SHORTEST_PATH",
+     "두 자리, 이상이면 세 자리로"),
     ("Skill 대조 풀이 파일을 지우면",
      "problems/P01_QUEUE_BASIC/skill_control.py", "delete",
      "skill_control.py 가 없다"),
@@ -294,6 +301,20 @@ def main() -> int:
     failed = 0
     for name, rel, action, expect in FILE_CASES:
         path = ROOT / rel
+        if action.startswith("mkdir-copy:"):
+            # 다른 문제를 새 이름으로 복사한다. code 는 디렉터리 이름에 맞춘다 - 그래야
+            # 번호 규칙만 걸리는지 볼 수 있다.
+            shutil.copytree(ROOT / "problems" / action.split(":", 1)[1], path)
+            spec = path / "problem.yaml"
+            spec.write_text(spec.read_text(encoding="utf-8").replace(
+                "code: " + action.split(":", 1)[1], "code: " + path.name),
+                encoding="utf-8", newline="")
+            try:
+                code, output = run_checker()
+            finally:
+                shutil.rmtree(path)
+            failed += report(name, code, output, expect)
+            continue
         if action == "delete":
             original = path.read_bytes()
             path.unlink()
@@ -333,7 +354,7 @@ def main() -> int:
     if failed:
         print(f"\n[FAIL] 메타테스트 실패: {failed}건")
         return 1
-    print(f"\n[OK] 메타테스트 통과: {len(CASES)}개 위반을 검사가 전부 차단함")
+    print(f"\n[OK] 메타테스트 통과: {len(CASES) + len(FILE_CASES)}개 위반을 검사가 전부 차단함")
     return 0
 
 

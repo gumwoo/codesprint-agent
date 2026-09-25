@@ -94,7 +94,7 @@ class RunTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "run-" + System.nanoTime() + "@codesprint.dev", "실행테스트")).id();
+                "run-" + System.nanoTime() + "@codesprint.dev", "실행테스트", "JOB")).id();
     }
 
     private long startRun(String problemCode) throws Exception {
@@ -183,7 +183,7 @@ class RunTest {
         // 실행 결과에는 그 사람이 쓴 코드의 출력이 담긴다.
         long runId = startRun("P02_GRID_TRAVERSAL");
         long other = users.save(new UserRow(
-                "other-" + System.nanoTime() + "@codesprint.dev", "남")).id();
+                "other-" + System.nanoTime() + "@codesprint.dev", "남", "JOB")).id();
 
         assertThat(mvc.perform(get("/api/runs/{id}", runId)
                         .param("userId", String.valueOf(other)))

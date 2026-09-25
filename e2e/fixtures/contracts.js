@@ -40,6 +40,10 @@ const BY_PATH = [
   [/^\/api\/users\/\d+\/diagnostic$/, "diagnostic-step"],
   [/^\/api\/users\/\d+\/reviews$/, "reviews"],
   [/^\/api\/users\/\d+\/skills$/, "skill-map"],
+  [/^\/api\/users\/\d+\/track$/, "user"],
+  [/^\/api\/users\/\d+$/, "user"],
+  [/^\/api\/users$/, "user"],
+  [/^\/api\/tracks$/, "track-list"],
   [/^\/api\/skills$/, "skill-catalog"],
 ];
 
@@ -49,8 +53,6 @@ const BY_PATH = [
  * 목록이 길어지면 규칙이 아니라 예외가 하네스를 지배한다(ADR-0023 의 같은 규칙).
  */
 const UNCONTRACTED = {
-  "/api/users": "CreatedUser(userId, nickname) 에 대응하는 계약 파일이 없다. "
-      + "계약을 만드는 것은 이 하네스의 결정이 아니라 API 쪽 결정이다",
   "/api/problems/{code}/run": "202 응답(runId)에 대응하는 계약이 없다. "
       + "결과 조회(run-result)만 계약이 있다",
 };

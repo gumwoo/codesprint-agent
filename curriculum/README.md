@@ -10,6 +10,7 @@ Skill Graph 의 **실행 가능한 정본**이다. 문서가 아니라 CI 가 �
 | [prerequisites.yaml](prerequisites.yaml) | Addendum §33 | 학습 경로 잠금 해제 조건 |
 | [mistakes.yaml](mistakes.yaml) | Addendum §37, §42 | 오답 taxonomy + 자동 드릴 연결 |
 | [concepts.yaml](concepts.yaml) | ADR-0024 | `REVIEW_CONCEPT`가 제공하는 Skill별 기본 복습 자료 |
+| [tracks.yaml](tracks.yaml) | PRD §129, ADR-0035 | 목표별 활성 Skill 범위(입문 · 일반 취업 · 상위 기업 · 심화) |
 
 ## 왜 domains 와 skills 를 나눴는가
 

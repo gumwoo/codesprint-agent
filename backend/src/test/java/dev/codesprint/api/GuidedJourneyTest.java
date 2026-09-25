@@ -119,7 +119,7 @@ class GuidedJourneyTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "journey-" + System.nanoTime() + "@codesprint.dev", "여정")).id();
+                "journey-" + System.nanoTime() + "@codesprint.dev", "여정", "JOB")).id();
     }
 
     private JsonNode getJson(String url, Object... args) throws Exception {

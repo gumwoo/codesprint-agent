@@ -109,7 +109,8 @@ def seed_job(conn, *, source_code: str = "print(1)", problem: str = "P01_QUEUE_B
              language: str = "PYTHON") -> int:
     """제출 하나와 그에 딸린 job 하나를 만든다."""
     with conn.cursor() as cur:
-        cur.execute("INSERT INTO users (email, nickname) VALUES (%s, %s) RETURNING id",
+        cur.execute("INSERT INTO users (email, nickname, track) VALUES (%s, %s, 'JOB')"
+                    " RETURNING id",
                     (f"w{os.urandom(4).hex()}@codesprint.dev", "worker-test"))
         user_id = cur.fetchone()[0]
         cur.execute("INSERT INTO problems (code, source) VALUES (%s, 'DEV_FIXTURE')"

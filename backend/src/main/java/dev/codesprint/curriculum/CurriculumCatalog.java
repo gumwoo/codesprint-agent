@@ -29,12 +29,27 @@ public class CurriculumCatalog {
     private final List<Prerequisite> prerequisites;
     private final Map<String, MistakeDefinition> mistakes;
     private final Map<String, ConceptDefinition> concepts;
+    private final Map<String, Track> tracks;
 
     public CurriculumCatalog() {
         this.skills = loadSkills();
         this.prerequisites = loadPrerequisites();
         this.mistakes = loadMistakes();
         this.concepts = loadConcepts();
+        this.tracks = loadTracks();
+    }
+
+    /**
+     * 학습 트랙 - 목표별 활성 Skill 범위(PRD §129, ADR-0035). 사용자에게 켜지는 Skill 은
+     * domain 과 tier 가 모두 트랙 안에 있는 것이다. 트랙이 스스로 닫혀 있는지(선수가 트랙
+     * 밖에 없는지)는 {@code tools/check_curriculum.py} 가 본다.
+     */
+    public record Track(String code, String name, String description, List<String> tiers,
+            List<String> domains) {
+
+        public boolean includes(SkillDefinition skill) {
+            return domains.contains(skill.domain()) && tiers.contains(skill.tier());
+        }
     }
 
     /** {@code prerequisites.yaml} 한 줄. */
@@ -120,6 +135,22 @@ public class CurriculumCatalog {
     }
 
     @SuppressWarnings("unchecked")
+    private static Map<String, Track> loadTracks() {
+        Map<String, Track> loaded = new LinkedHashMap<>();
+        for (Map<String, Object> row : read("tracks.yaml", "tracks")) {
+            String code = (String) row.get("code");
+            loaded.put(code, new Track(
+                    code,
+                    (String) row.get("name"),
+                    (String) row.get("description"),
+                    List.copyOf((List<String>) row.get("tiers")),
+                    List.copyOf((List<String>) row.get("domains"))));
+        }
+        // 순서를 지킨다. Map.copyOf 는 순서를 버린다.
+        return java.util.Collections.unmodifiableMap(loaded);
+    }
+
+    @SuppressWarnings("unchecked")
     private static Map<String, ConceptDefinition> loadConcepts() {
         Map<String, ConceptDefinition> loaded = new LinkedHashMap<>();
         for (Map<String, Object> row : read("concepts.yaml", "concepts")) {
@@ -137,6 +168,30 @@ public class CurriculumCatalog {
 
     public Set<String> skillCodes() {
         return skills.keySet();
+    }
+
+    /** 이 트랙에서 켜지는 Skill. 트랙이 없으면 예외다 - 조용히 비면 모든 Skill 이 사라진다. */
+    public Set<String> skillCodesFor(String trackCode) {
+        Track track = tracks.get(trackCode);
+        if (track == null) {
+            throw new IllegalArgumentException("tracks.yaml 에 없는 트랙이다: " + trackCode);
+        }
+        Set<String> codes = new java.util.LinkedHashSet<>();
+        for (SkillDefinition skill : skills.values()) {
+            if (track.includes(skill)) {
+                codes.add(skill.code());
+            }
+        }
+        return codes;
+    }
+
+    /** tracks.yaml 순서 그대로. 화면이 이 순서로 보여준다. */
+    public List<Track> tracks() {
+        return List.copyOf(tracks.values());
+    }
+
+    public Track track(String code) {
+        return tracks.get(code);
     }
 
     public SkillDefinition skill(String code) {

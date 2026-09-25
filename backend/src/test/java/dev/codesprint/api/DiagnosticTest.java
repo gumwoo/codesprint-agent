@@ -94,7 +94,7 @@ class DiagnosticTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "diag-" + System.nanoTime() + "@codesprint.dev", "진단테스트")).id();
+                "diag-" + System.nanoTime() + "@codesprint.dev", "진단테스트", "JOB")).id();
     }
 
     private JsonNode step() throws Exception {

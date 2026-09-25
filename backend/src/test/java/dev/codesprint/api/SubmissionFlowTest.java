@@ -115,7 +115,7 @@ class SubmissionFlowTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "flow-" + System.nanoTime() + "@codesprint.dev", "흐름테스트")).id();
+                "flow-" + System.nanoTime() + "@codesprint.dev", "흐름테스트", "JOB")).id();
     }
 
     /**

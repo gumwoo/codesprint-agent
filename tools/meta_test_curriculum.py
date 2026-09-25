@@ -55,6 +55,24 @@ def drop_skill_control_flag(doc):
     doc["skills"][1].pop("needs_skill_control", None)
 
 
+def track_drops_a_prerequisite_domain(doc):
+    # JOB 에서 FOUNDATIONS 를 빼면 BFS_BASIC 이 트랙 밖의 PYTHON_DEQUE_BASIC 을 요구한다.
+    job = next(t for t in doc["tracks"] if t["code"] == "JOB")
+    job["domains"].remove("FOUNDATIONS")
+
+
+def track_points_to_unknown_domain(doc):
+    doc["tracks"][0]["domains"].append("NOT_A_REAL_DOMAIN")
+
+
+def track_code_too_long(doc):
+    doc["tracks"][0]["code"] = "A_TRACK_CODE_THAT_IS_LONGER_THAN_THIRTY"
+
+
+def track_activates_nothing(doc):
+    doc["tracks"][0]["domains"] = ["GEOMETRY"]
+
+
 def make_cycle(doc):
     # BFS_BASIC 이 BFS_SHORTEST_PATH 를 요구하게 만들면
     # BFS_BASIC -> BFS_SHORTEST_PATH -> BFS_GRID_TRAVERSAL -> BFS_BASIC 순환이 생긴다.
@@ -233,6 +251,10 @@ CASES = [
     ("등록되지 않은 domain 을 참조하면", "curriculum/skills.yaml", unknown_domain, "없는 domain"),
     ("language 필드를 생략하면", "curriculum/skills.yaml", drop_language_field, "language 필드가 없다"),
     ("ADR-0033 · Skill 대조 필요 여부를 생략하면", "curriculum/skills.yaml", drop_skill_control_flag, "needs_skill_control 이 true/false 가 아니다"),
+    ("ADR-0035 · 트랙이 선수 도메인을 빠뜨리면", "curriculum/tracks.yaml", track_drops_a_prerequisite_domain, "트랙 밖의 선수"),
+    ("ADR-0035 · 트랙이 없는 domain 을 가리키면", "curriculum/tracks.yaml", track_points_to_unknown_domain, "domains.yaml 에 없는 domain"),
+    ("ADR-0035 · 트랙 code 가 DB 칼럼보다 길면", "curriculum/tracks.yaml", track_code_too_long, "30 자를 넘는다"),
+    ("ADR-0035 · 트랙에 켜지는 Skill 이 없으면", "curriculum/tracks.yaml", track_activates_nothing, "켜지는 Skill 이 하나도 없다"),
 
     # -- 선수 관계 --
     ("선수 관계에 순환이 생기면", "curriculum/prerequisites.yaml", make_cycle, "순환 선수 관계"),

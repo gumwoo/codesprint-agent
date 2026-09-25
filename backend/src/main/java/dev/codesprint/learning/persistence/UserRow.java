@@ -23,15 +23,20 @@ public class UserRow {
     @Column(nullable = false, length = 100)
     private String nickname;
 
+    /** curriculum/tracks.yaml 의 code. 켜지는 Skill 범위를 정한다(ADR-0035). */
+    @Column(nullable = false, length = 30)
+    private String track;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
     protected UserRow() {
     }
 
-    public UserRow(String email, String nickname) {
+    public UserRow(String email, String nickname, String track) {
         this.email = email;
         this.nickname = nickname;
+        this.track = track;
     }
 
     public Long id() {
@@ -44,5 +49,13 @@ public class UserRow {
 
     public String nickname() {
         return nickname;
+    }
+
+    public String track() {
+        return track;
+    }
+
+    public void changeTrack(String track) {
+        this.track = track;
     }
 }

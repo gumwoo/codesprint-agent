@@ -6,6 +6,8 @@ import dev.codesprint.learning.domain.MasteryCalculator;
 import dev.codesprint.learning.domain.PrerequisiteEvaluator;
 import dev.codesprint.learning.domain.SkillState;
 import dev.codesprint.learning.domain.SkillStatus;
+import dev.codesprint.learning.persistence.UserRepository;
+import dev.codesprint.learning.persistence.UserRow;
 import dev.codesprint.learning.persistence.UserSkillRepository;
 import dev.codesprint.learning.persistence.UserSkillRow;
 import java.math.BigDecimal;
@@ -33,10 +35,12 @@ public class MasteryService {
     private final UserSkillRepository userSkills;
     private final PrerequisiteEvaluator prerequisites;
     private final dev.codesprint.curriculum.CurriculumCatalog catalog;
+    private final UserRepository users;
 
     public MasteryService(EvidenceStore evidence, UserSkillRepository userSkills,
             PrerequisiteEvaluator prerequisites,
-            dev.codesprint.curriculum.CurriculumCatalog catalog) {
+            dev.codesprint.curriculum.CurriculumCatalog catalog, UserRepository users) {
+        this.users = users;
         this.evidence = evidence;
         this.userSkills = userSkills;
         this.prerequisites = prerequisites;
@@ -58,7 +62,24 @@ public class MasteryService {
      */
     @Transactional(readOnly = true)
     public List<SkillState> statesOf(Long userId) {
-        List<String> codes = catalog.skillCodes().stream().sorted().toList();
+        return statesFor(userId, activeSkills(userId));
+    }
+
+    /**
+     * 트랙과 상관없는 <b>전체</b> Skill 상태. <b>판단</b>에 쓴다 - 보여 주는 데는
+     * {@link #statesOf} 를 쓴다(ADR-0035).
+     *
+     * <p>선수 조건은 트랙이 아니라 Evidence 로 판단한다. 걸러진 목록으로 판단하면 트랙 밖에서
+     * 이미 숙달한 선수가 0 으로 읽힌다 - 검증 에이전트가 재현했다. 같은 Evidence 인데
+     * JOB 사용자는 RETRY_VARIANT, INTRO 사용자는 mastery 0.93 인 선수로 CHANGE_SKILL 을 받았다.
+     */
+    @Transactional(readOnly = true)
+    public List<SkillState> allStatesOf(Long userId) {
+        return statesFor(userId, catalog.skillCodes());
+    }
+
+    private List<SkillState> statesFor(Long userId, java.util.Set<String> skillCodes) {
+        List<String> codes = skillCodes.stream().sorted().toList();
 
         Map<String, SkillState> fromEvidence = new java.util.LinkedHashMap<>();
         Map<String, Double> masteries = new HashMap<>();
@@ -77,6 +98,22 @@ public class MasteryService {
                     prerequisites.resolve(code, state.status(), masteries)));
         }
         return states;
+    }
+
+    /**
+     * 이 사용자에게 켜진 Skill - 트랙이 정한 범위다(ADR-0035).
+     *
+     * <p>진단 · 다음 행동 · Skill 지도가 전부 이 목록 위에서 돈다. 여기서 거르지 않으면
+     * 입문 트랙 사용자에게 BFS 최단거리 진단이 나간다.
+     *
+     * <p>Evidence 는 트랙과 상관없이 남는다. 트랙을 바꿔도 이미 푼 기록이 사라지지 않는다 -
+     * 범위만 달라지고 계산은 같은 Evidence 에서 다시 한다(ADR-0009).
+     */
+    @Transactional(readOnly = true)
+    public java.util.Set<String> activeSkills(Long userId) {
+        String track = users.findById(userId).map(UserRow::track)
+                .orElseThrow(() -> new IllegalArgumentException("없는 사용자다: " + userId));
+        return catalog.skillCodesFor(track);
     }
 
     /**

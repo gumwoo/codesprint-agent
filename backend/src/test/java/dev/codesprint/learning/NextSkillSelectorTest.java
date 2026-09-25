@@ -101,4 +101,21 @@ class NextSkillSelectorTest {
                         "PYTHON_LIST_BASIC", "GRID_COORDINATE")))
                 .isNotEqualTo(java.util.Optional.of("GRID_COORDINATE"));
     }
+
+    @Test
+    @DisplayName("사용자의 트랙 밖 Skill 은 열려도 고르지 않는다 (ADR-0035)")
+    void aSkillOutsideTheTrackIsNotChosen() {
+        // PYTHON_DEQUE_BASIC 을 숙달하면 선수 그래프상 BFS_BASIC 이 열린다. 입문 트랙에는
+        // BFS 가 없으므로 states 에도 없다 - 그래프만 보고 고르면 입문 사용자를 BFS 로 보낸다.
+        var intro = catalog.skillCodesFor("INTRO");
+        List<SkillState> scoped = states(Map.of("PYTHON_DEQUE_BASIC", 0.90), "PYTHON_DEQUE_BASIC")
+                .stream().filter(state -> intro.contains(state.skillCode())).toList();
+        assertThat(selector.after("PYTHON_DEQUE_BASIC", scoped))
+                .isPresent()
+                .get().isIn(intro);
+        // 대조군: 전체 범위에서는 같은 숙달이 BFS_BASIC 을 연다.
+        assertThat(selector.after("PYTHON_DEQUE_BASIC",
+                states(Map.of("PYTHON_DEQUE_BASIC", 0.90), "PYTHON_DEQUE_BASIC")))
+                .contains("BFS_BASIC");
+    }
 }

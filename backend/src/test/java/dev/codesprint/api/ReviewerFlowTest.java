@@ -164,7 +164,7 @@ class ReviewerFlowTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "rev-" + System.nanoTime() + "@codesprint.dev", "리뷰테스트")).id();
+                "rev-" + System.nanoTime() + "@codesprint.dev", "리뷰테스트", "JOB")).id();
         reviewer.reset();
     }
 

@@ -1,13 +1,19 @@
 package dev.codesprint.api;
 
+import dev.codesprint.curriculum.CurriculumCatalog;
 import dev.codesprint.learning.persistence.UserRepository;
 import dev.codesprint.learning.persistence.UserRow;
+import java.util.List;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,30 +38,84 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserRepository users;
+    private final CurriculumCatalog catalog;
 
-    public UserController(UserRepository users) {
+    public UserController(UserRepository users, CurriculumCatalog catalog) {
         this.users = users;
+        this.catalog = catalog;
     }
 
     /**
-     * @param nickname 화면에 보일 이름. 이메일은 여기서 만들어 준다 - 슬라이스 1 이
-     *     쓰지 않는 값을 사용자에게 물으면, 나중에 인증이 붙었을 때 진짜 이메일과
-     *     구분되지 않는다.
+     * @param nickname 화면에 보일 이름. 이메일은 여기서 만들어 준다 - 인증이 붙었을 때 진짜
+     *     이메일과 구분되지 않게 하려고 사용자에게 묻지 않는다.
+     * @param track 학습 트랙(ADR-0035). <b>기본값이 없다</b> - 목표를 고르지 않은 사용자와
+     *     일반 취업 트랙을 고른 사용자가 구별되지 않게 되기 때문이다. 빠지면 400 이다.
      */
     public record CreateUserRequest(
-            @NotBlank @Size(max = 100) String nickname) {
+            @NotBlank @Size(max = 100) String nickname,
+            @NotBlank String track) {
     }
 
-    public record CreatedUser(long userId, String nickname) {
+    /** 계약: contracts/user.schema.json. */
+    public record UserView(long userId, String nickname, String track) {
+    }
+
+    public record ChangeTrackRequest(@NotBlank String track) {
+    }
+
+    /** 계약: contracts/track-list.schema.json. */
+    public record TrackView(String code, String name, String description, int skillCount) {
+    }
+
+    public record TrackListResponse(List<TrackView> tracks) {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<CreatedUser> create(@RequestBody @Validated CreateUserRequest request) {
+    public ResponseEntity<UserView> create(@RequestBody @Validated CreateUserRequest request) {
+        if (catalog.track(request.track()) == null) {
+            return ResponseEntity.badRequest().build();
+        }
         // 이메일은 유일해야 한다. 같은 이름으로 여러 번 시작할 수 있어야 하므로
         // 이름이 아니라 만든 시각으로 가른다.
         String email = "local-" + System.nanoTime() + "@codesprint.invalid";
-        UserRow saved = users.save(new UserRow(email, request.nickname()));
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new CreatedUser(saved.id(), saved.nickname()));
+        UserRow saved = users.save(new UserRow(email, request.nickname(), request.track()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(view(saved));
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<UserView> get(@PathVariable Long userId) {
+        return users.findById(userId).map(UserController::view)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 목표를 바꾼다. <b>Evidence 는 그대로다</b> - 켜지는 범위만 달라지고, 이미 푼 기록은
+     * 새 범위에서 다시 계산된다(ADR-0009, ADR-0035).
+     */
+    @PutMapping("/users/{userId}/track")
+    @Transactional
+    public ResponseEntity<UserView> changeTrack(@PathVariable Long userId,
+            @RequestBody @Validated ChangeTrackRequest request) {
+        if (catalog.track(request.track()) == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return users.findById(userId).map(user -> {
+            user.changeTrack(request.track());
+            return ResponseEntity.ok(view(users.save(user)));
+        }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** 고를 수 있는 목표. 켜지는 Skill 수는 서버가 센다 - 화면이 세면 갈린다(ADR-0001). */
+    @GetMapping("/tracks")
+    public TrackListResponse tracks() {
+        return new TrackListResponse(catalog.tracks().stream()
+                .map(track -> new TrackView(track.code(), track.name(), track.description(),
+                        catalog.skillCodesFor(track.code()).size()))
+                .toList());
+    }
+
+    private static UserView view(UserRow user) {
+        return new UserView(user.id(), user.nickname(), user.track());
     }
 }

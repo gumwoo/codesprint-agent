@@ -80,7 +80,7 @@ public class ProblemController {
         // code 순으로 고정한다. 카탈로그의 Map 은 순서를 보장하지 않아, 그대로
         // 내보내면 같은 데이터인데 실행할 때마다 목록 순서가 달라진다.
         return new ProblemListResponse(catalog.codes().stream()
-                .sorted()
+                .sorted(ProblemCatalog.BY_NUMBER)
                 .map(catalog::find)
                 .map(problem -> new ProblemSummary(
                         problem.code(), problem.title(), problem.kind(),

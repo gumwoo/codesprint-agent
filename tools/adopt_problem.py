@@ -310,8 +310,10 @@ def _used_numbers() -> list[int]:
 def next_code(draft: dict) -> str:
     numbers = _used_numbers()
     number = max(numbers, default=0) + 1
-    if number > 99:
-        raise Rejected("중복", ["문제 번호가 99 를 넘는다 - code 형식이 두 자리다"])
+    if number > 999:
+        raise Rejected("중복", ["문제 번호가 999 를 넘는다 - code 형식이 세 자리까지다"])
+    # 두 자리(P01..P99)를 다 쓰면 세 자리로 넘어간다. 앞에 0 을 붙이지 않는다 - P05 와
+    # P005 가 같은 번호가 되면 안 된다(check_problems 가 막는다, ADR-0035).
     return f"P{number:02d}_{draft['codeSuffix']}"
 
 

@@ -28,7 +28,7 @@ PROBLEMS = ROOT / "problems"
 CURRICULUM = ROOT / "curriculum"
 CONTRACTS = ROOT / "contracts"
 
-DIR_RE = re.compile(r"^P[0-9]{2}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$")
+DIR_RE = re.compile(r"^P[0-9]{2,3}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$")
 REQUIRED_FILES = ("problem.yaml", "cases.json", "reference.py", "wrong.py",
                   "hints.yaml")
 # probes/<MISTAKE>.py 는 선택이다 - cases.json 이 그 실수를 겨냥할 때만 요구한다.
@@ -62,6 +62,7 @@ def main() -> int:
     cases_schema = Draft202012Validator(load(CONTRACTS / "test-cases.schema.json"))
 
     seen_codes: set[str] = set()
+    seen_numbers: dict[int, str] = {}
     # 사다리 전체가 같은 문제가 있으면 복사해 붙인 것이다.
     seen_ladders: dict[tuple[str, ...], str] = {}
     control_mistakes: dict[str, list[str]] = {}
@@ -94,6 +95,16 @@ def main() -> int:
         code = problem.get("code")
         if code != rel:
             fail("layout", f"{rel}: code({code!r})와 디렉터리 이름이 다르다")
+        # 번호는 두 자리(P01..P99) 뒤에 세 자리(P100..)로 넘어간다. 세 자리에 앞 0 을
+        # 붙이면(P005) 같은 번호가 두 code 를 갖는다.
+        number = re.match(r"^P([0-9]+)_", rel)
+        if number and (len(number.group(1)) == 3) != (int(number.group(1)) >= 100):
+            fail("layout", f"{rel}: 번호가 100 미만이면 두 자리, 이상이면 세 자리로 쓴다")
+        if number:
+            n = int(number.group(1))
+            if n in seen_numbers:
+                fail("problem", f"{rel}: {seen_numbers[n]} 와 문제 번호가 같다")
+            seen_numbers.setdefault(n, rel)
         if code in seen_codes:
             fail("problem", f"{code}: 중복된 문제 code")
         seen_codes.add(code)

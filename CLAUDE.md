@@ -37,6 +37,10 @@ Skill을 독립 풀이 가능한 상태까지 가장 짧은 경로로 만드는 
 - `skills.yaml`에는 **검증된 Skill만** 넣는다. 도메인 레지스트리(45개 알고리즘 도메인
   + Programming Foundations = 46개 entry)는 `domains.yaml`이 갖는다.
 - `mistakes.yaml`의 `assigned_by`가 `REVIEWER`인 것만 LLM enum에 들어간다.
+- **켜지는 범위는 학습 트랙이 정한다**([ADR-0035](docs/adr/0035-a-learning-track-scopes-the-skill-graph.md)).
+  `tracks.yaml` 의 트랙은 domain · tier 로 Skill 을 고르고, **트랙 안의 Skill 이 트랙 밖의
+  선수를 요구하면 CI 가 막는다** - 그 Skill 은 영원히 LOCKED 가 되고 Decision Engine 이
+  사용자를 트랙 밖으로 보낸다. 새 도메인을 열면 어느 트랙에 들어가는지도 함께 정한다.
 - **null을 허용하는 필드는 required여야 한다.** 생략은 "모른다", null은 "확인했고 없었다"다.
 
 ## 검사를 고칠 때
@@ -283,6 +287,7 @@ scripts/local.sh worker     # 터미널 2
 
 ```bash
 cd e2e && npm ci && npx playwright install chromium && npx playwright test
+E2E_PORT=4391 npx playwright test   # 4173 에 다른 서버가 떠 있으면 - 그 페이지를 우리 화면으로 연다
 ```
 
 **지연이 아니라 게이트로 순서를 쥔다.** `setTimeout` 으로 늦추면 늦게 보낸 응답이

@@ -278,6 +278,7 @@ function switchedUser() {
   resetHints();
 
   remember($("userId").value);
+  refreshUserTrack();
   refreshDiagnostic();
   refreshReviews();
   if (!$("skillsBody").hidden) {
@@ -1167,11 +1168,17 @@ async function createUser() {
   // **여기가 소유권이 가장 큰 변경이다.** 사용자를 바꾸면 화면 전체가 따라간다.
   // 두 번 누르면 늦게 온 응답이 나중에 만든 사용자를 덮어쓰고, 그 사이 사용자가
   // id 를 직접 고쳤어도 덮는다.
+  if (!$("track").value) {
+    $("footNote").textContent = "목표를 먼저 고른다";
+    return;
+  }
   const mine = claimView("user");
   const response = await fetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nickname: "로컬 사용자" }),
+    // 목표는 기본값이 없다(ADR-0035). 고른 것을 그대로 보낸다 - 목록이 아직 없으면
+    // 빈 값이 가고 서버가 400 으로 돌려준다.
+    body: JSON.stringify({ nickname: "로컬 사용자", track: $("track").value }),
   });
   if (!response.ok) {
     if (mine()) {
@@ -1186,6 +1193,102 @@ async function createUser() {
   $("userId").value = created.userId;
 
   // 값을 코드로 바꾸면 change 가 뜨지 않는다. 직접 부른다.
+  switchedUser();
+}
+
+// -- 목표(학습 트랙) ----------------------------------------------------
+//
+// 켜지는 Skill 범위를 정한다(ADR-0035). 진단 · Skill 표 · 다음 행동이 그 범위 위에서
+// 돈다. **목록도 Skill 수도 서버가 준다** - 화면이 도메인과 tier 를 조합해 세면 서버가
+// 정한 범위와 갈린다(ADR-0001).
+
+async function loadTracks() {
+  const mine = claimView("tracks");
+  const view = await getJson("/api/tracks");
+  if (!mine()) {
+    return;
+  }
+  // 첫 칸은 "고르지 않음" 이다. 첫 트랙이 골라진 채로 두면 고르지 않은 사용자가 그 트랙으로
+  // 만들어진다 - 서버가 기본값을 없앤 이유(ADR-0035 §4)가 화면에서 다시 생긴다.
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "목표를 고른다";
+  none.disabled = true;
+  $("track").replaceChildren(none, ...view.tracks.map((track) => {
+    const option = document.createElement("option");
+    option.value = track.code;
+    option.textContent = `${track.name} · Skill ${track.skillCount}`;
+    option.title = track.description;
+    return option;
+  }));
+  $("track").value = "";
+  refreshUserTrack();
+}
+
+/** 지금 사용자의 목표를 서버에서 읽어 고른다. 사용자가 없으면 새로 시작할 목표를 고르는 자리다. */
+async function refreshUserTrack() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    // 사용자가 없으면 이전 사용자의 목표를 남기지 않는다 - 그대로 "새로 시작" 하면 그 목표로 만들어진다.
+    invalidateView("userTrack");
+    $("track").value = "";
+    return;
+  }
+  const mine = claimView("userTrack");
+  let user = null;
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    user = response.ok ? await response.json() : null;
+  } catch (error) {
+    user = null;
+  }
+  if (!mine()) {
+    return;
+  }
+  // 없는 사용자면 이전 사용자의 목표를 남기지 않는다.
+  $("track").value = user ? user.track : "";
+}
+
+/**
+ * 목표를 바꾼다. 사용자가 있으면 서버에 적고, 없으면 새로 시작할 때 쓸 값을 고른 것이다.
+ *
+ * 이미 푼 기록은 그대로다 - 범위만 달라지고 같은 Evidence 에서 다시 계산된다.
+ */
+async function changeTrack() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    return;
+  }
+  const mine = claimView("userTrack");
+  // 바꾸는 동안 다시 바꾸지 못하게 막는다. PUT 두 개가 나란히 나가면 화면은 두 번째를
+  // 보여 주는데 서버에는 늦게 처리된 쪽이 남을 수 있다(검증 에이전트).
+  $("track").disabled = true;
+  let response;
+  try {
+    response = await fetch(`/api/users/${userId}/track`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ track: $("track").value }),
+    });
+  } catch (error) {
+    response = null;
+  } finally {
+    $("track").disabled = false;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!response || !response.ok) {
+    $("footNote").textContent = `목표를 바꾸지 못했다 (${response ? response.status : "연결 실패"})`;
+    refreshUserTrack();
+    return;
+  }
+  const user = await response.json();
+  if (!mine()) {
+    return;
+  }
+  $("track").value = user.track;
+  // 켜지는 범위가 바뀌었다. 보고 있는 진단 · Skill 표 · 결과를 전부 다시 읽는다.
   switchedUser();
 }
 
@@ -1240,6 +1343,7 @@ attachEditor();
 attachGutter();
 $("createUser").addEventListener("click", createUser);
 $("userId").addEventListener("change", switchedUser);
+$("track").addEventListener("change", changeTrack);
 $("toProblems").addEventListener("click", showPicker);
 $("tabProblem").addEventListener("click", () => {
   // 열어 둔 문제가 있으면 그리로, 없으면 목록으로 돌아간다.
@@ -1250,6 +1354,9 @@ $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);
 $("hintButton").addEventListener("click", revealNextHint);
 restore();
+loadTracks().catch((error) => {
+  $("footNote").textContent = `목표 목록을 불러오지 못했다: ${error.message}`;
+});
 refreshDiagnostic();
 refreshReviews();
 loadProblems().catch((error) => {

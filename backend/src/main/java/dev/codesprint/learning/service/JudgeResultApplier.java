@@ -316,7 +316,13 @@ public class JudgeResultApplier {
         //
         // 진단은 **이번 제출을 반영한 뒤** 본다. 앞서 보면 방금 낸 Skill 이 아직
         // 안 재 본 것으로 남아, 같은 Skill 을 다시 물으러 보낸다.
-        List<SkillState> states = mastery.statesOf(userId);
+        //
+        // 보여 주고 고르는 것(진단 · 다음 Skill)은 트랙 안에서, **선수 판단은 전체에서** 한다
+        // (ADR-0035). 트랙 밖에서 숙달한 선수를 0 으로 읽으면 안 된다.
+        List<SkillState> allStates = mastery.allStatesOf(userId);
+        java.util.Set<String> active = mastery.activeSkills(userId);
+        List<SkillState> states = allStates.stream()
+                .filter(state -> active.contains(state.skillCode())).toList();
 
         // **선수 조건 판정도 같은 snapshot 을 본다.** masteriesOf() 는 user_skills
         // 캐시를 읽는데, 그 행은 정본이 아니다(ADR-0009). 방금 재계산한 states 와
@@ -326,7 +332,7 @@ public class JudgeResultApplier {
         // Collectors.toMap 을 쓰지 않는다 - mastery 는 null 일 수 있고(아직 평가 전),
         // 그 구현은 null 값에서 NPE 를 낸다. 여기서 null 은 정상 데이터다.
         Map<String, Double> masteries = new HashMap<>();
-        for (SkillState state : states) {
+        for (SkillState state : allStates) {
             masteries.put(state.skillCode(), state.mastery());
         }
         NextAction action = decisions.decide(new DecisionEngine.Context(

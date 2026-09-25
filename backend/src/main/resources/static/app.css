@@ -64,6 +64,8 @@ body {
   margin-left: 6px;
 }
 
+.who select { margin-left: 6px; }
+
 /* -- 2단 -- */
 .split {
   flex: 1 1 auto;
@@ -278,7 +280,7 @@ dl pre { grid-column: 1 / -1; margin-top: 8px; }
 
 .grow { flex: 1 1 auto; }
 
-input, textarea, button {
+input, textarea, button, select {
   font: inherit;
   color: inherit;
   background: var(--raise);
@@ -425,6 +427,7 @@ table.runcases pre {
 
   .topbar { gap: 8px; padding: 0 10px; }
   .who input { width: 48px; }
+  .who select { max-width: 140px; }
   .sample { grid-template-columns: 1fr; }
 }
 

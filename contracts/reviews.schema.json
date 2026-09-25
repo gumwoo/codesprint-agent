@@ -64,7 +64,7 @@
             "properties": {
               "code": {
                 "type": "string",
-                "pattern": "^P[0-9]{2}_[A-Z0-9_]+$"
+                "pattern": "^P[0-9]{2,3}_[A-Z0-9_]+$"
               },
               "title": {
                 "type": "string",

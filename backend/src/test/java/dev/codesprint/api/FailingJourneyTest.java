@@ -154,7 +154,7 @@ class FailingJourneyTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         userId = users.save(new UserRow(
-                "fail-" + System.nanoTime() + "@codesprint.dev", "실패여정")).id();
+                "fail-" + System.nanoTime() + "@codesprint.dev", "실패여정", "JOB")).id();
         reviewer.scripted = null;
     }
 
