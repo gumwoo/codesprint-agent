@@ -106,4 +106,45 @@ class DailyPlannerTest {
         assertThat(skills(plan).stream().filter("WEAK"::equals).count()).isEqualTo(1);
         assertThat(plan.blocks().get(0).type()).isEqualTo(BlockType.REVIEW);
     }
+
+    @Test
+    @DisplayName("진단은 하루 시간보다 길어도 빠지지 않는다 - 다른 Skill 이 그 자리를 채우지 않는다")
+    void diagnosisIsNeverSkipped() {
+        // 검증 에이전트가 재현했다. 하루 10 분에 진단 문제가 20 분이면 진단이 빠지고 짧은 새 Skill
+        // 이 들어가, 계획과 결과 패널이 다른 곳을 가리켰다.
+        Map<String, Integer> cost = new java.util.HashMap<>(COST);
+        cost.put("PROBED", 20);
+        Plan plan = planner.plan(STATES, List.of(), "PROBED", cost, 10, null);
+        assertThat(plan.blocks()).isNotEmpty();
+        assertThat(plan.blocks().get(0).type()).isEqualTo(BlockType.DIAGNOSE);
+        assertThat(skills(plan)).as("넘친 뒤에는 아무것도 더 넣지 않는다").containsExactly("PROBED");
+        assertThat(plan.reason()).contains("넘는다");
+    }
+
+    @Test
+    @DisplayName("만기 복습도 예산에 밀려 빠지지 않는다")
+    void reviewIsNeverSkipped() {
+        Map<String, Integer> cost = new java.util.HashMap<>(COST);
+        cost.put("REVIEWED", 40);
+        Plan plan = planner.plan(STATES, List.of("REVIEWED"), null, cost, 30, null);
+        assertThat(plan.blocks().get(0).type()).isEqualTo(BlockType.REVIEW);
+    }
+
+    @Test
+    @DisplayName("혼합 블록은 20 분을 넘지 않고, 남는 시간은 비워 둔다고 말한다")
+    void mixedIsCapped() {
+        Plan plan = planner.plan(STATES, List.of(), null, COST, 600, null);
+        Block last = plan.blocks().get(plan.blocks().size() - 1);
+        assertThat(last.type()).isEqualTo(BlockType.MIXED);
+        assertThat(last.minutes()).isLessThanOrEqualTo(DailyPlanner.MAX_MIXED_MINUTES);
+        assertThat(plan.reason()).contains("비워 둔다");
+    }
+
+    @Test
+    @DisplayName("지난 시험은 없는 시험이다")
+    void pastExamIsNoExam() {
+        Plan plan = planner.plan(STATES, List.of(), null, COST, 60, -3);
+        assertThat(plan.mode()).isEqualTo(Mode.NORMAL);
+        assertThat(plan.examInDays()).isNull();
+    }
 }

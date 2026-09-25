@@ -25,7 +25,8 @@ import org.springframework.stereotype.Component;
  * <p>여섯 항 중 <b>잴 수 있는 것만 쓴다</b>(CLAUDE.md "측정할 수 없는 것은 측정하지 않는다").
  *
  * <ul>
- *   <li>GoalImportance - 트랙 안이면 1, 밖이면 계획에 넣지 않는다(입력이 이미 트랙 범위다)
+ *   <li>GoalImportance - 연습 · 새로 배우기는 트랙 안 Skill 만 본다(입력 states 가 트랙 범위다).
+ *       만기 복습은 트랙과 상관없이 넣는다 - 이미 배운 것의 유지다(ADR-0035 남는 위험)
  *   <li>Weakness - {@code 1 - mastery}. 재 본 적 없으면 계획의 "새로 배우기" 쪽으로 간다
  *   <li>Learnability - 선수를 채웠는가. LOCKED 면 넣지 않는다
  *   <li>ExamFrequency - <b>쓰지 않는다.</b> 이 저장소에는 출제 빈도 데이터가 없다. 어림한 값을
@@ -42,6 +43,13 @@ public class DailyPlanner {
 
     /** 남은 시간이 이것보다 짧으면 혼합 블록을 만들지 않는다. */
     public static final int MIN_MIXED_MINUTES = 10;
+
+    /**
+     * 혼합 블록의 최대 길이. PRD §80 · §121 의 예가 10~20 분이다. 줄 문제가 없는 칸으로 하루
+     * 대부분을 채우면 할 일이 없는 계획이 된다 - 새 사용자에게 720 분을 주면 691 분이 혼합이었다
+     * (검증 에이전트). 남는 시간은 배정하지 않고 그렇다고 말한다.
+     */
+    public static final int MAX_MIXED_MINUTES = 20;
 
     /** 하루 공부 시간을 정하지 않았을 때 보여 줄 블록 수. 시간을 어림하지 않는다. */
     public static final int UNBUDGETED_BLOCKS = 3;
@@ -79,6 +87,10 @@ public class DailyPlanner {
     public Plan plan(List<SkillState> states, List<String> dueReviews, String diagnosticSkill,
             Map<String, Integer> costMinutes, Integer dailyMinutes, Integer examInDays) {
 
+        if (examInDays != null && examInDays < 0) {
+            // 지난 시험은 없는 시험이다. 서비스가 이미 걸러 주지만 이 함수만 봐도 맞아야 한다.
+            examInDays = null;
+        }
         Mode mode = examInDays != null && examInDays <= EXAM_MODE_DAYS ? Mode.EXAM : Mode.NORMAL;
 
         List<Block> candidates = new ArrayList<>();
@@ -134,7 +146,7 @@ public class DailyPlanner {
                 SkillState s = practice.get(p++);
                 candidates.add(new Block(BlockType.PRACTICE, s.skillCode(),
                         costMinutes.get(s.skillCode()), mode == Mode.NORMAL
-                                ? "mastery " + format(s.mastery()) + " - 아직 약하다"
+                                ? "mastery " + format(s.mastery()) + " - 아직 숙달 전이다"
                                 : "mastery " + format(s.mastery()) + " - 시험 전에 굳힐 수 있다"));
             }
             if (mode == Mode.NORMAL && l < learn.size()) {
@@ -144,27 +156,42 @@ public class DailyPlanner {
             }
         }
 
+        String how = (diagnosticSkill != null && !candidates.isEmpty()
+                        && candidates.get(0).type() == BlockType.DIAGNOSE
+                ? "진단을 먼저 하고, " : "")
+                + (mode == Mode.EXAM ? "시험이 " + examInDays + "일 남아 새로 배우지 않고 굳힌다"
+                        : "복습 · 연습 · 새로 배우기 순서로 채웠다");
+
         if (dailyMinutes == null) {
             return new Plan(null, examInDays, mode,
                     List.copyOf(candidates.subList(0, Math.min(UNBUDGETED_BLOCKS, candidates.size()))),
-                    "하루 공부 시간을 정하지 않아 시간을 나누지 않았다 - 앞에서부터 한다");
+                    how + " - 하루 공부 시간을 정하지 않아 시간을 나누지 않았다");
         }
 
+        // 진단과 만기 복습은 **예산과 상관없이** 맨 앞에 둔다. 들어가지 않는다고 건너뛰면 그
+        // 자리를 우선순위가 낮은 블록이 채우고, 계획이 결과 패널과 다른 곳을 가리킨다 - 하루
+        // 10 분인 새 사용자에게 진단(20 분) 대신 다른 Skill 이 나왔다(검증 에이전트).
         List<Block> blocks = new ArrayList<>();
         int left = dailyMinutes;
         for (Block block : candidates) {
-            if (block.minutes() <= left) {
+            boolean mandatory = block.type() == BlockType.DIAGNOSE || block.type() == BlockType.REVIEW;
+            if (mandatory || block.minutes() <= left) {
                 blocks.add(block);
                 left -= block.minutes();
             }
         }
-        if (left >= MIN_MIXED_MINUTES) {
-            blocks.add(new Block(BlockType.MIXED, null, left,
-                    "남은 시간 - 유형을 모르는 문제로 고르는 연습을 한다"));
+        if (left < 0) {
+            how += " - 진단 · 복습만으로 하루 시간을 넘는다";
         }
-        return new Plan(dailyMinutes, examInDays, mode, List.copyOf(blocks),
-                mode == Mode.EXAM ? "시험이 " + examInDays + "일 남아 새로 배우지 않고 굳힌다"
-                        : "복습 · 연습 · 새로 배우기 순서로 채웠다");
+        if (left >= MIN_MIXED_MINUTES) {
+            int mixed = Math.min(left, MAX_MIXED_MINUTES);
+            blocks.add(new Block(BlockType.MIXED, null, mixed,
+                    "유형을 모르는 문제로 고르는 연습을 한다"));
+            if (left > mixed) {
+                how += " - 남은 " + (left - mixed) + "분은 지금 줄 문제가 없어 비워 둔다";
+            }
+        }
+        return new Plan(dailyMinutes, examInDays, mode, List.copyOf(blocks), how);
     }
 
     private static double weakness(SkillState state) {

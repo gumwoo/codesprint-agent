@@ -287,6 +287,7 @@ async function showToday() {
   const mistakeRows = $("mistakeRows");
   if (!userId) {
     $("todaySummary").textContent = "사용자를 먼저 만든다.";
+    $("settingsNote").textContent = "";
     $("todayReason").textContent = "";
     $("mistakeNote").textContent = "";
     rows.replaceChildren();
@@ -383,7 +384,13 @@ async function showToday() {
 async function saveSettings() {
   const userId = Number($("userId").value);
   if (!userId) {
-    $("todaySummary").textContent = "사용자를 먼저 만든다.";
+    $("settingsNote").textContent = "사용자를 먼저 만든다.";
+    return;
+  }
+  // 잘못 입력하면 입력칸의 값이 "" 가 된다. 그대로 보내면 "정하지 않았다" 로 저장되어 기존
+  // 설정이 지워진다 - 생략과 null 을 나눈 이유(ADR-0038 §4)가 화면에서 흐려진다(검증 에이전트).
+  if ($("dailyMinutes").validity.badInput || $("examDate").validity.badInput) {
+    $("settingsNote").textContent = "입력한 값을 읽지 못했다 - 저장하지 않았다";
     return;
   }
   const mine = claimView("settings");
@@ -406,10 +413,13 @@ async function saveSettings() {
     return;
   }
   if (!response || !response.ok) {
-    $("todaySummary").textContent =
-        `설정을 저장하지 못했다 (${response ? response.status : "연결 실패"}) - 하루 시간은 10~720 분이다`;
+    const why = !response ? "연결 실패"
+        : response.status === 400 ? "400 - 하루 시간은 10~720 분, 시험일은 YYYY-MM-DD 다"
+        : String(response.status);
+    $("settingsNote").textContent = `설정을 저장하지 못했다 (${why})`;
     return;
   }
+  $("settingsNote").textContent = "저장했다.";
   showToday();
 }
 

@@ -43,7 +43,11 @@ public interface MistakeDetectionRepository extends JpaRepository<MistakeDetecti
     /**
      * 주어진 제출들에서 PRIMARY 로 탐지된 Mistake 를 code · status 별로 센다(PRD §123).
      *
-     * <p>SECONDARY 는 세지 않는다 - 확정 규칙과 같은 이유다. status 를 함께 돌려주는 것은
+     * <p>SECONDARY 는 세지 않는다 - 확정 규칙과 같은 이유다. 그 문제에서 일어날 수 없다고
+     * 선언된 탐지도 세지 않는다 - 재발 집계에서 빼는 것과 같은 이유다(ADR-0029). 사용자에게
+     * 보이는 오답 수가 확정 규칙이 무시한 주장으로 부풀면 안 된다.
+     *
+     * <p>status 를 함께 돌려주는 것은
      * <b>확정되지 않은 탐지를 확정된 것처럼 보이지 않게</b> 하기 위해서다(ADR-0014).
      */
     @Query("""
@@ -51,6 +55,7 @@ public interface MistakeDetectionRepository extends JpaRepository<MistakeDetecti
             from MistakeDetectionRow d
             where d.userId = :userId
               and d.role = 'PRIMARY'
+              and d.declaredForProblem = true
               and d.submissionId in :submissionIds
             group by d.mistakeCode, d.status
             """)

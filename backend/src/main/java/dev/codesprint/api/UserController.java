@@ -134,6 +134,11 @@ public class UserController {
             return ResponseEntity.badRequest().build();
         }
         java.time.LocalDate exam;
+        if (!body.get("examDate").isNull() && (!body.get("examDate").isTextual()
+                || !body.get("examDate").asText().matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"))) {
+            // "+10000-01-01" 처럼 LocalDate 는 받지만 계약(YYYY-MM-DD)과 DB 가 받지 못하는 값.
+            return ResponseEntity.badRequest().build();
+        }
         try {
             exam = body.get("examDate").isNull() ? null
                     : java.time.LocalDate.parse(body.get("examDate").asText());

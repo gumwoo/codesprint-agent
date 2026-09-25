@@ -359,3 +359,22 @@ test("늦게 온 이전 사용자의 계획이 지금 사용자의 오늘 화면
   await releaseAndSettle(page, slow, "/api/users/1/today");
   await expect(page.locator("#todayReason")).toHaveText("사용자 2 의 계획");
 });
+
+test("잘못 입력한 하루 시간은 저장하지 않는다 - 정하지 않음으로 바꾸지 않는다", async ({ page }) => {
+  // ADR-0038 §4. number 칸에 잘못 쓰면 value 가 "" 가 되어, 그대로 보내면 null 로 저장됐다.
+  let puts = 0;
+  await stubApi(page);
+  await page.route("**/api/users/1/settings", (route) => {
+    puts += 1;
+    return fulfill(route, { userId: 1, nickname: "x", track: "JOB", dailyMinutes: null,
+      examDate: null });
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.locator("#dailyMinutes").focus();
+  await page.keyboard.type("6-0");
+  await page.click("#saveSettings");
+  await expect(page.locator("#settingsNote")).toHaveText("입력한 값을 읽지 못했다 - 저장하지 않았다");
+  expect(puts).toBe(0);
+});

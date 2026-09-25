@@ -78,6 +78,9 @@ class TodayTest {
     @Autowired
     private UserRepository users;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     private MockMvc mvc;
     private long userId;
 
@@ -184,5 +187,36 @@ class TodayTest {
                 .andReturn().getResponse().getStatus()).isEqualTo(404);
         assertThat(mvc.perform(get("/api/users/{id}/mistakes", 999999999L))
                 .andReturn().getResponse().getStatus()).isEqualTo(404);
+    }
+
+    @Test
+    @DisplayName("그 문제에서 일어날 수 없다고 선언된 탐지는 오답 요약에서 세지 않는다")
+    void undeclaredDetectionsAreNotCounted() throws Exception {
+        // 검증 에이전트가 재현했다. ADR-0029 는 이런 탐지를 확정에도 재발에도 쓰지 않는데, 요약이
+        // 그대로 세서 큐 문제의 격자 경계 주장이 "탐지 1" 로 보였다.
+        long submissionId = MAPPER.readTree(mvc.perform(post("/api/problems/{code}/submit",
+                        "P01_QUEUE_BASIC").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\": " + userId + ", \"language\": \"PYTHON\","
+                                + " \"sourceCode\": \"print(1)\", \"solveSeconds\": 60}"))
+                .andReturn().getResponse().getContentAsString()).get("submissionId").asLong();
+        String insert = "insert into mistake_detections (submission_id, user_id, mistake_code, role,"
+                + " confidence, status, reason, prompt_version, declared_for_problem)"
+                + " values (?, ?, ?, 'PRIMARY', 0.7, 'POSSIBLE', 'test', 'reviewer-v1', ?)";
+        jdbc.update(insert, submissionId, userId, "BOUNDARY_CHECK", false);
+        jdbc.update(insert, submissionId, userId, "OUTPUT_FORMAT", true);   // 대조군
+
+        JsonNode summary = MAPPER.readTree(mvc.perform(get("/api/users/{id}/mistakes", userId))
+                .andReturn().getResponse().getContentAsString());
+        assertThat(schema("mistake-summary.schema.json").validate(summary)).isEmpty();
+        assertThat(summary.get("mistakes").findValuesAsText("mistakeCode"))
+                .containsExactly("OUTPUT_FORMAT");
+    }
+
+    @Test
+    @DisplayName("계약의 날짜 모양이 아닌 시험일은 받지 않는다")
+    void examDateShape() throws Exception {
+        assertThat(putSettings("{\"dailyMinutes\": 60, \"examDate\": \"+10000-01-01\"}"))
+                .isEqualTo(400);
+        assertThat(putSettings("{\"dailyMinutes\": 60, \"examDate\": 20260101}")).isEqualTo(400);
     }
 }

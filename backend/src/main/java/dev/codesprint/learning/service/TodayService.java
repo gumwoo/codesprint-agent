@@ -75,7 +75,8 @@ public class TodayService {
 
         Long userId = user.id();
         List<SkillState> states = mastery.statesOf(userId);
-        DiagnosticService.Step step = diagnostic.nextStep(userId);
+        // 한 응답 안에서 두 시점을 보지 않게 이미 계산한 상태로 진단을 묻는다(DiagnosticService 주석).
+        DiagnosticService.Step step = diagnostic.nextStep(states);
         String diagnosticSkill = step.done() || step.problem() == null ? null : step.targetSkill();
         List<String> due = reviews.due(userId).stream().map(ReviewScheduleRow::skillCode).toList();
 
@@ -120,9 +121,12 @@ public class TodayService {
         if (problem == null) {
             return;
         }
+        if (problem.expectedSolveSeconds() == null) {
+            // 예상 시간을 어림하지 않는다. check_problems 가 필수로 요구하므로 실제로는 없다.
+            return;
+        }
         picked.put(skill, problem);
         // 예상 풀이 시간을 분으로 올림한다. 1 분보다 짧게 잡지 않는다.
-        int seconds = problem.expectedSolveSeconds() == null ? 600 : problem.expectedSolveSeconds();
-        cost.put(skill, Math.max(1, (seconds + 59) / 60));
+        cost.put(skill, Math.max(1, (problem.expectedSolveSeconds() + 59) / 60));
     }
 }
