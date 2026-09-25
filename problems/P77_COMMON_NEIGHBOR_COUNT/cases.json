@@ -28,8 +28,8 @@
       "id": 4,
       "type": "SINGLE",
       "hidden": true,
-      "input": "3 2\n3 1\n3 2\n3\n1 2\n2 1\n1 3\n",
-      "expectedOutput": "1\n1\n0\n",
+      "input": "3 2\n3 1\n3 2\n3\n1 2\n2 3\n1 3\n",
+      "expectedOutput": "1\n0\n0\n",
       "probes": []
     },
     {
