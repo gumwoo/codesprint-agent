@@ -1,0 +1,32 @@
+{
+  "problemCode": "P83_CLUB_MERGE_SIZE",
+  "problemTitle": "동아리 합병과 인원 조회",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DISJOINT_SET"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    parent = list(range(n + 1))\n    size = [1] * (n + 1)\n\n    def find(x):\n        root = x\n        while parent[root] != root:\n            root = parent[root]\n        while parent[x] != root:\n            parent[x], x = root, parent[x]\n        return root\n\n    out = []\n    idx = 2\n    for _ in range(q):\n        if data[idx] == b'1':\n            a = int(data[idx + 1])\n            b = int(data[idx + 2])\n            idx += 3\n            ra = find(a)\n            rb = find(b)\n            if size[ra] < size[rb]:\n                ra, rb = rb, ra\n            parent[rb] = ra\n            size[ra] += size[rb]\n        else:\n            a = int(data[idx + 1])\n            idx += 2\n            out.append(str(size[find(a)]))\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      6
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

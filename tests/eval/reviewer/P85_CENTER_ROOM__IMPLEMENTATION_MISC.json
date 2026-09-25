@@ -1,0 +1,33 @@
+{
+  "problemCode": "P85_CENTER_ROOM",
+  "problemTitle": "가장 먼 방까지가 가장 가까운 방",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "FLOYD_WARSHALL"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    INF = float('inf')\n    dist = [[INF] * n for _ in range(n)]\n    for i in range(n):\n        dist[i][i] = 0\n    pos = 2\n    for _ in range(m):\n        u, v, w = int(data[pos]) - 1, int(data[pos + 1]) - 1, int(data[pos + 2])\n        pos += 3\n        if w < dist[u][v]:\n            dist[u][v] = w\n            dist[v][u] = w\n    for i in range(n):\n        di = dist[i]\n        for j in range(n):\n            for k in range(n):\n                cand = di[k] + dist[k][j]\n                if cand < di[j]:\n                    di[j] = cand\n    best_room, best_ecc = 0, INF\n    for i in range(n):\n        ecc = max(dist[i])\n        if ecc < best_ecc:\n            best_room, best_ecc = i, ecc\n    print(best_room + 1, best_ecc)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 8,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      9,
+      10,
+      11
+    ],
+    "failedCaseIds": [
+      8,
+      12
+    ]
+  },
+  "probes": {}
+}

@@ -1,0 +1,33 @@
+{
+  "problemCode": "P81_NEAREST_SHELTER_DISTANCE",
+  "problemTitle": "가장 가까운 대피소까지의 거리",
+  "problemSource": "DEV_FIXTURE",
+  "label": "OUTPUT_FORMAT",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DIJKSTRA"
+  ],
+  "sourceCode": "\nimport sys\nimport heapq\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    pos = 3\n    shelters = [int(x) - 1 for x in data[pos:pos + k]]\n    pos += k\n    adj = [[] for _ in range(n)]\n    for _ in range(m):\n        u = int(data[pos]) - 1\n        v = int(data[pos + 1]) - 1\n        w = int(data[pos + 2])\n        pos += 3\n        adj[u].append((v, w))\n        adj[v].append((u, w))\n    INF = 10 ** 18\n    dist = [INF] * n\n    heap = []\n    for s in shelters:\n        dist[s] = 0\n        heap.append((0, s))\n    heapq.heapify(heap)\n    while heap:\n        d, u = heapq.heappop(heap)\n        if d > dist[u]:\n            continue\n        for v, w in adj[u]:\n            nd = d + w\n            if nd < dist[v]:\n                dist[v] = nd\n                heapq.heappush(heap, (nd, v))\n    print(' '.join(str(x) for x in dist))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      6,
+      7,
+      9,
+      10,
+      11,
+      12
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      8
+    ]
+  },
+  "probes": {}
+}
