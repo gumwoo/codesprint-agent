@@ -59,6 +59,12 @@ const DEFAULTS = {
   // /api/skills 와 /api/users/{id}/skills 는 **다른 계약이다** - 정의(누구에게나
   // 같다)와 상태(사용자별)를 나눠 둔 것이고, 둘 다 minItems 1 이다. 하나의 stub
   // 으로 둘 다 답하고 있었는데 검증을 붙이자 바로 걸렸다.
+  tracks: {
+    tracks: [
+      { code: "INTRO", name: "입문", description: "구현까지", skillCount: 4 },
+      { code: "JOB", name: "일반 취업 코딩테스트", description: "CORE 전체", skillCount: 8 },
+    ],
+  },
   catalog: {
     skills: [{ code: "BFS_GRID_TRAVERSAL", name: "격자 BFS", domain: "GRAPH",
       tier: "CORE", requires: [] }],
@@ -164,6 +170,12 @@ async function stubApi(page, overrides = {}) {
     }
     if (p.endsWith("/reviews")) {
       return fulfill(route, overrides.reviews || DEFAULTS.reviews);
+    }
+    if (p === "/api/tracks") {
+      return fulfill(route, DEFAULTS.tracks);
+    }
+    if (/^\/api\/users\/\d+$/.test(p)) {
+      return fulfill(route, { userId: Number(p.split("/").pop()), nickname: "stub", track: "JOB" });
     }
     if (p === "/api/skills") {
       return fulfill(route, DEFAULTS.catalog);

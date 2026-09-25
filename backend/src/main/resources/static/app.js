@@ -278,6 +278,7 @@ function switchedUser() {
   resetHints();
 
   remember($("userId").value);
+  refreshUserTrack();
   refreshDiagnostic();
   refreshReviews();
   if (!$("skillsBody").hidden) {
@@ -1171,7 +1172,9 @@ async function createUser() {
   const response = await fetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nickname: "로컬 사용자" }),
+    // 목표는 기본값이 없다(ADR-0035). 고른 것을 그대로 보낸다 - 목록이 아직 없으면
+    // 빈 값이 가고 서버가 400 으로 돌려준다.
+    body: JSON.stringify({ nickname: "로컬 사용자", track: $("track").value }),
   });
   if (!response.ok) {
     if (mine()) {
@@ -1186,6 +1189,73 @@ async function createUser() {
   $("userId").value = created.userId;
 
   // 값을 코드로 바꾸면 change 가 뜨지 않는다. 직접 부른다.
+  switchedUser();
+}
+
+// -- 목표(학습 트랙) ----------------------------------------------------
+//
+// 켜지는 Skill 범위를 정한다(ADR-0035). 진단 · Skill 표 · 다음 행동이 그 범위 위에서
+// 돈다. **목록도 Skill 수도 서버가 준다** - 화면이 도메인과 tier 를 조합해 세면 서버가
+// 정한 범위와 갈린다(ADR-0001).
+
+async function loadTracks() {
+  const mine = claimView("tracks");
+  const view = await getJson("/api/tracks");
+  if (!mine()) {
+    return;
+  }
+  $("track").replaceChildren(...view.tracks.map((track) => {
+    const option = document.createElement("option");
+    option.value = track.code;
+    option.textContent = `${track.name} · Skill ${track.skillCount}`;
+    option.title = track.description;
+    return option;
+  }));
+  refreshUserTrack();
+}
+
+/** 지금 사용자의 목표를 서버에서 읽어 고른다. 사용자가 없으면 새로 시작할 목표를 고르는 자리다. */
+async function refreshUserTrack() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    return;
+  }
+  const mine = claimView("userTrack");
+  const response = await fetch(`/api/users/${userId}`);
+  if (!mine() || !response.ok) {
+    return;
+  }
+  const user = await response.json();
+  $("track").value = user.track;
+}
+
+/**
+ * 목표를 바꾼다. 사용자가 있으면 서버에 적고, 없으면 새로 시작할 때 쓸 값을 고른 것이다.
+ *
+ * 이미 푼 기록은 그대로다 - 범위만 달라지고 같은 Evidence 에서 다시 계산된다.
+ */
+async function changeTrack() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    return;
+  }
+  const mine = claimView("userTrack");
+  const response = await fetch(`/api/users/${userId}/track`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ track: $("track").value }),
+  });
+  if (!mine()) {
+    return;
+  }
+  if (!response.ok) {
+    $("footNote").textContent = `목표를 바꾸지 못했다 (${response.status})`;
+    refreshUserTrack();
+    return;
+  }
+  const user = await response.json();
+  $("track").value = user.track;
+  // 켜지는 범위가 바뀌었다. 보고 있는 진단 · Skill 표 · 결과를 전부 다시 읽는다.
   switchedUser();
 }
 
@@ -1240,6 +1310,7 @@ attachEditor();
 attachGutter();
 $("createUser").addEventListener("click", createUser);
 $("userId").addEventListener("change", switchedUser);
+$("track").addEventListener("change", changeTrack);
 $("toProblems").addEventListener("click", showPicker);
 $("tabProblem").addEventListener("click", () => {
   // 열어 둔 문제가 있으면 그리로, 없으면 목록으로 돌아간다.
@@ -1250,6 +1321,9 @@ $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);
 $("hintButton").addEventListener("click", revealNextHint);
 restore();
+loadTracks().catch((error) => {
+  $("footNote").textContent = `목표 목록을 불러오지 못했다: ${error.message}`;
+});
 refreshDiagnostic();
 refreshReviews();
 loadProblems().catch((error) => {

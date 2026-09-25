@@ -128,9 +128,9 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
     made += 1;
     if (made === 1) {
       await slow.held;
-      return fulfill(route, { userId: 11, nickname: "먼저" });
+      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB" });
     }
-    return fulfill(route, { userId: 12, nickname: "나중" });
+    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB" });
   });
 
   await page.goto("/index.html");
@@ -294,4 +294,25 @@ test("전체 풀이를 눌러 둔 채 문제를 옮기면 그 상태가 따라�
   await page.locator("#problemList button", { hasText: "P03" }).click();
   await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
   await expect(page.locator("#hintButton")).toHaveText("힌트 보기");
+});
+
+test("늦게 온 이전 사용자의 목표가 지금 사용자의 목표를 덮지 않는다", async ({ page }) => {
+  // ADR-0035. 사용자를 바꾸면 그 사람의 목표를 서버에서 읽는다. 1 번의 응답이 늦게
+  // 오면 2 번 화면의 목표가 1 번 것으로 바뀌고, 그 상태로 목표를 바꾸면 남의 값이 적힌다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/users/1", async (route) => {
+    await slow.held;
+    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB" });
+  });
+  await page.route("**/api/users/2", (route) =>
+    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO" }));
+
+  await asUser(page, "1");
+  await page.fill("#userId", "2");
+  await page.dispatchEvent("#userId", "change");
+  await expect(page.locator("#track")).toHaveValue("INTRO");
+
+  await releaseAndSettle(page, slow, "/api/users/1");
+  await expect(page.locator("#track")).toHaveValue("INTRO");
 });
