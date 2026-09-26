@@ -399,3 +399,68 @@ prerequisites:
   - skill: STATE_GRAPH_DIJKSTRA
     requires: STATE_SPACE_BFS
     minimum_mastery: 0.65
+
+  # W9c · ADVANCED DP · 문자열 심화 · 섞인 문제 (ADR-0048)
+  - skill: TREE_DP
+    requires: TREE_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: TREE_DP
+    requires: DP_1D
+    minimum_mastery: 0.65
+
+  - skill: REROOTING_DP
+    requires: TREE_DP
+    minimum_mastery: 0.65
+
+  - skill: INTERVAL_DP
+    requires: DP_2D
+    minimum_mastery: 0.65
+
+  - skill: DIGIT_DP
+    requires: DP_2D
+    minimum_mastery: 0.65
+
+  - skill: DIGIT_DP
+    requires: NUMBER_BASE_CONVERSION
+    minimum_mastery: 0.65
+
+  - skill: PALINDROME_RADII
+    requires: STRING_MANIPULATION
+    minimum_mastery: 0.65
+
+  - skill: PALINDROME_RADII
+    requires: TWO_POINTER
+    minimum_mastery: 0.65
+
+  - skill: MULTI_PATTERN_MATCHING
+    requires: TRIE_PREFIX
+    minimum_mastery: 0.65
+
+  - skill: MULTI_PATTERN_MATCHING
+    requires: PREFIX_FUNCTION
+    minimum_mastery: 0.65
+
+  - skill: SUFFIX_ARRAY
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: SUFFIX_ARRAY
+    requires: STRING_MANIPULATION
+    minimum_mastery: 0.65
+
+  - skill: SKILL_COMPOSITION
+    requires: PREFIX_SUM
+    minimum_mastery: 0.65
+
+  - skill: SKILL_COMPOSITION
+    requires: BINARY_SEARCH_BOUNDS
+    minimum_mastery: 0.65
+
+  - skill: SKILL_COMPOSITION
+    requires: BFS_SHORTEST_PATH
+    minimum_mastery: 0.65
+
+  - skill: SKILL_COMPOSITION
+    requires: HASH_MAP_COUNTING
+    minimum_mastery: 0.65
