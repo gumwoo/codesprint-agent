@@ -176,10 +176,10 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 
 | | 상태 |
 | --- | --- |
-| Skill Catalog (70개, 도메인 43개 활성) + 도메인 레지스트리 (46개) + 학습 트랙 4개 | 진행 중 (ADR-0034) |
+| Skill Catalog (79개, 도메인 46개 전부 활성) + 도메인 레지스트리 (46개) + 학습 트랙 4개 | 완료 (ADR-0034 W1~W9) |
 | 계약 + 검사 하네스 + 메타테스트 | 완료 |
 | Judge / Sandbox (Python 3.12 · Java 21 · C++17, ADR-0045) + Judge Worker / 큐 | 완료 |
-| 문제 · Test Case 106개 + 단계별 힌트 사다리 | 완료 |
+| 문제 · Test Case 118개 + 단계별 힌트 사다리 | 완료 |
 | Mastery / Evidence 산식 (Python oracle ↔ Java) | 완료 |
 | 초기 진단 · Decision Engine · 선수 관계 | 완료 |
 | 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |
@@ -191,8 +191,8 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | 자유 질문 Tutor (ADR-0044) | 완료 — 기본은 꺼져 있다 |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 지금은
-PRD 끝까지 웨이브로 넓히는 중이다([ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md)) - CORE 전체(CORE-3)까지
-INTERMEDIATE 까지 도메인 서른여덟 · Skill 예순하나가 켜져 있고, 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
+PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 모두 마쳐 도메인 마흔여섯이 전부
+켜져 있고 Skill 은 일흔아홉이다. 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
 도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개
 Registry Entry**다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
 `skills.yaml`로 승격한다.

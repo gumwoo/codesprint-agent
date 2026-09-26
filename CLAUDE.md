@@ -237,8 +237,8 @@ Python 은 샌드박스와 하네스. 다음 기능을 Python 으로 더 만들�
 
 ## 현재 상태
 
-PRD 끝까지 웨이브로 넓히는 중([ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md)). 지금 도메인 43 ·
-Skill 70. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox, 검증된 문제 106개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
+PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 마쳤다. 도메인 46 전부 ·
+Skill 79. 커리큘럼 데이터, 계약, 하네스, Judge/Sandbox(Python · Java · C++), 검증된 문제 118개, Mastery 산식, 백엔드(Spring Boot · PostgreSQL · Flyway), Decision Engine,
 제출 API, Judge Worker + 큐, Reviewer 오케스트레이션, 그리고 문제 제공까지 있다.
 LLM 어댑터도 붙어 있다. **다만 기본은 꺼져 있고**, 켜지 않으면 분석 없이 나머지가
 그대로 돈다 - 판정도 mastery 도 다음 행동도 Reviewer 없이 계산된다.
