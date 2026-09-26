@@ -1,0 +1,33 @@
+{
+  "problemCode": "P87_COURSE_ORDER_LEX_SMALLEST",
+  "problemTitle": "가장 앞서는 수강 순서",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "TOPOLOGICAL_ORDER"
+  ],
+  "sourceCode": "\nimport sys\nimport heapq\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    indeg = [0] * (n + 1)\n    idx = 2\n    for _ in range(m):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        indeg[b] += 1\n    heap = [v for v in range(1, n + 1) if indeg[v] == 0]\n    heapq.heapify(heap)\n    order = []\n    while heap:\n        v = heapq.heappop(heap)\n        order.append(v)\n        for w in adj[v]:\n            indeg[w] -= 1\n            if indeg[w] == 0:\n                heapq.heappush(heap, w)\n    print(' '.join(map(str, order)))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "failedCaseIds": [
+      2,
+      6
+    ]
+  },
+  "probes": {}
+}

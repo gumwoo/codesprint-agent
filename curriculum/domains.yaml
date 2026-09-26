@@ -153,25 +153,25 @@ domains:
     order: 23
     name: Shortest Path
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: UNION_FIND
     order: 24
     name: Union Find
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: MST
     order: 25
     name: Minimum Spanning Tree
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: TOPOLOGICAL_SORT
     order: 26
     name: Topological Sort / DAG
     tier: INTERMEDIATE
-    active: false
+    active: true
 
   - code: TREE
     order: 27

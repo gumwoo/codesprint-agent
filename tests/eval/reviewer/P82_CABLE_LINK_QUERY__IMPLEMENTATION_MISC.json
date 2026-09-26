@@ -1,0 +1,33 @@
+{
+  "problemCode": "P82_CABLE_LINK_QUERY",
+  "problemTitle": "케이블 연결과 통신 확인",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DISJOINT_SET"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, q = int(data[0]), int(data[1])\n    parent = list(range(n + 1))\n\n    def find(x):\n        root = x\n        while parent[root] != root:\n            root = parent[root]\n        while parent[x] != root:\n            nxt = parent[x]\n            parent[x] = root\n            x = nxt\n        return root\n\n    out = []\n    idx = 2\n    for _ in range(q):\n        t = data[idx]\n        a = int(data[idx + 1])\n        b = int(data[idx + 2])\n        idx += 3\n        ra = find(a)\n        rb = find(b)\n        if t == b\"1\":\n            if ra != rb:\n                parent[a] = rb\n        else:\n            out.append(\"YES\" if ra == rb else \"NO\")\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      7,
+      10,
+      12
+    ]
+  },
+  "probes": {}
+}

@@ -580,3 +580,108 @@ concepts:
       while queue:
           r, c, broken = queue.popleft()
     self_check: 칸 단위로만 방문을 표시하면 벽 부수기 문제에서 무엇이 틀리는지 설명해 보세요.
+
+  # ── W6a · INTERMEDIATE 그래프 (ADR-0040) ────────────────────────────
+  - skill_code: DIJKSTRA
+    title: 가장 가까운 정점부터 확정하기
+    summary: 가중치가 음이 아니면, 아직 확정하지 않은 정점 중 거리가 가장 짧은 정점의 거리는 더 줄어들 수 없다. 힙으로 그 정점을 꺼내 확정하고 이웃을 갱신한다.
+    key_points:
+      - 힙에서 꺼낸 거리가 이미 기록된 거리보다 크면 오래된 항목이라 건너뛴다.
+      - 음수 간선이 있으면 이 성질이 깨진다. 그때는 벨만-포드를 쓴다.
+      - 매번 모든 정점을 훑어 가장 가까운 것을 찾으면 정점 수의 제곱만큼 걸린다.
+    example: |
+      dist[start] = 0
+      heap = [(0, start)]
+      while heap:
+          d, node = heapq.heappop(heap)
+          if d > dist[node]:
+              continue
+          for nxt, w in graph[node]:
+              if d + w < dist[nxt]:
+                  dist[nxt] = d + w
+                  heapq.heappush(heap, (dist[nxt], nxt))
+    self_check: 힙에서 꺼낸 거리가 기록보다 클 때 건너뛰어도 되는 이유를 설명해 보세요.
+
+  - skill_code: FLOYD_WARSHALL
+    title: 거쳐 가는 정점을 하나씩 늘리기
+    summary: dist[i][j]를 "정점 0..k 만 거쳐 가는 최단 거리"로 보고 k를 하나씩 늘리면 모든 쌍의 최단 거리가 나온다.
+    key_points:
+      - 가장 바깥 반복이 거쳐 가는 정점 k다. 순서를 바꾸면 틀린다.
+      - 정점 수가 N이면 N³ 번 계산하므로 N이 수백 이하일 때만 쓴다.
+      - 갈 수 없는 쌍은 무한대로 두고 더할 때 넘치지 않게 한다.
+      - 정점마다 다익스트라를 돌려도 같은 답이 나온다. 음수 간선이 있으면 그 방법은 쓸 수 없고 이 방법은 쓸 수 있다.
+    example: |
+      for k in range(n):
+          for i in range(n):
+              for j in range(n):
+                  if dist[i][k] + dist[k][j] < dist[i][j]:
+                      dist[i][j] = dist[i][k] + dist[k][j]
+    self_check: 반복의 가장 바깥이 k가 아니면 어떤 경로를 놓치는지 설명해 보세요.
+
+  - skill_code: BELLMAN_FORD
+    title: 음수 간선과 음수 사이클
+    summary: 모든 간선을 N-1번 완화하면 음수 간선이 있어도 최단 거리가 정해진다. N번째에도 줄어드는 거리가 있으면 음수 사이클이다.
+    key_points:
+      - 시작점에서 갈 수 없는 정점은 완화하지 않는다(무한대에 음수를 더하지 않는다).
+      - 음수 사이클이 시작점에서 도달 가능한지를 문제 조건과 맞춰 본다.
+      - 간선 목록 전체를 한 번 도는 것을 한 라운드로 센다.
+    example: |
+      for _ in range(n - 1):
+          for u, v, w in edges:
+              if dist[u] != INF and dist[u] + w < dist[v]:
+                  dist[v] = dist[u] + w
+    self_check: N-1번이면 충분한 이유를 경로의 간선 수로 설명해 보세요.
+
+  - skill_code: DISJOINT_SET
+    title: 대표를 따라가는 서로소 집합
+    summary: 각 원소가 부모를 가리키고, 부모를 끝까지 따라간 원소를 집합의 대표로 삼는다. 두 원소의 대표가 같으면 같은 집합이다.
+    key_points:
+      - 대표를 찾으며 지나간 원소가 대표를 바로 가리키게 하면(경로 압축) 다음 찾기가 빨라진다.
+      - 합칠 때는 두 대표 중 하나가 다른 하나를 가리키게 한다.
+      - 파이썬에서는 재귀 대신 반복으로 대표를 찾으면 깊이 제한에 걸리지 않는다.
+    example: |
+      def find(x):
+          root = x
+          while parent[root] != root:
+              root = parent[root]
+          while parent[x] != root:
+              parent[x], x = root, parent[x]
+          return root
+    self_check: 경로 압축이 없으면 어떤 입력에서 찾기가 느려지는지 예를 들어 보세요.
+
+  - skill_code: MINIMUM_SPANNING_TREE
+    title: 사이클을 만들지 않는 가장 싼 간선
+    summary: 간선을 가중치 순으로 보며, 두 끝이 아직 다른 집합일 때만 고르면 최소 신장 트리가 된다(크루스칼).
+    key_points:
+      - 두 끝이 같은 집합이면 그 간선은 사이클을 만든다. 서로소 집합으로 바로 확인한다.
+      - 정점이 N개면 간선 N-1개를 고른 순간 끝난다.
+      - 그래프가 연결돼 있지 않으면 신장 트리가 없다. 고른 간선 수로 확인한다.
+    example: |
+      edges.sort()
+      total = picked = 0
+      for w, u, v in edges:
+          if find(u) != find(v):
+              union(u, v)
+              total += w
+              picked += 1
+    self_check: 가장 싼 간선부터 고르는 것이 왜 최소가 되는지 사이클 성질로 설명해 보세요.
+
+  - skill_code: TOPOLOGICAL_ORDER
+    title: 들어오는 간선이 없는 것부터
+    summary: 선행 작업이 모두 끝난(들어오는 간선이 0인) 작업을 꺼내고, 그 작업에서 나가는 간선을 지워 가며 순서를 만든다.
+    key_points:
+      - 들어오는 간선 수(indegree)를 먼저 센다.
+      - 여럿 중 번호가 작은 것부터 꺼내라는 조건이 있으면 큐 대신 힙을 쓴다.
+      - 꺼낸 작업 수가 전체보다 적으면 사이클이 있어 순서를 정할 수 없다.
+      - DFS 로 탐색을 마친 순서를 거꾸로 읽어도 위상 순서가 된다. 탐색 중인 정점을 다시 만나면 사이클이다.
+    example: |
+      ready = [v for v in range(1, n + 1) if indegree[v] == 0]
+      order = []
+      while ready:
+          v = ready.pop()
+          order.append(v)
+          for nxt in graph[v]:
+              indegree[nxt] -= 1
+              if indegree[nxt] == 0:
+                  ready.append(nxt)
+    self_check: 꺼낸 작업 수가 전체보다 적을 때 무엇이 남아 있는지 설명해 보세요.

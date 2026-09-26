@@ -1,0 +1,33 @@
+{
+  "problemCode": "P78_NEGATIVE_TOLL_ROADS",
+  "problemTitle": "음수 통행료 도로망",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BELLMAN_FORD"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = []\n    for i in range(m):\n        u = int(data[2 + 3 * i])\n        v = int(data[3 + 3 * i])\n        w = int(data[4 + 3 * i])\n        edges.append((u, v, w))\n    INF = float(\"inf\")\n    dist = [INF] * (n + 1)\n    dist[1] = 0\n    for _ in range(n - 1):\n        changed = False\n        for u, v, w in edges:\n            if dist[u] != INF and dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n                changed = True\n        if not changed:\n            break\n    neg = [False] * (n + 1)\n    for u, v, w in edges:\n        if dist[u] != INF and dist[u] + w < dist[v]:\n            neg[v] = True\n    out = []\n    for v in range(1, n + 1):\n        if dist[v] == INF:\n            out.append(\"INF\")\n        elif neg[v]:\n            out.append(\"-INF\")\n        else:\n            out.append(str(dist[v]))\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7,
+      11
+    ],
+    "failedCaseIds": [
+      2,
+      8,
+      9,
+      10,
+      12
+    ]
+  },
+  "probes": {}
+}

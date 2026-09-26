@@ -194,3 +194,44 @@ prerequisites:
   - skill: STATE_SPACE_BFS
     requires: BFS_SHORTEST_PATH
     minimum_mastery: 0.65
+
+  # ── W6a · INTERMEDIATE 그래프 (ADR-0040) ────────────────────────────
+  - skill: DIJKSTRA
+    requires: HEAP_PRIORITY
+    minimum_mastery: 0.65
+
+  - skill: DIJKSTRA
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: FLOYD_WARSHALL
+    requires: DP_2D
+    minimum_mastery: 0.65
+
+  - skill: FLOYD_WARSHALL
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: BELLMAN_FORD
+    requires: DIJKSTRA
+    minimum_mastery: 0.65
+
+  - skill: DISJOINT_SET
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: MINIMUM_SPANNING_TREE
+    requires: DISJOINT_SET
+    minimum_mastery: 0.65
+
+  - skill: MINIMUM_SPANNING_TREE
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: TOPOLOGICAL_ORDER
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: TOPOLOGICAL_ORDER
+    requires: BFS_BASIC
+    minimum_mastery: 0.65

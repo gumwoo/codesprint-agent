@@ -1,0 +1,46 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P82_CABLE_LINK_QUERY
+title: 케이블 연결과 통신 확인
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N + Q log N) (경로 압축, 분할 상환)
+statement: |
+  컴퓨터 N 대가 있고 1 번부터 N 번까지 번호가 붙어 있다(번호는 1 부터 센다). 처음에는 케이블이 하나도 없다. 명령 Q 개가 주어지는 순서대로 처리한다.
+
+  - `1 a b` : a 번과 b 번 컴퓨터 사이에 케이블을 하나 놓는다.
+  - `2 a b` : 지금까지 놓인 케이블만 따라가서 a 번에서 b 번까지 신호가 갈 수 있으면 YES, 없으면 NO 를 출력한다. a 와 b 가 같으면 YES 다.
+
+  케이블은 양방향이고 한 번 놓이면 없어지지 않는다. 같은 두 컴퓨터 사이에 케이블을 여러 번 놓을 수 있고, a 와 b 가 같은 1 명령도 올 수 있다.
+
+  예: 1-2, 2-3 케이블이 있으면 1 번에서 3 번으로 신호가 간다. 1-2, 3-4 케이블만 있으면 1 번에서 4 번으로는 가지 못한다.
+
+  입력
+  첫 줄에 정수 N, Q 가 공백으로 구분되어 주어진다. 다음 Q 줄에 명령이 한 줄에 하나씩 `t a b` 형태로 주어진다.
+
+  출력
+  `2` 명령마다 한 줄에 YES 또는 NO 를 명령이 주어진 순서대로 출력한다.
+
+  제약
+  - 1 ≤ N ≤ 40000
+  - 1 ≤ Q ≤ 60000
+  - t 는 1 또는 2
+  - 1 ≤ a, b ≤ N
+  - `2` 명령은 적어도 하나 있다.
+skills:
+- code: DISJOINT_SET
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 케이블을 인접 리스트에 쌓아 두고 2 명령마다 a 에서 BFS 로 b 를 찾는다.

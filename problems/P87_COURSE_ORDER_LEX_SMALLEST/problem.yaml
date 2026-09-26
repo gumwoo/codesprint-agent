@@ -1,0 +1,39 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P87_COURSE_ORDER_LEX_SMALLEST
+title: 가장 앞서는 수강 순서
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O((N + M) log N)
+statement: |
+  과목 N개가 있고 1번부터 N번까지 번호가 붙어 있다(1-based). 선수 관계 M개가 주어진다. 선수 관계 a b 는 a번 과목을 b번 과목보다 먼저 들어야 한다는 뜻이다. 한 학기에 한 과목씩, 모든 과목을 한 번씩 듣는다. 모든 선수 관계를 지키는 수강 순서 중 사전순으로 가장 앞서는 것을 출력한다. 두 순서를 비교할 때는 앞에서부터 처음으로 다른 자리의 번호가 더 작은 쪽이 앞선다. 예를 들어 2 1 3 은 2 3 1 보다 앞선다. 모든 선수 관계를 지키는 순서가 없으면 -1 을 출력한다.
+
+  입력
+  첫 줄에 N, M 이 공백으로 구분되어 주어진다.
+  다음 M개의 줄에 선수 관계 a b 가 한 줄에 하나씩 주어진다.
+
+  제약
+  1 <= N <= 100000
+  0 <= M <= 200000
+  1 <= a, b <= N, a != b
+  같은 선수 관계가 여러 번 주어질 수 있다.
+
+  출력
+  수강 순서가 있으면 과목 번호 N개를 공백으로 구분해 한 줄에 출력한다. 없으면 -1 을 출력한다.
+skills:
+- code: TOPOLOGICAL_ORDER
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

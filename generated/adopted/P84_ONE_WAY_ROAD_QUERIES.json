@@ -1,0 +1,11 @@
+{
+  "id": "FLOYD_WARSHALL-1790371687176-1",
+  "skill": "FLOYD_WARSHALL",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T21:39:53+00:00",
+  "code": "P84_ONE_WAY_ROAD_QUERIES",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    p = 2\n    edges = []\n    for _ in range(m):\n        edges.append((int(data[p]) - 1, int(data[p + 1]) - 1, int(data[p + 2])))\n        p += 3\n    q = int(data[p])\n    p += 1\n    out = []\n    for _ in range(q):\n        s = int(data[p]) - 1\n        t = int(data[p + 1]) - 1\n        p += 2\n        dist = [None] * n\n        dist[s] = 0\n        for _ in range(n):\n            changed = False\n            for u, v, w in edges:\n                if dist[u] is not None and (dist[v] is None or dist[u] + w < dist[v]):\n                    dist[v] = dist[u] + w\n                    changed = True\n            if not changed:\n                break\n        out.append(str(dist[t]) if dist[t] is not None else '-1')\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nedges = []\nif n >= 2:\n    m = rng.randint(0, 12)\n    for _ in range(m):\n        u = rng.randint(1, n)\n        v = rng.randint(1, n - 1)\n        if v >= u:\n            v += 1\n        edges.append((u, v, rng.randint(1, 20)))\nlines = [f'{n} {len(edges)}']\nfor u, v, w in edges:\n    lines.append(f'{u} {v} {w}')\nq = rng.randint(1, 8)\nlines.append(str(q))\nfor _ in range(q):\n    lines.append(f'{rng.randint(1, n)} {rng.randint(1, n)}')\nprint('\\n'.join(lines))\n",
+  "stressInputGenerator": null
+}

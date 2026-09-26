@@ -1,0 +1,33 @@
+{
+  "problemCode": "P86_CITY_ROAD_MIN_COST",
+  "problemTitle": "도시 도로 연결 비용",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MINIMUM_SPANNING_TREE"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    edges = []\n    for i in range(m):\n        u = int(data[2 + 3 * i]) - 1\n        v = int(data[3 + 3 * i]) - 1\n        w = int(data[4 + 3 * i])\n        edges.append((w, u, v))\n    edges.sort()\n    parent = list(range(n))\n\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n\n    total = 0\n    used = 0\n    for w, u, v in edges:\n        if used == n - 1:\n            break\n        ru = find(u)\n        rv = find(v)\n        if ru != rv:\n            parent[ru] = rv\n            total += w\n            used += 1\n    print(total)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      4,
+      5,
+      7,
+      9,
+      10,
+      12
+    ],
+    "failedCaseIds": [
+      2,
+      6,
+      8,
+      11
+    ]
+  },
+  "probes": {}
+}

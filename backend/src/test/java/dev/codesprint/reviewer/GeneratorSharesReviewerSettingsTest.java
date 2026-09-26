@@ -41,7 +41,7 @@ class GeneratorSharesReviewerSettingsTest {
             values.put(name, "x");
         }
         String version = GeneratorSettings.load().promptVersion();
-        assertThat(version).isEqualTo("problem-v2");
+        assertThat(version).isEqualTo("problem-v3");
         assertThatCode(() -> PromptTemplate.load(version).render(values))
                 .doesNotThrowAnyException();
     }

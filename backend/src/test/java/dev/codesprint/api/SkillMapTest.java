@@ -81,6 +81,9 @@ class SkillMapTest {
     private UserRepository users;
 
     @Autowired
+    private dev.codesprint.curriculum.CurriculumCatalog curriculum;
+
+    @Autowired
     private JudgeJobRepository jobs;
 
     @Autowired
@@ -151,12 +154,20 @@ class SkillMapTest {
         List<String> listed = new ArrayList<>();
         map.get("skills").forEach(skill -> listed.add(skill.get("skillCode").asText()));
 
+        // 지도는 사용자의 트랙 안만 보여 준다(ADR-0035). 이 사용자는 JOB 이라, INTERMEDIATE 가
+        // 켜진 뒤로 카탈로그 전부와 같지 않다 - 기대값도 트랙으로 거른다.
+        var inTrack = curriculum.skillCodesFor("JOB");
         JsonNode catalog = MAPPER.readTree(mvc.perform(get("/api/skills"))
                 .andReturn().getResponse().getContentAsString());
         List<String> defined = new ArrayList<>();
-        catalog.get("skills").forEach(skill -> defined.add(skill.get("code").asText()));
+        List<String> outside = new ArrayList<>();
+        catalog.get("skills").forEach(skill -> {
+            String code = skill.get("code").asText();
+            (inTrack.contains(code) ? defined : outside).add(code);
+        });
 
-        assertThat(listed).as("활성 Skill 전부가 있어야 한다").containsExactlyElementsOf(defined);
+        assertThat(listed).as("트랙 안의 활성 Skill 전부가 있어야 한다").containsExactlyElementsOf(defined);
+        assertThat(outside).as("대조: 트랙 밖에 켜진 Skill 이 실제로 있어야 거르는 것을 본다").isNotEmpty();
     }
 
     @Test

@@ -91,5 +91,7 @@ codesprint:
     timeout-seconds: ${CODESPRINT_GENERATOR_TIMEOUT:300}
     # 파일 이름이 버전이다(generator/prompts/). 내용을 고치면 새 파일을 만든다 -
     # 같은 이름으로 바꾸면 채택률을 버전끼리 비교할 수 없다.
-    # problem-v2 는 Skill 대조 풀이를 요구한다(ADR-0033). v1 은 파일럿 기록을 위해 남긴다.
-    prompt-version: ${CODESPRINT_GENERATOR_PROMPT_VERSION:problem-v2}
+    # problem-v2 는 Skill 대조 풀이를 요구한다(ADR-0033). problem-v3 은 CORE 세 웨이브에서 검증
+    # 에이전트가 반복해 찾은 약점(다양성 없는 큰 입력 · 출력 상한 · 본문의 핵심 식)을 요구로 적었다
+    # (ADR-0040). 앞 버전은 그때의 채택 기록을 위해 남긴다.
+    prompt-version: ${CODESPRINT_GENERATOR_PROMPT_VERSION:problem-v3}

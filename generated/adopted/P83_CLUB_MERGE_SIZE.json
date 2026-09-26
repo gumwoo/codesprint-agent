@@ -1,0 +1,11 @@
+{
+  "id": "DISJOINT_SET-1790371954018-2",
+  "skill": "DISJOINT_SET",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T21:39:26+00:00",
+  "code": "P83_CLUB_MERGE_SIZE",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    label = list(range(n + 1))\n    out = []\n    idx = 2\n    for _ in range(q):\n        if data[idx] == '1':\n            a = int(data[idx + 1])\n            b = int(data[idx + 2])\n            idx += 3\n            la = label[a]\n            lb = label[b]\n            if la != lb:\n                for v in range(1, n + 1):\n                    if label[v] == lb:\n                        label[v] = la\n        else:\n            a = int(data[idx + 1])\n            idx += 2\n            la = label[a]\n            cnt = 0\n            for v in range(1, n + 1):\n                if label[v] == la:\n                    cnt += 1\n            out.append(str(cnt))\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(1, 12)\nq = r.randint(1, 20)\nops = []\nfor _ in range(q):\n    if r.random() < 0.5:\n        ops.append('1 %d %d' % (r.randint(1, n), r.randint(1, n)))\n    else:\n        ops.append('2 %d' % r.randint(1, n))\nif not any(o.startswith('2') for o in ops):\n    ops[-1] = '2 %d' % r.randint(1, n)\nprint(n, q)\nprint('\\n'.join(ops))\n",
+  "stressInputGenerator": "import random\n\nr = random.Random(20260926)\nn = 50000\nq = 60000\np = list(range(1, n + 1))\nr.shuffle(p)\ngrown = 1\nops = []\nfor i in range(q):\n    if i < 200 or r.random() < 0.6:\n        if grown < 40000 and r.random() < 0.85:\n            a = p[grown]\n            b = p[r.randrange(grown)]\n            grown += 1\n        else:\n            a = r.randint(1, n)\n            b = r.randint(1, n)\n        ops.append('1 %d %d' % (a, b))\n    else:\n        ops.append('2 %d' % r.randint(1, n))\nprint(n, q)\nprint('\\n'.join(ops))\n"
+}

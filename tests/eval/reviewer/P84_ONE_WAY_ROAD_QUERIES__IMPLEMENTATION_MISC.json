@@ -1,0 +1,32 @@
+{
+  "problemCode": "P84_ONE_WAY_ROAD_QUERIES",
+  "problemTitle": "일방통행 도로 거리 질의",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "FLOYD_WARSHALL"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    p = 2\n    INF = 10 ** 18\n    d = [[INF] * n for _ in range(n)]\n    for i in range(n):\n        d[i][i] = 0\n    for _ in range(m):\n        u = int(data[p]) - 1\n        v = int(data[p + 1]) - 1\n        w = int(data[p + 2])\n        p += 3\n        if w < d[u][v]:\n            d[u][v] = w\n    for i in range(n):\n        di = d[i]\n        for j in range(n):\n            for k in range(n):\n                nd = di[k] + d[k][j]\n                if nd < di[j]:\n                    di[j] = nd\n    q = int(data[p])\n    p += 1\n    out = []\n    for _ in range(q):\n        a = int(data[p]) - 1\n        b = int(data[p + 1]) - 1\n        p += 2\n        x = d[a][b]\n        out.append(str(x) if x < INF else '-1')\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      5,
+      11
+    ]
+  },
+  "probes": {}
+}
