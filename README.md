@@ -186,10 +186,13 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | API + 화면 (빌드 도구 없음) + 브라우저 E2E | 완료 |
 | Reviewer + 실제 모델 평가 (25건 · 오확정 0) | 완료 — 기본은 꺼져 있다 |
 | 내 PC 실행 경로 (`scripts/local.sh`) | 완료 |
+| 오늘의 계획 · 시험 직전 모드 (ADR-0038) | 완료 |
+| 모의 시험 · 학습 모드 5종 (ADR-0043) | 완료 |
+| 자유 질문 Tutor (ADR-0044) | 완료 — 기본은 꺼져 있다 |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 지금은
 PRD 끝까지 웨이브로 넓히는 중이다([ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md)) - CORE 전체(CORE-3)까지
-도메인 스물셋 · Skill 마흔이 켜져 있고, 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
+INTERMEDIATE 그래프 · DP 까지 도메인 서른둘 · Skill 쉰셋이 켜져 있고, 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
 도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개
 Registry Entry**다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
 `skills.yaml`로 승격한다.
