@@ -163,11 +163,12 @@ function showLeft(bodyId) {
   if (bodyId !== "statementBody") {
     invalidateView("problem");
   }
-  for (const id of ["picker", "statementBody", "skillsBody", "todayBody"]) {
+  for (const id of ["picker", "statementBody", "skillsBody", "todayBody", "mockBody"]) {
     $(id).hidden = id !== bodyId;
   }
   $("tabSkills").classList.toggle("active", bodyId === "skillsBody");
   $("tabToday").classList.toggle("active", bodyId === "todayBody");
+  $("tabMock").classList.toggle("active", bodyId === "mockBody");
   $("tabProblem").classList.toggle("active",
       bodyId === "picker" || bodyId === "statementBody");
 }
@@ -305,6 +306,7 @@ async function showToday() {
     }
     $("dailyMinutes").value = user.dailyMinutes === null ? "" : user.dailyMinutes;
     $("examDate").value = user.examDate === null ? "" : user.examDate;
+    $("learningMode").value = user.learningMode;
 
     const parts = [];
     if (today.examInDays !== null) {
@@ -425,6 +427,335 @@ async function saveSettings() {
   showToday();
 }
 
+// -- 모의 시험 --------------------------------------------------------
+//
+// PRD §84~86, ADR-0043. **화면은 시험을 고르지도 평가하지도 않는다.** 문제는 서버가
+// 골랐고, 보고서의 시각 · 결과 · 전략 사실도 서버가 관측해서 준다. 시험 중에는 문제를
+// 라벨로만 부른다 - code · 제목 · Skill 이 유형을 알려 준다.
+
+const OUTCOME_LABEL = {
+  SOLVED: "풀었다",
+  ATTEMPTED: "냈지만 못 풀었다",
+  OPENED: "열고 내지 않았다",
+  UNOPENED: "열지 않았다",
+};
+
+/** 시작 후 초를 분:초로. 표시만이다 - 값은 서버가 잰 것이다. */
+function clockText(seconds) {
+  if (seconds === null || seconds === undefined) {
+    return "–";
+  }
+  const m = Math.floor(seconds / 60);
+  const sec = String(seconds % 60).padStart(2, "0");
+  return `${m}:${sec}`;
+}
+
+async function showMock() {
+  showLeft("mockBody");
+  const userId = Number($("userId").value);
+  const mine = claimView("mock");
+  if (!userId) {
+    renderMockNone("사용자를 먼저 만든다.");
+    return;
+  }
+  let latest = null;
+  try {
+    const response = await fetch(`/api/users/${userId}/mock-tests/latest`);
+    if (!mine()) {
+      return;
+    }
+    if (response.status !== 404) {
+      if (!response.ok) {
+        throw new Error(String(response.status));
+      }
+      latest = await response.json();
+    }
+  } catch (error) {
+    if (mine()) {
+      renderMockNone(`시험을 불러오지 못했다: ${error.message}`);
+    }
+    return;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!latest) {
+    renderMockNone("문제는 서버가 고른다. 시작하면 시간이 흐르고, 끝날 때까지 힌트와 분석이 없다.");
+    return;
+  }
+  renderMockOverview(latest);
+  if (latest.state === "FINISHED") {
+    await loadMockReport(latest.mockTestId, userId, mine);
+  }
+}
+
+function renderMockNone(message) {
+  $("mockNote").textContent = message;
+  $("mockStart").hidden = false;
+  $("mockFinish").hidden = true;
+  $("mockTable").hidden = true;
+  $("mockRows").replaceChildren();
+  $("mockReportHead").hidden = true;
+  $("mockReport").hidden = true;
+  $("mockReportRows").replaceChildren();
+  $("mockSummary").textContent = "";
+  $("mockUnmeasured").hidden = true;
+}
+
+function renderMockOverview(test) {
+  const running = test.state === "IN_PROGRESS";
+  $("mockStart").hidden = running;
+  $("mockFinish").hidden = !running;
+  $("mockFinish").onclick = () => finishMock(test.mockTestId);
+  $("mockNote").textContent = running
+      ? `끝나는 시각 ${when(test.endsAt)} · 이 화면을 연 때 남은 ${Math.ceil(test.remainingSeconds / 60)}분`
+      : `끝난 시험 · ${when(test.startedAt)} 시작`;
+  $("mockTable").hidden = false;
+  const rows = $("mockRows");
+  rows.replaceChildren();
+  for (const problem of test.problems) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    if (running) {
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "link";
+      open.textContent = `문제 ${problem.label}`;
+      open.addEventListener("click", () => openMockProblem(test.mockTestId, problem.label));
+      name.append(open);
+    } else {
+      name.textContent = `문제 ${problem.label}`;
+    }
+    const state = document.createElement("td");
+    state.textContent = problem.opened ? "열었다" : "열지 않았다";
+    const count = document.createElement("td");
+    count.className = "num";
+    count.textContent = problem.submissions;
+    tr.append(name, state, count);
+    rows.append(tr);
+  }
+  if (running) {
+    $("mockReportHead").hidden = true;
+    $("mockReport").hidden = true;
+    $("mockSummary").textContent = "";
+    $("mockUnmeasured").hidden = true;
+  }
+}
+
+async function loadMockReport(mockTestId, userId, mine) {
+  let report;
+  try {
+    report = await getJson(`/api/mock-tests/${mockTestId}/report?userId=${userId}`);
+  } catch (error) {
+    if (mine()) {
+      $("mockSummary").textContent = `보고서를 불러오지 못했다: ${error.message}`;
+    }
+    return;
+  }
+  if (!mine()) {
+    return;
+  }
+  $("mockReportHead").hidden = false;
+  $("mockReport").hidden = false;
+  $("mockUnmeasured").hidden = false;
+  const facts = [`${report.solved} / ${report.total} 풀었다`];
+  if (report.openOrder.length) {
+    facts.push(`연 순서 ${report.openOrder.join(" → ")}`);
+  }
+  if (report.easiestFirst !== null) {
+    facts.push(report.easiestFirst
+        ? "기대 시간이 가장 짧은 문제부터 열었다" : "기대 시간이 가장 짧은 문제부터 열지 않았다");
+  }
+  $("mockSummary").textContent = facts.join(" · ");
+
+  const rows = $("mockReportRows");
+  rows.replaceChildren();
+  for (const problem of report.problems) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    const title = document.createElement("div");
+    title.textContent = `${problem.label} · ${problem.title}`;
+    const code = document.createElement("div");
+    code.className = "code what";
+    code.textContent = `${problem.problemCode} · ${problem.primarySkill}`;
+    name.append(title, code);
+    for (const mistake of problem.mistakes) {
+      const line = document.createElement("div");
+      line.className = "code what";
+      line.textContent = `${mistake.mistake} · ${text(mistake.status)}`;
+      name.append(line);
+    }
+    const outcome = document.createElement("td");
+    outcome.textContent = OUTCOME_LABEL[problem.outcome] || problem.outcome;
+    if (problem.overExpected) {
+      const over = document.createElement("div");
+      over.className = "what";
+      over.textContent = `기대보다 오래 (${clockText(problem.timeSpentSeconds)})`;
+      outcome.append(over);
+    }
+    tr.append(name, outcome);
+    for (const value of [problem.openedAtSeconds, problem.firstRunAtSeconds,
+        problem.firstSubmitAtSeconds, problem.solvedAtSeconds, problem.expectedSolveSeconds]) {
+      const td = document.createElement("td");
+      td.className = "num";
+      td.textContent = clockText(value);
+      tr.append(td);
+    }
+    rows.append(tr);
+  }
+}
+
+async function startMock() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    renderMockNone("사용자를 먼저 만든다.");
+    return;
+  }
+  const mine = claimView("mock");
+  let response;
+  try {
+    response = await fetch(`/api/users/${userId}/mock-tests`, { method: "POST" });
+  } catch (error) {
+    response = null;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!response || !response.ok) {
+    // 서버가 거절한 이유를 그대로 보여 준다 - 진행 중인 시험이 있거나 고를 문제가 모자라다.
+    const body = response ? await response.json().catch(() => ({})) : {};
+    if (mine()) {
+      $("mockNote").textContent = `시험을 만들지 못했다 (${response ? response.status : "연결 실패"})`
+          + (body.message ? `: ${body.message}` : "");
+    }
+    return;
+  }
+  const test = await response.json();
+  if (mine()) {
+    renderMockOverview(test);
+  }
+}
+
+async function finishMock(mockTestId) {
+  const userId = Number($("userId").value);
+  const mine = claimView("mock");
+  try {
+    const response = await fetch(`/api/mock-tests/${mockTestId}/finish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!response.ok) {
+      throw new Error(String(response.status));
+    }
+  } catch (error) {
+    if (mine()) {
+      $("mockNote").textContent = `시험을 끝내지 못했다: ${error.message}`;
+    }
+    return;
+  }
+  if (mine()) {
+    // 끝났으면 시험 문제 화면을 놓는다 - 그 문제로 더 낼 수 없다.
+    if (currentProblem && currentProblem.mockTestId === mockTestId) {
+      currentProblem = null;
+    }
+    showMock();
+  }
+}
+
+/** 시험 문제를 연다. **여는 요청이 연 시각을 남긴다**(ADR-0043) - 그래서 POST 다. */
+async function openMockProblem(mockTestId, label) {
+  const userId = Number($("userId").value);
+  const mine = claimView("problem");
+  let sheet;
+  try {
+    const response = await fetch(`/api/mock-tests/${mockTestId}/problems/${label}/open`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!response.ok) {
+      throw new Error(String(response.status));
+    }
+    sheet = await response.json();
+  } catch (error) {
+    if (mine()) {
+      $("mockNote").textContent = `문제를 열지 못했다: ${error.message}`;
+    }
+    return;
+  }
+  if (!mine()) {
+    return;
+  }
+  // 시험 문제에는 code 도 제목도 없다. 라벨이 이름이다.
+  currentProblem = {
+    mockTestId, label: sheet.label, statement: sheet.statement, samples: sheet.samples,
+  };
+  $("problemTitle").textContent = `문제 ${sheet.label}`;
+  $("crumbProblem").textContent = `시험 · 문제 ${sheet.label}`;
+  $("problemMeta").textContent = `${text(sheet.timeLimitMs)}ms · ${text(sheet.memoryLimitMb)}MB`;
+  $("statement").textContent = sheet.statement;
+  $("problemConcept").replaceChildren();
+  const samples = $("samples");
+  samples.replaceChildren();
+  sheet.samples.forEach((sample, index) => {
+    const block = document.createElement("div");
+    block.className = "sample";
+    const title = document.createElement("h4");
+    title.textContent = `예시 ${index + 1}`;
+    const input = document.createElement("pre");
+    input.textContent = sample.input;
+    const output = document.createElement("pre");
+    output.textContent = sample.expectedOutput;
+    block.append(title, input, output);
+    samples.append(block);
+  });
+  // 시험 중에는 힌트를 주지 않는다(PRD §84).
+  resetHints();
+  $("hintsBox").hidden = true;
+  showLeft("statementBody");
+  $("submitButton").disabled = false;
+  $("runButton").disabled = false;
+  setSourceCode("");
+  cancelActivePolling();
+  cancelActiveRun();
+  resetResultUi("제출하면 여기에 판정이 나온다. 분석은 시험이 끝난 뒤 보고서에 있다.");
+  $("footNote").textContent = "";
+  openedAt = Date.now();
+}
+
+/** 학습 모드를 바꾼다(ADR-0043). 모드의 뜻은 서버가 정한다 - 화면은 값을 보낼 뿐이다. */
+async function saveLearningMode() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    $("modeNote").textContent = "사용자를 먼저 만든다.";
+    return;
+  }
+  const mine = claimView("mode");
+  let response;
+  try {
+    response = await fetch(`/api/users/${userId}/learning-mode`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: $("learningMode").value }),
+    });
+  } catch (error) {
+    response = null;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!response || !response.ok) {
+    $("modeNote").textContent = `학습 모드를 바꾸지 못했다 (${response ? response.status : "연결 실패"})`;
+    return;
+  }
+  const user = await response.json();
+  if (mine()) {
+    $("learningMode").value = user.learningMode;
+    $("modeNote").textContent = `학습 모드 ${user.learningMode}. 다음에 여는 문제부터 적용된다.`;
+  }
+}
+
 /**
  * 초기 진단.
  *
@@ -451,6 +782,7 @@ function switchedUser() {
   // "제출하는 중…" 같은 진행 문구도 이전 사용자의 것이다. 설정 저장 결과도 그렇다.
   $("footNote").textContent = "";
   $("settingsNote").textContent = "";
+  $("modeNote").textContent = "";
   // 띄워 둔 힌트도 이전 사용자가 연 것이다. 새 사용자는 그 문제에서 아직
   // 아무것도 보지 않았는데, 남겨 두면 본 것처럼 보이고 채점 기록과 어긋난다.
   resetHints();
@@ -464,6 +796,9 @@ function switchedUser() {
   }
   if (!$("todayBody").hidden) {
     showToday();
+  }
+  if (!$("mockBody").hidden) {
+    showMock();
   }
 }
 
@@ -775,11 +1110,20 @@ async function openProblem(code) {
   // **문제를 빠르게 두 번 고르면 늦게 온 응답이 이긴다.** 마지막에 누른 것이
   // 아니라 먼저 누른 문제가 열린다 - 이 검사가 그것을 찾았다(ADR-0023).
   const mine = claimView("problem");
-  const opened = await getJson(`/api/problems/${code}`);
+  const viewer = Number($("userId").value);
+  // 사용자를 알려 주면 그 사람의 학습 모드를 따른다 - 유형을 숨기거나 개념 자료를 붙인다(ADR-0043).
+  const opened = await getJson(viewer
+      ? `/api/problems/${code}?userId=${viewer}` : `/api/problems/${code}`);
   if (!mine()) {
     return;
   }
   currentProblem = opened;
+  $("hintsBox").hidden = false;
+  const conceptBox = $("problemConcept");
+  conceptBox.replaceChildren();
+  if (opened.concept) {
+    renderConcept(opened.concept, conceptBox);
+  }
   $("problemTitle").textContent = currentProblem.title;
   $("crumbProblem").textContent = currentProblem.code;
   $("problemMeta").textContent =
@@ -871,20 +1215,31 @@ async function submit() {
   // 루프가 끝나 접수된 제출을 화면이 놓친다.
   let accepted;
   try {
-    const response = await fetch(`/api/problems/${currentProblem.code}/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: submittingUserId,
-        language: "PYTHON",
-        sourceCode: sourceCode(),
-        // 화면은 힌트 사용량을 신고하지 않는다. 서버가 힌트를 내주면서 기록하고,
-        // 제출은 그 기록에서 읽는다(ADR-0026). 보내면 400 이다 - 받아 놓고 무시하면
-        // 보낸 쪽은 그 값이 적용됐다고 믿는다.
-        // 풀이 시간은 화면이 잰다. 서버가 알 방법이 없다.
-        solveSeconds: Math.max(1, Math.round((Date.now() - openedAt) / 1000)),
-      }),
-    });
+    // 시험 문제는 시험으로 낸다. 연 · 낸 시각은 서버가 시험 기록에 남긴다(ADR-0043) -
+    // 그래서 풀이 시간을 보내지 않는다.
+    const exam = currentProblem.mockTestId;
+    const response = exam
+        ? await fetch(`/api/mock-tests/${exam}/problems/${currentProblem.label}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: submittingUserId, language: "PYTHON", sourceCode: sourceCode(),
+          }),
+        })
+        : await fetch(`/api/problems/${currentProblem.code}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: submittingUserId,
+            language: "PYTHON",
+            sourceCode: sourceCode(),
+            // 화면은 힌트 사용량을 신고하지 않는다. 서버가 힌트를 내주면서 기록하고,
+            // 제출은 그 기록에서 읽는다(ADR-0026). 보내면 400 이다 - 받아 놓고 무시하면
+            // 보낸 쪽은 그 값이 적용됐다고 믿는다.
+            // 풀이 시간은 화면이 잰다. 서버가 알 방법이 없다.
+            solveSeconds: Math.max(1, Math.round((Date.now() - openedAt) / 1000)),
+          }),
+        });
     if (!response.ok) {
       // 서버가 거절한 이유를 그대로 보여준다. "제출 실패" 로 덮으면 무엇이
       // 잘못됐는지 알 수 없다. 앞 제출의 폴링은 건드리지 않는다.
@@ -921,7 +1276,8 @@ async function submit() {
   cancelActiveRun();
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
-  await waitForResult(accepted.submissionId, startedAt);
+  await waitForResult(accepted.submissionId, startedAt,
+      currentProblem.mockTestId || null, submittingUserId);
 }
 
 /**
@@ -944,15 +1300,20 @@ async function runSamples() {
 
   let accepted;
   try {
-    const response = await fetch(`/api/problems/${currentProblem.code}/run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: runningUserId,
-        language: "PYTHON",
-        sourceCode: sourceCode(),
-      }),
+    // 시험 문제는 시험으로 실행한다 - 첫 실행 시각이 관측이다(ADR-0043).
+    const exam = currentProblem.mockTestId;
+    const payload = JSON.stringify({
+      userId: runningUserId,
+      language: "PYTHON",
+      sourceCode: sourceCode(),
     });
+    const response = exam
+        ? await fetch(`/api/mock-tests/${exam}/problems/${currentProblem.label}/run`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: payload,
+        })
+        : await fetch(`/api/problems/${currentProblem.code}/run`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: payload,
+        });
     if (!response.ok) {
       reportTo(runningUserId, `실행이 거절됐다 (${response.status}): `
           + (await response.text()));
@@ -978,7 +1339,7 @@ async function runSamples() {
   }
   // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
   dropActiveRun();
-  await waitForRun(accepted.runId, runningUserId);
+  await waitForRun(accepted.runId, runningUserId, currentProblem.mockTestId || null);
 }
 
 /** 보고 있던 실행을 놓는다. 그 폴러는 다음 응답에서 스스로 멈춘다. */
@@ -1021,7 +1382,7 @@ function dropActiveRun() {
  * 끝냈는데, 같은 큐와 같은 Worker 를 쓰면서 실행에만 다른 규칙을 둘 이유가 없다 -
  * job 은 큐에 남아 있고, 서버가 잠깐 내려갔다고 사라지지 않는다.
  */
-async function waitForRun(runId, runningUserId) {
+async function waitForRun(runId, runningUserId, mockTestId) {
   activeRunId = runId;
   const box = $("runOutput");
   box.replaceChildren();
@@ -1034,7 +1395,10 @@ async function waitForRun(runId, runningUserId) {
     let view = null;
     let failure = null;
     try {
-      view = await getJson(`/api/runs/${runId}?userId=${runningUserId}`);
+      // 시험 중의 실행은 시험에서 본다. 일반 조회에는 문제 code 가 있다(ADR-0043).
+      view = await getJson(mockTestId
+          ? `/api/mock-tests/${mockTestId}/runs/${runId}?userId=${runningUserId}`
+          : `/api/runs/${runId}?userId=${runningUserId}`);
     } catch (error) {
       failure = error;
     }
@@ -1122,7 +1486,7 @@ function renderRun(view, box) {
   }
 }
 
-async function waitForResult(submissionId, startedAt) {
+async function waitForResult(submissionId, startedAt, mockTestId, userId) {
   activeSubmissionId = submissionId;
   $("submitNote").textContent = "채점 중…";
   $("state").textContent = "채점 중";
@@ -1133,7 +1497,10 @@ async function waitForResult(submissionId, startedAt) {
     let view = null;
     let failure = null;
     try {
-      view = await getJson(`/api/submissions/${submissionId}`);
+      // 시험 중의 제출은 판정만 본다 - 분석과 다음 행동은 보고서 뒤다(PRD §84).
+      view = await getJson(mockTestId
+          ? `/api/mock-tests/${mockTestId}/submissions/${submissionId}?userId=${userId}`
+          : `/api/submissions/${submissionId}`);
     } catch (error) {
       failure = error;
     }
@@ -1165,7 +1532,11 @@ async function waitForResult(submissionId, startedAt) {
     }
 
     if (view && view.state !== "PENDING") {
-      render(submissionId, view);
+      if (mockTestId) {
+        renderVerdict(view);
+      } else {
+        render(submissionId, view);
+      }
       return;
     }
 
@@ -1188,6 +1559,28 @@ async function waitForResult(submissionId, startedAt) {
 function slowNote() {
   return "평소보다 오래 걸리고 있다. Judge Worker 가 떠 있는지 확인한다 - "
       + "제출은 큐에 남아 있고, 끝나면 여기에 나타난다.";
+}
+
+/** 시험 중의 판정. 분석도 다음 행동도 없다 - 그것은 시험이 끝난 뒤 보고서다(PRD §84). */
+function renderVerdict(verdict) {
+  $("submitNote").hidden = true;
+  const state = $("state");
+  state.textContent = verdict.status;
+  state.className = verdict.status === "ACCEPTED" ? "meta verdict-ok" : "meta verdict-bad";
+  const judge = $("judge");
+  judge.replaceChildren();
+  for (const [label, value] of [["문제", verdict.label],
+      ["통과", `${text(verdict.passed)} / ${text(verdict.total)}`]]) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    judge.append(dt, dd);
+  }
+  $("review").replaceChildren(note("분석과 다음 행동은 시험이 끝난 뒤 보고서에 나온다."));
+  if (!$("mockBody").hidden) {
+    showMock();
+  }
 }
 
 function render(submissionId, view) {
@@ -1299,8 +1692,8 @@ async function goToNextProblem(submissionId) {
   await openProblem(next.problem.code);
 }
 
-function renderConcept(concept) {
-  const action = $("nextAction");
+function renderConcept(concept, container) {
+  const action = container || $("nextAction");
   // **결정 요약을 지우지 않는다.** 자료는 무엇을 보는지 말하지만, 왜 보는지
   // ("같은 문제 3회 실패 - 개념부터 다시 본다")는 그 줄에만 있다. 지우면
   // 사용자는 갑자기 나타난 개념 설명이 자기 실패와 무슨 상관인지 알 수 없다.
@@ -1535,6 +1928,9 @@ $("tabProblem").addEventListener("click", () => {
 });
 $("tabSkills").addEventListener("click", showSkills);
 $("tabToday").addEventListener("click", showToday);
+$("tabMock").addEventListener("click", showMock);
+$("mockStart").addEventListener("click", startMock);
+$("learningMode").addEventListener("change", saveLearningMode);
 $("saveSettings").addEventListener("click", saveSettings);
 $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);

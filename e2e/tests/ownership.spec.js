@@ -24,7 +24,7 @@ test("먼저 누른 문제가 늦게 도착해도 마지막에 고른 문제가 
   // PR #30. openProblem 이 표를 받지 않아, P02 -> P03 으로 눌렀는데 P02 가 열렸다.
   const slow = gate();
   await stubApi(page);
-  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL?*", async (route) => {
     await slow.held;
     await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
@@ -44,7 +44,7 @@ test("문제를 기다리는 동안 목록으로 돌아가면 끌려가지 않�
   // 그 문제 화면으로 끌고 갔다.
   const slow = gate();
   await stubApi(page);
-  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL?*", async (route) => {
     await slow.held;
     await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
@@ -64,7 +64,7 @@ test("문제를 기다리는 동안 내 Skill 로 옮겨도 끌려가지 않는�
   // 적으면 하나씩 빠뜨린다.
   const slow = gate();
   await stubApi(page);
-  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL?*", async (route) => {
     await slow.held;
     await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
@@ -128,9 +128,9 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
     made += 1;
     if (made === 1) {
       await slow.held;
-      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB", dailyMinutes: null, examDate: null });
+      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
     }
-    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB", dailyMinutes: null, examDate: null });
+    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
   });
 
   await page.goto("/index.html");
@@ -304,10 +304,10 @@ test("늦게 온 이전 사용자의 목표가 지금 사용자의 목표를 덮
   await stubApi(page);
   await page.route("**/api/users/1", async (route) => {
     await slow.held;
-    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB", dailyMinutes: null, examDate: null });
+    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
   });
   await page.route("**/api/users/2", (route) =>
-    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO", dailyMinutes: null, examDate: null }));
+    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO", dailyMinutes: null, examDate: null, learningMode: "NORMAL" }));
 
   await asUser(page, "1");
   await page.fill("#userId", "2");
@@ -324,7 +324,7 @@ test("목표를 고르지 않으면 새로 시작하지 않는다", async ({ pag
   await stubApi(page);
   await page.route("**/api/users", (route) => {
     created += 1;
-    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO", dailyMinutes: null, examDate: null });
+    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
   });
 
   await page.goto("/index.html");
@@ -367,7 +367,7 @@ test("잘못 입력한 하루 시간은 저장하지 않는다 - 정하지 않�
   await page.route("**/api/users/1/settings", (route) => {
     puts += 1;
     return fulfill(route, { userId: 1, nickname: "x", track: "JOB", dailyMinutes: null,
-      examDate: null });
+      examDate: null, learningMode: "NORMAL" });
   });
 
   await asUser(page, "1");
@@ -377,4 +377,54 @@ test("잘못 입력한 하루 시간은 저장하지 않는다 - 정하지 않�
   await page.click("#saveSettings");
   await expect(page.locator("#settingsNote")).toHaveText("입력한 값을 읽지 못했다 - 저장하지 않았다");
   expect(puts).toBe(0);
+});
+
+test("늦게 온 이전 사용자의 시험이 지금 사용자의 시험 화면을 덮지 않는다", async ({ page }) => {
+  // ADR-0043. 시험 탭은 가장 최근 시험을 읽어 그린다. 1 번의 시험이 늦게 오면 2 번 화면에
+  // 1 번의 문제 라벨과 "시험 끝내기" 가 나타나고, 누르면 남의 시험을 끝낸다.
+  const slow = gate();
+  const { mockTest } = require("../fixtures/api");
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest", async (route) => {
+    await slow.held;
+    await fulfill(route, mockTest(11, "IN_PROGRESS", ["A", "B", "C"]));
+  });
+  // 2 번은 시험이 없다 - stubApi 가 모르는 경로에 404 를 준다.
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.fill("#userId", "2");
+  await page.dispatchEvent("#userId", "change");
+  await expect(page.locator("#mockStart")).toBeVisible();
+
+  await releaseAndSettle(page, slow, "/api/users/1/mock-tests/latest");
+  await expect(page.locator("#mockStart")).toBeVisible();
+  await expect(page.locator("#mockFinish")).toBeHidden();
+  await expect(page.locator("#mockRows tr")).toHaveCount(0);
+});
+
+test("늦게 온 시험 문제가 그 뒤에 연 일반 문제를 덮지 않는다", async ({ page }) => {
+  // ADR-0043. 시험 문제를 여는 것도 문제 화면의 주인(claimView("problem"))을 쓴다. 통을 따로
+  // 두면 시험 A 를 눌렀다가 목록에서 P03 을 열었을 때 늦게 온 A 가 P03 을 덮는다 - 사용자는
+  // P03 을 푼다고 믿고 시험 A 의 답을 낸다.
+  const slow = gate();
+  const { mockTest, mockSheet } = require("../fixtures/api");
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest",
+      (route) => fulfill(route, mockTest(21, "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/21/problems/A/open", async (route) => {
+    await slow.held;
+    await fulfill(route, mockSheet(21, "A"));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.locator("#mockRows button", { hasText: "문제 A" }).click();
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/mock-tests/21/problems/A/open");
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+  await expect(page.locator("#hintsBox")).toBeVisible();
 });

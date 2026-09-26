@@ -203,6 +203,14 @@ public class MockTestService {
 
     // ── 시험 중 ────────────────────────────────────────────────────────────
 
+    /** 가장 최근의 시험. 화면이 다시 열렸을 때 이어서 보여 주려고 쓴다. */
+    @Transactional(readOnly = true)
+    public Optional<Overview> latest(long userId) {
+        Instant now = clock.instant();
+        return tests.findByUserIdOrderByStartedAtDesc(userId).stream().findFirst()
+                .map(test -> overview(test, now));
+    }
+
     @Transactional(readOnly = true)
     public Overview overview(long mockTestId, long userId) {
         return overview(owned(mockTestId, userId), clock.instant());

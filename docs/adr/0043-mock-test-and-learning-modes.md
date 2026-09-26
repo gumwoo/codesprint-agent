@@ -83,6 +83,7 @@ LOCKED 가 아닌 것을 후보로 둔다. 후보를 기대 풀이 시간 순으
 
 ```
 POST /api/users/{id}/mock-tests                      시험을 만든다(201, 진행 중인 시험이 있으면 409)
+GET  /api/users/{id}/mock-tests/latest                가장 최근의 시험(없으면 404)
 GET  /api/mock-tests/{id}?userId=                    상태 · 남은 시간 · 라벨별 진행
 POST /api/mock-tests/{id}/problems/{label}/open      문제를 연다(연 시각을 남긴다)
 POST /api/mock-tests/{id}/problems/{label}/run       예시로 실행

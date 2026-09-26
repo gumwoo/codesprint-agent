@@ -60,6 +60,13 @@ public class MockTestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(mockTests.create(userId));
     }
 
+    /** 가장 최근의 시험. 한 번도 없으면 404. */
+    @GetMapping("/users/{userId}/mock-tests/latest")
+    public ResponseEntity<MockTestService.Overview> latest(@PathVariable long userId) {
+        return mockTests.latest(userId).map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/mock-tests/{mockTestId}")
     public MockTestService.Overview overview(@PathVariable long mockTestId,
             @RequestParam long userId) {
