@@ -36,12 +36,14 @@
 curriculum/    Skill Graph — 문서가 아니라 CI가 검증하는 데이터
 contracts/     API · LLM · Judge 계약 (JSON Schema) — 전부 contracts/README.md 표에 있다
 judge/         사용자 코드를 실행하는 샌드박스와 채점 하네스 + Judge Worker
-problems/      검증된 문제 96개 (전부 개발 fixture — ADR-0008)
+problems/      검증된 문제 (전부 개발 fixture — ADR-0008) + 문제 가족 templates.yaml
 learning/      Mastery 산식의 실행 가능한 명세 (Python oracle)
 backend/       Spring Boot · PostgreSQL · Decision Engine · API · 화면(static/)
 reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
+tutor/         Tutor 프롬프트 (같은 규칙)
+explain/       Explain Back 프롬프트 (같은 규칙)
 e2e/           실제 브라우저로 보는 화면 비동기 순서 검사 (Playwright)
-tests/         golden fixture + Reviewer 평가 케이스
+tests/         golden fixture + Reviewer 평가 케이스 + 채택 메타테스트용 고정 초안(generation/)
 tools/         계약 · 문제 데이터 검사 + 메타테스트
 scripts/       내 PC 에서 끝까지 띄우는 스크립트 (+ 문제 초안 생성 · 채택)
 generator/     문제 초안 생성기 프롬프트 (파일 이름이 버전이다)
@@ -55,8 +57,9 @@ docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
 배포하지 않는다. 만든 사람이 자기 PC 에서 돌린다.
 
 **필요한 것:** Docker Desktop(켜진 상태) · Java 17+ · Python 3.12+ ·
-`pip install -r requirements-dev.txt`. Claude CLI 는 선택이다 — 없으면 오답 분석만
-빠지고 판정 · mastery · 다음 행동은 그대로 돈다.
+`pip install -r requirements-dev.txt`. Claude CLI 는 선택이다 — 없으면 앱에서는 오답 분석 · Tutor ·
+Explain Back 만 빠지고 판정 · mastery · 다음 행동 · 오늘의 계획은 그대로 돈다(문제 초안 생성과
+Reviewer 평가는 CLI 가 있어야 한다).
 
 ```bash
 scripts/local.sh check      # 필요한 것이 다 있는가 (포트 충돌도 본다)
@@ -73,17 +76,17 @@ scripts/local.sh worker     # 터미널 2 — 채점
 | PostgreSQL | 컨테이너 (`compose.yaml`) | 백엔드가 뜨지 않는다 |
 | 백엔드 + 화면 | 호스트 `java -jar` | — |
 | Judge Worker | 호스트 `python judge/worker.py` | **제출이 영원히 "채점 중" 이다** |
-| Reviewer (선택) | 호스트 `claude` CLI | 오답 원인 분석만 빠진다 |
+| LLM 기능 (선택) | 호스트 `claude` CLI | 오답 원인 분석 · Tutor · Explain Back 만 빠진다 |
 
 백엔드와 Worker 가 컨테이너가 아닌 이유는 둘 다 호스트의 무언가를 불러야 해서다 —
-Reviewer 는 로그인된 `claude` CLI 를, Worker 는 채점 샌드박스를 띄울 `docker` 를.
+LLM 기능은 로그인된 `claude` CLI 를, Worker 는 채점 샌드박스를 띄울 `docker` 를.
 그리고 둘은 **각자 한 터미널을 차지한다.** 백그라운드로 숨기면 하나가 죽었을 때
 화면은 멈춘 것처럼 보이고 이유는 어디에도 남지 않는다.
 
-Reviewer 까지 켜려면:
+LLM 기능은 각각 따로 켠다 (기본은 전부 꺼져 있다):
 
 ```bash
-CODESPRINT_REVIEWER_ENABLED=true scripts/local.sh backend
+CODESPRINT_REVIEWER_ENABLED=true CODESPRINT_TUTOR_ENABLED=true CODESPRINT_EXPLAIN_ENABLED=true scripts/local.sh backend
 ```
 
 포트는 `PORT=` 와 `CODESPRINT_DB_PORT=` 로 바꾼다. 8080 · 5432 를 쓰지 않는 이유는
@@ -132,7 +135,8 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 아무것도 안 하는 검사도 통과한다. 그래서 계약을 일부러 망가뜨린 뒤 검사가 실제로
 실패하는지 확인한다. 여기서 "검사가 놓침"이 나오면 데이터가 아니라 **하네스가 깨진 것**이다.
 
-현재 커리큘럼 · 계약 32건 + 문제 데이터 27건, 총 59개 위반 케이스를 차단한다.
+위반 케이스는 커리큘럼 · 계약(`meta_test_curriculum.py`)과 문제 데이터(`meta_test_problems.py`)에 따로 있고,
+각 메타테스트가 실행할 때 몇 건을 차단했는지 출력한다.
 
 같은 논리가 문제 데이터에도 적용된다. **정답이 통과하는 것과 오답이 걸리는 것은
 다르다** — 아무것도 거르지 못하는 Test Case 집합도 정답은 통과시킨다. 그래서 문제마다
@@ -141,7 +145,7 @@ CI 도 같은 파일을 설치한다. 로컬과 CI 가 다른 의존성으로 �
 그것도 "실패했는가" 가 아니라 **"의도한 이유로 실패했는가"** 를 본다 — 심어둔 실수와
 드러나야 할 판정을 `negativeControl` 에 데이터로 적어두고 대조한다.
 
-저장소의 문제 96개는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
+저장소의 문제는 전부 **개발 fixture**다. Test Case 와 정답이 공개돼 있으므로
 실서비스 문제은행은 여기 두지 않는다([ADR-0008](docs/adr/0008-public-repo-holds-fixtures-not-the-problem-bank.md)).
 
 Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어두는 것**과 네트워크가
@@ -149,9 +153,9 @@ Judge 는 같은 논리를 격리에 적용한다. `--network none` 을 **적어
 격리 덕분인지 확인한다.
 
 ```bash
-docker build -t codesprint-judge:py312 -f judge/Dockerfile .
-python judge/tests/test_judge.py          # 판정 9 + 격리 8 + 기밀성 3
-python tools/verify_problems.py           # 문제 96개를 실제로 채점
+scripts/local.sh build                   # 샌드박스 이미지 셋 (Python · C++ · Java) + 백엔드 jar
+python judge/tests/test_judge.py          # 판정 + 격리 + 기밀성, 언어마다
+python tools/verify_problems.py           # 모든 문제를 실제로 채점
 python learning/tests/test_mastery.py     # Mastery 산식 (Python oracle)
 python tools/gen_mastery_golden.py        # golden 이 oracle 과 일치하는가
 cd backend && gradle test                 # Java 구현이 oracle 과 같은 값을 내는가
@@ -185,7 +189,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | 초기 진단 · Decision Engine · 선수 관계 | 완료 |
 | 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |
 | API + 화면 (빌드 도구 없음) + 브라우저 E2E | 완료 |
-| Reviewer + 실제 모델 평가 (25건 · 오확정 0) | 완료 — 기본은 꺼져 있다 |
+| Reviewer + 실제 모델 평가 (ADR-0029 시점 25건 · 오확정 0 - 그 뒤 늘어난 평가 케이스로는 다시 재지 않았다) | 완료 — 기본은 꺼져 있다 |
 | 내 PC 실행 경로 (`scripts/local.sh`) | 완료 |
 | 오늘의 계획 · 시험 직전 모드 (ADR-0038) | 완료 |
 | 모의 시험 · 학습 모드 5종 (ADR-0043) | 완료 |
@@ -194,8 +198,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | Explain Back - 푼 문제의 설명 분석, 기록하지 않음 (ADR-0050) | 완료 — 기본은 꺼져 있다 |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 지금은
-PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 모두 마쳐 도메인 마흔여섯이 전부
-켜져 있고 Skill 은 일흔여덟이다. 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
-도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개
-Registry Entry**다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
+PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 모두 마쳐 레지스트리의 도메인이
+전부 켜져 있다(개수는 위 표). 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
+도메인 레지스트리는 **알고리즘 도메인 + Programming Foundations 1개**로 이뤄진다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
 `skills.yaml`로 승격한다.

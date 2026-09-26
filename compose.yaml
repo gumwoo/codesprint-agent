@@ -2,7 +2,7 @@
 #
 # 백엔드와 Judge Worker 는 호스트에서 돈다 - 둘 다 호스트의 무언가를 불러야 해서다.
 #
-#   백엔드   Reviewer 가 호스트의 claude CLI 를 부른다(로그인 세션을 쓴다)
+#   백엔드   Reviewer · Tutor · Explain Back 이 호스트의 claude CLI 를 부른다(로그인 세션을 쓴다)
 #   Worker   채점 샌드박스를 호스트의 docker 로 띄운다(ADR-0005)
 #
 # 포트를 5432 가 아니라 55440 으로 둔다. 개발 PC 에 이미 떠 있는 PostgreSQL 과
