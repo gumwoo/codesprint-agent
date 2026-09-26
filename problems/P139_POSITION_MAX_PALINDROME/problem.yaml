@@ -1,0 +1,41 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P139_POSITION_MAX_PALINDROME
+title: 위치마다 가장 긴 회문
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(N)
+statement: |
+  소문자로만 이루어진 길이 N 의 문자열 S 가 주어진다. 글자의 위치는 0 부터 센다.
+
+  각 위치 i (0 ≤ i ≤ N-1) 에 대해 다음 두 값 중 큰 값을 구한다.
+  - A_i: 가운데 글자가 S[i] 인 홀수 길이 회문 부분 문자열 중 가장 긴 것의 길이. S[i] 한 글자도 회문이므로 A_i 는 1 이상이다.
+  - B_i: 가운데 두 글자가 S[i], S[i+1] 인 짝수 길이 회문 부분 문자열 중 가장 긴 것의 길이. 그런 회문이 없거나 i = N-1 이면 0 이다.
+
+  회문은 앞에서 읽으나 뒤에서 읽으나 같은 문자열이다.
+
+  예: S = abba 이면 위치 1 에서 A_1 = 1 (b), B_1 = 4 (abba) 이므로 답은 4 다. 위치 2 에서 A_2 = 1, B_2 = 0 (S[2] = b, S[3] = a) 이므로 답은 1 이다.
+
+  입력
+  첫째 줄에 N (1 ≤ N ≤ 100000).
+  둘째 줄에 길이 N 의 문자열 S. S 는 소문자 a-z 로만 이루어진다.
+
+  출력
+  한 줄에 위치 0 부터 N-1 까지의 max(A_i, B_i) 를 공백으로 구분해 출력한다.
+skills:
+- code: PALINDROME_RADII
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 각 위치에서 글자 중심과 오른쪽 틈 중심마다 양쪽으로 한 칸씩 넓혀 보며 회문 길이를 잰다.

@@ -1,0 +1,11 @@
+{
+  "id": "TREE_DP-1790399552041-1",
+  "skill": "TREE_DP",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T05:58:07+00:00",
+  "code": "P144_TREE_NO_ADJACENT_PICK",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    w = [int(x) for x in data[1:1 + n]]\n    edges = []\n    idx = 1 + n\n    for _ in range(n - 1):\n        a = int(data[idx]) - 1\n        b = int(data[idx + 1]) - 1\n        idx += 2\n        edges.append((a, b))\n    best = 0\n    for mask in range(1 << n):\n        ok = True\n        for a, b in edges:\n            if (mask >> a) & 1 and (mask >> b) & 1:\n                ok = False\n                break\n        if not ok:\n            continue\n        s = 0\n        for i in range(n):\n            if (mask >> i) & 1:\n                s += w[i]\n        if s > best:\n            best = s\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nhi = rng.choice([5, 1000])\nw = [rng.randint(1, hi) for _ in range(n)]\nlabels = list(range(1, n + 1))\nrng.shuffle(labels)\nedges = []\nfor i in range(1, n):\n    p = rng.randint(0, i - 1)\n    a, b = labels[i], labels[p]\n    if rng.random() < 0.5:\n        a, b = b, a\n    edges.append((a, b))\nrng.shuffle(edges)\nprint(n)\nprint(*w)\nfor a, b in edges:\n    print(a, b)\n",
+  "stressInputGenerator": "import random\nimport sys\n\nrng = random.Random(20260926)\nn = 50000\nw = [rng.randint(1, 1000) for _ in range(n)]\nlabels = list(range(1, n + 1))\nrng.shuffle(labels)\nedges = []\nfor i in range(1, n):\n    if rng.random() < 0.3:\n        p = i - 1\n    else:\n        p = rng.randint(0, i - 1)\n    a, b = labels[i], labels[p]\n    if rng.random() < 0.5:\n        a, b = b, a\n    edges.append((a, b))\nrng.shuffle(edges)\nout = [str(n), ' '.join(map(str, w))]\nfor a, b in edges:\n    out.append(f'{a} {b}')\nsys.stdout.write('\\n'.join(out) + '\\n')\n"
+}

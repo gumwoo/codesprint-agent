@@ -1,0 +1,11 @@
+{
+  "id": "SUFFIX_ARRAY-1790402072737-1",
+  "skill": "SUFFIX_ARRAY",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T05:59:03+00:00",
+  "code": "P145_DISTINCT_SUBSTRINGS_LENGTH_RANGE",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\ndata = sys.stdin.read().split()\ns = data[0]\nlo_len = int(data[1])\nhi_len = int(data[2])\nn = len(s)\nseen = set()\nfor i in range(n):\n    for j in range(i + lo_len, min(n, i + hi_len) + 1):\n        seen.add(s[i:j])\nprint(len(seen))\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 30)\nalphabet = \"abcd\"[: rng.randint(1, 4)]\nif rng.random() < 0.3:\n    block = \"\".join(rng.choice(alphabet) for _ in range(rng.randint(1, 5)))\n    s = (block * n)[:n]\nelse:\n    s = \"\".join(rng.choice(alphabet) for _ in range(n))\nlo = rng.randint(1, n)\nhi = rng.randint(lo, n)\nprint(s)\nprint(lo, hi)\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nletters = \"abcdefghijklmnopqrstuvwxyz\"\nparts = []\nsize = 0\nwhile size < n:\n    if size > 0 and rng.random() < 0.5:\n        cur = \"\".join(parts)\n        m = rng.randint(200, 2000)\n        start = rng.randint(0, max(0, len(cur) - m))\n        piece = cur[start:start + m]\n    else:\n        m = rng.randint(200, 2000)\n        piece = \"\".join(rng.choice(letters[: rng.randint(2, 26)]) for _ in range(m))\n    parts.append(piece)\n    size += len(piece)\ns = \"\".join(parts)[:n]\nlo = rng.randint(2, 50)\nhi = rng.randint(n // 2, n - 10)\nprint(s)\nprint(lo, hi)\n"
+}

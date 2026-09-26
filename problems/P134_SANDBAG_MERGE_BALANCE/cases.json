@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5\n3 1 4 1 5\n",
+      "expectedOutput": "8\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "6\n10 2 7 7 2 10\n",
+      "expectedOutput": "12\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1\n7\n",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "2\n1 1000\n",
+      "expectedOutput": "999\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "8\n5 5 5 5 5 5 5 5\n",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "9\n1000 1000 1000 1000 1000 1000 1000 1000 1000\n",
+      "expectedOutput": "3000\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "10\n1 1000 1 1000 1 1000 1 1000 1 1000\n",
+      "expectedOutput": "6997\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "4\n2 2 3 3\n",
+      "expectedOutput": "2\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\n20 12 9 5 6 28 22 1\n",
+      "expectedOutput": "50\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\n28 18 28 30 25 15 15 17\n",
+      "expectedOutput": "76\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "8\n9 22 17 22 12 5 13 1\n",
+      "expectedOutput": "63\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "120\n75 48 17 601 235 871 518 864 190 643 37 118 381 508 787 253 875 232 132 706 767 419 720 54 738 318 733 557 627 866 206 594 616 785 462 714 168 198 895 813 128 537 331 354 258 245 345 14 434 959 906 367 921 964 972 566 257 933 755 25 812 92 183 570 386 697 496 760 790 828 180 423 701 110 564 154 410 159 161 180 742 845 806 196 84 898 376 770 42 575 847 931 63 474 833 907 238 278 949 856 307 440 674 888 859 40 704 112 131 953 359 768 106 121 561 593 61 606 929 227\n",
+      "expectedOutput": "34700\n",
+      "probes": []
+    }
+  ]
+}

@@ -273,16 +273,16 @@ domains:
     order: 43
     name: Advanced DP
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: ADVANCED_STRING
     order: 44
     name: Advanced String
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: COMPOSITE
     order: 45
     name: Mixed / Composite Problems
     tier: INTERMEDIATE
-    active: false
+    active: true

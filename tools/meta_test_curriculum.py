@@ -228,7 +228,15 @@ def domain_active_without_skill(doc):
         if not d["active"]:
             d["active"] = True
             return
-    raise AssertionError("꺼진 도메인이 없다 - 이 케이스는 모든 도메인이 켜지면 다른 방법이 필요하다")
+    # W9c 에서 46 개 도메인이 모두 켜졌다. 그때는 Skill 이 하나도 없는 켜진 도메인을 새로 넣는다 -
+    # 기대 문구("active 가 true 인데")가 이 규칙에서만 나오므로 다른 검사에 걸려 통과하는 일은 없다.
+    doc["domains"].append({
+        "code": "META_EMPTY_DOMAIN",
+        "order": max(d["order"] for d in doc["domains"]) + 1,
+        "name": "Skill 없는 도메인",
+        "tier": "ADVANCED",
+        "active": True,
+    })
 
 
 def llm_schema_gains_next_action(schema):

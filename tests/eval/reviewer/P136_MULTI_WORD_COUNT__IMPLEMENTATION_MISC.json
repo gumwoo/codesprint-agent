@@ -1,0 +1,35 @@
+{
+  "problemCode": "P136_MULTI_WORD_COUNT",
+  "problemTitle": "여러 단어의 등장 횟수",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MULTI_PATTERN_MATCHING",
+    "TRIE_PREFIX"
+  ],
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    text = data[0]\n    n = int(data[1])\n    pats = data[2:2 + n]\n\n    children = [{}]\n    fail = [0]\n    ends = []\n    for p in pats:\n        cur = 0\n        for ch in p:\n            nxt = children[cur].get(ch)\n            if nxt is None:\n                nxt = len(children)\n                children[cur][ch] = nxt\n                children.append({})\n                fail.append(0)\n            cur = nxt\n        ends.append(cur)\n\n    order = []\n    q = deque(children[0].values())\n    while q:\n        u = q.popleft()\n        order.append(u)\n        for ch, v in children[u].items():\n            f = fail[u]\n            while f and ch not in children[f]:\n                f = fail[f]\n            fail[v] = children[f].get(ch, 0)\n            q.append(v)\n\n    hit = [0] * len(children)\n    cur = 0\n    for ch in text:\n        while cur and ch not in children[cur]:\n            cur = fail[cur]\n        cur = children[cur].get(ch, 0)\n        hit[cur] += 1\n\n    sys.stdout.write('\\n'.join(str(hit[e]) for e in ends) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      8
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "probes": {}
+}

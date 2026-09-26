@@ -1,0 +1,80 @@
+{
+  "id": "MULTI_PATTERN_MATCHING-1790401072634-2",
+  "skill": "MULTI_PATTERN_MATCHING",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T06:01:09+00:00",
+  "stage": "중복",
+  "code": "P137_PATTERN_END_COUNTS",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P136_MULTI_WORD_COUNT 와 같은 계산이다 - 같은 트라이와 실패 링크를 만들고, 출현을 패턴마다 모으는지 본문 위치마다 모으는지만 다르다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "MULTI_PATTERN_MATCHING-1790401072634-2",
+    "skill": "MULTI_PATTERN_MATCHING",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T05:37:52.634073600Z",
+    "draft": {
+      "codeSuffix": "PATTERN_END_COUNTS",
+      "title": "위치마다 끝나는 패턴 수",
+      "statement": "소문자로 된 본문 T 와 패턴 N 개가 주어진다. 본문의 각 위치 i (0-based) 마다, 그 위치에서 끝나는 패턴 등장이 몇 개인지 구한다. 패턴 p 가 위치 i 에서 끝난다는 것은 길이가 |p| 인 T 의 연속 부분 문자열 T[i-|p|+1..i] 가 p 와 같다는 뜻이다(i-|p|+1 >= 0 이어야 한다). 같은 패턴이 여러 번 주어지면 각각 따로 센다.\n\n예: T = ushers, 패턴이 he, she, his, hers 이면 위치 3 (문자 e) 에서 she 와 he 가 끝나므로 위치 3 의 값은 2 이고, 위치 5 에서는 hers 가 끝나므로 1 이다.\n\n입력 형식\n- 첫 줄에 본문 T.\n- 둘째 줄에 정수 N.\n- 이어서 N 줄에 패턴이 하나씩 주어진다.\n\n제약\n- 1 <= |T| <= 100000\n- 1 <= N <= 100000\n- 각 패턴의 길이는 1 이상이고, 모든 패턴 길이의 합은 100000 이하다.\n- T 와 패턴은 영어 소문자로만 이루어진다.\n\n출력 형식\n한 줄에 |T| 개의 정수를 공백으로 구분해 출력한다. i 번째 (0-based) 정수는 위치 i 에서 끝나는 패턴 등장 수다.",
+      "secondarySkills": [
+        "TRIE_PREFIX"
+      ],
+      "referenceComplexity": "O(|T| + S), S 는 패턴 길이의 합 (전이는 dict 로 저장)",
+      "expectedSolveSeconds": 2400,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "INPUT_PARSE",
+        "OUTPUT_FORMAT"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "각 노드의 끝나는 패턴 수를 실패 링크를 따라 누적하지 않아, 현재 상태의 접미사로 끝나는 짧은 패턴을 세지 않는다.",
+      "sampleInputs": [
+        "ushers\n4\nhe\nshe\nhis\nhers\n",
+        "aaaa\n3\na\naa\na\n"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "a\n1\na\n"
+        },
+        {
+          "type": "SINGLE",
+          "input": "abc\n1\nabcd\n"
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "aaaaaaaaaa\n4\na\naa\naaa\naaaa\n"
+        },
+        {
+          "type": "DUPLICATE",
+          "input": "abab\n3\nab\nab\nb\n"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "aabaabaab\n5\naab\nab\nb\naabaa\nbaab\n"
+        }
+      ],
+      "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nal = 'abc'[:r.randint(1, 3)]\nn = r.randint(1, 30)\nt = ''.join(r.choice(al) for _ in range(n))\nk = r.randint(1, 8)\nps = []\nfor _ in range(k):\n    if r.random() < 0.6:\n        i = r.randrange(n)\n        j = r.randint(i + 1, min(n, i + 6))\n        ps.append(t[i:j])\n    else:\n        ps.append(''.join(r.choice(al) for _ in range(r.randint(1, 6))))\nprint(t)\nprint(k)\nprint('\\n'.join(ps))\n",
+      "reference": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    t = data[0]\n    n = int(data[1])\n    pats = data[2:2 + n]\n    ch = [{}]\n    fail = [0]\n    out = [0]\n    for p in pats:\n        s = 0\n        for c in p:\n            nx = ch[s].get(c)\n            if nx is None:\n                nx = len(ch)\n                ch[s][c] = nx\n                ch.append({})\n                fail.append(0)\n                out.append(0)\n            s = nx\n        out[s] += 1\n    q = deque(ch[0].values())\n    while q:\n        u = q.popleft()\n        for c, v in ch[u].items():\n            f = fail[u]\n            while f and c not in ch[f]:\n                f = fail[f]\n            fv = ch[f].get(c, 0)\n            if fv == v:\n                fv = 0\n            fail[v] = fv\n            out[v] += out[fv]\n            q.append(v)\n    s = 0\n    res = []\n    for c in t:\n        while s and c not in ch[s]:\n            s = fail[s]\n        s = ch[s].get(c, 0)\n        res.append(out[s])\n    print(' '.join(map(str, res)))\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    d = sys.stdin.read().split()\n    t = d[0]\n    n = int(d[1])\n    ps = d[2:2 + n]\n    res = []\n    for i in range(len(t)):\n        c = 0\n        for p in ps:\n            L = len(p)\n            if L <= i + 1 and t[i - L + 1:i + 1] == p:\n                c += 1\n        res.append(c)\n    print(' '.join(map(str, res)))\n\n\nmain()\n",
+      "wrong": "# 각 노드의 끝나는 패턴 수를 실패 링크를 따라 누적하지 않아, 현재 상태의 접미사로 끝나는 짧은 패턴을 세지 않는다.\nimport sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    t = data[0]\n    n = int(data[1])\n    pats = data[2:2 + n]\n    ch = [{}]\n    fail = [0]\n    out = [0]\n    for p in pats:\n        s = 0\n        for c in p:\n            nx = ch[s].get(c)\n            if nx is None:\n                nx = len(ch)\n                ch[s][c] = nx\n                ch.append({})\n                fail.append(0)\n                out.append(0)\n            s = nx\n        out[s] += 1\n    q = deque(ch[0].values())\n    while q:\n        u = q.popleft()\n        for c, v in ch[u].items():\n            f = fail[u]\n            while f and c not in ch[f]:\n                f = fail[f]\n            fv = ch[f].get(c, 0)\n            if fv == v:\n                fv = 0\n            fail[v] = fv\n            q.append(v)\n    s = 0\n    res = []\n    for c in t:\n        while s and c not in ch[s]:\n            s = fail[s]\n        s = ch[s].get(c, 0)\n        res.append(out[s])\n    print(' '.join(map(str, res)))\n\n\nmain()\n",
+      "hints": [
+        "위치 i 에서 끝나는 패턴들은 모두 T[0..i] 의 접미사다. 패턴마다 본문을 따로 훑으면 패턴 수만큼 본문을 반복해 읽게 되니, 본문을 한 번만 읽으며 모든 패턴을 동시에 따라가는 방법을 찾는다.",
+        "여러 패턴을 한 번에 찾는 문자열 매칭 범주의 문제다. 모든 패턴을 하나의 구조로 합친 뒤, 불일치가 나면 처음부터 다시 시작하지 않고 이미 읽은 부분을 재활용하는 방식(아호-코라식)을 쓴다.",
+        "패턴들로 트라이를 만들고, 각 노드에 '이 노드가 나타내는 문자열의 가장 긴 진접미사이면서 트라이에 있는 노드'를 가리키는 링크와 '이 노드에서 끝나는 패턴 수'를 둔다.",
+        "링크는 깊이가 얕은 노드부터 BFS 순서로 정한다. 노드의 패턴 수에는 링크가 가리키는 노드의 (이미 누적된) 패턴 수를 더해 두어야, 현재 문자열의 접미사로 끝나는 짧은 패턴까지 한 번에 셀 수 있다. 본문을 읽을 때 다음 글자로 갈 수 없으면 링크를 따라 되돌아간다.",
+        "트라이 구성 → 루트의 자식은 링크를 루트로 두고 큐에 넣는다 → 큐에서 노드 u 를 꺼내 각 자식 v(글자 c) 에 대해: u 의 링크에서 시작해 c 로 갈 수 있을 때까지 링크를 타고, 갈 수 있으면 그 자식을 v 의 링크로 둔다(없으면 루트) → v 의 패턴 수 += 링크 노드의 패턴 수 → 본문을 한 글자씩: 갈 수 없는 동안 링크로 이동, 가능하면 전이 → 현재 노드의 패턴 수를 그 위치의 답으로 기록."
+      ],
+      "skillControl": {
+        "approach": "패턴을 길이별로 묶고, 서로 다른 길이마다 본문의 모든 끝 위치에서 그 길이의 부분 문자열을 잘라 사전에서 찾는다 (O(|T| x 서로 다른 길이 수)).",
+        "solution": "import sys\nfrom collections import Counter, defaultdict\n\n\ndef main():\n    d = sys.stdin.read().split()\n    t = d[0]\n    n = int(d[1])\n    ps = d[2:2 + n]\n    by = defaultdict(Counter)\n    for p in ps:\n        by[len(p)][p] += 1\n    m = len(t)\n    res = [0] * m\n    for L, cnt in by.items():\n        for i in range(L - 1, m):\n            v = cnt.get(t[i - L + 1:i + 1])\n            if v:\n                res[i] += v\n    print(' '.join(map(str, res)))\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nr = random.Random(20260926)\nn = 100000\nt = ''.join(r.choice('ab') for _ in range(n))\nps = []\nfor L in range(1, 301):\n    i = r.randrange(n - L + 1)\n    ps.append(t[i:i + L])\nfor L in range(1, 11):\n    for m in range(1 << L):\n        ps.append(format(m, '0%db' % L).replace('0', 'a').replace('1', 'b'))\nr.shuffle(ps)\nprint(t)\nprint(len(ps))\nprint('\\n'.join(ps))\n"
+      }
+    }
+  }
+}

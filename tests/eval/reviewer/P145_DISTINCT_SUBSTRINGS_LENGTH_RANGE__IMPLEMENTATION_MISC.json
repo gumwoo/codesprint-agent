@@ -1,0 +1,32 @@
+{
+  "problemCode": "P145_DISTINCT_SUBSTRINGS_LENGTH_RANGE",
+  "problemTitle": "길이 범위 안의 서로 다른 부분 문자열",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SUFFIX_ARRAY"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef build_suffix_array(s):\n    n = len(s)\n    rank = [ord(c) for c in s]\n    sa = sorted(range(n), key=rank.__getitem__)\n    k = 1\n    while True:\n        shifted = rank[k:] + [-1] * min(k, n)\n        key = [rank[i] * (n + 2) + shifted[i] + 1 for i in range(n)]\n        sa.sort(key=key.__getitem__)\n        new_rank = [0] * n\n        r = 0\n        prev = key[sa[0]]\n        for i in sa:\n            if key[i] != prev:\n                r += 1\n                prev = key[i]\n            new_rank[i] = r\n        rank = new_rank\n        if r == n - 1 or k >= n:\n            break\n        k *= 2\n    return sa, rank\n\n\ndef build_lcp(s, sa, rank):\n    n = len(s)\n    lcp = [0] * n\n    h = 0\n    for i in range(n):\n        if rank[i] == 0:\n            h = 0\n            continue\n        j = sa[rank[i] - 1]\n        while i + h < n and j + h < n and s[i + h] == s[j + h]:\n            h += 1\n        lcp[rank[i]] = h\n        if h:\n            h -= 1\n    return lcp\n\n\ndef main():\n    data = sys.stdin.read().split()\n    s = data[0]\n    lo_len = int(data[1])\n    hi_len = int(data[2])\n    n = len(s)\n    sa, rank = build_suffix_array(s)\n    lcp = build_lcp(s, sa, rank)\n    total = 0\n    for idx in range(n):\n        length = n - sa[idx]\n        lo = max(lcp[idx], lo_len)\n        hi = min(length, hi_len)\n        if hi >= lo:\n            total += hi - lo + 1\n    print(total)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

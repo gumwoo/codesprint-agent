@@ -1,0 +1,71 @@
+{
+  "id": "TREE_DP-1790399635691-2",
+  "skill": "TREE_DP",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T05:58:32+00:00",
+  "stage": "Skill 측정",
+  "reasons": [
+    "대조 풀이가 큰 입력에서 TIME_LIMIT 이 아니라 MEMORY_LIMIT"
+  ],
+  "draft": {
+    "codeSuffix": "CCTV_TREE_COVER",
+    "title": "트리 위의 CCTV 설치",
+    "statement": "정점 N개와 간선 N-1개로 이루어진 트리가 있다. 정점 번호는 1번부터 N번까지다(1-based). 모든 정점은 서로 연결되어 있다.\n\ni번 정점에 CCTV를 설치하는 비용은 c_i다. CCTV를 설치한 정점은 자기 자신과, 간선으로 직접 연결된 모든 정점을 감시한다. 모든 정점이 적어도 하나의 CCTV에 감시되도록 몇 개의 정점을 골라 CCTV를 설치할 때, 설치 비용 합의 최솟값을 구한다.\n\n예를 들어 1-2-3 으로 이어진 트리에서 비용이 10, 10, 1 이면, 3번에만 설치하면 1번이 감시되지 않는다. 2번에만 설치하면 세 정점이 모두 감시되고 비용은 10이다.\n\n입력\n첫째 줄에 정점의 수 N이 주어진다. (1 ≤ N ≤ 100000)\n둘째 줄에 c_1, c_2, ..., c_N 이 공백으로 구분되어 주어진다. (1 ≤ c_i ≤ 10000)\n셋째 줄부터 N-1개의 줄에 간선을 이루는 두 정점 번호 u v 가 주어진다. (1 ≤ u, v ≤ N, u ≠ v) 주어진 간선은 트리를 이룬다.\n\n출력\n최소 설치 비용을 정수 하나로 출력한다.",
+    "secondarySkills": [
+      "TREE_TRAVERSAL"
+    ],
+    "referenceComplexity": "O(N)",
+    "expectedSolveSeconds": 1500,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "루트의 답을 고를 때 '아직 감시되지 않고 부모를 기다리는' 상태까지 포함해, 루트가 감시되지 않는 배치를 답으로 인정한다.",
+    "sampleInputs": [
+      "3\n10 10 1\n1 2\n2 3\n",
+      "6\n3 5 3 2 8 4\n1 2\n1 3\n2 4\n2 5\n3 6\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "SINGLE",
+        "input": "1\n7\n"
+      },
+      {
+        "type": "MINIMUM",
+        "input": "2\n10000 10000\n2 1\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "5\n1 1 1 1 1\n1 2\n2 3\n3 4\n4 5\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "7\n100 1 1 1 1 1 1\n1 2\n1 3\n1 4\n1 5\n1 6\n1 7\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "8\n4 9 9 4 9 9 4 9\n1 2\n2 3\n3 4\n4 5\n5 6\n6 7\n7 8\n"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 10)\nprint(n)\nprint(\" \".join(str(rng.randint(1, 20)) for _ in range(n)))\nfor v in range(2, n + 1):\n    u = rng.randint(1, v - 1)\n    if rng.random() < 0.5:\n        print(u, v)\n    else:\n        print(v, u)\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    cost = [0] + [int(x) for x in data[1:n + 1]]\n    adj = [[] for _ in range(n + 1)]\n    pos = n + 1\n    for _ in range(n - 1):\n        u = int(data[pos])\n        v = int(data[pos + 1])\n        pos += 2\n        adj[u].append(v)\n        adj[v].append(u)\n    INF = 10 ** 18\n    parent = [0] * (n + 1)\n    seen = [False] * (n + 1)\n    seen[1] = True\n    order = []\n    stack = [1]\n    while stack:\n        v = stack.pop()\n        order.append(v)\n        for w in adj[v]:\n            if not seen[w]:\n                seen[w] = True\n                parent[w] = v\n                stack.append(w)\n    on = [0] * (n + 1)\n    covered = [0] * (n + 1)\n    waiting = [0] * (n + 1)\n    for v in reversed(order):\n        take = cost[v]\n        free = 0\n        extra = INF\n        need = 0\n        for w in adj[v]:\n            if w == parent[v]:\n                continue\n            take += min(on[w], covered[w], waiting[w])\n            best = min(on[w], covered[w])\n            free += best\n            extra = min(extra, on[w] - best)\n            need = min(INF, need + covered[w])\n        on[v] = take\n        covered[v] = free + extra if extra < INF else INF\n        waiting[v] = need\n    print(min(on[1], covered[1]))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    cost = [int(x) for x in data[1:n + 1]]\n    nb = [[i] for i in range(n)]\n    pos = n + 1\n    for _ in range(n - 1):\n        u = int(data[pos]) - 1\n        v = int(data[pos + 1]) - 1\n        pos += 2\n        nb[u].append(v)\n        nb[v].append(u)\n    best = None\n    chosen = [False] * n\n\n    def go(i, total):\n        nonlocal best\n        if i == n:\n            for v in range(n):\n                if not any(chosen[x] for x in nb[v]):\n                    return\n            if best is None or total < best:\n                best = total\n            return\n        chosen[i] = True\n        go(i + 1, total + cost[i])\n        chosen[i] = False\n        go(i + 1, total)\n\n    go(0, 0)\n    print(best)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    cost = [0] + [int(x) for x in data[1:n + 1]]\n    adj = [[] for _ in range(n + 1)]\n    pos = n + 1\n    for _ in range(n - 1):\n        u = int(data[pos])\n        v = int(data[pos + 1])\n        pos += 2\n        adj[u].append(v)\n        adj[v].append(u)\n    INF = 10 ** 18\n    parent = [0] * (n + 1)\n    seen = [False] * (n + 1)\n    seen[1] = True\n    order = []\n    stack = [1]\n    while stack:\n        v = stack.pop()\n        order.append(v)\n        for w in adj[v]:\n            if not seen[w]:\n                seen[w] = True\n                parent[w] = v\n                stack.append(w)\n    on = [0] * (n + 1)\n    covered = [0] * (n + 1)\n    waiting = [0] * (n + 1)\n    for v in reversed(order):\n        take = cost[v]\n        free = 0\n        extra = INF\n        need = 0\n        for w in adj[v]:\n            if w == parent[v]:\n                continue\n            take += min(on[w], covered[w], waiting[w])\n            best = min(on[w], covered[w])\n            free += best\n            extra = min(extra, on[w] - best)\n            need = min(INF, need + covered[w])\n        on[v] = take\n        covered[v] = free + extra if extra < INF else INF\n        waiting[v] = need\n    print(min(on[1], covered[1], waiting[1]))\n\n\nmain()\n",
+    "hints": [
+      "한 정점이 감시되는 경로는 세 가지뿐이다: 자기 자신에 설치, 자식 중 하나에 설치, 부모에 설치. 부모 쪽 사정은 부분 트리 안에서 알 수 없으니, 부분 트리의 답을 '부모에게 무엇을 기대하는가'로 나눠 생각한다.",
+      "트리를 한 정점에 매달아 루트 트리로 보고, 자식 부분 트리의 결과를 부모에서 합치는 트리 DP다. 조합을 모두 나열하면 2^N 이 된다.",
+      "정점마다 세 값을 둔다: (가) 이 정점에 설치함, (나) 설치하지 않았지만 자식 덕에 감시됨, (다) 설치하지 않았고 아직 감시되지 않아 부모의 설치가 필요함. 각 값은 부분 트리의 나머지 정점이 모두 감시될 때의 최소 비용이다. 재귀 깊이가 N까지 갈 수 있으니 방문 순서를 기록해 뒤에서부터 처리한다.",
+      "(가)는 자기 비용에 각 자식의 세 값 중 최솟값을 더한다. (다)는 자식이 모두 (나)여야 한다. (나)는 각 자식에서 (가)·(나) 중 작은 쪽을 더하되, 적어도 한 자식은 (가)여야 하므로 '(가)로 바꿀 때 늘어나는 비용'의 최솟값을 한 번 더한다. 자식이 없으면 (나)는 불가능이다. 루트에는 부모가 없으므로 (다)는 답이 될 수 없다.",
+      "루트 1에서 스택으로 방문 순서와 부모를 기록한다 → 순서를 거꾸로 돌며 각 정점 v에 대해: 설치값 = 비용 + Σ min(자식 세 값); 합 = Σ min(자식 가, 자식 나); 보정 = min(자식 가 - min(자식 가, 자식 나)); 자식감시값 = 합 + 보정 (자식이 없으면 무한대); 대기값 = Σ 자식 나 → 답 = min(루트 설치값, 루트 자식감시값)."
+    ],
+    "skillControl": {
+      "approach": "설치할 정점 집합을 비트마스크로 모두 나열하고, 모든 정점이 감시되는 집합 중 비용 합이 가장 작은 것을 고른다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    cost = [int(x) for x in data[1:n + 1]]\n    mask_of = [1 << i for i in range(n)]\n    pos = n + 1\n    for _ in range(n - 1):\n        u = int(data[pos]) - 1\n        v = int(data[pos + 1]) - 1\n        pos += 2\n        mask_of[u] |= 1 << v\n        mask_of[v] |= 1 << u\n    best = None\n    for mask in range(1, 1 << n):\n        ok = True\n        for v in range(n):\n            if not mask & mask_of[v]:\n                ok = False\n                break\n        if not ok:\n            continue\n        total = 0\n        for v in range(n):\n            if mask >> v & 1:\n                total += cost[v]\n        if best is None or total < best:\n            best = total\n    print(best)\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nlabel = list(range(1, n + 1))\nrng.shuffle(label)\nlines = [str(n), \" \".join(str(rng.randint(1, 10000)) for _ in range(n))]\nfor i in range(1, n):\n    if rng.random() < 0.5:\n        j = rng.randint(max(0, i - 50), i - 1)\n    else:\n        j = rng.randint(0, i - 1)\n    lines.append(f\"{label[i]} {label[j]}\")\nprint(\"\\n\".join(lines))\n"
+    }
+  }
+}

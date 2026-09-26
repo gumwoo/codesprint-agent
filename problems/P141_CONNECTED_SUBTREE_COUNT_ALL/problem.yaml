@@ -1,0 +1,44 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P141_CONNECTED_SUBTREE_COUNT_ALL
+title: 정점마다 연결 부분집합 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1800
+referenceComplexity: O(N)
+statement: |
+  정점 N개와 간선 N-1개로 이루어진 트리가 주어진다. 정점 번호는 1번부터 N번까지다(1-based).
+
+  정점 집합 S가 다음 두 조건을 모두 만족하면 S를 연결 부분집합이라고 한다.
+  - S는 비어 있지 않다.
+  - S에 속한 어느 두 정점을 골라도, 트리에서 두 정점을 잇는 경로 위의 모든 정점이 S에 속한다.
+
+  예를 들어 1-2-3 모양의 트리에서 {1, 3}은 경로 위의 정점 2가 빠져 있으므로 연결 부분집합이 아니다. {2}, {1, 2}, {2, 3}, {1, 2, 3}은 연결 부분집합이다.
+
+  각 정점 v마다 v를 포함하는 연결 부분집합의 개수를 구하여 1,000,000,007로 나눈 나머지를 출력한다.
+
+  입력 형식
+  - 첫 줄에 정수 N (1 ≤ N ≤ 80000).
+  - 다음 N-1개의 줄에 정수 u v (1 ≤ u, v ≤ N, u ≠ v). 정점 u와 정점 v를 잇는 간선이다.
+  - 주어진 간선은 항상 트리를 이룬다. N = 1이면 간선 줄이 없다.
+
+  출력 형식
+  - N개의 줄을 출력한다. i번째 줄에는 정점 i를 포함하는 연결 부분집합의 개수를 1,000,000,007로 나눈 나머지를 출력한다.
+skills:
+- code: REROOTING_DP
+  role: PRIMARY
+  weight: 0.7
+- code: TREE_TRAVERSAL
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 정점마다 그 정점을 루트로 트리 전체를 다시 DFS 해서 아래쪽 DP만 계산한다 (O(N^2)).

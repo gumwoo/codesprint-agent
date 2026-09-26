@@ -1,0 +1,33 @@
+{
+  "problemCode": "P144_TREE_NO_ADJACENT_PICK",
+  "problemTitle": "이웃하지 않는 초소 고르기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "TREE_DP",
+    "TREE_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    w = [0] + [int(x) for x in data[1:1 + n]]\n    adj = [[] for _ in range(n + 1)]\n    idx = 1 + n\n    for _ in range(n - 1):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    parent = [0] * (n + 1)\n    parent[1] = -1\n    order = []\n    stack = [1]\n    while stack:\n        v = stack.pop()\n        order.append(v)\n        for u in adj[v]:\n            if u != parent[v]:\n                parent[u] = v\n                stack.append(u)\n    take = [0] * (n + 1)\n    skip = [0] * (n + 1)\n    for v in reversed(order):\n        take[v] += w[v]\n        p = parent[v]\n        if p > 0:\n            take[p] += skip[v]\n            skip[p] += take[v]\n    print(max(take[1], skip[1]))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      8
+    ],
+    "failedCaseIds": [
+      1,
+      7,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

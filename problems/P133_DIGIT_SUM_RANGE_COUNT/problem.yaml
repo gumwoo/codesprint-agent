@@ -1,0 +1,40 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P133_DIGIT_SUM_RANGE_COUNT
+title: 구간의 자릿수 합 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: 전처리 O(D · 9D · 10), 질의당 O(D · 10), D ≤ 19
+statement: |
+  질의 Q 개가 주어진다. 각 질의는 정수 L, R, S 로 이루어진다. L 이상 R 이하인 정수 x 가운데, x 를 십진법으로 썼을 때 각 자리 숫자를 모두 더한 값이 정확히 S 인 것의 개수를 구한다. 예를 들어 x = 1203 의 자리 숫자 합은 1 + 2 + 0 + 3 = 6 이다.
+
+  입력 형식
+  첫 줄에 Q 가 주어진다.
+  다음 Q 줄의 각 줄에 L R S 가 공백으로 구분되어 주어진다.
+
+  출력 형식
+  질의마다 한 줄에 답 하나를 입력 순서대로 출력한다.
+
+  제약
+  1 ≤ Q ≤ 1000
+  1 ≤ L ≤ R ≤ 10^18
+  1 ≤ S ≤ 162
+  모든 값은 정수다. 이 문제는 인덱스를 사용하지 않는다. 질의는 입력에 나온 순서대로 답한다.
+skills:
+- code: DIGIT_DP
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: L 부터 R 까지 모든 정수의 자리 숫자 합을 직접 구해 S 와 같은지 센다.
