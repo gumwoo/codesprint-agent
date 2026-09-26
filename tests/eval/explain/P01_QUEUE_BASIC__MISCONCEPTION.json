@@ -1,0 +1,7 @@
+{
+  "problemCode": "P01_QUEUE_BASIC",
+  "label": "MISCONCEPTION",
+  "explanation": "먼저 넣은 값을 먼저 꺼내야 하므로 deque 의 append 와 popleft 를 쓴다. 리스트의 pop(0) 도 앞 원소 하나만 떼어 내므로 popleft 와 속도가 같고, deque 를 쓰는 것은 코드가 읽기 쉬워서일 뿐이다.",
+  "omittedPoint": null,
+  "plantedMisconception": "list.pop(0) 이 deque.popleft 와 속도가 같다고 했다 - 실제로는 뒤 원소를 전부 옮겨 원소 수에 비례한다"
+}

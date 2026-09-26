@@ -195,7 +195,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | 모의 시험 · 학습 모드 5종 (ADR-0043) | 완료 |
 | 자유 질문 Tutor (ADR-0044) | 완료 — 기본은 꺼져 있다 |
 | 학습 분석 · 시험 전략(모의 시험 빈도 · 포기 기준) · Evaluator 매핑 (ADR-0049) | 완료 |
-| Explain Back - 푼 문제의 설명 분석, 기록하지 않음 (ADR-0050) | 완료 — 기본은 꺼져 있다 |
+| Explain Back - 푼 문제의 설명 분석, 기록하지 않음 (ADR-0050) + 실제 모델 평가 (ADR-0052, 심은 설명 24건 · 오지적 0 · 2회) | 완료 — 기본은 꺼져 있다 |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 지금은
 PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 모두 마쳐 레지스트리의 도메인이

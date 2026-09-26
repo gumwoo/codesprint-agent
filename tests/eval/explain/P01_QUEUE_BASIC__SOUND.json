@@ -1,0 +1,7 @@
+{
+  "problemCode": "P01_QUEUE_BASIC",
+  "label": "SOUND",
+  "explanation": "명령이 들어온 순서대로 먼저 넣은 값을 먼저 꺼내야 하므로 deque 의 append 로 뒤에 넣고 popleft 로 앞에서 꺼낸다. list.pop(0) 은 매번 뒤의 원소를 한 칸씩 당겨 명령이 60만 개면 느려지지만 popleft 는 그렇지 않고, 큐가 빈 채로 pop 이 오면 -1 을 낸다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

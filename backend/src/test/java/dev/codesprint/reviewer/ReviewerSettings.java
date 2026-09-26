@@ -34,8 +34,16 @@ final class ReviewerSettings {
     }
 
     /** @param env 환경변수 조회. 테스트가 갈아 끼운다. */
-    @SuppressWarnings("unchecked")
     static Values load(Function<String, String> env) {
+        return load("reviewer", env);
+    }
+
+    /**
+     * {@code codesprint.<section>} 아래의 명령 · timeout · 프롬프트 버전. Explain Back 평가도 앱과 같은 곳에서
+     * 읽는다 - 이 로더를 복사하면 정본이 다시 둘이 된다(ADR-0052).
+     */
+    @SuppressWarnings("unchecked")
+    static Values load(String section, Function<String, String> env) {
         Map<String, Object> reviewer;
         try (InputStream in = ReviewerSettings.class.getClassLoader()
                 .getResourceAsStream("application.yml")) {
@@ -47,7 +55,10 @@ final class ReviewerSettings {
             Map<String, Object> root = new Yaml().load(in);
             Map<String, Object> codesprint =
                     (Map<String, Object>) root.get("codesprint");
-            reviewer = (Map<String, Object>) codesprint.get("reviewer");
+            reviewer = (Map<String, Object>) codesprint.get(section);
+            if (reviewer == null) {
+                throw new IllegalStateException("application.yml 에 codesprint." + section + " 이 없다");
+            }
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException("application.yml 을 읽지 못했다", e);
         }

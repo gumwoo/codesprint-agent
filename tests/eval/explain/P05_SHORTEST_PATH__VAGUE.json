@@ -1,0 +1,7 @@
+{
+  "problemCode": "P05_SHORTEST_PATH",
+  "label": "VAGUE",
+  "explanation": "BFS 로 풀었다. 큐를 써서 차례대로 처리했다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

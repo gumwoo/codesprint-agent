@@ -1,0 +1,7 @@
+{
+  "problemCode": "P73_WALL_BREAK_K_BFS",
+  "label": "SOUND",
+  "explanation": "같은 칸이라도 지금까지 벽을 몇 개 부쉈는지에 따라 앞으로 갈 수 있는 곳이 달라지므로, 정점을 (행, 열, 부순 벽 수) 로 두고 visited 도 이 세 값으로 기록하는 BFS 를 한다. 벽 칸으로 갈 때만 부순 수를 1 늘리되 K 를 넘지 않게 하고, 모든 이동의 비용이 1 이므로 도착 칸에 처음 닿은 이동 횟수가 답이다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

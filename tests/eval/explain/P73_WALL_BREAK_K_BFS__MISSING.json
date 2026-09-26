@@ -1,0 +1,7 @@
+{
+  "problemCode": "P73_WALL_BREAK_K_BFS",
+  "label": "MISSING",
+  "explanation": "같은 칸이라도 지금까지 부순 벽 수에 따라 앞으로 갈 수 있는 곳이 달라지므로 정점을 (행, 열, 부순 벽 수) 로 두고, visited 도 칸만이 아니라 부순 벽 수까지 포함해 기록한다. 모든 이동의 비용이 1 이므로 BFS 로 도착 칸에 처음 닿은 이동 횟수가 답이다.",
+  "omittedPoint": 2,
+  "plantedMisconception": null
+}

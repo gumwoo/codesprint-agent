@@ -59,4 +59,19 @@ class ReviewerSettingsTest {
         assertThat(values.promptVersion()).isEqualTo("reviewer-v2");
         assertThat(values.timeoutSeconds()).isEqualTo(300);
     }
+
+    @Test
+    @DisplayName("Explain Back 평가는 codesprint.explain 을 읽고, 앱과 같은 환경변수로 바뀐다")
+    void explainSectionIsReadFromTheSameFile() {
+        // ADR-0052. 평가가 explain-v1 을 재는 동안 앱이 explain-v2 로 돌면 잰 값이 실제와 무관해진다.
+        ReviewerSettings.Values defaults = ReviewerSettings.load("explain", name -> null);
+        assertThat(defaults.promptVersion()).isEqualTo("explain-v1");
+        assertThat(defaults.command()).isEqualTo(ReviewerSettings.load(name -> null).command());
+
+        Map<String, String> env = Map.of("CODESPRINT_EXPLAIN_PROMPT_VERSION", "explain-v2",
+                "CODESPRINT_EXPLAIN_TIMEOUT", "90");
+        ReviewerSettings.Values changed = ReviewerSettings.load("explain", env::get);
+        assertThat(changed.promptVersion()).isEqualTo("explain-v2");
+        assertThat(changed.timeoutSeconds()).isEqualTo(90);
+    }
 }

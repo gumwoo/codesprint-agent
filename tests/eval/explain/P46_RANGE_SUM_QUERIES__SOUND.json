@@ -1,0 +1,7 @@
+{
+  "problemCode": "P46_RANGE_SUM_QUERIES",
+  "label": "SOUND",
+  "explanation": "prefix[i] 를 A_1 부터 A_i 까지의 합으로, prefix[0] = 0 으로 둔 길이 N+1 배열을 한 번 만들면 구간 l..r 의 합은 prefix[r] - prefix[l-1] 로 질의마다 뺄셈 한 번이다. 질의마다 구간을 직접 더하면 질의 수와 구간 길이를 곱한 만큼, 최악 50000 × 100000 번을 더하므로 미리 한 번 누적해 두는 것이 통한다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

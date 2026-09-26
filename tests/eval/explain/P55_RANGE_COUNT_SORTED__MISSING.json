@@ -1,0 +1,7 @@
+{
+  "problemCode": "P55_RANGE_COUNT_SORTED",
+  "label": "MISSING",
+  "explanation": "배열이 정렬돼 있으므로 L 이상이 처음 나오는 위치는 bisect_left(a, L), R 을 넘는 값이 처음 나오는 위치는 bisect_right(a, R) 로 로그 시간에 찾는다. 질의마다 이분 탐색 두 번만 하므로 질의가 10만 개여도 빠르다.",
+  "omittedPoint": 1,
+  "plantedMisconception": null
+}

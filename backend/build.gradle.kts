@@ -138,6 +138,14 @@ val evalReviewer by tasks.registering(JavaExec::class) {
     systemProperty("codesprint.repoRoot", rootProject.projectDir.parentFile.absolutePath)
 }
 
+val evalExplain by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "무엇을 심었는지 적힌 설명으로 Explain Back 분석을 잰다(ADR-0052). 로컬 Claude CLI 가 필요하다."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "dev.codesprint.reviewer.ExplainEvaluation"
+    systemProperty("codesprint.repoRoot", rootProject.projectDir.parentFile.absolutePath)
+}
+
 // gradle 이 없는 곳에서 위 하네스를 돌리기 위한 것.
 //
 // 이 저장소에서는 gradle 이 컨테이너 안에서 돌고 claude CLI 는 호스트에 있어서,

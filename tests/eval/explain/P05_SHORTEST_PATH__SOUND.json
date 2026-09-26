@@ -1,0 +1,7 @@
+{
+  "problemCode": "P05_SHORTEST_PATH",
+  "label": "SOUND",
+  "explanation": "모든 이동의 비용이 1 이라 BFS 는 시작점에서 가까운 칸부터 꺼내고, 어떤 칸에 처음 도달한 순간의 거리가 그 칸의 최단 거리다. 이웃을 큐에 넣는 순간 방문과 거리(현재 거리 + 1)를 함께 기록하고, 시작 칸과 도착 칸을 모두 세는 문제라 시작 칸을 1 로 두며, 도착 칸에 끝내 닿지 못하면 -1 을 출력한다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

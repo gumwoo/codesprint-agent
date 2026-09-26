@@ -447,7 +447,12 @@ Reviewer 에서 "confidence 는 LLM 이, 확정은 시스템이" 로 그은 선�
 ```bash
 python tools/gen_reviewer_eval_cases.py --write   # 라벨 + 실제 채점 결과 (Docker)
 gradle evalReviewer                               # 진짜 모델을 부른다 (Claude CLI)
+gradle evalExplain                                # Explain Back - 심은 설명 24건 (ADR-0052)
 ```
+
+Explain Back 에는 채점이 없어서 **무엇을 심었는지 적은 설명**(`tests/eval/explain/`)이 정답지다. 실패는
+"맞게 이해한 설명에 잘못 이해한 점을 붙였다" 와 "분석 0건" 둘뿐이고, 나머지는 심은 것과 모델의 답을 나란히
+찍어 사람이 읽는다. 요청은 앱과 같은 `ExplainService.request` 가 조립한다.
 
 **하네스는 설정을 따로 갖지 않는다.** 명령 · timeout · 프롬프트 버전을 애플리케이션과
 같은 `application.yml` 에서 읽는다 - 따로 적으면 앱을 `reviewer-v2` 로 바꿔 놓고

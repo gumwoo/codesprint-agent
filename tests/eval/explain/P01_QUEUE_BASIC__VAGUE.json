@@ -1,0 +1,7 @@
+{
+  "problemCode": "P01_QUEUE_BASIC",
+  "label": "VAGUE",
+  "explanation": "큐 문제라서 큐를 쓰면 된다. 명령대로 하면 답이 나온다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}
