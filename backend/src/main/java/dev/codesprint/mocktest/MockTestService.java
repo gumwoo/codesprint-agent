@@ -47,6 +47,9 @@ public class MockTestService {
     private final SubmissionIntakeService intake;
     private final SubmissionQueryService queries;
     private final RunService runs;
+    private final dev.codesprint.learning.service.DiagnosticService diagnostic;
+    private final dev.codesprint.learning.service.ReviewScheduleService reviews;
+    private final dev.codesprint.learning.service.NextProblemService nextProblem;
     private final Clock clock;
 
     public MockTestService(MockTestRepository tests, MockTestProblemRepository problems,
@@ -54,7 +57,9 @@ public class MockTestService {
             SubmissionRepository submissions, ProblemCatalog catalog,
             CurriculumCatalog curriculum, MasteryService mastery,
             SubmissionIntakeService intake, SubmissionQueryService queries, RunService runs,
-            Clock clock) {
+            dev.codesprint.learning.service.DiagnosticService diagnostic,
+            dev.codesprint.learning.service.ReviewScheduleService reviews,
+            dev.codesprint.learning.service.NextProblemService nextProblem, Clock clock) {
         this.tests = tests;
         this.problems = problems;
         this.events = events;
@@ -66,6 +71,9 @@ public class MockTestService {
         this.intake = intake;
         this.queries = queries;
         this.runs = runs;
+        this.diagnostic = diagnostic;
+        this.reviews = reviews;
+        this.nextProblem = nextProblem;
         this.clock = clock;
     }
 
@@ -217,13 +225,34 @@ public class MockTestService {
 
     /**
      * 후보: 사용자의 트랙 안(ADR-0035), 한 번도 제출하지 않은, PRIMARY Skill 이 잠기지 않은
-     * 일반 문제. 드릴 · 복습 문제는 시험 문제가 아니다.
+     * 일반 문제. 드릴 · 복습 문제는 시험 문제가 아니다. 진단 · 만기 복습이 지금 가리키는 문제도 뺀다({@link #reserved}).
      */
     private List<MockTestComposer.Candidate> candidates(long userId) {
         return candidates(userId, mastery.statesOf(userId));
     }
 
+    /**
+     * 진단과 만기 복습이 지금 가리키는 문제. 시험에 넣지 않는다(ADR-0049) - 진단 · 복습은 오늘의 계획에서 빠질
+     * 수 없는 블록이고(ADR-0038) 진단 패널 · 결과의 다음 행동도 같은 문제를 가리키므로, 그 문제가 시험에 들어가면
+     * 시작하기 전에 유형이 드러난다. 계획에서 빼는 쪽으로 막았더니 진단 블록이 사라졌다(검증 에이전트가 재현했다).
+     */
+    private java.util.Set<String> reserved(long userId, List<SkillState> states) {
+        java.util.Set<String> reserved = new java.util.HashSet<>();
+        var step = diagnostic.nextStep(states);
+        if (!step.done() && step.problem() != null) {
+            reserved.add(step.problem().code());
+        }
+        for (var due : reviews.due(userId)) {
+            String code = nextProblem.forReview(userId, due.skillCode(), null).problemCode();
+            if (code != null) {
+                reserved.add(code);
+            }
+        }
+        return reserved;
+    }
+
     private List<MockTestComposer.Candidate> candidates(long userId, List<SkillState> states) {
+        java.util.Set<String> reserved = reserved(userId, states);
         Map<String, SkillStatus> status = new HashMap<>();
         for (SkillState state : states) {
             status.put(state.skillCode(), state.status());
@@ -235,7 +264,8 @@ public class MockTestService {
             ProblemDefinition problem = catalog.find(code);
             SkillStatus skill = status.get(problem.primarySkill());
             if (!"NORMAL".equals(problem.kind()) || skill == null || skill == SkillStatus.LOCKED
-                    || seen.contains(code) || problem.expectedSolveSeconds() == null) {
+                    || seen.contains(code) || problem.expectedSolveSeconds() == null
+                    || reserved.contains(code)) {
                 continue;
             }
             candidates.add(new MockTestComposer.Candidate(code, number(code),

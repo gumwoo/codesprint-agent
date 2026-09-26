@@ -195,6 +195,61 @@ class TodayTest {
         poller.applyFinishedJobs();
     }
 
+    private void judge(String code, String status) throws Exception {
+        String body = MAPPER.createObjectNode().put("userId", userId).put("language", "PYTHON")
+                .put("sourceCode", "x").toString();
+        long id = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/problems/{code}/submit", code)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse().getContentAsString()).get("submissionId").asLong();
+        boolean ok = "ACCEPTED".equals(status);
+        var result = MAPPER.createObjectNode().put("status", status).put("passed", ok ? 6 : 1)
+                .put("total", 6).put("executionMs", 100).put("memoryKb", 20480);
+        if (ok) {
+            result.putNull("failedCaseId");
+        } else {
+            result.put("failedCaseId", 2);
+        }
+        result.putNull("stderr");
+        result.set("cases", MAPPER.createArrayNode());
+        dev.codesprint.support.JudgeResultFixture.finish(jdbc, result.toString(),
+                jobs.findBySubmissionId(id).orElseThrow().id());
+        poller.applyFinishedJobs();
+    }
+
+    @Test
+    @DisplayName("시험 모드에서 진단을 따라가는 내내 진단 블록이 남고, 진단이 묻는 문제는 곧 만들 시험에 들어가지 않는다")
+    void diagnosisStaysAndIsNotInTheUpcomingTest() throws Exception {
+        // 검증 에이전트의 재현: INTRO 사용자가 진단을 일곱 걸음 맞히면 진단 문제(P33)가 시험 후보와 겹쳐, 계획에서
+        // 진단 블록이 사라지고 그 문제가 시험에 들어갔다.
+        userId = users.save(new UserRow(
+                "diag-exam-" + System.nanoTime() + "@codesprint.dev", "진단시험", "INTRO")).id();
+        String soon = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(3).toString();
+        assertThat(putSettings("{\"dailyMinutes\": 600, \"examDate\": \"" + soon + "\"}"))
+                .isEqualTo(200);
+        for (int step = 0; step < 12; step++) {
+            JsonNode diag = MAPPER.readTree(mvc.perform(
+                            org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                    .get("/api/users/{id}/diagnostic", userId))
+                    .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+            if (diag.get("done").asBoolean() || diag.get("problem").isNull()) {
+                break;
+            }
+            String probe = diag.get("problem").get("code").asText();
+            JsonNode plan = today();
+            boolean diagnose = false;
+            for (JsonNode block : plan.get("blocks")) {
+                if ("DIAGNOSE".equals(block.get("type").asText())) {
+                    diagnose = true;
+                    assertThat(block.get("problem").get("code").asText()).as("걸음 " + step).isEqualTo(probe);
+                }
+            }
+            assertThat(diagnose).as("걸음 " + step + " - 진단 블록은 빠질 수 없다(" + probe + ")").isTrue();
+            judge(probe, "ACCEPTED");
+        }
+    }
+
     @Test
     @DisplayName("시험 모드에서 최근 7 일 안에 본 모의 시험이 없으면 모의 시험 블록을 주고, 보면 사라진다")
     void examModeAsksForAMockTest() throws Exception {
