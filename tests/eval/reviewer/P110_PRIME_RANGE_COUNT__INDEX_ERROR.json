@@ -1,0 +1,32 @@
+{
+  "problemCode": "P110_PRIME_RANGE_COUNT",
+  "problemTitle": "구간 속 소수 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PRIME_SIEVE"
+  ],
+  "sourceCode": "\nimport sys\nfrom itertools import accumulate\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    qs = [(int(data[1 + 2 * k]), int(data[2 + 2 * k])) for k in range(q)]\n    m = max(r for _, r in qs)\n    is_p = bytearray([1]) * m\n    is_p[0] = 0\n    is_p[1] = 0\n    i = 2\n    while i * i <= m:\n        if is_p[i]:\n            is_p[i * i::i] = bytes(len(is_p[i * i::i]))\n        i += 1\n    pref = list(accumulate(is_p))\n    out = [str(pref[r] - pref[l - 1]) for l, r in qs]\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 24, in <module>\n    main()\n  File \"solution.py\", line 20, in main\n    out = [str(pref[r] - pref[l - 1]) for l, r in qs]\n               ~~~~^^^\nIndexError: list index out of range\n",
+    "passedCaseIds": [],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}

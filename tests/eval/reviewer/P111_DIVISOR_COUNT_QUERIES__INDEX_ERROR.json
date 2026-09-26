@@ -1,0 +1,32 @@
+{
+  "problemCode": "P111_DIVISOR_COUNT_QUERIES",
+  "problemTitle": "약수 개수 질의",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SMALLEST_PRIME_FACTOR"
+  ],
+  "sourceCode": "\nimport sys\nfrom math import isqrt\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    xs = list(map(int, data[1:1 + q]))\n    m = max(xs)\n    spf = list(range(m))\n    composite = bytearray(m)\n    primes = []\n    for i in range(2, isqrt(m) + 1):\n        if not composite[i]:\n            primes.append(i)\n            composite[i * i::i] = b\"\\x01\" * len(range(i * i, m, i))\n    for p in reversed(primes):\n        spf[p * p::p] = [p] * len(range(p * p, m, p))\n    out = []\n    for x in xs:\n        cnt = 1\n        while x > 1:\n            p = spf[x]\n            e = 0\n            while x % p == 0:\n                x //= p\n                e += 1\n            cnt *= e + 1\n        out.append(cnt)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 34, in <module>\n    main()\n  File \"solution.py\", line 24, in main\n    p = spf[x]\n        ~~~^^^\nIndexError: list index out of range\n",
+    "passedCaseIds": [
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

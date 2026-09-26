@@ -1,0 +1,32 @@
+{
+  "problemCode": "P101_BINOMIAL_QUERIES",
+  "problemTitle": "번호표 고르기 질의",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BINOMIAL_MOD"
+  ],
+  "sourceCode": "\nimport sys\n\nMOD = 1_000_000_007\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    nums = list(map(int, data[1:1 + 2 * q]))\n    m = max(nums)\n    fact = [1] * (m + 1)\n    for i in range(1, m + 1):\n        fact[i] = fact[i - 1] * i % MOD\n    inv_fact = [1] * (m + 1)\n    inv_fact[m] = pow(fact[m], MOD - 2, MOD)\n    for i in range(m, 0, -1):\n        inv_fact[i - 1] = inv_fact[i] * i % MOD\n    out = []\n    for j in range(q):\n        n = nums[2 * j]\n        k = nums[2 * j + 1]\n        out.append(fact[n] * inv_fact[k] % MOD * inv_fact[n - k] % MOD)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      5,
+      6,
+      7,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      8,
+      9,
+      10
+    ]
+  },
+  "probes": {}
+}

@@ -1,0 +1,32 @@
+{
+  "problemCode": "P109_PREFIX_OCCURRENCE_COUNT",
+  "problemTitle": "접두사가 나타나는 횟수",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PREFIX_FUNCTION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n    pi = [0] * n\n    k = 0\n    for i in range(1, n):\n        while k and s[i] != s[k]:\n            k = pi[k - 1]\n        if s[i] == s[k]:\n            k += 1\n        pi[i] = k\n    cnt = [0] * (n + 1)\n    for v in pi:\n        cnt[v] += 1\n    for length in range(1, n + 1):\n        cnt[pi[length - 1]] += cnt[length]\n    print(\" \".join(str(cnt[length] + 1) for length in range(1, n + 1)))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 4,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      5,
+      9
+    ],
+    "failedCaseIds": [
+      4,
+      6,
+      7,
+      8,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

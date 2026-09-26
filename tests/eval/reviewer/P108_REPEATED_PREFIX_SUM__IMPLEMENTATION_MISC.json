@@ -1,0 +1,33 @@
+{
+  "problemCode": "P108_REPEATED_PREFIX_SUM",
+  "problemTitle": "반복으로 된 접두사",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "PREFIX_FUNCTION",
+    "STRING_MANIPULATION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n    pi = [0] * n\n    total = 1\n    k = 0\n    for i in range(1, n):\n        c = s[i]\n        while k and s[k] != c:\n            k = pi[k - 1]\n        if s[k] == c:\n            k += 1\n        pi[i] = k\n        length = i + 1\n        p = length - k\n        total += length // p\n    print(total)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      7,
+      8,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      5,
+      6,
+      9,
+      11
+    ]
+  },
+  "probes": {}
+}

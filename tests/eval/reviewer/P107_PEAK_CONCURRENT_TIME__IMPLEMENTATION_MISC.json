@@ -1,0 +1,33 @@
+{
+  "problemCode": "P107_PEAK_CONCURRENT_TIME",
+  "problemTitle": "가장 붐비는 시각",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "INTERVAL_SWEEP",
+    "SORT_CUSTOM_KEY"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    events = []\n    for i in range(n):\n        s = int(data[1 + 2 * i])\n        e = int(data[2 + 2 * i])\n        events.append((s, 1))\n        events.append((e, -1))\n    events.sort(key=lambda t: (t[0], -t[1]))\n    cur = 0\n    best = 0\n    at = 0\n    for x, d in events:\n        cur += d\n        if cur > best:\n            best = cur\n            at = x\n    print(best, at)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      8,
+      10,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      7,
+      9
+    ]
+  },
+  "probes": {}
+}
