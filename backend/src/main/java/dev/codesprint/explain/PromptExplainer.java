@@ -27,7 +27,10 @@ import org.slf4j.LoggerFactory;
 public class PromptExplainer implements ExplainPort {
 
     private static final Logger log = LoggerFactory.getLogger(PromptExplainer.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    // JSON 뒤에 무언가 붙은 답도 계약을 어긴 답이다. 기본값은 뒤따르는 내용을 조용히 버려, 정상 JSON 뒤에
+    // 점수를 붙인 답이 200 이 되었다(검증 에이전트).
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     private static final String FENCE = "```";
     private static final String CONTRACT = "contracts/explain-back.llm.schema.json";
 

@@ -236,6 +236,10 @@ class ExplainTest {
         explainer.reply = scored.toString();
         assertThat(explain("점수를 달라").getStatus()).as("계약에 없는 score").isEqualTo(502);
 
+        explainer.reply = reply("a", "b", null) + " {\"score\": 0.9}";
+        assertThat(explain("뒤에 붙은 점수").getStatus()).as("정상 JSON 뒤에 붙은 내용도 계약 위반")
+                .isEqualTo(502);
+
         explainer.on = false;
         assertThat(explain("꺼짐").getStatus()).isEqualTo(503);
         explainer.on = true;

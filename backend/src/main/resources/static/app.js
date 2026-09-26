@@ -710,6 +710,9 @@ async function loadMockReport(mockTestId, userId, mine) {
 }
 
 async function startMock() {
+  // 시험이 시작되면 그 전에 보낸 설명의 분석과 자유 질문의 답을 놓는다 - 늦게 와도 붙이지 않는다.
+  resetExplain();
+  resetTutor();
   const userId = Number($("userId").value);
   if (!userId) {
     renderMockNone("사용자를 먼저 만든다.");
@@ -970,7 +973,10 @@ async function sendExplain() {
     return;
   }
   const mine = claimView("explain");
-  $("explainNote").textContent = "읽는 중…";
+  $("explainNote").textContent = "설명을 분석하는 중";
+  // 보내는 동안 버튼을 잠근다 - 연달아 누르면 모델을 여러 번 부른다.
+  const send = $("explainSend");
+  send.disabled = true;
   let response;
   try {
     response = await fetch(`/api/problems/${code}/explanations`, {
@@ -980,6 +986,8 @@ async function sendExplain() {
     });
   } catch (error) {
     response = null;
+  } finally {
+    send.disabled = false;
   }
   if (!mine()) {
     return;
