@@ -984,3 +984,136 @@ concepts:
               upper.append(p)
           hull = lower[:-1] + upper[:-1]
     self_check: 점 (0,0), (2,0), (1,1), (2,2), (0,2) 의 볼록 껍질을 이 방법으로 쌓는 과정을 적어 보세요.
+
+  - skill_code: SEGMENT_TREE_RANGE_QUERY
+    title: 구간을 반씩 나눠 미리 합쳐 두기
+    summary: 수열을 반씩 나눈 구간마다 최솟값을 저장해 두면, 어떤 구간이든 저장된 구간 O(log N) 개로 덮이고 값 하나를 바꿀 때도 그 값을 품은 O(log N) 개만 고치면 된다.
+    key_points:
+      - 최솟값은 누적 합처럼 빼서 되돌릴 수 없다 - 그래서 누적 배열 대신 구간마다 값을 저장한다.
+      - 크기를 2 의 거듭제곱 size 로 잡고 잎을 size 부터 두면, 부모는 i // 2, 자식은 2i, 2i+1 이다.
+      - 질의는 [l, r) 의 양 끝에서 안쪽으로 올라가며 겹치는 노드만 합친다.
+      - 갱신은 잎을 바꾸고 루트까지 부모를 다시 계산한다.
+    example: |
+      size = 1
+      while size < n:
+          size *= 2
+      tree = [INF] * (2 * size)
+      tree[size:size + n] = values
+      for i in range(size - 1, 0, -1):
+          tree[i] = min(tree[2 * i], tree[2 * i + 1])
+
+      def update(i, value):
+          i += size
+          tree[i] = value
+          while i > 1:
+              i //= 2
+              tree[i] = min(tree[2 * i], tree[2 * i + 1])
+
+      def query(l, r):  # [l, r)
+          best = INF
+          l += size
+          r += size
+          while l < r:
+              if l & 1:
+                  best = min(best, tree[l]); l += 1
+              if r & 1:
+                  r -= 1; best = min(best, tree[r])
+              l //= 2; r //= 2
+          return best
+    self_check: 수열 길이 8 에서 구간 [1, 6) 의 최솟값을 구할 때 합치는 노드를 적어 보세요.
+
+  - skill_code: SEGMENT_TREE_LAZY
+    title: 구간 갱신을 미뤄 두기
+    summary: 구간 전체에 더하는 갱신은 그 구간을 완전히 덮는 노드에 "아직 자식에게 내려보내지 않은 값" 으로 적어 두고, 그 노드 아래로 내려갈 일이 생길 때 내려보낸다.
+    key_points:
+      - 노드마다 구간 합과 미뤄 둔 더하기 값(lazy)을 함께 둔다.
+      - 노드 구간이 갱신 구간에 완전히 들어가면 합에 (값 × 길이) 를 더하고 lazy 에 값을 쌓은 뒤 멈춘다.
+      - 부분적으로 겹치면 먼저 lazy 를 자식에게 내려보내고(push) 두 자식으로 내려간다.
+      - 갱신 하나가 원소 수만큼이 아니라 O(log N) 개의 노드만 건드린다.
+    example: |
+      def apply(node, length, value):
+          total[node] += value * length
+          lazy[node] += value
+
+      def push(node, left_len, right_len):
+          if lazy[node]:
+              apply(2 * node, left_len, lazy[node])
+              apply(2 * node + 1, right_len, lazy[node])
+              lazy[node] = 0
+
+      def update(node, lo, hi, l, r, value):  # [lo, hi) 노드, [l, r) 갱신
+          if r <= lo or hi <= l:
+              return
+          if l <= lo and hi <= r:
+              apply(node, hi - lo, value)
+              return
+          mid = (lo + hi) // 2
+          push(node, mid - lo, hi - mid)
+          update(2 * node, lo, mid, l, r, value)
+          update(2 * node + 1, mid, hi, l, r, value)
+          total[node] = total[2 * node] + total[2 * node + 1]
+    self_check: 구간 [0, 8) 에 3 을 더한 직후, 루트 아래 어느 노드에 lazy 가 남는지 설명해 보세요.
+
+  - skill_code: FENWICK_PREFIX_SUM
+    title: 가장 낮은 1 비트로 나눈 누적 합
+    summary: i 번 칸이 (i - (i & -i), i] 구간의 합을 갖게 두면, 접두사 합은 i 에서 가장 낮은 1 비트를 빼며 O(log N) 칸을 더하고, 갱신은 가장 낮은 1 비트를 더하며 O(log N) 칸을 고친다.
+    key_points:
+      - 인덱스는 1 부터 쓴다. 0 은 가장 낮은 1 비트가 없어 멈추지 않는다.
+      - 구간 [l, r] 의 합은 prefix(r) - prefix(l - 1) 이다 - 합은 빼서 되돌릴 수 있다.
+      - 값을 v 로 "바꾸는" 갱신은 차이(v - 지금 값)를 더하는 것이다. 지금 값을 따로 들고 있어야 한다.
+    example: |
+      tree = [0] * (n + 1)
+
+      def add(i, delta):  # 1-indexed
+          while i <= n:
+              tree[i] += delta
+              i += i & -i
+
+      def prefix(i):
+          s = 0
+          while i > 0:
+              s += tree[i]
+              i -= i & -i
+          return s
+    self_check: n = 8 일 때 add(3, 5) 가 고치는 칸과 prefix(7) 이 더하는 칸을 적어 보세요.
+
+  - skill_code: SCC_DECOMPOSITION
+    title: 서로 오갈 수 있는 정점 묶기
+    summary: 방향 그래프에서 서로 도달할 수 있는 정점끼리 묶으면 묶음 사이의 간선은 사이클이 없는 그래프가 된다. 한 번 DFS 로 끝나는 순서를 얻고, 간선을 뒤집은 그래프에서 끝난 순서의 역순으로 DFS 하면 한 번에 한 묶음씩 나온다(코사라주).
+    key_points:
+      - 첫 DFS 는 정점이 끝나는 순서를 기록한다. 가장 늦게 끝난 정점은 "출발점 쪽" 묶음에 있다.
+      - 뒤집은 그래프에서는 그 묶음 밖으로 나가는 간선이 모두 막혀, DFS 한 번이 정확히 한 묶음을 돈다.
+      - 정점이 많으면 재귀 깊이가 한계를 넘는다 - 스택으로 반복 DFS 를 쓴다.
+      - 한 번의 DFS 로 low-link 를 이용하는 타잔 방법도 같은 결과를 낸다.
+    example: |
+      order, seen = [], [False] * n
+      for s in range(n):
+          if seen[s]:
+              continue
+          seen[s] = True
+          stack = [(s, 0)]
+          while stack:
+              v, i = stack.pop()
+              if i < len(graph[v]):
+                  stack.append((v, i + 1))
+                  w = graph[v][i]
+                  if not seen[w]:
+                      seen[w] = True
+                      stack.append((w, 0))
+              else:
+                  order.append(v)
+      comp = [-1] * n
+      count = 0
+      for s in reversed(order):
+          if comp[s] != -1:
+              continue
+          comp[s] = count
+          stack = [s]
+          while stack:
+              v = stack.pop()
+              for w in reverse[v]:
+                  if comp[w] == -1:
+                      comp[w] = count
+                      stack.append(w)
+          count += 1
+    self_check: 간선 1→2, 2→3, 3→1, 3→4 인 그래프의 강한 연결 요소와 묶음 사이의 간선을 적어 보세요.

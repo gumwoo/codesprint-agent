@@ -329,3 +329,32 @@ prerequisites:
   - skill: CONVEX_HULL
     requires: SORT_CUSTOM_KEY
     minimum_mastery: 0.65
+
+  # W9a · ADVANCED 구간 트리 · SCC (ADR-0046)
+  - skill: SEGMENT_TREE_RANGE_QUERY
+    requires: DIVIDE_AND_CONQUER
+    minimum_mastery: 0.65
+
+  - skill: SEGMENT_TREE_RANGE_QUERY
+    requires: PREFIX_SUM
+    minimum_mastery: 0.65
+
+  - skill: SEGMENT_TREE_LAZY
+    requires: SEGMENT_TREE_RANGE_QUERY
+    minimum_mastery: 0.65
+
+  - skill: SEGMENT_TREE_LAZY
+    requires: DIFFERENCE_ARRAY
+    minimum_mastery: 0.65
+
+  - skill: FENWICK_PREFIX_SUM
+    requires: PREFIX_SUM
+    minimum_mastery: 0.65
+
+  - skill: SCC_DECOMPOSITION
+    requires: DFS_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: SCC_DECOMPOSITION
+    requires: TOPOLOGICAL_ORDER
+    minimum_mastery: 0.65

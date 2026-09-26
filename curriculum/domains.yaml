@@ -231,13 +231,13 @@ domains:
     order: 36
     name: Segment Tree
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: FENWICK_TREE
     order: 37
     name: Fenwick Tree
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: SWEEP_LINE
     order: 38
@@ -255,7 +255,7 @@ domains:
     order: 40
     name: SCC / Articulation / Bridge
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: FLOW
     order: 41
