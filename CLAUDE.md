@@ -287,6 +287,8 @@ scripts/local.sh worker     # 터미널 2
 서버가 세고(예측 · 점수 없음, 시험 중 409), 시험 모드에서 최근 7 일 안에 본 모의 시험이 없으면 계획이 모의 시험
 블록을 준다. 포기 기준은 문제의 기대 풀이 시간이다. PRD 의 Evaluator 는 LLM 이 아니라 결과를 반영하는 시스템
 (`JudgeResultApplier` 등)이다.
+Explain Back([ADR-0050](docs/adr/0050-explain-back-is-analysed-and-not-recorded.md))은 **푼 문제만** 받고, 분석(짚은 점 · 빠진 점)은
+LLM 의 주장이라 어디에도 기록하지 않는다. 기본은 꺼져 있다(`CODESPRINT_EXPLAIN_ENABLED`).
 
 **오늘의 계획도 결정이다**([ADR-0038](docs/adr/0038-the-plan-is-decided-not-generated.md)). PRD 가 Planner 를
 Agent 로 불러도 LLM 을 부르지 않는다 - `DailyPlanner` 가 Skill 상태 · 만기 복습 · 진단 · 하루 시간 ·

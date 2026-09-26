@@ -58,6 +58,9 @@ val generatorPromptSource = rootProject.projectDir.parentFile.resolve("generator
 // Tutor 의 프롬프트(ADR-0044). 같은 prompts/ 로 굽는다 - 이름(tutor-v1)으로 갈린다.
 val tutorPromptSource = rootProject.projectDir.parentFile.resolve("tutor/prompts")
 
+// Explain Back 의 프롬프트(ADR-0050). 같은 prompts/ 로 굽는다 - 이름(explain-v1)으로 갈린다.
+val explainPromptSource = rootProject.projectDir.parentFile.resolve("explain/prompts")
+
 // Reviewer 요청용 계약. 프롬프트에 그대로 넣으므로 런타임에 필요하다 -
 // 스키마를 손으로 옮겨 적으면 계약과 프롬프트가 갈라지고, 그때 모델은 프롬프트를 따른다.
 val contractSource = rootProject.projectDir.parentFile.resolve("contracts")
@@ -79,16 +82,21 @@ tasks.named<ProcessResources>("processResources") {
         into("prompts")
         include("*.md")
     }
+    from(explainPromptSource) {
+        into("prompts")
+        include("*.md")
+    }
     from(contractSource) {
         into("contracts")
         include("reviewer-output.llm.schema.json", "problem-draft.llm.schema.json",
-                "tutor-answer.llm.schema.json")
+                "tutor-answer.llm.schema.json", "explain-back.llm.schema.json")
     }
     // 커리큘럼이나 프롬프트가 바뀌면 다시 굽는다.
     inputs.dir(curriculumSource)
     inputs.dir(promptSource)
     inputs.dir(generatorPromptSource)
     inputs.dir(tutorPromptSource)
+    inputs.dir(explainPromptSource)
     inputs.dir(contractSource)
 }
 

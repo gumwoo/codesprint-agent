@@ -272,6 +272,19 @@
       <dl id="judge"></dl>
       <div id="review"></div>
       <div id="nextAction"></div>
+      <!--
+        Explain Back(PRD §148, ADR-0050). 푼 문제에서만 열린다. 질문은 서버가 정하고, 분석은 기록되지 않는다 -
+        점수도 다음 행동도 바뀌지 않는다.
+      -->
+      <div class="hints" id="explainBox" hidden>
+        <h3>설명해 보기</h3>
+        <p class="note">왜 이 풀이가 통하는지 두 문장으로 쓴다. 분석은 기록에 남지 않는다.</p>
+        <textarea id="explainText" rows="3" maxlength="1000"
+                  placeholder="이 문제에서 이 방법이 통하는 이유"></textarea>
+        <button type="button" id="explainSend">설명 보내기</button>
+        <p class="note" id="explainNote"></p>
+        <div id="explainAnswer"></div>
+      </div>
     </div>
   </section>
 </main>

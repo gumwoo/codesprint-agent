@@ -822,6 +822,7 @@ async function openMockProblem(mockTestId, label) {
   resetHints();
   $("hintsBox").hidden = true;
   resetTutor();
+  resetExplain();
   showLeft("statementBody");
   $("submitButton").disabled = false;
   $("runButton").disabled = false;
@@ -936,6 +937,90 @@ function applyTutorVisibility() {
   $("tutorBox").hidden = !(currentLearningMode === "FREE" && tutorSkill());
 }
 
+// -- Explain Back ------------------------------------------------------
+//
+// PRD §148, ADR-0050. 푼 문제(ACCEPTED)의 결과 아래에만 연다. 분석은 LLM 의 주장이고 기록되지 않는다 -
+// 화면은 서버가 준 짚은 점 · 빠진 점을 옮길 뿐, 설명을 채점하지 않는다.
+
+// 설명할 문제. ACCEPTED 결과를 그릴 때 정한다 - 보내는 순간의 currentProblem 이 아니라 그 결과의 문제다.
+let explainTarget = null;
+
+function resetExplain() {
+  // 앞 문제의 설명과 분석을 남기지 않는다. 진행 중인 요청도 놓는다.
+  invalidateView("explain");
+  explainTarget = null;
+  $("explainText").value = "";
+  $("explainNote").textContent = "";
+  $("explainAnswer").replaceChildren();
+  $("explainBox").hidden = true;
+}
+
+function openExplain(problemCode) {
+  resetExplain();
+  explainTarget = problemCode;
+  $("explainBox").hidden = false;
+}
+
+async function sendExplain() {
+  const userId = Number($("userId").value);
+  const code = explainTarget;
+  const explanation = $("explainText").value.trim();
+  if (!userId || !code || !explanation) {
+    $("explainNote").textContent = "설명을 쓴다.";
+    return;
+  }
+  const mine = claimView("explain");
+  $("explainNote").textContent = "읽는 중…";
+  let response;
+  try {
+    response = await fetch(`/api/problems/${code}/explanations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, explanation }),
+    });
+  } catch (error) {
+    response = null;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!response || !response.ok) {
+    // 서버가 준 이유를 그대로 보여 준다 - 꺼짐 · 풀지 않음 · 시험 중 · 쓸 수 없는 답.
+    const body = response ? await response.json().catch(() => ({})) : {};
+    if (mine()) {
+      $("explainNote").textContent = `분석을 받지 못했다 (${response ? response.status : "연결 실패"})`
+          + (body.message ? `: ${body.message}` : "");
+    }
+    return;
+  }
+  const analysis = await response.json();
+  if (!mine()) {
+    return;
+  }
+  $("explainNote").textContent = `${analysis.question} · ${analysis.promptVersion} · 기록에 남지 않는다`;
+  const box = $("explainAnswer");
+  box.replaceChildren();
+  for (const [label, items] of [["짚은 점", analysis.coveredPoints],
+      ["빠진 점", analysis.missingPoints]]) {
+    const line = document.createElement("p");
+    line.className = "what";
+    line.textContent = `${label}: ${items.length ? items.join(" · ") : "–"}`;
+    box.append(line);
+  }
+  if (analysis.misconception) {
+    const wrong = document.createElement("p");
+    wrong.className = "what";
+    wrong.textContent = `잘못 이해한 점: ${analysis.misconception}`;
+    box.append(wrong);
+  }
+  if (analysis.followUpQuestion) {
+    const check = document.createElement("p");
+    check.className = "concept-check";
+    check.textContent = `스스로 확인: ${analysis.followUpQuestion}`;
+    box.append(check);
+  }
+}
+
 function resetTutor() {
   // 앞 문제의 질문과 답을 남기지 않는다. 진행 중인 질문도 놓는다.
   invalidateView("tutor");
@@ -1026,8 +1111,9 @@ function switchedUser() {
   // 띄워 둔 힌트도 이전 사용자가 연 것이다. 새 사용자는 그 문제에서 아직
   // 아무것도 보지 않았는데, 남겨 두면 본 것처럼 보이고 채점 기록과 어긋난다.
   resetHints();
-  // 자유 질문의 답도 이전 사용자의 것이다.
+  // 자유 질문의 답도 이전 사용자의 것이다. 설명 분석도 마찬가지다.
   resetTutor();
+  resetExplain();
 
   remember($("userId").value);
   refreshUserTrack();
@@ -1365,6 +1451,7 @@ async function openProblem(code) {
   currentProblem = opened;
   $("hintsBox").hidden = false;
   resetTutor();
+  resetExplain();
   const conceptBox = $("problemConcept");
   conceptBox.replaceChildren();
   if (opened.concept) {
@@ -1839,6 +1926,12 @@ function renderVerdict(verdict) {
 function render(submissionId, view) {
   const result = view.result;
   const passed = result.judge.status === "ACCEPTED";
+  // 푼 문제면 설명해 보기를 연다(PRD §148). 시험 문제는 이 경로로 그려지지 않는다(renderVerdict).
+  if (passed && currentProblem && !currentProblem.mockTestId) {
+    openExplain(currentProblem.code);
+  } else {
+    resetExplain();
+  }
 
   $("submitNote").hidden = true;
   const state = $("state");
@@ -2193,6 +2286,7 @@ $("mockStart").addEventListener("click", startMock);
 $("learningMode").addEventListener("change", saveLearningMode);
 $("language").addEventListener("change", showLanguage);
 $("tutorAsk").addEventListener("click", askTutor);
+$("explainSend").addEventListener("click", sendExplain);
 $("saveSettings").addEventListener("click", saveSettings);
 $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);

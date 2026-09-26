@@ -478,6 +478,53 @@ test("늦게 온 자유 질문의 답이 다른 문제 화면에 붙지 않는�
   await expect(page.locator("#tutorAnswer")).toBeEmpty();
 });
 
+test("늦게 온 설명 분석이 다른 문제 화면에 붙지 않는다", async ({ page }) => {
+  // ADR-0050. 분석은 푼 그 문제에 대한 것이다. P02 를 풀고 보낸 설명의 분석이 P03 을 연 뒤에 오면
+  // P03 화면에 붙어, 사용자는 그것을 P03 에 대한 분석으로 읽는다.
+  const slow = gate();
+  const solved = finished(1, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL", "다음");
+  solved.result.judge = { status: "ACCEPTED", passed: 6, total: 6, executionMs: 90,
+    memoryKb: 20480, failedCaseId: null, stderr: null };
+  await stubApi(page);
+  await page.route("**/api/problems/*/submit", (route) => fulfill(route, accepted(1), 202));
+  await page.route("**/api/submissions/1", (route) => fulfill(route, solved));
+  await page.route("**/api/problems/*/explanations", async (route) => {
+    await slow.held;
+    await fulfill(route, { problemCode: "P02_GRID_TRAVERSAL", skillCode: "BFS_GRID_TRAVERSAL",
+      question: "왜 이 문제에서 격자 BFS 이(가) 통하는지 두 문장으로 설명해 보세요.",
+      coveredPoints: ["P02 에 대한 늦은 분석"], missingPoints: [], misconception: null,
+      followUpQuestion: null, promptVersion: "explain-v1" });
+  });
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#submitButton");
+  await expect(page.locator("#explainBox")).toBeVisible();
+  await page.fill("#explainText", "방문 표시를 큐에 넣을 때 한다.");
+  await page.click("#explainSend");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/problems/P02_GRID_TRAVERSAL/explanations");
+  await expect(page.locator("#explainAnswer")).toBeEmpty();
+  await expect(page.locator("#explainBox")).toBeHidden();
+});
+
+test("설명해 보기는 푼 결과에서만 열린다", async ({ page }) => {
+  // 풀기 전에 설명을 분석해 주면 빠진 요점이 힌트 사다리 밖의 힌트가 된다(서버도 409 로 막는다).
+  await stubApi(page);
+  await page.route("**/api/problems/*/submit", (route) => fulfill(route, accepted(1), 202));
+  await page.route("**/api/submissions/1", (route) => fulfill(route,
+      finished(1, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL", "구현 연습이 더 필요하다")));
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#submitButton");
+  await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
+  await expect(page.locator("#explainBox")).toBeHidden();
+});
+
 /** 검증 에이전트가 재현한 학습 모드 · 시험 끝내기 경합(PR #52). */
 function modeUser(mode) {
   return { userId: 1, nickname: "v", track: "JOB", dailyMinutes: null, examDate: null,
