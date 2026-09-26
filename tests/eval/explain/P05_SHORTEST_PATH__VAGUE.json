@@ -1,7 +1,7 @@
 {
   "problemCode": "P05_SHORTEST_PATH",
   "label": "VAGUE",
-  "explanation": "최단거리니까 BFS 다. 가까운 곳부터 보면 된다.",
+  "explanation": "BFS 로 풀었다. 큐를 써서 차례대로 처리했다.",
   "omittedPoint": null,
   "plantedMisconception": null
 }

@@ -61,4 +61,5 @@ Evaluator 는 시스템이다(ADR-0049) - 자유로운 문장을 읽는 것은 L
   기록되지 않으므로 틀린 분석이 학습 경로를 바꾸지는 않는다
 - 질문이 Skill 이름 하나로 만든 한 문장이라, 섞인 문제(SKILL_COMPOSITION)에서는 "기법을 골라 잇기" 가 무엇이 통하는
   지로 묻기에 어색하다
-- 실제 모델로 분석 품질을 잰 적은 없다 - Reviewer 처럼 라벨된 정답지가 없다
+- 실제 모델로 분석 품질을 잰 적은 없다 - Reviewer 처럼 라벨된 정답지가 없다. → 무엇을 심었는지 적은 설명으로 쟀다
+  ([ADR-0052](0052-explain-back-is-measured-with-planted-explanations.md))

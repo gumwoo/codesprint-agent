@@ -1,7 +1,7 @@
 {
   "problemCode": "P02_GRID_TRAVERSAL",
   "label": "MISSING",
-  "explanation": "(0, 0) 에서 BFS 로 상하좌우 이웃을 넓혀 가며 닿는 칸을 센다. 이웃마다 격자 안인지, 1 인지, 이미 방문했는지를 확인하고 처음 방문하는 칸만 큐에 넣으면 각 칸을 한 번씩만 센다.",
+  "explanation": "(0, 0) 에서 BFS 로 상하좌우 이웃을 넓혀 가며 닿는 칸을 센다. 이웃마다 격자 안인지, 1 인지, 이미 방문했는지를 확인하고 처음 방문하는 칸만 큐에 넣으므로 각 칸을 한 번씩만 세며, 거리는 필요 없어 방문 여부만 기록한다.",
   "omittedPoint": 0,
   "plantedMisconception": null
 }

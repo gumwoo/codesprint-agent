@@ -1,7 +1,7 @@
 {
   "problemCode": "P02_GRID_TRAVERSAL",
   "label": "VAGUE",
-  "explanation": "격자 문제는 BFS 로 풀면 된다. 그래서 BFS 를 썼다.",
+  "explanation": "BFS 를 썼다. 그렇게 하니 예제가 맞게 나왔다.",
   "omittedPoint": null,
   "plantedMisconception": null
 }

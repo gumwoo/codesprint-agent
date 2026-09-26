@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +31,12 @@ class ExplainEvalCasesTest {
             Path.of(System.getProperty("codesprint.repoRoot")).resolve("problems").toString());
     private static final CurriculumCatalog CURRICULUM = new CurriculumCatalog();
 
+    /** 저장소의 개념 자료. 규칙 하나를 시험할 때 이것만 갈아 끼운다. */
+    private static final Function<String, List<String>> REAL_POINTS = skill -> {
+        var concept = CURRICULUM.concept(skill);
+        return concept == null ? null : concept.keyPoints();
+    };
+
     @Test
     @DisplayName("저장소의 평가 설명은 전부 규칙을 지키고, 라벨마다 하나 이상 있다")
     void everyCaseIsUsable() {
@@ -45,8 +52,7 @@ class ExplainEvalCasesTest {
         assertThat(seen).as("라벨마다 케이스가 있다").isEqualTo(ExplainEvaluation.labels());
     }
 
-    /** 규칙마다 그것 하나만 어긴 케이스를 만들어, 검사가 실제로 잡는지 본다. */
-    private static List<String> broken(String label, Consumer<ObjectNode> breakIt) {
+    private static ObjectNode valid(String label) {
         ObjectNode node = MAPPER.createObjectNode()
                 .put("problemCode", "P02_GRID_TRAVERSAL")
                 .put("label", label)
@@ -59,29 +65,69 @@ class ExplainEvalCasesTest {
         if (label.equals("MISCONCEPTION")) {
             node.put("plantedMisconception", "틀린 주장");
         }
-        String before = "P02_GRID_TRAVERSAL__" + label + ".json";
-        assertThat(ExplainEvaluation.issues(before, node, PROBLEMS, CURRICULUM))
+        return node;
+    }
+
+    /**
+     * 규칙 하나만 어긴 케이스의 검사 결과. <b>파일 이름은 망가뜨린 뒤의 문제 · 라벨로 다시 짓는다</b> - 그대로 두면
+     * 문제 코드를 바꾼 케이스가 파일 이름 규칙에 먼저 걸려, 없는 문제 검사를 지워도 통과했다(검증 에이전트).
+     */
+    private static List<String> broken(String label, Consumer<ObjectNode> breakIt,
+            Function<String, List<String>> keyPoints) {
+        ObjectNode node = valid(label);
+        assertThat(ExplainEvaluation.issues(name(node), node, PROBLEMS, REAL_POINTS))
                 .as("망가뜨리기 전 " + label).isEmpty();
         breakIt.accept(node);
-        return ExplainEvaluation.issues(before, node, PROBLEMS, CURRICULUM);
+        return ExplainEvaluation.issues(name(node), node, PROBLEMS, keyPoints);
+    }
+
+    private static List<String> broken(String label, Consumer<ObjectNode> breakIt) {
+        return broken(label, breakIt, REAL_POINTS);
+    }
+
+    private static String name(ObjectNode node) {
+        return node.path("problemCode").asText() + "__" + node.path("label").asText() + ".json";
     }
 
     @Test
-    @DisplayName("정답지 검사가 규칙마다 실제로 잡는다")
+    @DisplayName("정답지 검사가 규칙마다 그 규칙의 이유로 잡는다")
     void theCaseCheckCatchesEachRule() {
-        assertThat(broken("SOUND", n -> n.remove("omittedPoint"))).as("null 필드 생략").isNotEmpty();
-        assertThat(broken("SOUND", n -> n.put("label", "GOOD"))).as("모르는 라벨").isNotEmpty();
-        assertThat(broken("SOUND", n -> n.put("label", "VAGUE"))).as("파일 이름과 라벨이 다르다").isNotEmpty();
-        assertThat(broken("SOUND", n -> n.put("problemCode", "P999_NONE"))).as("없는 문제").isNotEmpty();
-        assertThat(broken("SOUND", n -> n.put("explanation", " "))).as("빈 설명").isNotEmpty();
+        assertThat(broken("SOUND", n -> n.remove("omittedPoint"))).as("null 필드 생략")
+                .containsExactly("omittedPoint 가 없다");
+        assertThat(broken("SOUND", n -> n.put("label", "GOOD"))).as("모르는 라벨")
+                .containsExactly("모르는 라벨 GOOD");
+        assertThat(broken("SOUND", n -> n.put("problemCode", "P999_NONE"))).as("없는 문제")
+                .containsExactly("없는 문제 P999_NONE");
+        assertThat(broken("SOUND", n -> { }, skill -> null)).as("개념 자료가 없는 Skill")
+                .singleElement().asString().contains("개념 자료가 없다");
+        assertThat(broken("SOUND", n -> n.put("explanation", " "))).as("빈 설명")
+                .singleElement().asString().startsWith("설명은 1~");
+        assertThat(broken("SOUND", n -> n.put("explanation", "가".repeat(1001)))).as("1000 자 초과")
+                .singleElement().asString().startsWith("설명은 1~");
         assertThat(broken("MISSING", n -> n.putNull("omittedPoint"))).as("MISSING 인데 뺀 요점이 없다")
-                .isNotEmpty();
-        assertThat(broken("MISSING", n -> n.put("omittedPoint", 99))).as("없는 요점 번호").isNotEmpty();
-        assertThat(broken("SOUND", n -> n.put("omittedPoint", 0))).as("SOUND 에 뺀 요점").isNotEmpty();
+                .singleElement().asString().startsWith("MISSING 은 개념 자료 요점의 번호");
+        assertThat(broken("MISSING", n -> n.put("omittedPoint", 99))).as("없는 요점 번호")
+                .singleElement().asString().startsWith("MISSING 은 개념 자료 요점의 번호");
+        assertThat(broken("MISSING", n -> n.put("omittedPoint", -1))).as("음수 요점 번호")
+                .singleElement().asString().startsWith("MISSING 은 개념 자료 요점의 번호");
+        assertThat(broken("SOUND", n -> n.put("omittedPoint", 0))).as("SOUND 에 뺀 요점")
+                .containsExactly("SOUND 은 omittedPoint 가 null 이다");
         assertThat(broken("MISCONCEPTION", n -> n.putNull("plantedMisconception")))
-                .as("MISCONCEPTION 인데 심은 것이 없다").isNotEmpty();
+                .as("MISCONCEPTION 인데 심은 것이 없다")
+                .singleElement().asString().startsWith("MISCONCEPTION 은 심은 틀린 주장을");
+        assertThat(broken("MISCONCEPTION", n -> n.put("plantedMisconception", "  ")))
+                .as("MISCONCEPTION 인데 심은 것이 공백")
+                .singleElement().asString().startsWith("MISCONCEPTION 은 심은 틀린 주장을");
         assertThat(broken("VAGUE", n -> n.put("plantedMisconception", "x"))).as("VAGUE 에 심은 오개념")
-                .isNotEmpty();
+                .containsExactly("VAGUE 은 plantedMisconception 이 null 이다");
+    }
+
+    @Test
+    @DisplayName("파일 이름이 문제 · 라벨과 다르면 잡는다")
+    void theFileNameMustMatch() {
+        ObjectNode node = valid("SOUND");
+        assertThat(ExplainEvaluation.issues("P02_GRID_TRAVERSAL__VAGUE.json", node, PROBLEMS, REAL_POINTS))
+                .containsExactly("파일 이름이 <문제>__<라벨>.json 이 아니다");
     }
 
     private static ExplainEvaluation.Outcome outcome(String label, String misconception) {
@@ -105,8 +151,10 @@ class ExplainEvalCasesTest {
         assertThat(ExplainEvaluation.verdict(List.of(outcome("MISCONCEPTION", "틀렸다")))).isZero();
         assertThat(ExplainEvaluation.verdict(List.of(outcome("VAGUE", "틀렸다")))).isZero();
         assertThat(ExplainEvaluation.verdict(List.of(outcome("SOUND", null)))).isZero();
-        // 빈 문자열은 붙이지 않은 것이다 - 화면에 아무것도 나오지 않는다.
-        assertThat(ExplainEvaluation.verdict(List.of(outcome("SOUND", " ")))).isZero();
+        // 화면과 같은 기준이다(app.js 의 if (analysis.misconception)). 빈 문자열은 그리지 않으므로 붙이지 않은 것이고,
+        // 공백 한 칸은 "잘못 이해한 점: " 줄을 그리므로 붙인 것이다.
+        assertThat(ExplainEvaluation.verdict(List.of(outcome("SOUND", "")))).isZero();
+        assertThat(ExplainEvaluation.verdict(List.of(outcome("SOUND", " ")))).isEqualTo(1);
     }
 
     @Test

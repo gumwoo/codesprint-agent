@@ -77,9 +77,13 @@ public final class ExplainEvaluation {
             return analysis != null;
         }
 
+        /**
+         * 화면과 같은 기준으로 센다 - 화면은 {@code if (analysis.misconception)} 이라 빈 문자열만 숨기고 공백 한 칸은
+         * "잘못 이해한 점: " 줄을 그린다. 여기서 공백을 "붙이지 않음" 으로 세면 사용자가 본 것과 평가가 갈린다.
+         */
         boolean flagsMisconception() {
             return analysis != null && analysis.misconception() != null
-                    && !analysis.misconception().isBlank();
+                    && !analysis.misconception().isEmpty();
         }
 
         /** 맞게 이해한 설명에 "잘못 이해한 점" 을 붙였다. <b>이것이 일어나면 안 된다.</b> */
@@ -231,6 +235,15 @@ public final class ExplainEvaluation {
      */
     static List<String> issues(String file, JsonNode node, ProblemCatalog problems,
             CurriculumCatalog curriculum) {
+        return issues(file, node, problems, skill -> {
+            var concept = curriculum.concept(skill);
+            return concept == null ? null : concept.keyPoints();
+        });
+    }
+
+    /** @param keyPointsOf Skill 코드 → 개념 자료 요점. 자료가 없으면 null. 테스트가 갈아 끼운다 */
+    static List<String> issues(String file, JsonNode node, ProblemCatalog problems,
+            java.util.function.Function<String, List<String>> keyPointsOf) {
         List<String> issues = new ArrayList<>();
         for (String field : List.of("problemCode", "label", "explanation", "omittedPoint",
                 "plantedMisconception")) {
@@ -258,8 +271,8 @@ public final class ExplainEvaluation {
             issues.add("없는 문제 " + code);
             return issues;
         }
-        var concept = curriculum.concept(problem.primarySkill());
-        if (concept == null) {
+        List<String> keyPoints = keyPointsOf.apply(problem.primarySkill());
+        if (keyPoints == null) {
             issues.add(problem.primarySkill() + " 의 개념 자료가 없다 - 무엇이 빠졌는지 말할 근거가 없다");
             return issues;
         }
@@ -270,8 +283,8 @@ public final class ExplainEvaluation {
         JsonNode omitted = node.get("omittedPoint");
         JsonNode planted = node.get("plantedMisconception");
         if (label == Label.MISSING) {
-            if (!omitted.isInt() || omitted.asInt() < 0 || omitted.asInt() >= concept.keyPoints().size()) {
-                issues.add("MISSING 은 개념 자료 요점의 번호(0~" + (concept.keyPoints().size() - 1)
+            if (!omitted.isInt() || omitted.asInt() < 0 || omitted.asInt() >= keyPoints.size()) {
+                issues.add("MISSING 은 개념 자료 요점의 번호(0~" + (keyPoints.size() - 1)
                         + ")를 omittedPoint 에 적는다");
             }
         } else if (!omitted.isNull()) {
