@@ -1,0 +1,11 @@
+{
+  "id": "INTERVAL_SWEEP-1790378226676-1",
+  "skill": "INTERVAL_SWEEP",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:31:48+00:00",
+  "code": "P106_INTERVAL_COVER_AT_LEAST_K",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, k = int(data[0]), int(data[1])\n    intervals = []\n    for i in range(n):\n        intervals.append((int(data[2 + 2 * i]), int(data[3 + 2 * i])))\n    points = sorted(set(p for iv in intervals for p in iv))\n    total = 0\n    for j in range(len(points) - 1):\n        a, b = points[j], points[j + 1]\n        count = 0\n        for s, e in intervals:\n            if s <= a and b <= e:\n                count += 1\n        if count >= k:\n            total += b - a\n    print(total)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrnd = random.Random(seed)\nn = rnd.randint(1, 8)\nk = rnd.randint(1, n)\nlines = [f\"{n} {k}\"]\nfor _ in range(n):\n    s = rnd.randint(0, 19)\n    e = rnd.randint(s + 1, 20)\n    lines.append(f\"{s} {e}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nrnd = random.Random(20260926)\nn = 40000\nk = 4400\nlines = [f\"{n} {k}\"]\nfor _ in range(n):\n    s = rnd.randrange(0, 90000000)\n    e = s + rnd.randrange(1, 20000000)\n    lines.append(f\"{s} {e}\")\nprint(\"\\n\".join(lines))\n"
+}

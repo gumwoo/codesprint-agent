@@ -1,0 +1,11 @@
+{
+  "id": "SMALLEST_PRIME_FACTOR-1790377995391-1",
+  "skill": "SMALLEST_PRIME_FACTOR",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:33:53+00:00",
+  "code": "P111_DIVISOR_COUNT_QUERIES",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for k in range(1, q + 1):\n        x = int(data[k])\n        cnt = 0\n        d = 1\n        while d * d <= x:\n            if x % d == 0:\n                cnt += 1 if d * d == x else 2\n            d += 1\n        out.append(cnt)\n    print(\"\\n\".join(map(str, out)))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nq = rng.randint(1, 30)\nxs = []\nfor _ in range(q):\n    kind = rng.randint(0, 3)\n    if kind == 0:\n        x = rng.randint(1, 100)\n    elif kind == 1:\n        x = rng.randint(1, 10**6)\n    elif kind == 2:\n        x = rng.choice([2, 3, 5, 7, 11]) ** rng.randint(1, 5) * rng.randint(1, 50)\n    else:\n        x = rng.randint(1, 1000) ** 2\n    xs.append(min(x, 10**6))\nprint(q)\nprint(\"\\n\".join(map(str, xs)))\n",
+  "stressInputGenerator": "import random\n\nN = 10**6\nrng = random.Random(20260926)\nspf = list(range(N + 1))\nfor i in range(2, 1001):\n    if spf[i] == i:\n        for j in range(i * i, N + 1, i):\n            if spf[j] == j:\n                spf[j] = i\nhard = [x for x in range(200000, N + 1) if spf[x] > 300]\nchosen = set(rng.sample(hard, min(len(hard), 80000)))\nwhile len(chosen) < 100000:\n    chosen.add(rng.randint(1, N))\nvals = sorted(chosen)\nrng.shuffle(vals)\nprint(len(vals))\nprint(\"\\n\".join(map(str, vals)))\n"
+}

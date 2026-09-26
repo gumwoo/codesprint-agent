@@ -1,0 +1,78 @@
+{
+  "id": "CONVEX_HULL-1790378430808-2",
+  "skill": "CONVEX_HULL",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:31:23+00:00",
+  "stage": "중복",
+  "code": "P105_RUBBER_BAND_AREA",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P104_FENCE_CORNERS 에 포함된다 - 볼록 껍질 넓이의 2 배는 P104 가 모서리 수와 함께 이미 묻는다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "RUBBER_BAND_AREA",
+    "title": "고무줄이 두른 넓이",
+    "statement": "판 위에 못 N개가 박혀 있다. 못 전체를 바깥에서 감싸도록 고무줄을 크게 벌렸다가 놓으면, 고무줄은 모든 못을 안쪽 또는 줄 위에 둔 채 가장 팽팽하게 당겨진 모양이 된다. 이 모양은 모든 못을 안쪽 또는 테두리 위에 두는 볼록 다각형 가운데 넓이가 가장 작은 것이다. 고무줄이 둘러싼 영역의 넓이의 2배를 출력한다. 넓이의 2배는 항상 정수다.\n\n여러 못이 같은 자리에 있을 수 있다. 서로 다른 자리가 하나뿐이거나 모든 못이 한 직선 위에 있으면 둘러싼 영역이 없으므로 0을 출력한다.\n\n예: 못이 (0,0), (4,0), (4,3), (0,3), (2,1), (1,2)에 있으면 고무줄은 가로 4, 세로 3인 직사각형이 되고 넓이는 12이므로 24를 출력한다.\n\n입력 형식\n- 첫 줄에 정수 N (1 ≤ N ≤ 50000)\n- 다음 N줄에 각 못의 좌표 x y (정수, -1000000 ≤ x, y ≤ 1000000)\n\n출력 형식\n- 고무줄이 둘러싼 넓이의 2배를 정수 하나로 한 줄에 출력한다.\n\n못에 번호를 매기지 않으며 출력에 인덱스는 쓰이지 않는다.",
+    "secondarySkills": [
+      "CCW_ORIENTATION"
+    ],
+    "referenceComplexity": "O(N log N)",
+    "expectedSolveSeconds": 1200,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "INPUT_PARSE",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "첫 줄의 N 까지 좌표로 읽어 모든 점의 x, y 가 한 칸씩 밀린다.",
+    "sampleInputs": [
+      "6\n0 0\n4 0\n4 3\n0 3\n2 1\n1 2\n",
+      "5\n0 0\n2 2\n4 4\n1 3\n3 1\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "SINGLE",
+        "input": "1\n5 -7\n"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "4\n3 3\n3 3\n3 3\n3 3\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "5\n-1000000 -1000000\n0 0\n1000000 1000000\n500000 500000\n-3 -3\n"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "4\n-1000000 -1000000\n1000000 -1000000\n1000000 1000000\n-1000000 1000000\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "7\n0 0\n0 0\n5 0\n10 0\n10 10\n0 10\n5 10\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "6\n0 0\n2 0\n4 0\n2 2\n1 1\n3 1\n"
+      }
+    ],
+    "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 30)\nlim = rng.choice([3, 10, 1000000])\nprint(n)\nfor _ in range(n):\n    print(rng.randint(-lim, lim), rng.randint(-lim, lim))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    pts = sorted(set((int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)))\n    if len(pts) < 3:\n        print(0)\n        return\n\n    def cross(o, a, b):\n        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])\n\n    lower = []\n    for p in pts:\n        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:\n            lower.pop()\n        lower.append(p)\n    upper = []\n    for p in reversed(pts):\n        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:\n            upper.pop()\n        upper.append(p)\n    hull = lower[:-1] + upper[:-1]\n    s = 0\n    for i in range(len(hull)):\n        x1, y1 = hull[i]\n        x2, y2 = hull[(i + 1) % len(hull)]\n        s += x1 * y2 - x2 * y1\n    print(abs(s))\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    pts = list(set((int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)))\n    m = len(pts)\n    total = 0\n    for i in range(m):\n        ax, ay = pts[i]\n        for j in range(m):\n            if i == j:\n                continue\n            bx, by = pts[j]\n            ok = True\n            for k in range(m):\n                cx, cy = pts[k]\n                c = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)\n                if c < 0:\n                    ok = False\n                    break\n                if c == 0:\n                    d = (cx - ax) * (bx - ax) + (cy - ay) * (by - ay)\n                    if d < 0 or d > (bx - ax) ** 2 + (by - ay) ** 2:\n                        ok = False\n                        break\n            if ok:\n                total += ax * by - bx * ay\n    print(total)\n\n\nmain()\n",
+    "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    pts = sorted(set((int(data[2 * i]), int(data[2 * i + 1])) for i in range(n)))\n    if len(pts) < 3:\n        print(0)\n        return\n\n    def cross(o, a, b):\n        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])\n\n    lower = []\n    for p in pts:\n        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:\n            lower.pop()\n        lower.append(p)\n    upper = []\n    for p in reversed(pts):\n        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:\n            upper.pop()\n        upper.append(p)\n    hull = lower[:-1] + upper[:-1]\n    s = 0\n    for i in range(len(hull)):\n        x1, y1 = hull[i]\n        x2, y2 = hull[(i + 1) % len(hull)]\n        s += x1 * y2 - x2 * y1\n    print(abs(s))\n\n\nmain()\n",
+    "hints": [
+      "고무줄이 닿는 못은 바깥쪽 몇 개뿐이다. 그 못들을 차례로 이은 다각형의 넓이만 구하면 되고, 안쪽 못과 변 위에 놓인 못은 넓이에 영향을 주지 않는다.",
+      "좌표 순서로 점을 훑으며 테두리를 한 번에 쌓아 가는 볼록 껍질 문제다. 넓이는 꼭짓점을 한 방향으로 돈 순서가 있으면 신발끈 공식으로 정수 계산만으로 구한다.",
+      "중복을 없앤 점을 (x, y) 순으로 정렬해 두고, 아래쪽 테두리와 위쪽 테두리를 각각 스택 하나로 쌓는다. 스택에는 지금까지 확정된 테두리 꼭짓점이 순서대로 들어 있다.",
+      "새 점을 넣기 전에, 스택의 마지막 두 점과 새 점이 반시계 방향으로 꺾이지 않으면(오른쪽으로 꺾이거나 한 직선이면) 마지막 점을 꺼내는 일을 반복한 뒤 새 점을 넣는다. 위쪽 테두리는 정렬 순서를 거꾸로 훑으며 같은 규칙을 쓴다.",
+      "점을 읽고 중복 제거 후 정렬 / 서로 다른 점이 3개 미만이면 0 출력 / 정렬 순서로 훑으며 아래 테두리 스택 쌓기 / 역순으로 훑으며 위 테두리 스택 쌓기 / 두 스택에서 끝점 하나씩 빼고 이어 붙여 꼭짓점 순서 만들기 / 이웃한 두 꼭짓점의 외적을 모두 더해 절댓값 출력"
+    ],
+    "skillControl": {
+      "approach": "모든 점 쌍마다 나머지 점이 모두 왼쪽 또는 그 선분 위에 있는지 확인해 테두리 변을 찾고 외적을 더한다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    pts = list(set((int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)))\n    m = len(pts)\n    total = 0\n    for i in range(m):\n        ax, ay = pts[i]\n        for j in range(m):\n            if i == j:\n                continue\n            bx, by = pts[j]\n            ok = True\n            for k in range(m):\n                cx, cy = pts[k]\n                c = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)\n                if c < 0:\n                    ok = False\n                    break\n                if c == 0:\n                    d = (cx - ax) * (bx - ax) + (cy - ay) * (by - ay)\n                    if d < 0 or d > (bx - ax) ** 2 + (by - ay) ** 2:\n                        ok = False\n                        break\n            if ok:\n                total += ax * by - bx * ay\n    print(total)\n\n\nmain()\n",
+      "stressInputGenerator": "import math\nimport random\n\nrng = random.Random(20260926)\nR = 1000000\npts = []\nfor _ in range(30000):\n    t = rng.random() * 2 * math.pi\n    pts.append((round(R * math.cos(t)), round(R * math.sin(t))))\nfor _ in range(20000):\n    t = rng.random() * 2 * math.pi\n    r = 900000 * math.sqrt(rng.random())\n    pts.append((round(r * math.cos(t)), round(r * math.sin(t))))\nrng.shuffle(pts)\nout = [str(len(pts))]\nfor x, y in pts:\n    out.append(str(x) + ' ' + str(y))\nprint('\\n'.join(out))\n"
+    }
+  }
+}

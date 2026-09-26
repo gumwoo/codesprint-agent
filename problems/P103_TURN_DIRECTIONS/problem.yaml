@@ -1,0 +1,40 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P103_TURN_DIRECTIONS
+title: 경로의 회전 방향
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N)
+statement: |
+  평면 위의 점 N 개 P_0, P_1, ..., P_{N-1} 이 주어진다. 점은 0 부터 번호를 매긴다. 한 사람이 P_0 에서 출발해 번호 순서대로 각 점까지 직선으로 걸어간다.
+
+  1 ≤ i ≤ N-2 인 각 점 P_i 에서 이 사람이 어느 쪽으로 방향을 바꾸는지 판정한다. P_{i-1} 에서 P_i 로 걸어온 방향을 앞으로 보고 선다.
+  - P_{i+1} 이 P_{i-1} 과 P_i 를 지나는 직선의 왼쪽에 있으면 L
+  - 오른쪽에 있으면 R
+  - 그 직선 위에 있으면 S (그대로 직진하는 경우와 왔던 방향으로 되돌아가는 경우 모두 S)
+
+  예를 들어 (0, 0) → (1, 0) → (1, 1) 은 동쪽으로 가다 북쪽으로 꺾으므로 L 이다. (0, 0) → (2, 2) → (1, 1) 은 되돌아가므로 S 이다.
+
+  입력 형식
+  - 첫 줄에 정수 N (3 ≤ N ≤ 200000)
+  - 다음 N 줄의 i 번째 줄(0 부터)에 P_i 의 좌표 x y 가 공백으로 구분되어 주어진다. (-10^9 ≤ x, y ≤ 10^9, 정수)
+  - 연속한 두 점은 서로 다르다 (P_i ≠ P_{i+1}). 연속하지 않은 점은 같을 수 있다.
+
+  출력 형식
+  - P_1 부터 P_{N-2} 까지의 판정 결과를 순서대로 이어 붙인 길이 N-2 의 문자열 하나를 한 줄에 출력한다. 각 문자는 L, R, S 중 하나다.
+skills:
+- code: CCW_ORIENTATION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

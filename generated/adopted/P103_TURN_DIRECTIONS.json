@@ -1,0 +1,11 @@
+{
+  "id": "CCW_ORIENTATION-1790378544556-2",
+  "skill": "CCW_ORIENTATION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:30:45+00:00",
+  "code": "P103_TURN_DIRECTIONS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\nfrom fractions import Fraction\n\n\ndef side(a, b, c):\n    ax, ay = a\n    bx, by = b\n    cx, cy = c\n    if ax == bx:\n        if cx == ax:\n            return 'S'\n        if by > ay:\n            return 'L' if cx < ax else 'R'\n        return 'L' if cx > ax else 'R'\n    slope = Fraction(by - ay, bx - ax)\n    line_y = ay + slope * (cx - ax)\n    if cy == line_y:\n        return 'S'\n    above = cy > line_y\n    if bx > ax:\n        return 'L' if above else 'R'\n    return 'R' if above else 'L'\n\n\ndef main():\n    lines = sys.stdin.read().strip().split('\\n')\n    n = int(lines[0])\n    pts = []\n    for k in range(1, n + 1):\n        x, y = lines[k].split()\n        pts.append((int(x), int(y)))\n    res = ''\n    for i in range(1, n - 1):\n        res += side(pts[i - 1], pts[i], pts[i + 1])\n    print(res)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(3, 8)\nlim = rng.choice([2, 3, 5])\npts = [(rng.randint(-lim, lim), rng.randint(-lim, lim))]\nwhile len(pts) < n:\n    p = (rng.randint(-lim, lim), rng.randint(-lim, lim))\n    if p != pts[-1]:\n        pts.append(p)\nprint(n)\nfor x, y in pts:\n    print(x, y)\n",
+  "stressInputGenerator": null
+}

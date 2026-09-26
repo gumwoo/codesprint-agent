@@ -1,0 +1,11 @@
+{
+  "id": "TRIE_PREFIX-1790378146628-1",
+  "skill": "TRIE_PREFIX",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:34:54+00:00",
+  "code": "P113_PREFIX_WORD_COUNT",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, q = int(data[0]), int(data[1])\n    words = data[2:2 + n]\n    prefixes = data[2 + n:2 + n + q]\n    for p in prefixes:\n        count = 0\n        for w in words:\n            if len(w) >= len(p) and w[:len(p)] == p:\n                count += 1\n        print(count)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(1, 8)\nlines = [f\"{n} {q}\"]\nfor _ in range(n):\n    lines.append(\"\".join(rng.choice(\"abc\") for _ in range(rng.randint(1, 4))))\nfor _ in range(q):\n    lines.append(\"\".join(rng.choice(\"abc\") for _ in range(rng.randint(1, 5))))\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": null
+}

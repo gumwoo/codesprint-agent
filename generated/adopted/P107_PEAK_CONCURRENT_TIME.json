@@ -1,0 +1,11 @@
+{
+  "id": "INTERVAL_SWEEP-1790378324713-2",
+  "skill": "INTERVAL_SWEEP",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:32:13+00:00",
+  "code": "P107_PEAK_CONCURRENT_TIME",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    iv = [(int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)]\n    best = 0\n    at = 0\n    for p in sorted(set(s for s, _ in iv)):\n        c = 0\n        for s, e in iv:\n            if s <= p < e:\n                c += 1\n        if c > best:\n            best = c\n            at = p\n    print(best, at)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nlines = [str(n)]\nfor _ in range(n):\n    s = rng.randint(0, 14)\n    e = rng.randint(s + 1, 15)\n    lines.append(f\"{s} {e}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nlines = [str(n)]\nfor _ in range(n):\n    s = rng.randint(0, 900000)\n    e = s + rng.randint(1, 100000)\n    lines.append(f\"{s} {e}\")\nprint(\"\\n\".join(lines))\n"
+}

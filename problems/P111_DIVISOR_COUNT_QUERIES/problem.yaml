@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P111_DIVISOR_COUNT_QUERIES
+title: 약수 개수 질의
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(M log log M + Q log M), M 은 x_i 의 최댓값
+statement: |
+  양의 정수 Q개가 주어진다. 각 수마다 그 수를 나누어떨어지게 하는 양의 정수(약수)의 개수를 구한다. 예를 들어 12의 약수는 1, 2, 3, 4, 6, 12 로 6개이고, 1의 약수는 1 하나뿐이다.
+
+  입력
+  첫째 줄에 Q가 주어진다. 다음 Q개의 줄에 한 줄에 하나씩 정수 x_i 가 주어진다. i 는 1부터 센다.
+
+  출력
+  입력 순서대로 Q개의 줄에 x_i 의 약수 개수를 하나씩 출력한다.
+
+  제약
+  1 ≤ Q ≤ 100000
+  1 ≤ x_i ≤ 1000000
+  같은 값이 여러 번 주어질 수 있다.
+skills:
+- code: SMALLEST_PRIME_FACTOR
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: RUNTIME_ERROR
+skillControl:
+  approach: 질의마다 2부터 제곱근까지 차례로 나누어 보며 소인수분해한다.

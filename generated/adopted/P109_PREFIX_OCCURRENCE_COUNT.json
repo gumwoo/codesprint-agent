@@ -1,0 +1,11 @@
+{
+  "id": "PREFIX_FUNCTION-1790378242022-2",
+  "skill": "PREFIX_FUNCTION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:32:58+00:00",
+  "code": "P109_PREFIX_OCCURRENCE_COUNT",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n    result = []\n    for length in range(1, n + 1):\n        count = 0\n        for i in range(n - length + 1):\n            same = True\n            for j in range(length):\n                if s[i + j] != s[j]:\n                    same = False\n                    break\n            if same:\n                count += 1\n        result.append(count)\n    print(\" \".join(map(str, result)))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nalphabet = \"abc\"[:rng.randint(1, 3)]\nif rng.random() < 0.5:\n    block = \"\".join(rng.choice(alphabet) for _ in range(rng.randint(1, 4)))\n    n = rng.randint(1, 14)\n    s = list((block * n)[:n])\n    if rng.random() < 0.5:\n        p = rng.randrange(n)\n        s[p] = rng.choice(\"abc\")\n    print(\"\".join(s))\nelse:\n    n = rng.randint(1, 14)\n    print(\"\".join(rng.choice(alphabet) for _ in range(n)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 100000\nwhile True:\n    block = \"\".join(rng.choice(\"abc\") for _ in range(7))\n    if len(set(block)) > 1:\n        break\ns = list((block * (n // len(block) + 1))[:n])\nfor p in rng.sample(range(n // 2, n), 20):\n    s[p] = rng.choice([c for c in \"abc\" if c != s[p]])\nprint(\"\".join(s))\n"
+}

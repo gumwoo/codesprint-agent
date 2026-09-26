@@ -1,0 +1,11 @@
+{
+  "id": "BINOMIAL_MOD-1790377995387-1",
+  "skill": "BINOMIAL_MOD",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:29:56+00:00",
+  "code": "P101_BINOMIAL_QUERIES",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\nMOD = 1_000_000_007\n\n\ndef count_ways(n, k):\n    if k > n:\n        return 0\n    r = min(k, n - k)\n    c = 1\n    for i in range(r):\n        c = c * (n - i) // (i + 1)\n    return c % MOD\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for j in range(q):\n        n = int(data[1 + 2 * j])\n        k = int(data[2 + 2 * j])\n        out.append(count_ways(n, k))\n    print(\"\\n\".join(map(str, out)))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nq = rng.randint(1, 8)\nlines = [str(q)]\nfor _ in range(q):\n    n = rng.randint(0, 20)\n    k = rng.randint(0, 25)\n    lines.append(f\"{n} {k}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nq = 50000\nlines = [str(q)]\nfor _ in range(q):\n    n = rng.randint(250000, 500000)\n    k = rng.randint(n // 4, 3 * n // 4)\n    lines.append(f\"{n} {k}\")\nprint(\"\\n\".join(lines))\n"
+}

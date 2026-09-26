@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P106_INTERVAL_COVER_AT_LEAST_K
+title: K겹 이상 덮인 길이
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N log N)
+statement: |
+  수직선 위에 구간 N개가 있다. i번째 구간은 두 정수 s, e 로 주어지며, s 이상 e 미만인 모든 실수 x 를 덮는다(왼쪽 끝은 포함, 오른쪽 끝은 제외). 정수 K 가 주어질 때, 수직선 위의 점 가운데 K개 이상의 구간에 동시에 덮이는 점들이 이루는 부분의 전체 길이를 구한다.
+
+  예를 들어 구간이 [1,5), [3,8), [4,6) 이고 K = 2 이면, 2개 이상에 덮이는 부분은 [3,6) 이므로 답은 3 이다. [0,2) 와 [2,4) 는 점 2 에서 함께 덮이지 않는다.
+
+  입력
+  첫 줄에 N 과 K 가 공백으로 구분되어 주어진다.
+  다음 N 줄의 각 줄에 한 구간의 s 와 e 가 공백으로 구분되어 주어진다.
+  구간에는 번호를 매기지 않으며 인덱스를 쓰지 않는다. 좌표는 수직선 위의 값 그대로다.
+
+  제약
+  1 <= N <= 40000
+  1 <= K <= N
+  0 <= s < e <= 1000000000
+  같은 구간이 여러 번 주어질 수 있다.
+
+  출력
+   K개 이상의 구간에 덮이는 부분의 전체 길이를 정수 하나로 출력한다. 그런 부분이 없으면 0 을 출력한다.
+skills:
+- code: INTERVAL_SWEEP
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 끝점 좌표를 모아 정렬한 뒤, 각 구간이 걸치는 모든 조각의 덮는 수를 하나씩 1 늘리고 마지막에 K 이상인 조각 길이를 더한다.
