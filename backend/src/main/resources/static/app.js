@@ -68,6 +68,27 @@ let activeSubmissionId = null;
 
 let editor = null;
 
+// 언어마다 채점 이미지가 읽는 파일 이름과 편집기 모드. 파일 이름은 하네스가 정한다(judge/worker.py) -
+// Java 는 public class Main 이어야 한다. C++ · Java 는 강조 모드를 따로 불러오지 않는다(ADR-0017).
+const LANGUAGES = {
+  PYTHON: { file: "solution.py", mode: "python" },
+  JAVA: { file: "Main.java", mode: null },
+  CPP: { file: "solution.cpp", mode: null },
+};
+
+function language() {
+  return $("language").value;
+}
+
+/** 언어를 바꾸면 파일 이름과 편집기 모드만 바뀐다. 쓰던 코드는 그대로 둔다. */
+function showLanguage() {
+  const chosen = LANGUAGES[language()];
+  $("sourceFile").textContent = chosen.file;
+  if (editor) {
+    editor.setOption("mode", chosen.mode);
+  }
+}
+
 function sourceCode() {
   return editor ? editor.getValue() : $("sourceCode").value;
 }
@@ -93,7 +114,7 @@ function attachEditor() {
     return;
   }
   editor = window.CodeMirror.fromTextArea($("sourceCode"), {
-    mode: "python",
+    mode: LANGUAGES[language()].mode,
     theme: "material-darker",
     lineNumbers: true,
     indentUnit: 4,
@@ -1370,7 +1391,7 @@ async function submit() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId: submittingUserId, language: "PYTHON", sourceCode: sourceCode(),
+            userId: submittingUserId, language: language(), sourceCode: sourceCode(),
           }),
         })
         : await fetch(`/api/problems/${currentProblem.code}/submit`, {
@@ -1378,7 +1399,7 @@ async function submit() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: submittingUserId,
-            language: "PYTHON",
+            language: language(),
             sourceCode: sourceCode(),
             // 화면은 힌트 사용량을 신고하지 않는다. 서버가 힌트를 내주면서 기록하고,
             // 제출은 그 기록에서 읽는다(ADR-0026). 보내면 400 이다 - 받아 놓고 무시하면
@@ -1458,7 +1479,7 @@ async function runSamples() {
     const exam = currentProblem.mockTestId;
     const payload = JSON.stringify({
       userId: runningUserId,
-      language: "PYTHON",
+      language: language(),
       sourceCode: sourceCode(),
     });
     const response = exam
@@ -2076,6 +2097,7 @@ function attachGutter() {
 }
 
 attachEditor();
+showLanguage();
 attachGutter();
 $("createUser").addEventListener("click", createUser);
 $("userId").addEventListener("change", switchedUser);
@@ -2090,6 +2112,7 @@ $("tabToday").addEventListener("click", showToday);
 $("tabMock").addEventListener("click", showMock);
 $("mockStart").addEventListener("click", startMock);
 $("learningMode").addEventListener("change", saveLearningMode);
+$("language").addEventListener("change", showLanguage);
 $("tutorAsk").addEventListener("click", askTutor);
 $("saveSettings").addEventListener("click", saveSettings);
 $("submitButton").addEventListener("click", submit);
