@@ -283,6 +283,11 @@ scripts/local.sh worker     # 터미널 2
 시간과 알고리즘 인식은 재지 않는다. 학습 모드는 **무엇을 내주는가**만 바꾸고 다음 행동과 mastery 는
 바꾸지 않는다. 자유 질문 Tutor 는 FREE 모드에서만 답하고 기록을 남기지 않는다([ADR-0044](docs/adr/0044-the-tutor-explains-and-does-not-decide.md)).
 
+**학습 분석과 시험 전략도 결정이다**([ADR-0049](docs/adr/0049-analytics-exam-strategy-evaluator.md)). 분석 탭은 저장된 관측만
+서버가 세고(예측 · 점수 없음, 시험 중 409), 시험 모드에서 최근 7 일 안에 본 모의 시험이 없으면 계획이 모의 시험
+블록을 준다. 포기 기준은 문제의 기대 풀이 시간이다. PRD 의 Evaluator 는 LLM 이 아니라 결과를 반영하는 시스템
+(`JudgeResultApplier` 등)이다.
+
 **오늘의 계획도 결정이다**([ADR-0038](docs/adr/0038-the-plan-is-decided-not-generated.md)). PRD 가 Planner 를
 Agent 로 불러도 LLM 을 부르지 않는다 - `DailyPlanner` 가 Skill 상태 · 만기 복습 · 진단 · 하루 시간 ·
 시험일로 정한다. 출제 빈도처럼 **잴 수 없는 항은 쓰지 않고**, 하루 시간을 모르면 어림하지 않는다.

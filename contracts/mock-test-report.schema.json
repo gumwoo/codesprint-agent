@@ -85,6 +85,7 @@
           "submissions",
           "timeSpentSeconds",
           "overExpected",
+          "lateGiveUp",
           "mistakes"
         ],
         "properties": {
@@ -172,6 +173,13 @@
               "null"
             ],
             "description": "timeSpentSeconds 가 기대 풀이 시간을 넘었는가. 안 열었으면 null."
+          },
+          "lateGiveUp": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "포기 기준(연 뒤 기대 풀이 시간)을 넘긴 뒤에도 그 문제를 붙잡고 있었는가(PRD §95, ADR-0049). 기준을 넘긴 뒤 실행 · 제출이 있었고 끝내 못 풀었으면 true, 풀었거나 기준을 넘긴 뒤 손대지 않았으면 false, 채점 중이거나 안 열었으면 null(모른다). 서버는 실행 · 제출 시각만 본다."
           },
           "mistakes": {
             "type": "array",

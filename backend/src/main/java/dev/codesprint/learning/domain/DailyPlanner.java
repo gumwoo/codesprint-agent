@@ -54,7 +54,7 @@ public class DailyPlanner {
     /** 하루 공부 시간을 정하지 않았을 때 보여 줄 블록 수. 시간을 어림하지 않는다. */
     public static final int UNBUDGETED_BLOCKS = 3;
 
-    public enum BlockType { DIAGNOSE, REVIEW, PRACTICE, LEARN, MIXED }
+    public enum BlockType { DIAGNOSE, REVIEW, MOCK_TEST, PRACTICE, LEARN, MIXED }
 
     public enum Mode { NORMAL, EXAM }
 
@@ -75,6 +75,12 @@ public class DailyPlanner {
             String reason) {
     }
 
+    /** 모의 시험을 따로 정하지 않는 호출. 시험 전략(§95)의 모의 시험 블록이 없다. */
+    public Plan plan(List<SkillState> states, List<String> dueReviews, String diagnosticSkill,
+            Map<String, Integer> costMinutes, Integer dailyMinutes, Integer examInDays) {
+        return plan(states, dueReviews, diagnosticSkill, costMinutes, dailyMinutes, examInDays, null);
+    }
+
     /**
      * @param states 사용자의 트랙 범위 Skill 상태({@code MasteryService.statesOf})
      * @param dueReviews 지금 만기인 복습 Skill. 만기가 먼저 온 순서다
@@ -83,9 +89,12 @@ public class DailyPlanner {
      *     Skill 은 들어 있지 않다 - 줄 문제가 없으면 계획에도 넣지 않는다
      * @param dailyMinutes 하루 공부 시간. 모르면 null
      * @param examInDays 시험까지 남은 날. 모르면 null
+     * @param mockTestMinutes 모의 시험을 볼 때가 됐으면 그 시험의 길이(분). 아니면 null - 서비스가
+     *     "최근 EXAM_MODE_DAYS 일 안에 본 모의 시험이 없고, 시험을 만들 수 있다" 를 확인해 넘긴다(§95)
      */
     public Plan plan(List<SkillState> states, List<String> dueReviews, String diagnosticSkill,
-            Map<String, Integer> costMinutes, Integer dailyMinutes, Integer examInDays) {
+            Map<String, Integer> costMinutes, Integer dailyMinutes, Integer examInDays,
+            Integer mockTestMinutes) {
 
         if (examInDays != null && examInDays < 0) {
             // 지난 시험은 없는 시험이다. 서비스가 이미 걸러 주지만 이 함수만 봐도 맞아야 한다.
@@ -109,6 +118,15 @@ public class DailyPlanner {
                 candidates.add(new Block(BlockType.REVIEW, skill, costMinutes.get(skill),
                         "복습 만기가 됐다"));
             }
+        }
+
+        // 시험 전략(§95 "Mock Test 빈도"): 최근 EXAM_MODE_DAYS 일 안에 모의 시험을 보지 않았으면 복습
+        // 다음에 둔다. 연습보다 앞이다 - 시험 직전에는 유형을 모르는 문제를 시간 안에 푸는 연습이
+        // 한 Skill 을 더 굳히는 것보다 시험에 가깝다. 빈도는 "시험 모드 기간(7 일)에 한 번" 이다 - 더 잦은 빈도의
+        // 근거가 되는 측정이 없다.
+        if (mode == Mode.EXAM && mockTestMinutes != null) {
+            candidates.add(new Block(BlockType.MOCK_TEST, null, mockTestMinutes,
+                    "시험이 " + examInDays + "일 남았고 최근 " + EXAM_MODE_DAYS + "일 안에 본 모의 시험이 없다"));
         }
 
         List<SkillState> practice = new ArrayList<>();
@@ -156,31 +174,38 @@ public class DailyPlanner {
             }
         }
 
-        // 무엇으로 채웠는지 실제 블록에서 말한다. 고정 문구는 연습이 하나도 없어도 "연습" 을 말했다.
-        java.util.LinkedHashSet<String> kinds = new java.util.LinkedHashSet<>();
-        for (Block block : candidates) {
-            kinds.add(switch (block.type()) {
-                case DIAGNOSE -> "진단";
-                case REVIEW -> "복습";
-                case PRACTICE -> "연습";
-                case LEARN -> "새로 배우기";
-                case MIXED -> "혼합";
-            });
+        // 모의 시험은 쪼갤 수 없다. 진단 · 복습을 넣고 남은 시간에 들어가지 않으면 후보에서 빼고 그렇다고
+        // 말한다 - 이유 문장이 넣지 않은 블록을 "채웠다" 고 말하지 않게 문장을 만들기 전에 정한다.
+        String mockNote = "";
+        if (dailyMinutes != null) {
+            int mandatoryMinutes = candidates.stream()
+                    .filter(b -> b.type() == BlockType.DIAGNOSE || b.type() == BlockType.REVIEW)
+                    .mapToInt(Block::minutes).sum();
+            for (Block block : List.copyOf(candidates)) {
+                if (block.type() == BlockType.MOCK_TEST
+                        && block.minutes() > dailyMinutes - mandatoryMinutes) {
+                    candidates.remove(block);
+                    mockNote = " - 모의 시험(" + block.minutes() + "분)이 하루 시간에 들어가지 않아 넣지 못했다";
+                }
+            }
         }
-        String how = (kinds.isEmpty() ? "지금 줄 할 일이 없다"
-                : String.join(" · ", kinds) + " 순서로 채웠다")
-                + (mode == Mode.EXAM ? " - 시험이 " + examInDays + "일 남아 새로 배우지 않고 굳힌다" : "");
+
+        String examNote = (mode == Mode.EXAM
+                ? " - 시험이 " + (examInDays == 0 ? "오늘이라" : examInDays + "일 남아") + " 새로 배우지 않고 굳힌다"
+                : "") + mockNote;
 
         if (dailyMinutes == null) {
-            return new Plan(null, examInDays, mode,
-                    List.copyOf(candidates.subList(0, Math.min(UNBUDGETED_BLOCKS, candidates.size()))),
-                    how + " - 하루 공부 시간을 정하지 않아 시간을 나누지 않았다");
+            List<Block> shown = List.copyOf(
+                    candidates.subList(0, Math.min(UNBUDGETED_BLOCKS, candidates.size())));
+            return new Plan(null, examInDays, mode, shown,
+                    describe(shown) + examNote + " - 하루 공부 시간을 정하지 않아 시간을 나누지 않았다");
         }
 
         // 진단과 만기 복습은 **예산과 상관없이** 맨 앞에 둔다. 들어가지 않는다고 건너뛰면 그
         // 자리를 우선순위가 낮은 블록이 채우고, 계획이 결과 패널과 다른 곳을 가리킨다 - 하루
         // 10 분인 새 사용자에게 진단(20 분) 대신 다른 Skill 이 나왔다(검증 에이전트).
         List<Block> blocks = new ArrayList<>();
+        String how = "";
         int left = dailyMinutes;
         for (Block block : candidates) {
             boolean mandatory = block.type() == BlockType.DIAGNOSE || block.type() == BlockType.REVIEW;
@@ -200,7 +225,27 @@ public class DailyPlanner {
                 how += " - 남은 " + (left - mixed) + "분은 지금 줄 문제가 없어 비워 둔다";
             }
         }
-        return new Plan(dailyMinutes, examInDays, mode, List.copyOf(blocks), how);
+        return new Plan(dailyMinutes, examInDays, mode, List.copyOf(blocks),
+                describe(blocks) + examNote + how);
+    }
+
+    /**
+     * 무엇으로 채웠는지 <b>최종 블록에서</b> 말한다. 후보에서 만들면 하루 시간에 들어가지 않아 빠진 블록(연습 ·
+     * 모의 시험)을 "채웠다" 고 말한다(검증 에이전트가 재현했다). 혼합은 남은 시간을 채우는 칸이라 이름을 대지 않는다.
+     */
+    private static String describe(List<Block> blocks) {
+        java.util.LinkedHashSet<String> kinds = new java.util.LinkedHashSet<>();
+        for (Block block : blocks) {
+            switch (block.type()) {
+                case DIAGNOSE -> kinds.add("진단");
+                case REVIEW -> kinds.add("복습");
+                case MOCK_TEST -> kinds.add("모의 시험");
+                case PRACTICE -> kinds.add("연습");
+                case LEARN -> kinds.add("새로 배우기");
+                case MIXED -> { }
+            }
+        }
+        return kinds.isEmpty() ? "지금 줄 할 일이 없다" : String.join(" · ", kinds) + " 순서로 채웠다";
     }
 
     private static double weakness(SkillState state) {

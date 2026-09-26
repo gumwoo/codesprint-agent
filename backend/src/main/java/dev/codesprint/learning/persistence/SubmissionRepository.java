@@ -113,6 +113,16 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             @Param("hintCeiling") int hintCeiling);
 
     /**
+     * 학습 분석(PRD §99 · §160, ADR-0049)이 세는 원자료 - 판정 · 제출 시각 · 문제. 한 사용자의 제출 전부다.
+     * 화면이 세지 않게 서버가 여기서 읽어 센다.
+     */
+    @Query("""
+            select s.status, s.submittedAt, s.problemId from SubmissionRow s
+            where s.userId = :userId
+            """)
+    List<Object[]> findStatusTimesAndProblems(@Param("userId") Long userId);
+
+    /**
      * 이 문제에서 개념 자료를 <b>실제로 건넨 적이 있는가.</b>
      *
      * <p>같은 자료를 되풀이하지 않기 위해 필요하다(ADR-0030). 자료를 읽고도 또 틀렸다면

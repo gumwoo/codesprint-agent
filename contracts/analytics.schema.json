@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/analytics.schema.json",
+  "title": "Analytics",
+  "description": "GET /api/users/{id}/analytics - 학습 분석(PRD §99 · §160, ADR-0049). 저장된 관측(제출 · Skill 상태 · 끝난 모의 시험)을 서버가 센 값이다. 예측 · 점수는 없다. 시험 중에는 409 다(ADR-0043).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["userId", "submissions", "solved", "weeks", "skills", "mockTests"],
+  "properties": {
+    "userId": { "type": "integer", "minimum": 1 },
+    "submissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "judging", "verdicts"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0, "description": "제출 수(채점 중 포함)." },
+        "judging": { "type": "integer", "minimum": 0, "description": "아직 판정이 없는 제출(QUEUED · RUNNING)." },
+        "verdicts": {
+          "type": "array",
+          "description": "판정마다의 수. 0 인 판정도 들어 있고 순서는 서버가 정한다.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "count"],
+            "properties": {
+              "status": { "enum": ["ACCEPTED", "WRONG_ANSWER", "TIME_LIMIT", "MEMORY_LIMIT", "RUNTIME_ERROR", "COMPILE_ERROR", "OUTPUT_LIMIT", "SYSTEM_ERROR"] },
+              "count": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "solved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["problems", "independent"],
+      "properties": {
+        "problems": { "type": "integer", "minimum": 0, "description": "한 번이라도 ACCEPTED 를 받은 문제 수." },
+        "independent": { "type": "integer", "minimum": 0, "description": "그중 Evidence 가 독립 풀이로 치는 기준(힌트 H4 미만 · 전체 풀이 없음)으로 푼 문제 수." }
+      }
+    },
+    "weeks": {
+      "type": "array",
+      "description": "최근 8 주(이번 주 포함), 오래된 주부터. 제출이 없는 주도 0 으로 들어 있다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["weekStart", "submissions", "accepted"],
+        "properties": {
+          "weekStart": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "그 주의 월요일(UTC)." },
+          "submissions": { "type": "integer", "minimum": 0 },
+          "accepted": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "description": "트랙 안 Skill 의 상태별 수. 모든 상태가 0 을 포함해 들어 있다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "count"],
+        "properties": {
+          "status": { "enum": ["UNASSESSED", "READY", "LEARNING", "PRACTICING", "MASTERED", "REVIEW_DUE", "WEAKENED", "LOCKED"] },
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "mockTests": {
+      "type": "array",
+      "description": "끝난 모의 시험, 최근 것부터 10 개까지. 푼 수는 보고서와 같은 분석으로 센다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mockTestId", "startedAt", "solved", "total"],
+        "properties": {
+          "mockTestId": { "type": "integer", "minimum": 1 },
+          "startedAt": { "type": "string", "minLength": 1 },
+          "solved": { "type": "integer", "minimum": 0 },
+          "total": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

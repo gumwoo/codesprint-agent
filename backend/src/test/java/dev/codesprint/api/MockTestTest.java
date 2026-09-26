@@ -349,6 +349,17 @@ class MockTestTest {
         String[] screens = {"/api/users/%d/today", "/api/users/%d/mistakes", "/api/users/%d/skills",
             "/api/users/%d/reviews", "/api/users/%d/diagnostic"};
 
+        // 컨트롤러는 +1 · 0x1 · 앞 공백도 같은 사용자로 읽는다 - 잠금도 같은 변환으로 읽어야 한다(검증 에이전트가
+        // 이 표기들로 시험 중에 오늘 탭을 열었다)
+        for (String spelled : new String[] {"+" + userId, "0x" + Long.toHexString(userId),
+            "%20" + userId, "%2B" + userId}) {
+            for (String screen : new String[] {"/api/users/%s/today", "/api/users/%s/analytics"}) {
+                String url = screen.formatted(spelled);
+                assertThat(mvc.perform(get(java.net.URI.create(url))).andReturn().getResponse()
+                        .getStatus()).as(url).isEqualTo(409);
+            }
+        }
+
         for (String screen : screens) {
             MockHttpServletResponse response = mvc.perform(get(screen.formatted(userId)))
                     .andReturn().getResponse();

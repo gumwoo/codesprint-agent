@@ -47,6 +47,9 @@ public class MockTestService {
     private final SubmissionIntakeService intake;
     private final SubmissionQueryService queries;
     private final RunService runs;
+    private final dev.codesprint.learning.service.DiagnosticService diagnostic;
+    private final dev.codesprint.learning.service.ReviewScheduleService reviews;
+    private final dev.codesprint.learning.service.NextProblemService nextProblem;
     private final Clock clock;
 
     public MockTestService(MockTestRepository tests, MockTestProblemRepository problems,
@@ -54,7 +57,9 @@ public class MockTestService {
             SubmissionRepository submissions, ProblemCatalog catalog,
             CurriculumCatalog curriculum, MasteryService mastery,
             SubmissionIntakeService intake, SubmissionQueryService queries, RunService runs,
-            Clock clock) {
+            dev.codesprint.learning.service.DiagnosticService diagnostic,
+            dev.codesprint.learning.service.ReviewScheduleService reviews,
+            dev.codesprint.learning.service.NextProblemService nextProblem, Clock clock) {
         this.tests = tests;
         this.problems = problems;
         this.events = events;
@@ -66,6 +71,9 @@ public class MockTestService {
         this.intake = intake;
         this.queries = queries;
         this.runs = runs;
+        this.diagnostic = diagnostic;
+        this.reviews = reviews;
+        this.nextProblem = nextProblem;
         this.clock = clock;
     }
 
@@ -125,7 +133,11 @@ public class MockTestService {
             String primarySkill, int expectedSolveSeconds, MockTestAnalysis.Outcome outcome,
             Long openedAtSeconds, Long firstRunAtSeconds, Long firstSubmitAtSeconds,
             Long solvedAtSeconds, int submissions, Long timeSpentSeconds,
-            Boolean overExpected, List<Mistake> mistakes) {
+            Boolean overExpected, Boolean lateGiveUp, List<Mistake> mistakes) {
+    }
+
+    /** 끝난 시험 하나의 요약. 학습 분석이 기록으로 보여 준다. */
+    public record HistoryItem(long mockTestId, Instant startedAt, int solved, int total) {
     }
 
     public record Report(long mockTestId, Instant startedAt, Instant closedAt,
@@ -172,12 +184,77 @@ public class MockTestService {
     }
 
     /**
+     * 시험 전략(PRD §95 "Mock Test 빈도"): 최근 {@code days} 일 안에 시작한 모의 시험이 없고 지금 시험을
+     * 만들 수 있으면, 만들 시험의 길이(분). 아니면 null. 오늘의 계획이 모의 시험 블록을 넣을지 여기서 정한다.
+     *
+     * <p>길이는 {@link #create} 가 실제로 만들 시험과 같은 규칙(같은 후보 · 같은 {@link MockTestComposer})으로
+     * 잰다 - 계획이 말한 시간과 시험 탭이 여는 시험의 시간이 달라지지 않게.
+     */
+    @Transactional(readOnly = true)
+    public Integer dueMinutes(long userId, int days) {
+        Upcoming upcoming = upcoming(userId, days, mastery.statesOf(userId));
+        return upcoming == null ? null : upcoming.minutes();
+    }
+
+    /** 곧 만들 모의 시험. 문제 code 는 서버 안에서만 쓴다 - 응답에 싣지 않는다. */
+    public record Upcoming(int minutes, java.util.Set<String> problemCodes) {
+    }
+
+    /**
+     * {@link #dueMinutes} 와 같지만 이미 계산한 Skill 상태를 받아 다시 계산하지 않고, 만들 시험의 문제도 준다.
+     * 오늘의 계획이 그 문제들을 연습 · 진단 블록에 보여 주지 않게 쓴다(ADR-0049) - 계획이 보여 준 문제가 곧 시험에
+     * 들어가면 시험을 시작하기 전에 그 문제의 유형이 드러난다(검증 에이전트가 12/15 경우에서 재현했다).
+     */
+    @Transactional(readOnly = true)
+    public Upcoming upcoming(long userId, int days, List<SkillState> states) {
+        Instant since = clock.instant().minus(Duration.ofDays(days));
+        boolean recent = tests.findByUserIdOrderByStartedAtDesc(userId).stream()
+                .anyMatch(test -> !test.startedAt().isBefore(since));
+        if (recent) {
+            return null;
+        }
+        MockTestComposer.Composition composition =
+                MockTestComposer.compose(candidates(userId, states));
+        if (composition.picks().isEmpty()) {
+            return null;
+        }
+        java.util.Set<String> codes = new java.util.LinkedHashSet<>();
+        composition.picks().forEach(pick -> codes.add(pick.problem().code()));
+        return new Upcoming(composition.minutes(), java.util.Set.copyOf(codes));
+    }
+
+    /**
      * 후보: 사용자의 트랙 안(ADR-0035), 한 번도 제출하지 않은, PRIMARY Skill 이 잠기지 않은
-     * 일반 문제. 드릴 · 복습 문제는 시험 문제가 아니다.
+     * 일반 문제. 드릴 · 복습 문제는 시험 문제가 아니다. 진단 · 만기 복습이 지금 가리키는 문제도 뺀다({@link #reserved}).
      */
     private List<MockTestComposer.Candidate> candidates(long userId) {
+        return candidates(userId, mastery.statesOf(userId));
+    }
+
+    /**
+     * 진단과 만기 복습이 지금 가리키는 문제. 시험에 넣지 않는다(ADR-0049) - 진단 · 복습은 오늘의 계획에서 빠질
+     * 수 없는 블록이고(ADR-0038) 진단 패널 · 결과의 다음 행동도 같은 문제를 가리키므로, 그 문제가 시험에 들어가면
+     * 시작하기 전에 유형이 드러난다. 계획에서 빼는 쪽으로 막았더니 진단 블록이 사라졌다(검증 에이전트가 재현했다).
+     */
+    private java.util.Set<String> reserved(long userId, List<SkillState> states) {
+        java.util.Set<String> reserved = new java.util.HashSet<>();
+        var step = diagnostic.nextStep(states);
+        if (!step.done() && step.problem() != null) {
+            reserved.add(step.problem().code());
+        }
+        for (var due : reviews.due(userId)) {
+            String code = nextProblem.forReview(userId, due.skillCode(), null).problemCode();
+            if (code != null) {
+                reserved.add(code);
+            }
+        }
+        return reserved;
+    }
+
+    private List<MockTestComposer.Candidate> candidates(long userId, List<SkillState> states) {
+        java.util.Set<String> reserved = reserved(userId, states);
         Map<String, SkillStatus> status = new HashMap<>();
-        for (SkillState state : mastery.statesOf(userId)) {
+        for (SkillState state : states) {
             status.put(state.skillCode(), state.status());
         }
         Set<String> seen = new HashSet<>(submissions.submittedProblemCodes(userId));
@@ -187,7 +264,8 @@ public class MockTestService {
             ProblemDefinition problem = catalog.find(code);
             SkillStatus skill = status.get(problem.primarySkill());
             if (!"NORMAL".equals(problem.kind()) || skill == null || skill == SkillStatus.LOCKED
-                    || seen.contains(code) || problem.expectedSolveSeconds() == null) {
+                    || seen.contains(code) || problem.expectedSolveSeconds() == null
+                    || reserved.contains(code)) {
                 continue;
             }
             candidates.add(new MockTestComposer.Candidate(code, number(code),
@@ -307,6 +385,27 @@ public class MockTestService {
 
     // ── 끝난 뒤 ────────────────────────────────────────────────────────────
 
+    /**
+     * 끝난 시험들, 최근 것부터 {@code limit} 개. 푼 수는 보고서와 같은 분석으로 센다 - 따로 세면 보고서와
+     * 기록이 다른 수를 말한다. 진행 중인 시험은 넣지 않는다(시험 중에는 분석을 주지 않는다).
+     */
+    @Transactional(readOnly = true)
+    public List<HistoryItem> history(long userId, int limit) {
+        Instant now = clock.instant();
+        List<HistoryItem> items = new ArrayList<>();
+        for (MockTestRow test : tests.findByUserIdOrderByStartedAtDesc(userId)) {
+            if (items.size() >= limit) {
+                break;
+            }
+            if (!test.isOver(now)) {
+                continue;
+            }
+            Report report = report(test.id(), userId);
+            items.add(new HistoryItem(test.id(), test.startedAt(), report.solved(), report.total()));
+        }
+        return items;
+    }
+
     @Transactional(readOnly = true)
     public Report report(long mockTestId, long userId) {
         MockTestRow test = owned(mockTestId, userId);
@@ -350,7 +449,7 @@ public class MockTestService {
                     result.openedAtSeconds(), result.firstRunAtSeconds(),
                     result.firstSubmitAtSeconds(), result.solvedAtSeconds(),
                     result.submissions(), result.timeSpentSeconds(), result.overExpected(),
-                    mistakes));
+                    result.lateGiveUp(), mistakes));
         }
         return new Report(test.id(), test.startedAt(), test.closedAt(),
                 (int) Duration.between(test.startedAt(), test.endsAt()).toSeconds(),

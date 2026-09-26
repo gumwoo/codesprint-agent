@@ -54,6 +54,7 @@ const BY_PATH = [
   [/^\/api\/users\/\d+\/settings$/, "user"],
   [/^\/api\/users\/\d+\/today$/, "today"],
   [/^\/api\/users\/\d+\/mistakes$/, "mistake-summary"],
+  [/^\/api\/users\/\d+\/analytics$/, "analytics"],
   [/^\/api\/users\/\d+$/, "user"],
   [/^\/api\/users$/, "user"],
   [/^\/api\/tracks$/, "track-list"],

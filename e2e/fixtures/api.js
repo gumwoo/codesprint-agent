@@ -210,6 +210,9 @@ async function stubApi(page, overrides = {}) {
     if (p.endsWith("/today")) {
       return fulfill(route, overrides.today || DEFAULTS.today);
     }
+    if (p.endsWith("/analytics")) {
+      return fulfill(route, analyticsFor(Number(p.split("/")[3]), 0));
+    }
     if (p.endsWith("/mistakes")) {
       return fulfill(route, { userId: Number(p.split("/")[3]), submissions: 0, mistakes: [] });
     }
@@ -225,7 +228,20 @@ async function stubApi(page, overrides = {}) {
   });
 }
 
+/** 학습 분석(contracts/analytics.schema.json). 제출 수로 사용자를 가려 본다. */
+function analyticsFor(userId, submissions) {
+  return {
+    userId,
+    submissions: { total: submissions, judging: 0,
+      verdicts: [{ status: "ACCEPTED", count: submissions }] },
+    solved: { problems: 0, independent: 0 },
+    weeks: [{ weekStart: "2026-09-21", submissions, accepted: submissions }],
+    skills: [{ status: "READY", count: 8 }],
+    mockTests: [],
+  };
+}
+
 module.exports = {
   gate, releaseAndSettle, stubApi, problem, finished, accepted, hint, conceptFor,
-  fulfill, DEFAULTS, mockTest, mockSheet,
+  fulfill, DEFAULTS, mockTest, mockSheet, analyticsFor,
 };

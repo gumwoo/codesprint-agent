@@ -70,24 +70,33 @@ public class NextProblemService {
      */
     public Selection select(Long userId, ActionType action, String targetSkill,
             Long justAttemptedProblemId) {
+        return select(userId, action, targetSkill, justAttemptedProblemId, java.util.Set.of());
+    }
+
+    /**
+     * 주지 말아야 할 문제를 빼고 고른다. 오늘의 계획이 곧 만들 모의 시험의 문제를 미리 보여 주지 않게 쓴다
+     * (ADR-0049) - 빼면 갈 곳이 없는 Skill 은 문제 없이 돌려준다. 다른 호출은 빈 목록으로 부른다.
+     */
+    public Selection select(Long userId, ActionType action, String targetSkill,
+            Long justAttemptedProblemId, java.util.Set<String> excluded) {
 
         return switch (action) {
             case MICRO_DRILL -> pick(userId, targetSkill, "MICRO_DRILL",
-                    justAttemptedProblemId, "확정된 실수를 겨냥한 드릴");
+                    justAttemptedProblemId, "확정된 실수를 겨냥한 드릴", excluded);
             // 다른 Skill 로 보낼 때는 일반 문제다. 드릴은 이미 배운 것을 좁게 다시
             // 다루는 것이라, 아직 시작도 안 한 Skill 에 주면 맥락이 없다.
             case CHANGE_SKILL -> pick(userId, targetSkill, "NORMAL",
-                    justAttemptedProblemId, "선수 Skill 을 먼저 채운다");
+                    justAttemptedProblemId, "선수 Skill 을 먼저 채운다", excluded);
             // 진단은 NORMAL 만 낸다. MICRO_DRILL 은 확정된 실수를 좁게 다시 다루는
             // 것이라, 아직 재 보지도 않은 Skill 의 수준을 재지 못한다.
             case DIAGNOSTIC_PROBE -> pick(userId, targetSkill, "NORMAL",
-                    justAttemptedProblemId, "초기 진단이 아직 확인하지 않은 Skill");
+                    justAttemptedProblemId, "초기 진단이 아직 확인하지 않은 Skill", excluded);
             // 복습은 **종류를 가리지 않는다**(ADR-0021). kind: REVIEW 가 있으면 그것을
             // 주지만, 없는 Skill 이 일곱이라 종류를 요구하면 그쪽은 영원히 복습할 수
             // 없다 - 갈 곳 없는 액션을 또 만드는 셈이다.
-            case REVIEW_DUE -> forReview(userId, targetSkill, justAttemptedProblemId);
+            case REVIEW_DUE -> forReview(userId, targetSkill, justAttemptedProblemId, excluded);
             case RETRY_VARIANT -> pick(userId, targetSkill, "NORMAL",
-                    justAttemptedProblemId, "같은 Skill 의 다른 문제로 연습한다");
+                    justAttemptedProblemId, "같은 Skill 의 다른 문제로 연습한다", excluded);
 
             // 문제를 주지 않는 행동들. 각각 이유가 다르므로 뭉뚱그리지 않는다.
             case CONTINUE -> none("같은 문제를 이어서 푼다 - 새 문제를 고르지 않는다");
@@ -98,7 +107,7 @@ public class NextProblemService {
             // 새로 여는 Skill 이므로 일반 문제다. 드릴은 이미 배운 것을 좁게 다시
             // 다루는 것이라, 아직 시작도 안 한 Skill 에 주면 맥락이 없다.
             case UNLOCK_NEXT -> pick(userId, targetSkill, "NORMAL",
-                    justAttemptedProblemId, "앞 Skill 을 숙달해 열린 Skill");
+                    justAttemptedProblemId, "앞 Skill 을 숙달해 열린 Skill", excluded);
             case END_SESSION -> none("커리큘럼에 남은 Skill 이 없다");
             default -> none("이 행동을 문제로 옮기는 규칙이 아직 없다: " + action);
         };
@@ -158,20 +167,26 @@ public class NextProblemService {
      * 나오고, 사용자는 그중 하나만 복습으로 세어지는 이유를 알 수 없다.
      */
     public Selection forReview(Long userId, String skillCode, Long justAttemptedProblemId) {
+        return forReview(userId, skillCode, justAttemptedProblemId, java.util.Set.of());
+    }
+
+    private Selection forReview(Long userId, String skillCode, Long justAttemptedProblemId,
+            java.util.Set<String> excluded) {
         Selection curated = pick(userId, skillCode, "REVIEW",
-                justAttemptedProblemId, "예약된 복습");
+                justAttemptedProblemId, "예약된 복습", excluded);
         return curated.problemCode() != null ? curated
                 : pick(userId, skillCode, "NORMAL", justAttemptedProblemId,
-                        "예약된 복습 - 이 Skill 의 일반 문제로 확인한다");
+                        "예약된 복습 - 이 Skill 의 일반 문제로 확인한다", excluded);
     }
 
     private Selection pick(Long userId, String skillCode, String kind,
-            Long justAttemptedProblemId, String why) {
+            Long justAttemptedProblemId, String why, java.util.Set<String> excluded) {
 
         if (skillCode == null) {
             return none("대상 Skill 이 없다");
         }
-        List<ProblemDefinition> candidates = catalog.byPrimarySkill(skillCode, kind);
+        List<ProblemDefinition> candidates = catalog.byPrimarySkill(skillCode, kind).stream()
+                .filter(problem -> !excluded.contains(problem.code())).toList();
         if (candidates.isEmpty()) {
             // 자동 드릴 대상 Mistake 에는 드릴 문제가 반드시 있어야 한다 -
             // tools/check_problems.py 가 CI 에서 확인한다. 여기 걸리면 데이터가

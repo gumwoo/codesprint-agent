@@ -49,10 +49,14 @@ public final class MockTestAnalysis {
      *
      * @param timeSpentSeconds 연 뒤 푼 때까지, 못 풀었으면 시험이 끝날 때까지. 안 열었으면 null.
      * @param overExpected 그 시간이 기대 풀이 시간을 넘었는가. 안 열었으면 null.
+     * @param lateGiveUp 포기 기준(연 뒤 기대 풀이 시간)을 넘긴 뒤에도 그 문제를 붙잡고 있었는가(PRD §95 "문제 포기
+     *     전략"). 서버가 보는 것은 실행 · 제출 시각뿐이다 - 기준을 넘긴 뒤에 실행이나 제출이 있었고 끝내 풀지
+     *     못했으면 true, 풀었거나 기준을 넘긴 뒤 손대지 않았으면 false, 채점 중이거나 안 열었으면 null(모른다).
+     *     "연 때부터 끝날 때까지" 의 경과로 판정하지 않는다 - 열어 보고 바로 넘어간 사람도 그 값은 크다
      */
     public record ProblemResult(String label, Outcome outcome, Long openedAtSeconds,
             Long firstRunAtSeconds, Long firstSubmitAtSeconds, Long solvedAtSeconds,
-            int submissions, Long timeSpentSeconds, Boolean overExpected) {
+            int submissions, Long timeSpentSeconds, Boolean overExpected, Boolean lateGiveUp) {
     }
 
     /**
@@ -78,15 +82,21 @@ public final class MockTestAnalysis {
         Map<String, Instant> solved = new LinkedHashMap<>();
         Map<String, Integer> submissions = new LinkedHashMap<>();
         Map<String, Boolean> judging = new LinkedHashMap<>();
+        // 문제마다 마지막으로 손댄(실행 · 제출) 시각. 포기 기준을 넘긴 뒤에도 붙잡고 있었는지 이것으로 본다.
+        Map<String, Instant> lastWork = new LinkedHashMap<>();
         for (Event event : ordered) {
             if (event.at().isAfter(closedAt)) {
                 continue; // 끝난 뒤의 기록은 시험이 아니다
             }
             switch (event.kind()) {
                 case OPENED -> opened.putIfAbsent(event.label(), event.at());
-                case RUN -> firstRun.putIfAbsent(event.label(), event.at());
+                case RUN -> {
+                    firstRun.putIfAbsent(event.label(), event.at());
+                    lastWork.put(event.label(), event.at());
+                }
                 case SUBMITTED -> {
                     firstSubmit.putIfAbsent(event.label(), event.at());
+                    lastWork.put(event.label(), event.at());
                     submissions.merge(event.label(), 1, Integer::sum);
                     String status = statusOf.get(event.submissionId());
                     if ("ACCEPTED".equals(status)) {
@@ -114,7 +124,8 @@ public final class MockTestAnalysis {
                     offset(start, open), offset(start, firstRun.get(label)),
                     offset(start, firstSubmit.get(label)), offset(start, done),
                     submissions.getOrDefault(label, 0), spent,
-                    spent == null ? null : spent > problem.expectedSolveSeconds()));
+                    spent == null ? null : spent > problem.expectedSolveSeconds(),
+                    lateGiveUp(outcome, open, lastWork.get(label), problem.expectedSolveSeconds())));
         }
 
         List<String> openOrder = new ArrayList<>(opened.keySet());
@@ -128,6 +139,17 @@ public final class MockTestAnalysis {
         }
         return new Result(List.copyOf(results), solved.size(), List.copyOf(openOrder),
                 easiestFirst);
+    }
+
+    private static Boolean lateGiveUp(Outcome outcome, Instant opened, Instant lastWork,
+            int expectedSeconds) {
+        if (opened == null || outcome == Outcome.JUDGING) {
+            return null;
+        }
+        if (outcome == Outcome.SOLVED) {
+            return false;
+        }
+        return lastWork != null && lastWork.isAfter(opened.plusSeconds(expectedSeconds));
     }
 
     private static Long offset(Instant start, Instant at) {

@@ -81,6 +81,12 @@ class TodayTest {
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
+    @Autowired
+    private dev.codesprint.judge.JudgeJobRepository jobs;
+
+    @Autowired
+    private dev.codesprint.learning.service.JudgeResultPoller poller;
+
     private MockMvc mvc;
     private long userId;
 
@@ -168,6 +174,149 @@ class TodayTest {
         JsonNode after = today();
         assertThat(after.get("examInDays").isNull()).isTrue();
         assertThat(after.get("mode").asText()).isEqualTo("NORMAL");
+    }
+
+    /** 틀린 제출 하나를 채점까지 반영한다. 그 Skill 에 Evidence 가 생겨 계획이 연습 블록을 준다. */
+    private void wrong(String code) throws Exception {
+        String body = MAPPER.createObjectNode().put("userId", userId).put("language", "PYTHON")
+                .put("sourceCode", "x").toString();
+        long id = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/problems/{code}/submit", code)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse().getContentAsString()).get("submissionId").asLong();
+        var result = MAPPER.createObjectNode().put("status", "WRONG_ANSWER").put("passed", 1)
+                .put("total", 6).put("executionMs", 100).put("memoryKb", 20480)
+                .put("failedCaseId", 2);
+        result.putNull("stderr");
+        result.set("cases", MAPPER.createArrayNode());
+        dev.codesprint.support.JudgeResultFixture.finish(jdbc, result.toString(),
+                jobs.findBySubmissionId(id).orElseThrow().id());
+        poller.applyFinishedJobs();
+    }
+
+    private void judge(String code, String status) throws Exception {
+        String body = MAPPER.createObjectNode().put("userId", userId).put("language", "PYTHON")
+                .put("sourceCode", "x").toString();
+        long id = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/problems/{code}/submit", code)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse().getContentAsString()).get("submissionId").asLong();
+        boolean ok = "ACCEPTED".equals(status);
+        var result = MAPPER.createObjectNode().put("status", status).put("passed", ok ? 6 : 1)
+                .put("total", 6).put("executionMs", 100).put("memoryKb", 20480);
+        if (ok) {
+            result.putNull("failedCaseId");
+        } else {
+            result.put("failedCaseId", 2);
+        }
+        result.putNull("stderr");
+        result.set("cases", MAPPER.createArrayNode());
+        dev.codesprint.support.JudgeResultFixture.finish(jdbc, result.toString(),
+                jobs.findBySubmissionId(id).orElseThrow().id());
+        poller.applyFinishedJobs();
+    }
+
+    @Test
+    @DisplayName("시험 모드에서 진단을 따라가는 내내 진단 블록이 남고, 진단이 묻는 문제는 곧 만들 시험에 들어가지 않는다")
+    void diagnosisStaysAndIsNotInTheUpcomingTest() throws Exception {
+        // 검증 에이전트의 재현: INTRO 사용자가 진단을 일곱 걸음 맞히면 진단 문제(P33)가 시험 후보와 겹쳐, 계획에서
+        // 진단 블록이 사라지고 그 문제가 시험에 들어갔다.
+        userId = users.save(new UserRow(
+                "diag-exam-" + System.nanoTime() + "@codesprint.dev", "진단시험", "INTRO")).id();
+        String soon = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(3).toString();
+        assertThat(putSettings("{\"dailyMinutes\": 600, \"examDate\": \"" + soon + "\"}"))
+                .isEqualTo(200);
+        for (int step = 0; step < 12; step++) {
+            JsonNode diag = MAPPER.readTree(mvc.perform(
+                            org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                    .get("/api/users/{id}/diagnostic", userId))
+                    .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+            if (diag.get("done").asBoolean() || diag.get("problem").isNull()) {
+                break;
+            }
+            String probe = diag.get("problem").get("code").asText();
+            JsonNode plan = today();
+            boolean diagnose = false;
+            for (JsonNode block : plan.get("blocks")) {
+                if ("DIAGNOSE".equals(block.get("type").asText())) {
+                    diagnose = true;
+                    assertThat(block.get("problem").get("code").asText()).as("걸음 " + step).isEqualTo(probe);
+                }
+            }
+            assertThat(diagnose).as("걸음 " + step + " - 진단 블록은 빠질 수 없다(" + probe + ")").isTrue();
+            judge(probe, "ACCEPTED");
+        }
+    }
+
+    @Test
+    @DisplayName("시험 모드에서 최근 7 일 안에 본 모의 시험이 없으면 모의 시험 블록을 주고, 보면 사라진다")
+    void examModeAsksForAMockTest() throws Exception {
+        // 여러 Skill 에 틀린 제출을 남겨 계획이 연습 블록(다음 문제)을 보여 주게 한다. 연습 문제는 아직 내지 않은
+        // 문제라 모의 시험 후보와 겹칠 수 있다 - 겹치지 않는지 보려면 겹칠 수 있는 상황이어야 한다.
+        for (String code : new String[] {"P02_GRID_TRAVERSAL", "P05_SHORTEST_PATH",
+            "P14_GRAPH_REACHABLE", "P13_EDGE_CELLS", "P11_LIST_BASIC", "P12_GRID_COORDINATE"}) {
+            wrong(code);
+        }
+        String soon = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(3).toString();
+        assertThat(putSettings("{\"dailyMinutes\": 600, \"examDate\": \"" + soon + "\"}"))
+                .isEqualTo(200);
+        JsonNode plan = today();
+        assertThat(schema("today.schema.json").validate(plan)).isEmpty();
+        JsonNode mock = null;
+        for (JsonNode block : plan.get("blocks")) {
+            if ("MOCK_TEST".equals(block.get("type").asText())) {
+                mock = block;
+            }
+        }
+        assertThat(mock).as("시험 3 일 전, 모의 시험을 본 적 없음").isNotNull();
+        assertThat(mock.get("skillCode").isNull()).isTrue();
+        assertThat(mock.get("problem").isNull()).isTrue();
+
+        // 계획이 말한 시간이 시험 탭이 여는 시험의 시간과 같다 - 같은 규칙으로 잰다
+        JsonNode test = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/users/{id}/mock-tests", userId))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+        long minutes = java.time.Duration.between(java.time.Instant.parse(test.get("startedAt").asText()),
+                java.time.Instant.parse(test.get("endsAt").asText())).toMinutes();
+        assertThat(mock.get("minutes").asLong()).isEqualTo(minutes);
+
+        // 계획이 보여 준 문제는 곧 만든 시험에 없다 - 있으면 시작하기 전에 유형이 드러난다(검증 에이전트)
+        java.util.Set<String> shown = new java.util.HashSet<>();
+        for (JsonNode block : plan.get("blocks")) {
+            if (!block.get("problem").isNull()) {
+                shown.add(block.get("problem").get("code").asText());
+            }
+        }
+        assertThat(shown).as("대조가 성립하려면 계획이 문제를 보여 줘야 한다").isNotEmpty();
+        java.util.List<String> inTest = jdbc.queryForList(
+                "select problem_code from mock_test_problems where mock_test_id = ?", String.class,
+                test.get("mockTestId").asLong());
+        assertThat(inTest).isNotEmpty().doesNotContainAnyElementsOf(shown);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .post("/api/mock-tests/{id}/finish", test.get("mockTestId").asLong())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"userId\": " + userId + "}"));
+
+        JsonNode after = today();
+        for (JsonNode block : after.get("blocks")) {
+            assertThat(block.get("type").asText()).as("방금 모의 시험을 봤다").isNotEqualTo("MOCK_TEST");
+        }
+
+        // 대조: 시험일이 없으면(평소) 모의 시험 블록이 없다 - 막은 것이 시험 전략이다
+        long other = users.save(new UserRow(
+                "mock-normal-" + System.nanoTime() + "@codesprint.dev", "평소", "JOB")).id();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .put("/api/users/{id}/settings", other).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"dailyMinutes\": 600, \"examDate\": null}"));
+        JsonNode normal = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .get("/api/users/{id}/today", other))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+        for (JsonNode block : normal.get("blocks")) {
+            assertThat(block.get("type").asText()).isNotEqualTo("MOCK_TEST");
+        }
     }
 
     @Test

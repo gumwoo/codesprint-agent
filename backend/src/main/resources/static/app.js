@@ -189,12 +189,14 @@ function showLeft(bodyId) {
   if (bodyId !== "statementBody") {
     invalidateView("problem");
   }
-  for (const id of ["picker", "statementBody", "skillsBody", "todayBody", "mockBody"]) {
+  for (const id of ["picker", "statementBody", "skillsBody", "todayBody", "mockBody",
+    "analyticsBody"]) {
     $(id).hidden = id !== bodyId;
   }
   $("tabSkills").classList.toggle("active", bodyId === "skillsBody");
   $("tabToday").classList.toggle("active", bodyId === "todayBody");
   $("tabMock").classList.toggle("active", bodyId === "mockBody");
+  $("tabAnalytics").classList.toggle("active", bodyId === "analyticsBody");
   $("tabProblem").classList.toggle("active",
       bodyId === "picker" || bodyId === "statementBody");
 }
@@ -295,9 +297,67 @@ async function showSkills() {
   }
 }
 
+/** 표 한 줄을 만든다. 첫 칸은 글자, 나머지는 숫자 칸이다. */
+function numberRow(label, ...numbers) {
+  const tr = document.createElement("tr");
+  const name = document.createElement("td");
+  name.className = "code";
+  name.textContent = label;
+  tr.append(name);
+  for (const value of numbers) {
+    const td = document.createElement("td");
+    td.className = "num";
+    td.textContent = value;
+    tr.append(td);
+  }
+  return tr;
+}
+
+/**
+ * 학습 분석(PRD §99 · §160, ADR-0049).
+ *
+ * **여기서 세지 않는다.** 판정 수 · 주별 수 · 상태별 수는 서버가 저장된 관측에서 셌다. 화면이 합계를
+ * 다시 내거나 비율을 만들면 사용자가 보는 값과 서버의 값이 갈린다 - 서버가 준 수를 나란히 적을 뿐이다.
+ */
+async function showAnalytics() {
+  showLeft("analyticsBody");
+  const userId = Number($("userId").value);
+  const mine = claimView("analytics");
+  const tables = ["verdictRows", "weekRows", "statusRows", "mockHistoryRows"];
+  if (!userId) {
+    $("analyticsNote").textContent = "사용자를 먼저 만든다.";
+    tables.forEach((id) => $(id).replaceChildren());
+    return;
+  }
+  let data;
+  try {
+    data = await getJson(`/api/users/${userId}/analytics`);
+  } catch (error) {
+    if (mine()) {
+      $("analyticsNote").textContent = `분석을 불러오지 못했다: ${error.message}`;
+      tables.forEach((id) => $(id).replaceChildren());
+    }
+    return;
+  }
+  if (!mine()) {
+    return;
+  }
+  $("analyticsNote").textContent = `제출 ${data.submissions.total} · 채점 중 ${data.submissions.judging}`
+      + ` · 푼 문제 ${data.solved.problems} · 그중 도움 없이 ${data.solved.independent}`;
+  $("verdictRows").replaceChildren(...data.submissions.verdicts.map(
+      (v) => numberRow(v.status, v.count)));
+  $("weekRows").replaceChildren(...data.weeks.map(
+      (w) => numberRow(w.weekStart, w.submissions, w.accepted)));
+  $("statusRows").replaceChildren(...data.skills.map((s) => numberRow(s.status, s.count)));
+  $("mockHistoryRows").replaceChildren(...(data.mockTests.length
+      ? data.mockTests.map((t) => numberRow(when(t.startedAt), `${t.solved} / ${t.total}`))
+      : [numberRow("끝난 모의 시험이 없다")]));
+}
+
 /** 할 일 종류. 원문 code 를 지우지 않고 옆에 한국어를 붙인다. */
 const BLOCK_LABEL = {
-  DIAGNOSE: "진단", REVIEW: "복습", PRACTICE: "연습", LEARN: "학습", MIXED: "혼합",
+  DIAGNOSE: "진단", REVIEW: "복습", MOCK_TEST: "모의 시험", PRACTICE: "연습", LEARN: "학습",
+  MIXED: "혼합",
 };
 
 /**
@@ -371,6 +431,14 @@ async function showToday() {
         open.title = block.problem.code;
         open.addEventListener("click", () => openProblem(block.problem.code));
         problem.append(open);
+      } else if (block.type === "MOCK_TEST") {
+        // 모의 시험 문제는 시험 탭이 시작할 때 서버가 고른다 - 여기서는 그 탭으로 보낼 뿐이다.
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "link";
+        go.textContent = "시험 탭에서 시작";
+        go.addEventListener("click", showMock);
+        problem.append(go);
       } else {
         problem.textContent = "–";
       }
@@ -621,6 +689,13 @@ async function loadMockReport(mockTestId, userId, mine) {
       over.className = "what";
       over.textContent = `기대보다 오래 (${clockText(problem.timeSpentSeconds)})`;
       outcome.append(over);
+    }
+    if (problem.lateGiveUp) {
+      // 포기 기준은 연 뒤 기대 시간이다(서버가 정한 값). 그 뒤에도 실행 · 제출했다는 것은 서버가 본 사실이다.
+      const late = document.createElement("div");
+      late.className = "what";
+      late.textContent = `기준 ${clockText(problem.expectedSolveSeconds)} 을 넘긴 뒤에도 실행 · 제출했고 끝내 못 풀었다`;
+      outcome.append(late);
     }
     tr.append(name, outcome);
     for (const value of [problem.openedAtSeconds, problem.firstRunAtSeconds,
@@ -966,6 +1041,9 @@ function switchedUser() {
   }
   if (!$("mockBody").hidden) {
     showMock();
+  }
+  if (!$("analyticsBody").hidden) {
+    showAnalytics();
   }
 }
 
@@ -2110,6 +2188,7 @@ $("tabProblem").addEventListener("click", () => {
 $("tabSkills").addEventListener("click", showSkills);
 $("tabToday").addEventListener("click", showToday);
 $("tabMock").addEventListener("click", showMock);
+$("tabAnalytics").addEventListener("click", showAnalytics);
 $("mockStart").addEventListener("click", startMock);
 $("learningMode").addEventListener("change", saveLearningMode);
 $("language").addEventListener("change", showLanguage);
