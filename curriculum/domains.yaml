@@ -261,13 +261,13 @@ domains:
     order: 41
     name: Network Flow / Matching
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: ADVANCED_SHORTEST_PATH
     order: 42
     name: Advanced Shortest Path
     tier: ADVANCED
-    active: false
+    active: true
 
   - code: ADVANCED_DP
     order: 43

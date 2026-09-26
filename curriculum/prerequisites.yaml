@@ -358,3 +358,52 @@ prerequisites:
   - skill: SCC_DECOMPOSITION
     requires: TOPOLOGICAL_ORDER
     minimum_mastery: 0.65
+
+  # W9b · ADVANCED 단절점 · 단절선 · 유량 · 매칭 · 최단 경로 심화 (ADR-0047)
+  - skill: ARTICULATION_POINT
+    requires: DFS_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: ARTICULATION_POINT
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: BRIDGE
+    requires: DFS_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: BRIDGE
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: MAX_FLOW
+    requires: BFS_SHORTEST_PATH
+    minimum_mastery: 0.65
+
+  - skill: MAX_FLOW
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: BIPARTITE_MATCHING
+    requires: DFS_TRAVERSAL
+    minimum_mastery: 0.65
+
+  - skill: BIPARTITE_MATCHING
+    requires: GRAPH_REPRESENTATION
+    minimum_mastery: 0.65
+
+  - skill: MULTI_SOURCE_SHORTEST_PATH
+    requires: DIJKSTRA
+    minimum_mastery: 0.65
+
+  - skill: MULTI_SOURCE_SHORTEST_PATH
+    requires: BFS_SHORTEST_PATH
+    minimum_mastery: 0.65
+
+  - skill: STATE_GRAPH_DIJKSTRA
+    requires: DIJKSTRA
+    minimum_mastery: 0.65
+
+  - skill: STATE_GRAPH_DIJKSTRA
+    requires: STATE_SPACE_BFS
+    minimum_mastery: 0.65

@@ -784,3 +784,75 @@ skills:
     description: >-
       방향 그래프의 정점을 서로 오갈 수 있는 것끼리 묶어, 묶음의 수와 묶음 사이의 관계를 그래프 크기에
       비례하는 시간에 구한다. 정점마다 따로 도달 가능한 정점을 찾는 풀이는 정점이 많으면 끝나지 않는다.
+
+  # ══ W9b · ADVANCED 단절점 · 단절선 · 유량 · 매칭 · 최단 경로 심화 (ADR-0034 · 0047) ═══
+  # ALGORITHM 트랙에서만 켜진다(tier ADVANCED). 정의는 결과로 적는다.
+
+  # ── SCC (§46 의 나머지) ──────────────────────────────────────────────
+  - code: ARTICULATION_POINT
+    name: 단절점
+    domain: SCC
+    tier: ADVANCED
+    language: null
+    slice: 9
+    needs_skill_control: true
+    description: >-
+      무방향 그래프에서 지우면 연결 요소가 늘어나는 정점을 모두, 그래프 크기에 비례하는 시간에 찾는다. 정점마다
+      지워 보고 연결을 다시 확인하는 풀이는 정점이 많으면 시간 안에 끝나지 않는다.
+
+  - code: BRIDGE
+    name: 단절선
+    domain: SCC
+    tier: ADVANCED
+    language: null
+    slice: 9
+    needs_skill_control: true
+    description: >-
+      무방향 그래프에서 지우면 연결 요소가 늘어나는 간선을 모두, 그래프 크기에 비례하는 시간에 찾는다. 간선마다
+      지워 보고 연결을 다시 확인하는 풀이는 간선이 많으면 시간 안에 끝나지 않는다.
+
+  # ── FLOW ────────────────────────────────────────────────────────────
+  - code: MAX_FLOW
+    name: 최대 유량
+    domain: FLOW
+    tier: ADVANCED
+    language: null
+    slice: 9
+    needs_skill_control: true
+    description: >-
+      간선마다 용량이 있는 방향 그래프에서 출발점에서 도착점으로 한꺼번에 보낼 수 있는 최대 양(곧 최소 컷의
+      용량)을 다항 시간에 구한다. 정점을 두 편으로 나누는 모든 경우를 보는 풀이는 정점이 많으면 끝나지 않는다.
+
+  - code: BIPARTITE_MATCHING
+    name: 이분 매칭
+    domain: FLOW
+    tier: ADVANCED
+    language: null
+    slice: 9
+    needs_skill_control: true
+    description: >-
+      두 무리 사이에 허용된 짝 가운데 서로 겹치지 않게 동시에 맺을 수 있는 짝의 최대 수를 다항 시간에 구한다.
+      짝 조합을 모두 시도하는 풀이는 사람이 많으면 끝나지 않는다.
+
+  # ── ADVANCED_SHORTEST_PATH ──────────────────────────────────────────
+  - code: MULTI_SOURCE_SHORTEST_PATH
+    name: 여러 출발점의 최단 거리
+    domain: ADVANCED_SHORTEST_PATH
+    tier: ADVANCED
+    language: null
+    slice: 9
+    needs_skill_control: true
+    description: >-
+      여러 출발점 가운데 가장 가까운 곳까지의 최단 거리를 모든 정점에 대해 한 번의 탐색으로 구한다. 출발점마다
+      따로 탐색하는 풀이는 출발점이 많으면 시간 안에 끝나지 않는다.
+
+  - code: STATE_GRAPH_DIJKSTRA
+    name: 상태를 붙인 다익스트라
+    domain: ADVANCED_SHORTEST_PATH
+    tier: ADVANCED
+    language: null
+    slice: 9
+    needs_skill_control: true
+    description: >-
+      정점에 부가 상태(남은 쿠폰 수, 지금까지 쓴 특수 간선 수 등)를 붙인 상태들 위에서 가중치 최단 경로를 구한다.
+      부가 상태를 쓰는 방법을 모두 나열해 각각 최단 경로를 구하는 풀이는 경우가 많으면 끝나지 않는다.

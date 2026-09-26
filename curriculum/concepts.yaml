@@ -1117,3 +1117,159 @@ concepts:
                       stack.append(w)
           count += 1
     self_check: 간선 1→2, 2→3, 3→1, 3→4 인 그래프의 강한 연결 요소와 묶음 사이의 간선을 적어 보세요.
+
+  - skill_code: ARTICULATION_POINT
+    title: 되돌아갈 길이 없는 정점
+    summary: DFS 트리에서 정점 v 의 자식 c 쪽 부분 트리가 v 의 조상으로 가는 뒷간선을 하나도 갖지 않으면, v 를 지울 때 그 부분 트리가 떨어져 나간다. 방문 순서(order)와 부분 트리가 닿는 가장 이른 방문 순서(low)로 이것을 한 번의 DFS 로 가린다.
+    key_points:
+      - low[c] >= order[v] 인 자식 c 가 하나라도 있으면 v 는 단절점이다(루트는 제외).
+      - 루트는 DFS 트리에서 자식이 둘 이상일 때만 단절점이다.
+      - 연결 요소가 여럿이면 요소마다 DFS 를 새로 시작한다.
+      - 정점이 많으면 재귀 깊이가 한계를 넘는다 - 스택으로 반복 DFS 를 쓴다.
+    example: |
+      order = [0] * n; low = [0] * n; cut = [False] * n; timer = 1
+      def dfs(v, parent):
+          global timer
+          order[v] = low[v] = timer; timer += 1
+          children = 0
+          for w in graph[v]:
+              if w == parent:
+                  continue
+              if order[w]:
+                  low[v] = min(low[v], order[w])
+              else:
+                  children += 1
+                  dfs(w, v)
+                  low[v] = min(low[v], low[w])
+                  if parent != -1 and low[w] >= order[v]:
+                      cut[v] = True
+          if parent == -1 and children >= 2:
+              cut[v] = True
+    self_check: 간선 1-2, 2-3, 3-1, 3-4 인 그래프에서 각 정점의 order 와 low, 그리고 단절점을 적어 보세요.
+
+  - skill_code: BRIDGE
+    title: 우회로가 없는 간선
+    summary: DFS 트리의 간선 (v, c) 는 c 쪽 부분 트리가 v 나 그 조상으로 돌아가는 뒷간선을 갖지 않을 때, 곧 low[c] > order[v] 일 때 단절선이다. 단절점과 같은 order · low 로 한 번의 DFS 에 구한다.
+    key_points:
+      - 단절점은 low[c] >= order[v], 단절선은 low[c] > order[v] 다 - 등호 하나가 다르다.
+      - 부모로 가는 간선은 "간선 번호" 로 건너뛴다. 정점 번호로 건너뛰면 같은 두 정점 사이의 중복 간선을 놓친다.
+      - 사이클 위의 간선은 단절선이 아니다.
+    example: |
+      def dfs(v, parent_edge):
+          global timer
+          order[v] = low[v] = timer; timer += 1
+          for w, eid in graph[v]:
+              if eid == parent_edge:
+                  continue
+              if order[w]:
+                  low[v] = min(low[v], order[w])
+              else:
+                  dfs(w, eid)
+                  low[v] = min(low[v], low[w])
+                  if low[w] > order[v]:
+                      bridges.append(eid)
+    self_check: 두 정점 사이에 간선이 두 개 있으면 그 간선들이 단절선이 아닌 이유를 설명해 보세요.
+
+  - skill_code: MAX_FLOW
+    title: 남은 용량으로 길 찾기
+    summary: 출발점에서 도착점으로 남은 용량이 있는 경로를 찾아 흘리고, 흘린 만큼 역방향 간선에 되돌릴 수 있는 용량을 준다. 더 찾을 경로가 없을 때 흘린 양이 최대 유량이고, 그때 출발점에서 닿는 정점과 닿지 않는 정점 사이의 간선이 최소 컷이다.
+    key_points:
+      - 역방향 간선이 없으면 먼저 잘못 흘린 것을 되돌릴 수 없어 최대가 아닌 값에서 멈춘다.
+      - 경로를 BFS 로 가장 짧은 것부터 찾으면(에드몬드-카프) 반복 횟수가 용량에 매이지 않는다.
+      - BFS 로 층을 나누고 층을 따라 여러 경로를 한꺼번에 흘리면(디닉) 더 빠르다.
+      - 같은 두 정점 사이의 간선이 여럿이면 용량을 합치거나 따로 둔다.
+    example: |
+      from collections import deque
+      def max_flow(s, t):
+          flow = 0
+          while True:
+              parent = [-1] * n; parent[s] = s
+              q = deque([s])
+              while q and parent[t] == -1:
+                  v = q.popleft()
+                  for w in range(n):
+                      if parent[w] == -1 and cap[v][w] > 0:
+                          parent[w] = v; q.append(w)
+              if parent[t] == -1:
+                  return flow
+              push, w = float("inf"), t
+              while w != s:
+                  push = min(push, cap[parent[w]][w]); w = parent[w]
+              w = t
+              while w != s:
+                  cap[parent[w]][w] -= push; cap[w][parent[w]] += push; w = parent[w]
+              flow += push
+    self_check: 역방향 간선 없이 흘리면 최대 유량보다 작은 값에서 멈추는 그래프를 하나 만들어 보세요.
+
+  - skill_code: BIPARTITE_MATCHING
+    title: 짝을 바꿔 가며 늘리기
+    summary: 왼쪽 사람마다 짝을 찾되, 원하는 자리가 이미 찼으면 그 자리의 주인이 다른 자리로 옮길 수 있는지 DFS 로 따라가 본다. 옮길 길(증가 경로)이 있으면 짝이 하나 는다. 모든 왼쪽 사람에게 한 번씩 시도하면 최대 매칭이다.
+    key_points:
+      - 왼쪽 사람마다 visited 를 새로 비운다 - 한 번의 시도 안에서만 같은 자리를 두 번 보지 않는다.
+      - 먼저 온 사람에게 탐욕으로 자리를 주는 것만으로는 최대가 아니다 - 옮기기가 핵심이다.
+      - 출발점 · 도착점을 붙인 용량 1 짜리 최대 유량과 같은 값이다.
+    example: |
+      match_right = [-1] * m
+      def try_assign(u, seen):
+          for v in adj[u]:
+              if seen[v]:
+                  continue
+              seen[v] = True
+              if match_right[v] == -1 or try_assign(match_right[v], seen):
+                  match_right[v] = u
+                  return True
+          return False
+      result = sum(try_assign(u, [False] * m) for u in range(n))
+    self_check: 왼쪽 A 가 1, 2 를, B 가 1 만 원할 때 A 에게 먼저 1 을 주면 어떻게 옮겨 최대 매칭 2 에 이르는지 적어 보세요.
+
+  - skill_code: MULTI_SOURCE_SHORTEST_PATH
+    title: 출발점을 한꺼번에 넣기
+    summary: 모든 출발점을 거리 0 으로 처음부터 큐(가중치가 있으면 우선순위 큐)에 넣고 한 번 탐색하면, 각 정점의 거리는 가장 가까운 출발점까지의 거리가 된다. 가상의 출발점 하나에서 모든 출발점으로 가중치 0 간선을 잇는 것과 같다.
+    key_points:
+      - 출발점마다 따로 탐색하면 출발점 수만큼 곱해진다 - 한 번이면 된다.
+      - 어느 출발점에서 왔는지가 필요하면 거리와 함께 출발점 번호를 퍼뜨린다.
+      - 같은 거리에서 출발점을 가르는 규칙(번호가 작은 쪽 등)은 비교에 넣는다.
+    example: |
+      import heapq
+      dist = [INF] * n
+      heap = []
+      for s in sources:
+          dist[s] = 0
+          heap.append((0, s))
+      heapq.heapify(heap)
+      while heap:
+          d, v = heapq.heappop(heap)
+          if d > dist[v]:
+              continue
+          for w, c in graph[v]:
+              if d + c < dist[w]:
+                  dist[w] = d + c
+                  heapq.heappush(heap, (d + c, w))
+    self_check: 출발점이 1000 개, 정점이 10 만 개일 때 출발점마다 다익스트라를 돌리는 풀이와 한 번에 넣는 풀이의 연산량을 비교해 보세요.
+
+  - skill_code: STATE_GRAPH_DIJKSTRA
+    title: 정점에 상태를 붙인 그래프
+    summary: 같은 정점이라도 남은 쿠폰 수가 다르면 다른 상황이다. 상태를 (정점, 부가 상태) 로 두고 그 위에서 다익스트라를 돌리면, 부가 상태를 어떻게 썼는지 나열하지 않고 최단 경로를 구한다. 상태 수는 정점 수 × 부가 상태 수다.
+    key_points:
+      - dist 를 dist[정점][부가 상태] 로 둔다. 정점만으로 방문을 막으면 쿠폰을 아껴 둔 경로를 버린다.
+      - 간선마다 "쿠폰을 쓰는 전이" 와 "쓰지 않는 전이" 를 따로 만든다.
+      - 답은 도착 정점의 모든 부가 상태 중 가장 작은 값이다.
+      - 상태 수 × 간선 수가 시간을 정한다 - 부가 상태의 범위를 먼저 본다.
+    example: |
+      import heapq
+      dist = [[INF] * (k + 1) for _ in range(n)]
+      dist[s][0] = 0
+      heap = [(0, s, 0)]
+      while heap:
+          d, v, used = heapq.heappop(heap)
+          if d > dist[v][used]:
+              continue
+          for w, c in graph[v]:
+              if d + c < dist[w][used]:
+                  dist[w][used] = d + c
+                  heapq.heappush(heap, (d + c, w, used))
+              if used < k and d < dist[w][used + 1]:  # 쿠폰으로 이 간선을 공짜로
+                  dist[w][used + 1] = d
+                  heapq.heappush(heap, (d, w, used + 1))
+      answer = min(dist[t])
+    self_check: 쿠폰 k 장, 정점 n 개일 때 상태 수와, 정점만으로 방문을 막으면 틀리는 예를 적어 보세요.
