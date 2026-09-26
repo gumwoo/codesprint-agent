@@ -133,7 +133,9 @@ public class SubmissionController {
         // 않는다. 시험 밖 문제도 받지 않는다 - 그 결과의 skillUpdates 에는 시험 제출이 바꾼 before 값이 실려,
         // 닫아 둔 Skill 지도 대신 시험 문제의 유형을 알려 준다(검증 에이전트가 재현했다).
         if (mockTests.inProgress(request.userId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            // 이유를 싣는다 - 화면은 시험 탭 밖에서 문제를 열고 낼 수 있어, 빈 409 면 왜 막혔는지 모른다.
+            throw new dev.codesprint.mocktest.MockTestService.Conflict(
+                    "모의 시험 중에는 시험 문제만 낸다 - 시험을 끝내면 다시 받는다");
         }
 
         long submissionId = intake.accept(new SubmissionIntakeService.Request(
@@ -185,6 +187,12 @@ public class SubmissionController {
         return review == null ? null : new ReviewView(review.primaryMistake(),
                 review.secondaryMistakes(), review.confidence(), review.status(),
                 review.explanation());
+    }
+
+    @ExceptionHandler(dev.codesprint.mocktest.MockTestService.Conflict.class)
+    public ResponseEntity<Map<String, String>> examInProgress(
+            dev.codesprint.mocktest.MockTestService.Conflict e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }
 
     @ExceptionHandler(SubmissionIntakeService.SelfReportedHintUsage.class)

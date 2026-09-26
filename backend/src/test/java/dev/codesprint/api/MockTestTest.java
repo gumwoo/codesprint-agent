@@ -360,9 +360,13 @@ class MockTestTest {
                 .andReturn().getResponse().getStatus()).as("시험 문제를 code 로 열기").isEqualTo(409);
         assertThat(mvc.perform(get("/api/submissions/{id}/next-problem", before)).andReturn()
                 .getResponse().getStatus()).as("시험 전 제출의 다음 문제").isEqualTo(409);
-        assertThat(postJson("/api/problems/{code}/submit", codeBody(), "P01_QUEUE_BASIC").getStatus())
+        MockHttpServletResponse normal = postJson("/api/problems/{code}/submit", codeBody(),
+                "P01_QUEUE_BASIC");
+        assertThat(normal.getStatus())
                 .as("시험 밖 문제의 일반 제출 - 결과의 skillUpdates 가 시험 제출의 흔적을 싣는다")
                 .isEqualTo(409);
+        assertThat(normal.getContentAsString(StandardCharsets.UTF_8)).as("화면에 보일 이유")
+                .contains("모의 시험 중");
 
         // 대조: 시험이 없는 사용자는 같은 화면을 본다 - 막은 것이 그 사용자의 시험이다
         long other = users.save(new UserRow(
