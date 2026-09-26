@@ -42,6 +42,11 @@ JVM 은 SIGXFSZ 를 무시하고 계속 쓰려다 시간 초과로 죽는다. �
 시간 초과로 죽었는데 stdout 이 상한까지 찼으면 `OUTPUT_LIMIT` 로 판정한다. `OutOfMemoryError` ·
 `std::bad_alloc` 은 `MEMORY_LIMIT` 이다.
 
+단, JVM 은 스레드를 더 만들지 못해도 `OutOfMemoryError: unable to create native thread` 라고 적는다. 이것은 메모리가
+아니라 프로세스 수 상한(pids-limit)에 걸린 것이므로 `RUNTIME_ERROR` 다. 처음에는 이것도 MEMORY_LIMIT 로 불러, CI 의
+Java 프로세스 폭주 격리 case 가 가끔(JVM 이 프로세스보다 스레드에서 먼저 막히면) 실패했다. `ThreadBomb.java` 가
+그 판정을 고정한다 - 이 구분을 되돌리면 MEMORY_LIMIT 가 나와 실패하는 것을 확인했다.
+
 ### 5. 언어에 매인 Skill 은 그 언어의 제출만 잰다
 
 `skills.yaml` 의 `language` 가 정해진 Skill(지금 `PYTHON_LIST_BASIC`, `PYTHON_DEQUE_BASIC`)은 그 언어의

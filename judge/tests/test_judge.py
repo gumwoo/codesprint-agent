@@ -246,6 +246,9 @@ LANG_VERDICTS = [
         ("RuntimeError.java", "RUNTIME_ERROR", True),
         ("Timeout.java", "TIME_LIMIT", True),
         ("Memory.java", "MEMORY_LIMIT", True),
+        # 스레드를 pids 상한보다 많이 만들면 JVM 은 OutOfMemoryError("unable to create native thread")로
+        # 죽는다. 메모리가 아니라 프로세스 수 상한이다 - MEMORY_LIMIT 로 부르면 안 된다(대조: Memory.java).
+        ("ThreadBomb.java", "RUNTIME_ERROR", True),
         # JVM 은 SIGXFSZ 를 무시한다. 쓰기 실패를 삼키고 계속 돌면 시간 제한에 걸리는데, 그래도
         # 출력 상한을 채웠으면 OUTPUT_LIMIT 이어야 한다 - "느리다" 로 읽히면 안 된다.
         ("OutputFlood.java", "OUTPUT_LIMIT", True),
