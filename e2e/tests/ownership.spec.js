@@ -428,3 +428,30 @@ test("늦게 온 시험 문제가 그 뒤에 연 일반 문제를 덮지 않는�
   await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
   await expect(page.locator("#hintsBox")).toBeVisible();
 });
+
+test("늦게 온 자유 질문의 답이 다른 문제 화면에 붙지 않는다", async ({ page }) => {
+  // ADR-0044. 답은 그 문제의 Skill 에 대한 것이다. P02 에서 물은 답이 P03 을 연 뒤에 오면
+  // P03 의 질문 칸 아래에 붙어, 사용자는 그것을 P03 에 대한 설명으로 읽는다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, {
+    userId: 1, nickname: "자유", track: "JOB", dailyMinutes: null, examDate: null,
+    learningMode: "FREE" }));
+  await page.route("**/api/tutor/questions", async (route) => {
+    await slow.held;
+    await fulfill(route, { skillCode: "BFS_GRID_TRAVERSAL", answer: "P02 에 대한 늦은 답",
+      followUpQuestion: null, promptVersion: "tutor-v1" });
+  });
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+  await page.fill("#tutorQuestion", "방문 표시는 언제?");
+  await page.click("#tutorAsk");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/tutor/questions");
+  await expect(page.locator("#tutorAnswer")).toBeEmpty();
+});

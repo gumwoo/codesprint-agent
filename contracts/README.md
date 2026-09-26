@@ -30,6 +30,8 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | [mistake-summary.schema.json](mistake-summary.schema.json) | [ADR-0038](../docs/adr/0038-the-plan-is-decided-not-generated.md) | 최근 제출의 오답 탐지 개수(확정 · 주장 구분) |
 | [track-list.schema.json](track-list.schema.json) | [ADR-0035](../docs/adr/0035-a-learning-track-scopes-the-skill-graph.md) | 고를 수 있는 학습 트랙과 켜지는 Skill 수 |
 | [user.schema.json](user.schema.json) | [ADR-0035](../docs/adr/0035-a-learning-track-scopes-the-skill-graph.md) | 사용자 자리와 그 트랙. 인증이 아니다 |
+| [tutor-answer.llm.schema.json](tutor-answer.llm.schema.json) | [ADR-0044](../docs/adr/0044-the-tutor-explains-and-does-not-decide.md) | **LLM 요청 스키마.** Tutor 의 설명. 점수 · 숙련도 · 다음 행동 자리가 없다 |
+| [tutor-answer.schema.json](tutor-answer.schema.json) | [ADR-0044](../docs/adr/0044-the-tutor-explains-and-does-not-decide.md) | 자유 질문의 답. FREE 모드에서만. Evidence 가 되지 않는다 |
 | [mock-test.schema.json](mock-test.schema.json) | [ADR-0043](../docs/adr/0043-mock-test-and-learning-modes.md) | 모의 시험의 상태. 문제를 라벨로만 부른다 - code · 제목 · Skill 은 유형을 알려 준다 |
 | [mock-test-problem.schema.json](mock-test-problem.schema.json) | [ADR-0043](../docs/adr/0043-mock-test-and-learning-modes.md) | 시험 중에 연 문제. 본문 · 제한 · 예시만. 여는 요청이 연 시각을 남긴다 |
 | [mock-test-verdict.schema.json](mock-test-verdict.schema.json) | [ADR-0043](../docs/adr/0043-mock-test-and-learning-modes.md) | 시험 중의 제출 결과. 판정만 - 분석과 다음 행동은 끝난 뒤다 |

@@ -56,6 +56,8 @@ const $ = (id) => document.getElementById(id);
 const text = (value) => (value === null || value === undefined ? "-" : String(value));
 
 let currentProblem = null;
+/** 지금 사용자의 학습 모드. <b>표시만을 위한 값이다</b> - 줄지 말지는 서버가 정한다(ADR-0043). */
+let currentLearningMode = null;
 // 풀이 시간의 기준. 문제를 연 순간부터 잰다 - 서버는 알 방법이 없다.
 let openedAt = Date.now();
 
@@ -713,6 +715,7 @@ async function openMockProblem(mockTestId, label) {
   // 시험 중에는 힌트를 주지 않는다(PRD §84).
   resetHints();
   $("hintsBox").hidden = true;
+  resetTutor();
   showLeft("statementBody");
   $("submitButton").disabled = false;
   $("runButton").disabled = false;
@@ -753,6 +756,87 @@ async function saveLearningMode() {
   if (mine()) {
     $("learningMode").value = user.learningMode;
     $("modeNote").textContent = `학습 모드 ${user.learningMode}. 다음에 여는 문제부터 적용된다.`;
+    currentLearningMode = user.learningMode;
+    applyTutorVisibility();
+  }
+}
+
+
+// -- 자유 질문 --------------------------------------------------------
+//
+// PRD §90 · §151, ADR-0044. 칸을 보여 주는 것은 표시다 - 줄지 말지는 서버가 정한다(FREE 가
+// 아니면 409). 답은 Evidence 가 되지 않는다.
+
+/** 지금 문제의 PRIMARY Skill. 시험 문제에는 없다 - 유형을 숨기기 때문이다. */
+function tutorSkill() {
+  if (!currentProblem || currentProblem.mockTestId || !currentProblem.skills) {
+    return null;
+  }
+  const primary = currentProblem.skills.find((skill) => skill.role === "PRIMARY");
+  return primary ? primary.skillCode : null;
+}
+
+function applyTutorVisibility() {
+  $("tutorBox").hidden = !(currentLearningMode === "FREE" && tutorSkill());
+}
+
+function resetTutor() {
+  // 앞 문제의 질문과 답을 남기지 않는다. 진행 중인 질문도 놓는다.
+  invalidateView("tutor");
+  $("tutorQuestion").value = "";
+  $("tutorNote").textContent = "";
+  $("tutorAnswer").replaceChildren();
+  applyTutorVisibility();
+}
+
+async function askTutor() {
+  const userId = Number($("userId").value);
+  const skillCode = tutorSkill();
+  const question = $("tutorQuestion").value.trim();
+  if (!userId || !skillCode || !question) {
+    $("tutorNote").textContent = "질문을 쓴다.";
+    return;
+  }
+  const mine = claimView("tutor");
+  $("tutorNote").textContent = "묻는 중…";
+  let response;
+  try {
+    response = await fetch("/api/tutor/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, skillCode, question }),
+    });
+  } catch (error) {
+    response = null;
+  }
+  if (!mine()) {
+    return;
+  }
+  if (!response || !response.ok) {
+    // 서버가 준 이유를 그대로 보여 준다 - 모드 · 시험 · 꺼짐 · 쓸 수 없는 답.
+    const body = response ? await response.json().catch(() => ({})) : {};
+    if (mine()) {
+      $("tutorNote").textContent = `답을 받지 못했다 (${response ? response.status : "연결 실패"})`
+          + (body.message ? `: ${body.message}` : "");
+    }
+    return;
+  }
+  const answer = await response.json();
+  if (!mine()) {
+    return;
+  }
+  $("tutorNote").textContent = `${answer.skillCode} · ${answer.promptVersion} · 기록에 남지 않는다`;
+  const box = $("tutorAnswer");
+  box.replaceChildren();
+  const body = document.createElement("p");
+  body.className = "statement";
+  body.textContent = answer.answer;
+  box.append(body);
+  if (answer.followUpQuestion) {
+    const check = document.createElement("p");
+    check.className = "concept-check";
+    check.textContent = `스스로 확인: ${answer.followUpQuestion}`;
+    box.append(check);
   }
 }
 
@@ -786,6 +870,8 @@ function switchedUser() {
   // 띄워 둔 힌트도 이전 사용자가 연 것이다. 새 사용자는 그 문제에서 아직
   // 아무것도 보지 않았는데, 남겨 두면 본 것처럼 보이고 채점 기록과 어긋난다.
   resetHints();
+  // 자유 질문의 답도 이전 사용자의 것이다.
+  resetTutor();
 
   remember($("userId").value);
   refreshUserTrack();
@@ -1119,6 +1205,7 @@ async function openProblem(code) {
   }
   currentProblem = opened;
   $("hintsBox").hidden = false;
+  resetTutor();
   const conceptBox = $("problemConcept");
   conceptBox.replaceChildren();
   if (opened.concept) {
@@ -1824,6 +1911,8 @@ async function refreshUserTrack() {
   }
   // 없는 사용자면 이전 사용자의 목표를 남기지 않는다.
   $("track").value = user ? user.track : "";
+  currentLearningMode = user ? user.learningMode : null;
+  applyTutorVisibility();
 }
 
 /**
@@ -1931,6 +2020,7 @@ $("tabToday").addEventListener("click", showToday);
 $("tabMock").addEventListener("click", showMock);
 $("mockStart").addEventListener("click", startMock);
 $("learningMode").addEventListener("change", saveLearningMode);
+$("tutorAsk").addEventListener("click", askTutor);
 $("saveSettings").addEventListener("click", saveSettings);
 $("submitButton").addEventListener("click", submit);
 $("runButton").addEventListener("click", runSamples);

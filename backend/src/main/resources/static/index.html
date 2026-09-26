@@ -103,6 +103,19 @@
         <button type="button" id="hintButton">힌트 보기</button>
         <p class="note" id="hintNote"></p>
       </div>
+
+      <!--
+        자유 질문(PRD §90 · §151, ADR-0044). 학습 모드가 FREE 일 때만 서버가 답한다. 답은 설명일 뿐
+        Evidence 가 되지 않는다 - mastery 도 다음 행동도 바꾸지 않는다.
+      -->
+      <div class="hints" id="tutorBox" hidden>
+        <h3>자유 질문</h3>
+        <textarea id="tutorQuestion" rows="3" maxlength="1000"
+                  placeholder="이 문제의 Skill 에 대해 묻는다"></textarea>
+        <button type="button" id="tutorAsk">질문하기</button>
+        <p class="note" id="tutorNote"></p>
+        <div id="tutorAnswer"></div>
+      </div>
     </div>
 
     <!--

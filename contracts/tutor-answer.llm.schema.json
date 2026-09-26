@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/tutor-answer.llm.schema.json",
+  "title": "TutorAnswerLlm",
+  "description": "**LLM 요청 스키마.** Tutor 의 답(PRD §90, ADR-0044). 설명만 한다 - 점수 · 숙련도 · 다음 행동 자리가 없다(ADR-0001). 계약을 어긴 응답은 고쳐 쓰지 않고 버린다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "answer",
+    "followUpQuestion"
+  ],
+  "properties": {
+    "answer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000,
+      "description": "질문에 대한 설명. 사용자 수준에 맞춘 말과 작은 예제."
+    },
+    "followUpQuestion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300,
+      "description": "이해했는지 스스로 확인할 질문 하나(질문형 설명, PRD §90). 없으면 null."
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/tutor-answer.schema.json",
+  "title": "TutorAnswer",
+  "description": "자유 질문의 답(POST /api/tutor/questions, ADR-0044). 학습 모드가 FREE 일 때만 준다 - 다른 모드는 409, 진행 중인 모의 시험이 있으면 409, Tutor 가 꺼져 있으면 503, 모델 답이 계약을 어기면 502 다. 답은 Evidence 가 되지 않는다 - mastery 와 다음 행동을 바꾸지 않는다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "skillCode",
+    "answer",
+    "followUpQuestion",
+    "promptVersion"
+  ],
+  "properties": {
+    "skillCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+    },
+    "answer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "followUpQuestion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300
+    },
+    "promptVersion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "그 답을 만든 프롬프트 버전. 파일 이름이 버전이다."
+    }
+  }
+}

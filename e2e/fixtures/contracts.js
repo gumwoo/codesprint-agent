@@ -30,6 +30,7 @@ for (const file of fs.readdirSync(CONTRACTS).filter((f) => f.endsWith(".json")))
  * 그 상태에서는 `UNCONTRACTED` 의 이유를 통째로 지워도 전부 통과했다.
  */
 const BY_PATH = [
+  [/^\/api\/tutor\/questions$/, "tutor-answer"],
   [/^\/api\/mock-tests\/\d+\/problems\/[^/]+\/open$/, "mock-test-problem"],
   [/^\/api\/mock-tests\/\d+\/submissions\/\d+$/, "mock-test-verdict"],
   [/^\/api\/mock-tests\/\d+\/runs\/\d+$/, "mock-test-run"],
