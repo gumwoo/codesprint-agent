@@ -62,6 +62,8 @@ def main() -> int:
     cases_schema = Draft202012Validator(load(CONTRACTS / "test-cases.schema.json"))
 
     seen_codes: set[str] = set()
+    # 문제 code -> PRIMARY Skill. 템플릿이 가족을 맞게 적었는지 본다(ADR-0051).
+    problem_primary: dict[str, str | None] = {}
     seen_numbers: dict[int, str] = {}
     # 사다리 전체가 같은 문제가 있으면 복사해 붙인 것이다.
     seen_ladders: dict[tuple[str, ...], str] = {}
@@ -108,6 +110,8 @@ def main() -> int:
         if code in seen_codes:
             fail("problem", f"{code}: 중복된 문제 code")
         seen_codes.add(code)
+        problem_primary[code] = next(
+            (e.get("code") for e in (problem.get("skills") or []) if e.get("role") == "PRIMARY"), None)
 
         # -- Skill 매핑 --
         entries = problem.get("skills") or []
@@ -356,6 +360,8 @@ def main() -> int:
                 f"없다 - CHANGE_SKILL 이 갈 곳 없는 Skill 을 가리키게 된다",
             )
 
+    check_templates(problem_primary, skills)
+
     # -- 오답 라벨 분포 --
     # IMPLEMENTATION_MISC 가 많다는 것은 taxonomy 가 실제 오답을 담지 못한다는 신호다
     # (curriculum/mistakes.yaml 의 IMPLEMENTATION_MISC 설명). 실패는 아니지만 보여준다.
@@ -365,6 +371,73 @@ def main() -> int:
               f"- 슬라이스 1 taxonomy 로 이름 붙일 수 없는 오답이 절반 이상이다")
 
     return report(len(dirs))
+
+
+# 가족 안의 두 변형이 숫자만 다르면 PRD §149 가 막으려는 "같은 패턴의 숫자만 바꾼 문제" 다.
+NUMERIC_AXIS = "제약 조건"
+
+
+def normalized(value) -> str:
+    """공백 · 대소문자만 다른 값을 다른 변형으로 치지 않는다."""
+    return " ".join(str(value or "").split()).casefold()
+
+
+def check_templates(problem_primary: dict, skills: dict) -> None:
+    """problems/templates.yaml - 문제 가족과 변형 축(PRD §63 · §149, ADR-0051)."""
+    path = PROBLEMS / "templates.yaml"
+    if not path.exists():
+        fail("template", "problems/templates.yaml 이 없다")
+        return
+    doc = load(path) or {}
+    schema = Draft202012Validator(load(CONTRACTS / "problem-template.schema.json"))
+    for error in schema.iter_errors(doc):
+        fail("template-schema", f"templates.yaml{list(error.absolute_path)}: {error.message}")
+    owner: dict[str, str] = {}
+    seen: set[str] = set()
+    templates = doc.get("templates") if isinstance(doc, dict) else None
+    for template in templates if isinstance(templates, list) else []:
+        if not isinstance(template, dict):
+            continue  # 스키마 검사가 이미 이유를 적었다
+        code = template.get("code")
+        if code in seen:
+            fail("template", f"{code}: 템플릿 code 가 두 번 나온다")
+        seen.add(code)
+        skill = template.get("skill")
+        if skill not in skills:
+            fail("template", f"{code}: skills.yaml 에 없는 Skill {skill!r}")
+        params = [p for p in (template.get("parameters") or []) if isinstance(p, dict)]
+        names = [p.get("name") for p in params]
+        if len(set(names)) != len(names):
+            fail("template", f"{code}: parameter 이름이 두 번 나온다 ({names})")
+        variants = [v for v in (template.get("variants") or []) if isinstance(v, dict)]
+        in_template: set[str] = set()
+        for v in variants:
+            problem = v.get("problem")
+            # 한 템플릿 안에서도 같은 문제를 두 번 적지 않는다 - 문제 하나짜리 "가족" 이 변형 둘 이상과
+            # 쌍 검사를 모두 지나간다(검증 에이전트가 재현했다)
+            if problem in in_template:
+                fail("template", f"{code}: {problem} 가 한 템플릿에 두 번 나온다")
+            in_template.add(problem)
+            if problem not in problem_primary:
+                fail("template", f"{code}: 없는 문제 {problem!r}")
+                continue
+            if problem_primary[problem] != skill:
+                fail("template", f"{code}: {problem} 의 PRIMARY 는 {problem_primary[problem]} 인데 템플릿은 {skill}")
+            if problem in owner and owner[problem] != code:
+                fail("template", f"{problem}: 템플릿 {owner[problem]} 와 {code} 에 함께 속한다 - 한 문제는 한 가족이다")
+            owner.setdefault(problem, code)
+            values = v.get("values") if isinstance(v.get("values"), dict) else {}
+            if set(values) != set(names):
+                fail("template", f"{code}/{problem}: values 가 parameters({names}) 와 다르다 ({sorted(values)})")
+        # 숫자(제약 조건) 말고 다른 축에서 달라야 한다 - 아니면 숫자만 바꾼 같은 문제다(§149)
+        shaped = [p.get("name") for p in params if p.get("axis") != NUMERIC_AXIS]
+        for i in range(len(variants)):
+            for j in range(i + 1, len(variants)):
+                a_values = variants[i].get("values") if isinstance(variants[i].get("values"), dict) else {}
+                b_values = variants[j].get("values") if isinstance(variants[j].get("values"), dict) else {}
+                if all(normalized(a_values.get(n)) == normalized(b_values.get(n)) for n in shaped):
+                    fail("template", f"{code}: {variants[i].get('problem')} 와 {variants[j].get('problem')} 가 "
+                                     f"숫자(제약 조건) 말고는 같은 변형이다 - 같은 패턴의 숫자만 바꾼 문제다(PRD §149)")
 
 
 def report(count: int = 0) -> int:

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/problem-template.schema.json",
+  "title": "ProblemTemplates",
+  "description": "problems/templates.yaml - 같은 Skill 을 재는 문제들의 가족과 변형 축(PRD §63 · §149, ADR-0051). 템플릿은 문제를 만들지 않는다 - 이미 있는 문제들이 무엇을 바꾼 변형인지 적는다. 참조 무결성과 '숫자만 바꾼 변형 금지' 는 tools/check_problems.py 가 본다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["templates"],
+  "properties": {
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "name", "skill", "parameters", "variants"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "skill": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "변형 전부의 PRIMARY Skill." },
+          "parameters": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "axis"],
+              "properties": {
+                "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+                "axis": { "enum": ["문제 서술", "입력 구조", "출력 요구", "제약 조건", "자료 표현", "필요한 Secondary Skill"], "description": "PRD §149 의 변형 축." }
+              }
+            }
+          },
+          "variants": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["problem", "values"],
+              "properties": {
+                "problem": { "type": "string", "pattern": "^P[0-9]{2,3}_[A-Z0-9_]+$" },
+                "values": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

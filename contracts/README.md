@@ -12,6 +12,7 @@ Agent 출력과 애플리케이션 경계에서 **실제로 검증에 사용하�
 | [next-problem.schema.json](next-problem.schema.json) | [ADR-0002](../docs/adr/0002-next-action-decided-by-rule-engine.md), [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **다음 학습 단계 API 응답.** 결정된 액션을 문제 또는 개념 복습 자료로 옮긴 결과 |
 | [concept-view.schema.json](concept-view.schema.json) | [ADR-0024](../docs/adr/0024-review-concept-resolves-to-curriculum-material.md) | **개념 복습 자료 응답.** `REVIEW_CONCEPT` 대상 Skill의 검증된 커리큘럼 자료 |
 | [problem.schema.json](problem.schema.json) | [ADR-0007](../docs/adr/0007-problems-are-verified-by-a-wrong-solution.md) | 문제 메타 + Skill 매핑. `problems/<CODE>/problem.yaml` |
+| [problem-template.schema.json](problem-template.schema.json) | [ADR-0051](../docs/adr/0051-templates-declare-families-they-do-not-generate.md) | 문제 가족과 변형 축(problems/templates.yaml). 숫자만 바꾼 변형을 막는다 |
 | [test-cases.schema.json](test-cases.schema.json) | Addendum §66 | Test Case 집합. `problems/<CODE>/cases.json` |
 | [hint-ladder.schema.json](hint-ladder.schema.json) | [ADR-0026](../docs/adr/0026-hint-ladder-is-problem-data.md) | 단계별 힌트 H1~H5. `problems/<CODE>/hints.yaml`. **H6 은 들어오지 않는다** - `reference.py` 가 그것이다 |
 | [hint-view.schema.json](hint-view.schema.json) | [ADR-0027](../docs/adr/0027-hint-level-is-observed-not-reported.md) | **힌트 발급 응답.** 내용 한 단계와 지금까지 본 최고 단계. 화면이 단계를 세지 않는다 |
