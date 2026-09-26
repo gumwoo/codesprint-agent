@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/explain-back.schema.json",
+  "title": "ExplainBack",
+  "description": "POST /api/problems/{code}/explanations - 푼 문제에 대한 사용자의 설명과 그 분석(PRD §148, ADR-0050). 질문은 시스템이 정한다. 분석은 LLM 의 주장이고 **기록되지 않는다** - Evidence · mastery · 다음 행동에 들어가지 않는다. 꺼져 있으면 503, 풀지 않았거나 시험 중이면 409, 모델 답이 계약을 어기면 502.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["problemCode", "skillCode", "question", "coveredPoints", "missingPoints", "misconception", "followUpQuestion", "promptVersion"],
+  "properties": {
+    "problemCode": { "type": "string", "pattern": "^P[0-9]{2,3}_[A-Z0-9_]+$" },
+    "skillCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "그 문제의 PRIMARY Skill." },
+    "question": { "type": "string", "minLength": 1, "description": "시스템이 정한 질문." },
+    "coveredPoints": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "missingPoints": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "misconception": { "type": ["string", "null"] },
+    "followUpQuestion": { "type": ["string", "null"] },
+    "promptVersion": { "type": "string", "minLength": 1, "description": "파일 이름이 버전이다(explain/prompts/)." }
+  }
+}

@@ -90,6 +90,14 @@ codesprint:
     # 파일 이름이 버전이다(tutor/prompts/). 내용을 고치면 새 파일을 만든다.
     prompt-version: ${CODESPRINT_TUTOR_PROMPT_VERSION:tutor-v1}
 
+  # Explain Back(ADR-0050). 푼 문제의 설명을 분석한다 - 기록하지 않는다. 기본은 꺼져 있다.
+  explain:
+    enabled: ${CODESPRINT_EXPLAIN_ENABLED:false}
+    command: *llm-command
+    timeout-seconds: ${CODESPRINT_EXPLAIN_TIMEOUT:120}
+    # 파일 이름이 버전이다(explain/prompts/). 내용을 고치면 새 파일을 만든다.
+    prompt-version: ${CODESPRINT_EXPLAIN_PROMPT_VERSION:explain-v1}
+
   # 문제 초안 생성기(ADR-0032). 오프라인 저작이라 앱이 뜰 때는 쓰이지 않는다.
   #
   # **명령은 Reviewer 와 같은 것이다** - 위의 앵커를 가리킨다. 따로 적으면 한쪽만 도구
