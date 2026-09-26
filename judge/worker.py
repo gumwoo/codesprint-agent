@@ -241,16 +241,21 @@ def reap_exhausted(conn) -> int:
     return reaped
 
 
+# 언어 -> 임시 파일 이름. run_submission.py 가 마운트에 둘 이름은 따로 정한다 - 여기 이름은 호스트의
+# 임시 자리일 뿐이다. Java 는 public class 이름과 파일 이름이 같아야 하므로 Main.java 다.
+SOURCE_NAMES = {"PYTHON": "solution.py", "JAVA": "Main.java", "CPP": "solution.cpp"}
+
+
 def run_job(job: dict) -> tuple[dict | None, str | None]:
     """샌드박스에서 채점한다.
 
     돌려주는 값이 (None, 이유) 면 **채점 자체가 불가능했다**는 뜻이다. Java 는 그것을
     SYSTEM_ERROR 로 반영한다 - 우리 잘못이므로 사용자 점수를 건드리지 않는다.
     """
-    # 계약이 PYTHON 만 허용하고 DB CHECK 도 막지만, 여기서도 확인한다. 무엇이든
-    # solution.py 로 써서 Python 으로 돌리므로, 다른 언어가 새어 들어오면
-    # language 와 실제 판정이 어긋난 기록이 남는다.
-    if job["language"] != "PYTHON":
+    # 계약과 DB CHECK 가 막지만 여기서도 확인한다. 언어는 이미지를 고르는 데 쓰인다(ADR-0045) -
+    # 모르는 값이면 이미지를 고를 수 없고, 아무 이미지로 돌리면 language 와 실제 판정이 어긋난
+    # 기록이 남는다.
+    if job["language"] not in SOURCE_NAMES:
         return None, f"지원하지 않는 언어다: {job['language']}"
 
     cases = ROOT / "problems" / job["problemCode"] / "cases.json"
@@ -259,14 +264,14 @@ def run_job(job: dict) -> tuple[dict | None, str | None]:
 
     workdir = pathlib.Path(tempfile.mkdtemp(prefix="codesprint-worker-"))
     try:
-        solution = workdir / "solution.py"
+        solution = workdir / SOURCE_NAMES[job["language"]]
         # 사용자 코드다. 읽지 않고 그대로 넘긴다.
         solution.write_text(job["sourceCode"], encoding="utf-8")
 
         # 제출 전 실행은 **공개 case 만** 돈다(ADR-0020). 숨은 case 를 돌리면
         # 사용자는 제출하지 않고도 채점 결과를 얻는다 - 그건 실행이 아니라 제출이다.
         command = [sys.executable, str(ROOT / "judge" / "run_submission.py"),
-                   str(solution), str(cases)]
+                   str(solution), str(cases), "--language", job["language"]]
         if job.get("kind") == "RUN":
             command.append("--samples-only")
 

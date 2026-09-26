@@ -225,12 +225,143 @@ CONFIDENTIALITY = [
 ]
 
 
-def judge(code: str) -> dict:
-    """임시 solution 을 만들어 채점한다."""
+# -- Java · C++ (ADR-0045) ------------------------------------------------
+# 언어를 더해도 신뢰 경계는 하나다. 파이썬에서 막은 것을 같은 옵션이 다른 런타임에서도 막는지, 대조군과
+# 함께 **그 언어로** 다시 본다 - 옵션은 컨테이너에 걸리지만, 뚫는 수단은 언어마다 다르다.
+
+# (언어, fixture, 기대 status, 실패 case 를 특정해야 하는가)
+LANG_VERDICTS = [
+    *[("CPP", f"cpp/{name}", status, case) for name, status, case in [
+        ("accepted.cpp", "ACCEPTED", False),
+        ("wrong.cpp", "WRONG_ANSWER", True),
+        ("runtime_error.cpp", "RUNTIME_ERROR", True),
+        ("timeout.cpp", "TIME_LIMIT", True),
+        ("memory.cpp", "MEMORY_LIMIT", True),
+        ("output_flood.cpp", "OUTPUT_LIMIT", True),
+        ("compile_error.cpp", "COMPILE_ERROR", False),
+    ]],
+    *[("JAVA", f"java/{name}", status, case) for name, status, case in [
+        ("Accepted.java", "ACCEPTED", False),
+        ("Wrong.java", "WRONG_ANSWER", True),
+        ("RuntimeError.java", "RUNTIME_ERROR", True),
+        ("Timeout.java", "TIME_LIMIT", True),
+        ("Memory.java", "MEMORY_LIMIT", True),
+        # JVM 은 SIGXFSZ 를 무시한다. 쓰기 실패를 삼키고 계속 돌면 시간 제한에 걸리는데, 그래도
+        # 출력 상한을 채웠으면 OUTPUT_LIMIT 이어야 한다 - "느리다" 로 읽히면 안 된다.
+        ("OutputFlood.java", "OUTPUT_LIMIT", True),
+        ("CompileError.java", "COMPILE_ERROR", False),
+    ]],
+]
+
+_CPP_HEAD = ("#include <bits/stdc++.h>\n#include <unistd.h>\n#include <netdb.h>\n"
+             "#include <sys/socket.h>\n#include <sys/stat.h>\n#include <arpa/inet.h>\n"
+             "using namespace std;\n")
+
+# (언어, 이름, 사용자 코드, 이 코드가 성공하면 안 되는 이유). 실패는 0 이 아닌 종료 코드다.
+LANG_ISOLATION = [
+    ("CPP", "네트워크 차단", _CPP_HEAD + (
+        "int main(){int s=socket(AF_INET,SOCK_STREAM,0);sockaddr_in a{};a.sin_family=AF_INET;"
+        "a.sin_port=htons(53);inet_pton(AF_INET,\"1.1.1.1\",&a.sin_addr);timeval tv{3,0};"
+        "setsockopt(s,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof tv);"
+        "if(connect(s,(sockaddr*)&a,sizeof a)!=0)return 1;puts(\"connected\");}\n"),
+     "외부로 데이터를 보내거나 도구를 받아올 수 있다"),
+    ("CPP", "DNS 조회 차단", _CPP_HEAD + (
+        "int main(){addrinfo*r=nullptr;if(getaddrinfo(\"example.com\",nullptr,nullptr,&r)!=0)"
+        "return 1;puts(\"resolved\");}\n"),
+     "이름 해석만으로도 데이터를 밖으로 실어 보낼 수 있다"),
+    ("CPP", "루트 파일시스템 쓰기 차단", _CPP_HEAD + (
+        "int main(){FILE*f=fopen(\"/evil\",\"w\");if(!f)return 1;fputs(\"x\",f);puts(\"w\");}\n"),
+     "이미지를 변조해 다음 제출의 채점에 영향을 줄 수 있다"),
+    ("CPP", "채점 하네스 변조 차단", _CPP_HEAD + (
+        "int main(){FILE*f=fopen(\"/opt/judge/harness.py\",\"a\");if(!f)return 1;puts(\"w\");}\n"),
+     "채점 로직 자체를 바꿔 판정을 조작할 수 있다"),
+    ("CPP", "마운트 읽기 전용", _CPP_HEAD + (
+        "int main(){FILE*f=fopen(\"/job/job.json\",\"w\");if(!f)return 1;puts(\"w\");}\n"),
+     "Test Case 를 바꿔 오답을 정답으로 만들 수 있다"),
+    ("CPP", "root 아님", _CPP_HEAD + "int main(){if(geteuid()!=0)return 1;puts(\"root\");}\n",
+     "컨테이너 탈출 시도의 난이도가 크게 낮아진다"),
+    ("CPP", "fork bomb 제한", _CPP_HEAD + (
+        "int main(){for(int i=0;i<500;i++){pid_t p=fork();if(p<0)return 1;if(p==0)_exit(0);}"
+        "puts(\"forked\");}\n"),
+     "호스트의 프로세스 테이블을 고갈시킬 수 있다"),
+    ("CPP", "tmpfs 실행 차단", _CPP_HEAD + (
+        "int main(){FILE*f=fopen(\"/tmp/x.sh\",\"w\");if(!f)return 1;"
+        "fputs(\"#!/bin/sh\\necho hi\\n\",f);fclose(f);chmod(\"/tmp/x.sh\",0700);"
+        "if(system(\"/tmp/x.sh\")!=0)return 1;puts(\"ran\");}\n"),
+     "받아온 바이너리를 실행할 발판이 된다"),
+    ("JAVA", "네트워크 차단", (
+        "import java.net.*;\npublic class Main{public static void main(String[] a)throws Exception{"
+        "Socket s=new Socket();s.connect(new InetSocketAddress(\"1.1.1.1\",53),3000);"
+        "System.out.println(\"connected\");}}\n"),
+     "외부로 데이터를 보내거나 도구를 받아올 수 있다"),
+    ("JAVA", "DNS 조회 차단", (
+        "import java.net.*;\npublic class Main{public static void main(String[] a)throws Exception{"
+        "System.out.println(InetAddress.getByName(\"example.com\"));}}\n"),
+     "이름 해석만으로도 데이터를 밖으로 실어 보낼 수 있다"),
+    ("JAVA", "루트 파일시스템 쓰기 차단", (
+        "import java.io.*;\npublic class Main{public static void main(String[] a)throws Exception{"
+        "new FileWriter(\"/evil\").close();System.out.println(\"w\");}}\n"),
+     "이미지를 변조해 다음 제출의 채점에 영향을 줄 수 있다"),
+    ("JAVA", "채점 하네스 변조 차단", (
+        "import java.io.*;\npublic class Main{public static void main(String[] a)throws Exception{"
+        "new FileWriter(\"/opt/judge/harness.py\",true).close();System.out.println(\"w\");}}\n"),
+     "채점 로직 자체를 바꿔 판정을 조작할 수 있다"),
+    ("JAVA", "마운트 읽기 전용", (
+        "import java.io.*;\npublic class Main{public static void main(String[] a)throws Exception{"
+        "new FileWriter(\"/job/job.json\").close();System.out.println(\"w\");}}\n"),
+     "Test Case 를 바꿔 오답을 정답으로 만들 수 있다"),
+    ("JAVA", "root 아님", (
+        "public class Main{public static void main(String[] a){"
+        "if(new com.sun.security.auth.module.UnixSystem().getUid()!=0)System.exit(1);"
+        "System.out.println(\"root\");}}\n"),
+     "컨테이너 탈출 시도의 난이도가 크게 낮아진다"),
+    ("JAVA", "프로세스 폭주 제한", (
+        "public class Main{public static void main(String[] a)throws Exception{"
+        "for(int i=0;i<200;i++)new ProcessBuilder(\"/bin/sleep\",\"1\").start();"
+        "System.out.println(\"spawned\");}}\n"),
+     "호스트의 프로세스 테이블을 고갈시킬 수 있다"),
+    ("JAVA", "tmpfs 실행 차단", (
+        "import java.io.*;\npublic class Main{public static void main(String[] a)throws Exception{"
+        "File f=new File(\"/tmp/x.sh\");try(FileWriter w=new FileWriter(f)){w.write(\"#!/bin/sh\\necho hi\\n\");}"
+        "f.setExecutable(true);if(new ProcessBuilder(\"/tmp/x.sh\").start().waitFor()!=0)System.exit(1);"
+        "System.out.println(\"ran\");}}\n"),
+     "받아온 바이너리를 실행할 발판이 된다"),
+]
+
+# (언어, 이름, 프로브 코드, 기대 출력). 파이썬 프로브와 같은 것을 본다 - 마운트에는 제출 코드만 있고,
+# 환경 변수에 정답표의 흔적이 없다.
+LANG_CONFIDENTIALITY = [
+    ("CPP", "마운트에는 제출 코드만 있다", _CPP_HEAD + (
+        "#include <dirent.h>\nint main(){vector<string> n;DIR*d=opendir(\"/job\");"
+        "while(auto e=readdir(d)){string s=e->d_name;if(s!=\".\"&&s!=\"..\")n.push_back(s);}"
+        "sort(n.begin(),n.end());string o;for(auto&x:n)o+=(o.empty()?\"\":\",\")+x;puts(o.c_str());}\n"),
+     "solution.cpp"),
+    ("CPP", "환경 변수에 정답표가 없다", _CPP_HEAD + (
+        "extern char**environ;int main(){for(char**e=environ;*e;e++){string s=*e;"
+        "if(s.find(\"expectedOutput\")!=string::npos||s.find(\"\\\"cases\\\"\")!=string::npos)"
+        "{puts(\"LEAK\");return 0;}}puts(\"CLEAN\");}\n"),
+     "CLEAN"),
+    ("JAVA", "마운트에는 제출 코드만 있다", (
+        "import java.io.*;import java.util.*;\npublic class Main{public static void main(String[] a){"
+        "String[] n=new File(\"/job\").list();Arrays.sort(n);System.out.println(String.join(\",\",n));}}\n"),
+     "Main.java"),
+    ("JAVA", "환경 변수에 정답표가 없다", (
+        "public class Main{public static void main(String[] a){String e=System.getenv().toString();"
+        "System.out.println(e.contains(\"expectedOutput\")||e.contains(\"\\\"cases\\\"\")?\"LEAK\":\"CLEAN\");}}\n"),
+     "CLEAN"),
+]
+
+
+def _source_name(language: str) -> str:
+    return run_submission.LANGUAGES[language][1]
+
+
+def judge(code: str, language: str = "PYTHON") -> dict:
+    """임시 제출을 만들어 채점한다."""
     with tempfile.TemporaryDirectory() as d:
-        path = pathlib.Path(d) / "solution.py"
+        path = pathlib.Path(d) / _source_name(language)
         path.write_text(code, encoding="utf-8", newline="")
-        return run_submission.run(path, JOB)
+        return run_submission.run(path, JOB, language=language)
 
 
 def judge_with_job(code: str, job: dict) -> dict:
@@ -309,7 +440,7 @@ def _judge_containers() -> set[str]:
     return {n for n in proc.stdout.split() if n}
 
 
-def judge_probe(code: str, expected_stdout: str) -> str | None:
+def judge_probe(code: str, expected_stdout: str, language: str = "PYTHON") -> str | None:
     """프로브 코드를 돌리고 **사용자 출력 자체**를 돌려준다.
 
     판정이 아니라 출력을 봐야 한다. 채점 결과는 ACCEPTED/WRONG_ANSWER 로만 말하므로
@@ -321,14 +452,15 @@ def judge_probe(code: str, expected_stdout: str) -> str | None:
     """
     with tempfile.TemporaryDirectory() as d:
         base = pathlib.Path(d)
-        (base / "solution.py").write_text(code, encoding="utf-8", newline="")
+        source = base / _source_name(language)
+        source.write_text(code, encoding="utf-8", newline="")
         job = {
             "problemId": 0,
             "timeLimitMs": 5000,
             "cases": [{"id": 1, "input": "", "expectedOutput": expected_stdout}],
         }
         (base / "job.json").write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8", newline="")
-        result = run_submission.run(base / "solution.py", base / "job.json")
+        result = run_submission.run(source, base / "job.json", language=language)
 
     if result["status"] == "ACCEPTED":
         return expected_stdout
@@ -337,7 +469,7 @@ def judge_probe(code: str, expected_stdout: str) -> str | None:
     return None
 
 
-def judge_unrestricted(code: str) -> dict:
+def judge_unrestricted(code: str, language: str = "PYTHON") -> dict:
     """격리 옵션을 **걷어내고** 같은 코드를 돌린다. 대조군이다.
 
     격리 테스트가 통과하는 것만으로는 부족하다. 사용자 코드에 오타가 있어도
@@ -354,7 +486,7 @@ def judge_unrestricted(code: str) -> dict:
         # 이것도 함께 뒤집지 않으면 대조군에서도 막혀 "제한을 걷어내도 실패한다" 로
         # 오판한다. 실제로 그렇게 나왔고, 대조군이 그것을 잡아줬다.
         run_submission.MOUNT_MODE = "rw"
-        return judge(code)
+        return judge(code, language)
     finally:
         run_submission.DOCKER_LIMITS, run_submission.MOUNT_MODE = limits, mount
 
@@ -366,14 +498,16 @@ def main() -> int:
 
     if args.build:
         print("이미지 빌드 중...")
-        build = subprocess.run(
-            ["docker", "build", "-q", "-t", run_submission.IMAGE,
-             "-f", "judge/Dockerfile", "."],
-            cwd=ROOT, capture_output=True, text=True,
-        )
-        if build.returncode != 0:
-            print("[X] 이미지 빌드 실패:\n" + build.stderr[-800:])
-            return 1
+        for image, dockerfile in [(run_submission.IMAGE, "judge/Dockerfile"),
+                                  (run_submission.LANGUAGES["CPP"][0], "judge/Dockerfile.cpp"),
+                                  (run_submission.LANGUAGES["JAVA"][0], "judge/Dockerfile.java")]:
+            build = subprocess.run(
+                ["docker", "build", "-q", "-t", image, "-f", dockerfile, "."],
+                cwd=ROOT, capture_output=True, text=True,
+            )
+            if build.returncode != 0:
+                print(f"[X] 이미지 빌드 실패 ({image}):\n" + build.stderr[-800:])
+                return 1
 
     failed = 0
 
@@ -549,6 +683,69 @@ def main() -> int:
             continue
         print(f"[O] {name} -> {seen}")
 
+    print("\n== Java · C++ 판정 (ADR-0045) ==")
+    for language, fixture, expected, needs_case in LANG_VERDICTS:
+        result = run_submission.run(FIXTURES / fixture, JOB, language=language)
+        violations = contract_errors(result)
+        if violations:
+            failed += 1
+            print(f"[X] {fixture}: 결과가 judge-result.schema.json 을 어긴다 - {violations[:2]}")
+            continue
+        if result["status"] != expected:
+            failed += 1
+            print(f"[X] {fixture}: {expected} 를 기대했는데 {result['status']} "
+                  f"- {(result.get('stderr') or '')[:120]}")
+            continue
+        if needs_case != (result["failedCaseId"] is not None):
+            failed += 1
+            print(f"[X] {fixture}: {expected} 의 failedCaseId 가 {result['failedCaseId']}")
+            continue
+        if expected == "ACCEPTED" and (result["memoryKb"] or 0) > 100 * 1024:
+            # 메모리는 사용자 코드만 잰다. 컴파일러(g++ 는 약 190MB)가 섞이면 작은 풀이가 거대해 보인다.
+            failed += 1
+            print(f"[X] {fixture}: memoryKb {result['memoryKb']} - 컴파일러의 메모리가 섞였다")
+            continue
+        print(f"[O] {fixture} -> {result['status']} (memoryKb {result['memoryKb']})")
+
+    for language, fixture in [("CPP", "cpp/compile_error.cpp"), ("JAVA", "java/CompileError.java")]:
+        stderr = run_submission.run(FIXTURES / fixture, JOB, language=language).get("stderr") or ""
+        if "/job/" in stderr or "/build/" in stderr or "/opt/" in stderr:
+            failed += 1
+            print(f"[X] {fixture}: 컴파일 오류에 컨테이너 경로가 그대로 나간다")
+        elif _source_name(language) not in stderr:
+            failed += 1
+            print(f"[X] {fixture}: 컴파일 오류에 파일 이름이 없다 - 어디를 고칠지 알 수 없다")
+        else:
+            print(f"[O] {fixture} -> 경로 없이 {_source_name(language)} 만 남는다")
+
+    print("\n== Java · C++ 격리 (ADR-0045) ==")
+    for language, name, code, why in LANG_ISOLATION:
+        result = judge(code, language)
+        if result["status"] == "SYSTEM_ERROR":
+            failed += 1
+            print(f"[X] {language} {name}: 채점 자체가 실패했다 - {result.get('stderr')}")
+            continue
+        if result["status"] != "RUNTIME_ERROR":
+            failed += 1
+            print(f"[X] {language} {name}: 막히지 않았다 ({result['status']}) - {why}")
+            continue
+        control = judge_unrestricted(code, language)
+        if control["status"] in ("RUNTIME_ERROR", "COMPILE_ERROR", "SYSTEM_ERROR"):
+            failed += 1
+            print(f"[X] {language} {name}: 제한을 걷어내도 {control['status']} - 이 테스트는 격리를 "
+                  f"검증하지 못한다 [VACUOUS] {(control.get('stderr') or '')[:120]}")
+            continue
+        print(f"[O] {language} {name} -> 제한 있음 RUNTIME_ERROR / 제한 없음 {control['status']}")
+
+    print("\n== Java · C++ 채점 데이터 기밀성 (ADR-0006) ==")
+    for language, name, code, expected_stdout in LANG_CONFIDENTIALITY:
+        seen = judge_probe(code, expected_stdout, language)
+        if seen != expected_stdout:
+            failed += 1
+            print(f"[X] {language} {name}: '{expected_stdout}' 를 기대했는데 '{seen}'")
+            continue
+        print(f"[O] {language} {name} -> {seen}")
+
     print("\n== SYSTEM_ERROR 경로 ==")
     # 사용자 코드로는 재현할 수 없다. 우리 인프라가 고장난 상황을 직접 만든다.
     broken = run_submission.run(FIXTURES / "sol-accepted.py", FIXTURES / "does-not-exist.json")
@@ -598,7 +795,8 @@ def main() -> int:
         json.loads((ROOT / "contracts" / "judge-result.schema.json").read_text(encoding="utf-8"))
         ["properties"]["status"]["enum"]
     )
-    tested = {expected for _, expected, _ in VERDICTS} | STATUS_COVERED_ELSEWHERE
+    tested = ({expected for _, expected, _ in VERDICTS}
+              | {expected for _, _, expected, _ in LANG_VERDICTS} | STATUS_COVERED_ELSEWHERE)
     missing = sorted(all_status - tested)
     if missing:
         failed += 1
@@ -611,6 +809,8 @@ def main() -> int:
         return 1
     print(f"\n[OK] 판정 {len(VERDICTS)}건 · 실패의 모양 {len(PROFILE)}건 · "
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
+          f"Java · C++ 판정 {len(LANG_VERDICTS)}건 · 격리 {len(LANG_ISOLATION)}건 · "
+          f"기밀성 {len(LANG_CONFIDENTIALITY)}건 · "
           f"컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 

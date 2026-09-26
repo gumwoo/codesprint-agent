@@ -37,6 +37,10 @@ def load_sanitizer():
         'SOLUTION = pathlib.Path("/job/solution.py")', "")
     module = types.ModuleType("sanitize")
     module.re = re
+    # 언어 표(ADR-0045)가 이 부분에 있어 표준 모듈을 함께 준다. 실행은 하지 않는다 - 경로와 명령을
+    # 정의할 뿐이다.
+    import os
+    module.os, module.sys, module.pathlib = os, sys, pathlib
     exec(compile(body, "harness.py(sanitize)", "exec"), module.__dict__)  # noqa: S102
     return module
 

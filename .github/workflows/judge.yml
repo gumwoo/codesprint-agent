@@ -70,6 +70,13 @@ jobs:
       - name: build judge image
         run: docker build -t codesprint-judge:py312 -f judge/Dockerfile .
 
+      # Java · C++ 채점 이미지(ADR-0045). 격리 검사를 그 언어로 다시 돌리므로 여기서 함께 굽는다 -
+      # 하네스는 세 이미지에 모두 들어가므로, 하나만 굽으면 나머지는 옛 하네스로 돈다.
+      - name: build java / c++ judge images
+        run: |
+          docker build -t codesprint-judge:cpp -f judge/Dockerfile.cpp .
+          docker build -t codesprint-judge:java21 -f judge/Dockerfile.java .
+
       # 판정 8종과 격리 8종. 격리 쪽은 제한을 걷어낸 대조군까지 함께 돌려
       # "테스트가 아무것도 검증하지 못하는 상태"를 실패로 처리한다.
       #

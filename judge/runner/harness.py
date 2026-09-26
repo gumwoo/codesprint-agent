@@ -28,14 +28,59 @@
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import re
 import resource
 import subprocess
 import sys
+import threading
 import time
 
-SOLUTION = pathlib.Path("/job/solution.py")
+# -- 언어 (ADR-0045) ---------------------------------------------------------
+#
+# **언어는 이미지가 정한다.** judge/Dockerfile(.cpp/.java) 의 ENV 가 이 값을 박아 둔다 - 사용자 입력으로
+# 받지 않는다. 호스트는 제출 행의 language 로 이미지를 고르고, 이미지 안에서는 바꿀 수 없다.
+#
+# 컴파일 산출물은 /build(실행 가능한 tmpfs)에 둔다. /job 은 읽기 전용이고 /tmp 는 noexec 다 - 그
+# 둘은 그대로 둔다. C++ 는 어차피 사용자의 기계어가 돌므로 /build 의 실행 권한이 더 주는 것이 없다.
+LANGUAGE = os.environ.get("JUDGE_LANGUAGE", "PYTHON")
+
+# JVM 은 스레드를 여럿 띄운다. 컨테이너의 --pids-limit 과 자식의 RLIMIT_NPROC(64) 안에 들도록
+# 병렬 GC 와 JIT 스레드를 줄인다. 힙은 컨테이너 메모리(256m) 안에 둔다 - 넘으면 JVM 이 아니라 커널이
+# 죽이고, 그때 판정이 OutOfMemoryError 가 아니라 SIGKILL 이 된다.
+_JVM = ["-Xmx192m", "-Xss64m", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1",
+        "-XX:ActiveProcessorCount=1"]
+
+LANGUAGES = {
+    "PYTHON": {
+        "source": "solution.py",
+        "compile": None,
+        "run": [sys.executable, "/job/solution.py"],
+    },
+    "CPP": {
+        "source": "solution.cpp",
+        "compile": ["g++", "-O2", "-std=gnu++17", "-pipe", "-o", "/build/main",
+                    "/job/solution.cpp"],
+        "run": ["/build/main"],
+    },
+    "JAVA": {
+        "source": "Main.java",
+        "compile": ["javac", *[f"-J{flag}" for flag in _JVM], "-encoding", "UTF-8",
+                    "-d", "/build", "/job/Main.java"],
+        "run": ["java", *_JVM, "-cp", "/build", "Main"],
+    },
+}
+
+# 컴파일에 쓸 수 있는 시간. 전체 제출의 마지막 방어선(호스트의 SUBMISSION_HARD_TIMEOUT_S)보다 짧아야
+# 컴파일이 멈춘 것을 COMPILE_ERROR 로 돌려줄 수 있다.
+COMPILE_TIMEOUT_S = 20
+
+# 컴파일러가 쓰는 파일의 상한. 사용자 출력 상한(1MB)을 그대로 걸면 템플릿이 많은 C++ 의 실행 파일이
+# 그보다 커서 정상 코드가 컴파일 오류로 둔갑한다.
+COMPILE_FSIZE = 64 * 1024 * 1024
+
+SOLUTION = pathlib.Path("/job") / LANGUAGES.get(LANGUAGE, LANGUAGES["PYTHON"])["source"]
 
 # 사용자가 무한 출력으로 파이프를 채우는 것을 막는다(Addendum 64).
 STDOUT_LIMIT = 1024 * 1024
@@ -63,6 +108,7 @@ _OUR_PATHS = (
     ("/job", "<제출>"),
     ("/opt/judge", "<채점기>"),
     ("/tmp", "<임시>"),
+    ("/build", "<빌드>"),
 )
 # 긴 것부터 대조한다 - /opt/judge 가 /opt 로 먼저 잘리면 안 된다.
 #
@@ -119,6 +165,31 @@ def compile_check(path: pathlib.Path) -> str | None:
     return None
 
 
+def _limit_compiler() -> None:
+    """컴파일러에 거는 제한. 프로세스 수는 사용자 코드와 같고, 파일 크기는 실행 파일을 쓸 만큼 준다."""
+    resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (COMPILE_FSIZE, COMPILE_FSIZE))
+
+
+def compile_native(language: str) -> str | None:
+    """C++ · Java 를 /build 로 컴파일한다. 실패하면 사용자에게 보일 오류를, 성공하면 None.
+
+    컴파일러의 출력도 사용자 입력에서 나온 것이라 경로를 가려서 돌려준다(sanitize_stderr).
+    """
+    command = LANGUAGES[language]["compile"]
+    try:
+        proc = subprocess.run(command, capture_output=True, timeout=COMPILE_TIMEOUT_S,
+                              preexec_fn=_limit_compiler)
+    except subprocess.TimeoutExpired:
+        return f"컴파일이 {COMPILE_TIMEOUT_S}초 안에 끝나지 않았다"
+    except OSError as e:
+        return f"컴파일러를 실행하지 못했다: {type(e).__name__}"
+    if proc.returncode != 0:
+        text = (proc.stderr or proc.stdout).decode("utf-8", errors="replace")
+        return sanitize_stderr(text) or f"컴파일 실패(종료 코드 {proc.returncode})"
+    return None
+
+
 def _limit_child() -> None:
     """자식 프로세스에만 거는 제한.
 
@@ -159,21 +230,44 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
     err_path = pathlib.Path("/tmp/case-stderr")
 
     started = time.monotonic()
-    try:
-        with out_path.open("wb") as out, err_path.open("wb") as err:
-            proc = subprocess.run(
-                [sys.executable, str(SOLUTION)],
-                input=case_input.encode(),
-                stdout=out,
-                stderr=err,
-                timeout=hard_limit,
-                preexec_fn=_limit_child,
-            )
-        returncode = proc.returncode
-    except subprocess.TimeoutExpired:
+    killed = threading.Event()
+    with out_path.open("wb") as out, err_path.open("wb") as err:
+        proc = subprocess.Popen(
+            LANGUAGES[LANGUAGE]["run"],
+            stdin=subprocess.PIPE,
+            stdout=out,
+            stderr=err,
+            preexec_fn=_limit_child,
+        )
+
+        def kill() -> None:
+            killed.set()
+            proc.kill()
+
+        timer = threading.Timer(hard_limit, kill)
+        timer.start()
+        try:
+            # 입력을 읽지 않는 코드면 쓰기가 막힌다. 그때는 타이머가 죽여서 풀어 준다.
+            proc.stdin.write(case_input.encode())
+            proc.stdin.close()
+        except (BrokenPipeError, OSError):
+            pass
+        # **이 case 의 자식만** 기다려 그 자원 사용량을 받는다. RUSAGE_CHILDREN 은 지금까지 기다린
+        # 모든 자식의 최댓값이라, 컴파일러(g++ 는 약 190MB)가 사용자 코드의 메모리로 둔갑한다.
+        _, status, usage = os.wait4(proc.pid, 0)
+        timer.cancel()
+    elapsed_ms = int((time.monotonic() - started) * 1000)
+    _case_memory.append(int(usage.ru_maxrss))
+    if killed.is_set():
+        # 시간 안에 끝나지 않았지만 **출력 상한을 이미 채웠다면** 출력 폭주다. JVM 은 SIGXFSZ 를 무시해
+        # 쓰기가 실패해도 죽지 않고, 실패를 삼키는 코드는 그대로 돌다 시간 제한에 걸린다 - 그때
+        # TIME_LIMIT 으로 두면 "느리다" 로 읽힌다.
+        if _read_capped(out_path, STDOUT_LIMIT)[1]:
+            return {"outcome": "OUTPUT_LIMIT", "stdout": "", "stderr": None,
+                    "executionMs": time_limit_ms}
         return {"outcome": "TIME_LIMIT", "stdout": "", "stderr": None,
                 "executionMs": time_limit_ms}
-    elapsed_ms = int((time.monotonic() - started) * 1000)
+    returncode = os.waitstatus_to_exitcode(status)
 
     stdout_text, stdout_capped = _read_capped(out_path, STDOUT_LIMIT)
     stderr_text, _ = _read_capped(err_path, STDERR_LIMIT)
@@ -187,7 +281,9 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
     if returncode != 0:
         # 137 / -9 = SIGKILL. 컨테이너 메모리 상한에 걸린 경우가 대부분이다.
         outcome = "MEMORY_LIMIT" if returncode in (137, -9) else "RUNTIME_ERROR"
-        if "MemoryError" in stderr_text:
+        # 파이썬의 MemoryError, JVM 의 OutOfMemoryError, C++ 의 std::bad_alloc.
+        if any(sign in stderr_text
+               for sign in ("MemoryError", "OutOfMemoryError", "std::bad_alloc")):
             outcome = "MEMORY_LIMIT"
         return {"outcome": outcome, "stdout": "", "stderr": sanitize_stderr(stderr_text),
                 "executionMs": elapsed_ms}
@@ -200,21 +296,27 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
             "executionMs": elapsed_ms}
 
 
+# case 마다 잰 최대 RSS(KB). 컴파일러는 들어가지 않는다.
+_case_memory: list[int] = []
+
+
 def emit(message: dict) -> None:
     sys.stdout.write(json.dumps(message, ensure_ascii=False) + "\n")
     sys.stdout.flush()
 
 
 def peak_memory_kb() -> int | None:
-    """자식 프로세스들의 최대 RSS. Linux 에서 ru_maxrss 는 KB 단위다."""
-    try:
-        return int(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)
-    except Exception:
-        return None
+    """사용자 코드가 쓴 최대 RSS(KB). case 마다 그 자식에게서 잰 값의 최댓값이다 - 컴파일은 빼고 잰다."""
+    return max(_case_memory) if _case_memory else None
 
 
 def main() -> int:
-    compile_error = compile_check(SOLUTION)
+    if LANGUAGE not in LANGUAGES:
+        # 이미지가 모르는 언어를 박았다. 사용자 잘못이 아니다 - 호스트가 SYSTEM_ERROR 로 돌려준다.
+        emit({"type": "protocol_error", "detail": f"모르는 언어: {LANGUAGE}"})
+        return 0
+    compile_error = (compile_check(SOLUTION) if LANGUAGE == "PYTHON"
+                     else compile_native(LANGUAGE))
     if compile_error is not None:
         emit({"type": "compile_error", "stderr": compile_error})
         return 0

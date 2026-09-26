@@ -293,6 +293,50 @@ def test_wrong_submission(conn) -> None:
     check("판정은 ACCEPTED 가 아니다", result.get("status") != "ACCEPTED", f"result={result}")
 
 
+# P01 의 Java 풀이. **언어가 이미지를 고르는지** 보려고 쓴다(ADR-0045).
+JAVA_P01 = """import java.io.*;
+import java.util.*;
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        StringTokenizer first = new StringTokenizer(in.readLine());
+        int m = Integer.parseInt(first.nextToken()), n = Integer.parseInt(first.nextToken());
+        ArrayDeque<Integer> q = new ArrayDeque<>();
+        for (int i = 1; i <= m; i++) q.add(i);
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            StringTokenizer t = new StringTokenizer(in.readLine());
+            if (t.nextToken().equals("push")) q.add(Integer.parseInt(t.nextToken()));
+            else out.append(q.isEmpty() ? -1 : q.poll()).append('\\n');
+        }
+        System.out.print(out);
+    }
+}
+"""
+
+
+def test_language_picks_the_image(conn) -> None:
+    """job 의 language 가 채점 이미지를 고른다(ADR-0045). Docker 와 Java 이미지가 필요하다.
+
+    **대조군이 있다.** 같은 코드를 PYTHON 으로 넣으면 컴파일 오류여야 한다 - 그래야 ACCEPTED 가
+    "Java 로 돌았기 때문" 이라고 말할 수 있다. 언어를 무시하고 늘 같은 이미지로 돌면 둘 다 같은 판정이 된다.
+    """
+    reset(conn)
+    java = seed_job(conn, source_code=JAVA_P01, language="JAVA")
+    as_python = seed_job(conn, source_code=JAVA_P01, language="PYTHON")
+
+    worker.drain(conn)
+    results = {}
+    for name, job_id in (("JAVA", java), ("PYTHON", as_python)):
+        after = row(conn, job_id)
+        results[name] = after["result"] if isinstance(after["result"], dict) else json.loads(
+            after["result"] or "{}")
+    check("Java 로 낸 Java 풀이는 ACCEPTED 다", results["JAVA"].get("status") == "ACCEPTED",
+          f"result={results['JAVA']}")
+    check("대조: 같은 코드를 PYTHON 으로 내면 COMPILE_ERROR 다",
+          results["PYTHON"].get("status") == "COMPILE_ERROR", f"result={results['PYTHON']}")
+
+
 def test_infra_failure_is_retried(conn) -> None:
     """감지된 인프라 장애는 첫 시도에서 끝나면 안 된다.
 
@@ -418,7 +462,8 @@ def main() -> int:
                    test_claims_once, test_expired_lease_is_reclaimed,
                    test_exhausted_job_is_failed, test_stale_worker_cannot_overwrite,
                    test_stale_worker_cannot_revive_failed_job, test_accepted_submission,
-                   test_wrong_submission, test_infra_failure_is_retried,
+                   test_wrong_submission, test_language_picks_the_image,
+                   test_infra_failure_is_retried,
                    test_user_failure_is_not_retried,
                    test_worker_does_not_touch_learning_state):
             print(f"\n== {fn.__name__} ==")
