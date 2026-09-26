@@ -1,0 +1,11 @@
+{
+  "id": "MULTI_PATTERN_MATCHING-1790400927028-1",
+  "skill": "MULTI_PATTERN_MATCHING",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T05:55:10+00:00",
+  "code": "P136_MULTI_WORD_COUNT",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    text = data[0]\n    n = int(data[1])\n    pats = data[2:2 + n]\n    out = []\n    for p in pats:\n        m = len(p)\n        count = 0\n        for i in range(len(text) - m + 1):\n            if text[i:i + m] == p:\n                count += 1\n        out.append(str(count))\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nalpha = rng.choice(['ab', 'abc', 'abcd'])\nm = rng.randint(1, 30)\ntext = ''.join(rng.choice(alpha) for _ in range(m))\nn = rng.randint(1, 8)\npats = []\nfor _ in range(n):\n    if rng.random() < 0.6:\n        length = rng.randint(1, min(m, 6))\n        i = rng.randint(0, m - length)\n        pats.append(text[i:i + length])\n    else:\n        length = rng.randint(1, 7)\n        pats.append(''.join(rng.choice(alpha) for _ in range(length)))\nprint(text)\nprint(n)\nprint('\\n'.join(pats))\n",
+  "stressInputGenerator": "import random\nimport sys\n\nrng = random.Random(20260926)\nm = 200000\ntext = ''.join(rng.choices('ab', k=m))\npats = []\nseen = set()\ntotal = 0\nwhile True:\n    length = rng.randint(5, 40)\n    if total + length > 200000:\n        break\n    i = rng.randint(0, m - length)\n    p = text[i:i + length]\n    if rng.random() < 0.3:\n        j = rng.randrange(length)\n        p = p[:j] + ('a' if p[j] == 'b' else 'b') + p[j + 1:]\n    if p in seen:\n        continue\n    seen.add(p)\n    pats.append(p)\n    total += length\nsys.stdout.write(text + '\\n' + str(len(pats)) + '\\n' + '\\n'.join(pats) + '\\n')\n"
+}

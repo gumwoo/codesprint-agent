@@ -1,0 +1,43 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P142_WALL_BREAK_PATH
+title: 벽 부수며 가기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(N * M * K)
+statement: |
+  N행 M열 격자가 주어진다. 각 칸은 빈 칸 '.' 또는 벽 '#' 이다. 행과 열은 0부터 센다. 로봇은 (0, 0) 에서 출발해 (N-1, M-1) 에 도착하려 한다. 한 번의 이동으로 상하좌우로 인접한 칸 하나로 옮겨 가며, 격자 밖으로는 나갈 수 없다. 로봇은 벽 칸으로 들어갈 수 있지만, 벽 칸에 들어갈 때마다 그 벽을 부순 것으로 보고 부순 횟수가 1 늘어난다. 한 번 부순 벽 칸에 다시 들어가도 횟수는 또 1 늘어난다. 이동 전체에서 부순 횟수는 K 이하여야 한다. 도착하는 데 필요한 최소 이동 횟수를 구한다.
+
+  입력
+  첫 줄에 N M K 가 공백으로 구분되어 주어진다. 이어서 N줄에 걸쳐 길이 M 의 문자열이 주어진다.
+
+  제약
+  1 <= N, M <= 100
+  0 <= K <= 5
+  격자 문자는 '.' 또는 '#' 뿐이다.
+  (0, 0) 과 (N-1, M-1) 은 항상 '.' 이다.
+
+  출력
+  최소 이동 횟수를 한 줄에 출력한다. 도착할 수 없으면 -1 을 출력한다. 출발 칸과 도착 칸이 같으면 0 을 출력한다.
+skills:
+- code: SKILL_COMPOSITION
+  role: PRIMARY
+  weight: 0.7
+- code: BFS_SHORTEST_PATH
+  role: SECONDARY
+  weight: 0.15
+- code: STATE_SPACE_BFS
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- IMPLEMENTATION_MISC
+- BOUNDARY_CHECK
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

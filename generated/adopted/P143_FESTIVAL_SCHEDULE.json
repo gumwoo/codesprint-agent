@@ -1,0 +1,11 @@
+{
+  "id": "SKILL_COMPOSITION-1790401939606-2",
+  "skill": "SKILL_COMPOSITION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T05:57:55+00:00",
+  "code": "P143_FESTIVAL_SCHEDULE",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    shows = [(int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)]\n    best = 0\n    for mask in range(1 << n):\n        chosen = [shows[i] for i in range(n) if (mask >> i) & 1]\n        if len(chosen) <= best:\n            continue\n        ok = True\n        for i in range(len(chosen)):\n            for j in range(i + 1, len(chosen)):\n                a = chosen[i]\n                b = chosen[j]\n                if not (a[1] < b[0] or b[1] < a[0]):\n                    ok = False\n                    break\n            if not ok:\n                break\n        if ok:\n            best = len(chosen)\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(1, 10)\nlines = [str(n)]\nfor _ in range(n):\n    s = r.randint(1, 15)\n    e = s + r.randint(0, 6)\n    lines.append(f\"{s} {e}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": null
+}

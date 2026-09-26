@@ -1,0 +1,48 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P140_MEETING_PLACE_ALL_CITIES
+title: 모든 도시의 모임 비용
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(N)
+statement: |
+  도시 N개가 N-1개의 양방향 도로로 이어져 있고, 어느 두 도시 사이에도 도로를 따라 가는 경로가 정확히 하나 있다. 도시는 1번부터 N번까지 번호가 붙어 있다(1-based). i번 도시에는 a_i명이 산다. 각 도로에는 길이가 있다.
+
+  모임을 도시 v에서 열면, 모든 사람이 자기 도시에서 v까지 도로를 따라 이동한다. 이때의 비용은 모든 사람의 이동 거리를 더한 값이다. 예를 들어 u번 도시 사람 a_u명이 v까지 거리 d만큼 이동하면 이 도시가 비용에 a_u × d를 더한다. v번 도시에 사는 사람은 이동하지 않는다.
+
+  1번부터 N번까지 각 도시에 대해, 그 도시에서 모임을 열 때의 비용을 구하라.
+
+  입력
+  첫 줄에 N이 주어진다.
+  둘째 줄에 a_1 a_2 ... a_N이 공백으로 구분되어 주어진다.
+  다음 N-1줄에 도로 정보 u v w가 주어진다. u번 도시와 v번 도시를 길이 w인 도로가 잇는다는 뜻이다.
+
+  출력
+  N줄을 출력한다. i번째 줄에는 i번 도시에서 모임을 열 때의 비용을 출력한다.
+
+  제약
+  1 ≤ N ≤ 40000
+  0 ≤ a_i ≤ 100
+  1 ≤ u, v ≤ N, u ≠ v
+  1 ≤ w ≤ 100
+  주어지는 도로는 트리를 이룬다.
+skills:
+- code: REROOTING_DP
+  role: PRIMARY
+  weight: 0.7
+- code: TREE_TRAVERSAL
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 모든 도시를 각각 출발점으로 BFS 를 새로 돌려 거리와 인구를 곱해 더한다 (O(N^2)).

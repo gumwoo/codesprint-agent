@@ -1,0 +1,41 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P144_TREE_NO_ADJACENT_PICK
+title: 이웃하지 않는 초소 고르기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O(N)
+statement: |
+  정점 N개와 간선 N-1개로 이루어진 트리가 있다. 정점은 1번부터 N번까지 번호가 붙어 있고(1-based), 모든 정점은 서로 연결되어 있다. i번 정점에는 초소를 세웠을 때 얻는 점수 w_i가 있다.
+
+  몇 개의 정점을 골라 초소를 세운다. 간선으로 직접 연결된 두 정점에 모두 초소를 세울 수는 없다. 아무 정점도 고르지 않아도 된다. 고른 정점들의 점수 합의 최댓값을 구하라.
+
+  예를 들어 1-2-3-4 로 이어진 트리에서 점수가 10, 1, 1, 10 이면 1번과 4번을 골라 20을 얻는다. 1번과 3번을 고르면 11, 2번과 4번을 고르면 11이다.
+
+  입력
+  첫째 줄에 N (1 ≤ N ≤ 50000).
+  둘째 줄에 w_1 w_2 ... w_N 이 공백으로 구분되어 주어진다 (1 ≤ w_i ≤ 1000).
+  다음 N-1개 줄에 간선의 두 끝 정점 번호 a b 가 주어진다 (1 ≤ a, b ≤ N, a ≠ b). N = 1 이면 이 줄들은 없다. 간선의 순서와 두 끝의 순서는 정해져 있지 않다.
+
+  출력
+  점수 합의 최댓값을 정수 하나로 출력한다.
+skills:
+- code: TREE_DP
+  role: PRIMARY
+  weight: 0.7
+- code: TREE_TRAVERSAL
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 정점 조합을 크기별로 모두 나열해 인접한 쌍이 없는 조합의 점수 합 최댓값을 구한다.

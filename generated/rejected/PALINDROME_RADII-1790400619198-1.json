@@ -1,0 +1,77 @@
+{
+  "id": "PALINDROME_RADII-1790400619198-1",
+  "skill": "PALINDROME_RADII",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T06:01:09+00:00",
+  "stage": "중복",
+  "code": "P138_PALINDROME_CENTER_SUM",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P139_POSITION_MAX_PALINDROME 과 같은 계산이다 - 둘 다 모든 중심의 가장 긴 회문 반지름을 구하고, 모두 더하는지 위치마다 큰 쪽을 내는지만 다르다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "PALINDROME_RADII-1790400619198-1",
+    "skill": "PALINDROME_RADII",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T05:30:19.198037100Z",
+    "draft": {
+      "codeSuffix": "PALINDROME_CENTER_SUM",
+      "title": "모든 중심의 회문 길이 합",
+      "statement": "소문자로만 이루어진 문자열 S 가 주어진다. S 의 길이를 N 이라 하고, 글자의 위치는 0 부터 센다.\n\n부분 문자열의 중심은 다음과 같이 정한다. 길이가 홀수인 부분 문자열의 중심은 가운데 글자의 위치이고, 길이가 짝수인 부분 문자열의 중심은 가운데 두 글자 사이다. 따라서 S 에는 중심이 될 수 있는 곳이 2N-1 개 있다. 글자 위치 N 개와, 서로 이웃한 두 글자 사이 N-1 개다.\n\n앞에서 읽으나 뒤에서 읽으나 같은 부분 문자열을 회문이라 한다. 중심 하나마다 그 중심을 가진 회문 부분 문자열 중 가장 긴 것의 길이를 구한다. 그런 회문이 없으면 0 이다. 두 글자 사이 중심에서만 0 이 나올 수 있다. 2N-1 개 중심의 값을 모두 더해 출력한다.\n\n예를 들어 S = abba 이면 글자 위치 네 곳의 값은 모두 1 이다. 사이 세 곳 가운데 a 와 b 사이, b 와 a 사이는 0 이고, 두 b 사이는 abba 가 있으므로 4 다. 합은 8 이다.\n\n입력\n첫째 줄에 S 가 주어진다. 1 <= N <= 200000 이고 S 는 영어 소문자로만 이루어진다.\n\n출력\n2N-1 개 중심의 값의 합을 정수 하나로 한 줄에 출력한다.",
+      "secondarySkills": [],
+      "referenceComplexity": "O(N)",
+      "expectedSolveSeconds": 1500,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "INPUT_PARSE"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "글자 위치 중심(홀수 길이 회문)만 계산하고 두 글자 사이 중심(짝수 길이 회문)의 값을 합에서 빠뜨렸다.",
+      "sampleInputs": [
+        "abba",
+        "abacabab"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "a"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "ab"
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "aaaaaaaaaaaa"
+        },
+        {
+          "type": "DUPLICATE",
+          "input": "abbaabbaabba"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "zzyzzyzzzyzzyzz"
+        }
+      ],
+      "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nmode = rng.randint(0, 3)\nif mode == 0:\n    n = rng.randint(1, 30)\n    s = ''.join(rng.choice('ab') for _ in range(n))\nelif mode == 1:\n    n = rng.randint(1, 30)\n    s = ''.join(rng.choice('abc') for _ in range(n))\nelif mode == 2:\n    half = ''.join(rng.choice('ab') for _ in range(rng.randint(1, 14)))\n    s = half + rng.choice(['', 'c']) + half[::-1]\nelse:\n    parts = []\n    total = 0\n    target = rng.randint(1, 30)\n    while total < target:\n        c = rng.choice('abc')\n        length = min(rng.randint(1, 6), target - total)\n        parts.append(c * length)\n        total += length\n    s = ''.join(parts)\nprint(s)\n",
+      "reference": "import sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n\n    d1 = [0] * n\n    l, r = 0, -1\n    for i in range(n):\n        k = 1 if i > r else min(d1[l + r - i], r - i + 1)\n        while i - k >= 0 and i + k < n and s[i - k] == s[i + k]:\n            k += 1\n        d1[i] = k\n        if i + k - 1 > r:\n            l, r = i - k + 1, i + k - 1\n\n    d2 = [0] * n\n    l, r = 0, -1\n    for i in range(n):\n        k = 0 if i > r else min(d2[l + r - i + 1], r - i + 1)\n        while i - k - 1 >= 0 and i + k < n and s[i - k - 1] == s[i + k]:\n            k += 1\n        d2[i] = k\n        if i + k - 1 > r:\n            l, r = i - k, i + k - 1\n\n    total = sum(2 * x - 1 for x in d1) + sum(2 * x for x in d2)\n    print(total)\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n    best = [0] * (2 * n - 1)\n    for l in range(n):\n        for r in range(l, n):\n            sub = s[l:r + 1]\n            if sub == sub[::-1]:\n                c = l + r\n                if r - l + 1 > best[c]:\n                    best[c] = r - l + 1\n    print(sum(best))\n\n\nmain()\n",
+      "wrong": "import sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n\n    d1 = [0] * n\n    l, r = 0, -1\n    for i in range(n):\n        k = 1 if i > r else min(d1[l + r - i], r - i + 1)\n        while i - k >= 0 and i + k < n and s[i - k] == s[i + k]:\n            k += 1\n        d1[i] = k\n        if i + k - 1 > r:\n            l, r = i - k + 1, i + k - 1\n\n    total = sum(2 * x - 1 for x in d1)\n    print(total)\n\n\nmain()\n",
+      "hints": [
+        "중심마다 양쪽으로 한 글자씩 넓혀 보면 같은 글자가 길게 이어진 문자열에서 비교 횟수가 N 제곱에 가까워진다. 이미 확인한 긴 회문 안쪽의 중심은 그 회문의 반대편에 거울처럼 대응하는 중심이 있다는 점을 본다.",
+        "왼쪽에서 오른쪽으로 중심을 옮기며, 앞서 구한 회문의 대칭성을 재사용해 각 중심의 초기 반지름을 정하는 선형 시간 회문 반지름 알고리즘을 쓴다.",
+        "중심별 반지름을 담는 배열 두 개(글자 중심용, 글자 사이 중심용)와, 지금까지 찾은 회문 중 오른쪽 끝이 가장 먼 것의 왼쪽 끝과 오른쪽 끝을 상태로 둔다.",
+        "새 중심이 그 오른쪽 끝 안에 있으면 거울 위치의 반지름과 오른쪽 끝까지 남은 거리 중 작은 값에서 시작하고, 밖에 있으면 가장 작은 값에서 시작한다. 그 뒤 글자가 맞는 동안만 넓히고, 오른쪽 끝을 넘어섰으면 저장한 구간을 새 회문으로 바꾼다.",
+        "홀수용 반복: 각 위치 i 에 대해 시작 반지름을 정함 -> 양옆 글자가 같으면 반지름 증가 -> 반지름 기록 -> 필요하면 가장 먼 회문 구간 갱신. 짝수용도 같은 틀로 i-1 과 i 사이를 중심으로 반복. 끝으로 홀수 반지름 r 은 길이 2r-1, 짝수 반지름 r 은 길이 2r 로 바꿔 모두 더한다."
+      ],
+      "skillControl": {
+        "approach": "2N-1 개 중심마다 양쪽 글자가 다를 때까지 한 칸씩 넓혀 본다.",
+        "solution": "import sys\n\n\ndef main():\n    s = sys.stdin.readline().strip()\n    n = len(s)\n    total = 0\n    for c in range(2 * n - 1):\n        l = c // 2\n        r = l + c % 2\n        length = 0\n        while l >= 0 and r < n and s[l] == s[r]:\n            length = r - l + 1\n            l -= 1\n            r += 1\n        total += length\n    print(total)\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nN = 200000\nparts = []\ntotal = 0\nprev = ''\nwhile total < N:\n    c = rng.choice('abcd')\n    if c == prev:\n        continue\n    length = min(rng.randint(1, 1500), N - total)\n    parts.append(c * length)\n    total += length\n    prev = c\nprint(''.join(parts))\n"
+      }
+    }
+  }
+}

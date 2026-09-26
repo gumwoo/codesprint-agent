@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "4\n3 1 5 8\n",
+      "expectedOutput": "167\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "5\n2 7 1 9 4\n",
+      "expectedOutput": "383\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "1\n5\n",
+      "expectedOutput": "5\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "1\n1\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "6\n7 7 7 7 7 7\n",
+      "expectedOutput": "1428\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "7\n1 100 1 100 1 100 1\n",
+      "expectedOutput": "1030300\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "7\n100 100 100 100 100 100 100\n",
+      "expectedOutput": "5010100\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "2\n100 1\n",
+      "expectedOutput": "200\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7\n8 12 11 47 22 95 86\n",
+      "expectedOutput": "547064\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7\n74 11 63 98 34 5 1\n",
+      "expectedOutput": "767824\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "7\n38 11 3 76 40 55 49\n",
+      "expectedOutput": "549719\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "150\n10 6 3 76 30 65 24 81 5 15 48 64 99 32 29 17 89 96 53 90 7 93 40 92 70 79 26 75 77 99 58 90 21 25 16 68 42 45 33 31 44 2 55 46 71 33 95 4 12 23 72 49 88 62 95 99 23 53 88 14 71 20 52 20 21 23 93 25 11 47 97 6 72 8 60 30 35 39 55 85 5 88 14 17 45 96 14 16 71 75 8 76 29 28 83 67 59 51 10 97 18 5 46 20 55 83 63 53 60 49 99 33 40 73 69 66 72 80 5 55 40 71 22 17 51 2 74 2 73 7 39 32 63 22 24 32 62 86 78 93 3 12 60 44 34 69 39 65 76 64\n",
+      "expectedOutput": "50748885\n",
+      "probes": []
+    }
+  ]
+}
