@@ -49,6 +49,7 @@
       <button type="button" class="tab" id="tabToday">오늘</button>
       <button type="button" class="tab" id="tabSkills">내 Skill</button>
       <button type="button" class="tab" id="tabMock">시험</button>
+      <button type="button" class="tab" id="tabAnalytics">분석</button>
       <span class="meta" id="problemMeta"></span>
     </div>
 
@@ -204,6 +205,34 @@
           <tr><th>Skill</th><th>상태</th><th class="num">mastery</th><th class="num">근거</th></tr>
         </thead>
         <tbody id="skillRows"></tbody>
+      </table>
+    </div>
+
+    <!--
+      학습 분석(PRD §99 · §160, ADR-0049). 숫자는 전부 서버가 저장된 관측에서 센 값이다 - 화면은 세지 않는다.
+      예측이나 점수는 없다.
+    -->
+    <div class="pane-body" id="analyticsBody" hidden>
+      <p class="note" id="analyticsNote"></p>
+      <h3 class="sub">판정</h3>
+      <table class="skills">
+        <thead><tr><th>판정</th><th class="num">제출</th></tr></thead>
+        <tbody id="verdictRows"></tbody>
+      </table>
+      <h3 class="sub">주별</h3>
+      <table class="skills">
+        <thead><tr><th>주(월요일)</th><th class="num">제출</th><th class="num">ACCEPTED</th></tr></thead>
+        <tbody id="weekRows"></tbody>
+      </table>
+      <h3 class="sub">Skill 상태</h3>
+      <table class="skills">
+        <thead><tr><th>상태</th><th class="num">Skill</th></tr></thead>
+        <tbody id="statusRows"></tbody>
+      </table>
+      <h3 class="sub">모의 시험</h3>
+      <table class="skills">
+        <thead><tr><th>시작</th><th class="num">푼 문제</th></tr></thead>
+        <tbody id="mockHistoryRows"></tbody>
       </table>
     </div>
   </section>

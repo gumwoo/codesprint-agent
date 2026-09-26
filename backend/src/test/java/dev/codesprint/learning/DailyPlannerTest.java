@@ -147,4 +147,36 @@ class DailyPlannerTest {
         assertThat(plan.mode()).isEqualTo(Mode.NORMAL);
         assertThat(plan.examInDays()).isNull();
     }
+    @Test
+    @DisplayName("시험 모드에서 모의 시험을 볼 때면 복습 다음, 연습 앞에 모의 시험을 둔다 - 평소에는 두지 않는다")
+    void examModeSchedulesAMockTest() {
+        Plan plan = planner.plan(STATES, List.of("REVIEWED"), null, COST, 200, 3, 60);
+        assertThat(plan.blocks()).extracting(Block::type)
+                .startsWith(BlockType.REVIEW, BlockType.MOCK_TEST, BlockType.PRACTICE);
+        Block mock = plan.blocks().get(1);
+        assertThat(mock.skillCode()).as("모의 시험은 특정 Skill 이 아니다").isNull();
+        assertThat(mock.minutes()).isEqualTo(60);
+        assertThat(plan.reason()).contains("모의 시험");
+
+        // 대조: 같은 입력에 시험이 없으면(평소) 모의 시험을 두지 않는다
+        Plan normal = planner.plan(STATES, List.of("REVIEWED"), null, COST, 200, null, 60);
+        assertThat(normal.blocks()).extracting(Block::type).doesNotContain(BlockType.MOCK_TEST);
+        // 대조: 볼 때가 아니면(null) 시험 모드여도 두지 않는다
+        Plan notDue = planner.plan(STATES, List.of("REVIEWED"), null, COST, 200, 3, null);
+        assertThat(notDue.blocks()).extracting(Block::type).doesNotContain(BlockType.MOCK_TEST);
+    }
+
+    @Test
+    @DisplayName("모의 시험이 하루 시간에 들어가지 않으면 넣지 않고, 이유가 넣은 것처럼 말하지 않는다")
+    void mockTestThatDoesNotFitIsLeftOutHonestly() {
+        Plan plan = planner.plan(STATES, List.of("REVIEWED"), null, COST, 40, 3, 60);
+        assertThat(plan.blocks()).extracting(Block::type).doesNotContain(BlockType.MOCK_TEST);
+        assertThat(plan.reason()).contains("모의 시험(60분)이 하루 시간에 들어가지 않아 넣지 못했다")
+                .doesNotContain("모의 시험 ·").doesNotContain("· 모의 시험");
+
+        // 하루 시간을 정하지 않았으면 시간을 나누지 않으므로 앞 블록으로 보여 준다
+        Plan unbudgeted = planner.plan(STATES, List.of("REVIEWED"), null, COST, null, 3, 60);
+        assertThat(unbudgeted.blocks()).extracting(Block::type)
+                .startsWith(BlockType.REVIEW, BlockType.MOCK_TEST);
+    }
 }

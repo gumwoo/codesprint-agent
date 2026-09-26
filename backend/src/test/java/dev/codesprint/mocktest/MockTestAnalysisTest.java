@@ -57,20 +57,24 @@ class MockTestAnalysisTest {
         assertThat(b.submissions()).isEqualTo(2);
         assertThat(b.timeSpentSeconds()).isEqualTo(390);
         assertThat(b.overExpected()).as("390 > 300").isTrue();
+        assertThat(b.lateGiveUp()).as("기대보다 오래 걸렸지만 풀었다 - 포기할 문제가 아니었다").isFalse();
 
         ProblemResult a = of(result, "A");
         assertThat(a.outcome()).as("냈지만 못 풀었다 - 버린 문제").isEqualTo(Outcome.ATTEMPTED);
         assertThat(a.solvedAtSeconds()).isNull();
         assertThat(a.timeSpentSeconds()).as("못 풀었으면 시험 끝까지").isEqualTo(3100);
         assertThat(a.overExpected()).isTrue();
+        assertThat(a.lateGiveUp()).as("기대 시간을 넘기고도 못 풀었다 - 포기가 늦었다").isTrue();
 
         assertThat(of(result, "C").outcome()).isEqualTo(Outcome.OPENED);
         assertThat(of(result, "C").overExpected()).as("600 <= 900").isFalse();
+        assertThat(of(result, "C").lateGiveUp()).as("못 풀었지만 기준 안에서 멈췄다").isFalse();
         ProblemResult d = of(result, "D");
         assertThat(d.outcome()).isEqualTo(Outcome.UNOPENED);
         assertThat(d.openedAtSeconds()).isNull();
         assertThat(d.timeSpentSeconds()).isNull();
         assertThat(d.overExpected()).isNull();
+        assertThat(d.lateGiveUp()).isNull();
 
         assertThat(result.solved()).isEqualTo(1);
         assertThat(result.openOrder()).containsExactly("B", "A", "C");

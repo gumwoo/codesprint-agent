@@ -30,13 +30,13 @@
         "additionalProperties": false,
         "required": ["type", "skillCode", "problem", "minutes", "reason"],
         "properties": {
-          "type": { "enum": ["DIAGNOSE", "REVIEW", "PRACTICE", "LEARN", "MIXED"] },
-          "skillCode": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]*$", "description": "MIXED 면 null 이다." },
+          "type": { "enum": ["DIAGNOSE", "REVIEW", "MOCK_TEST", "PRACTICE", "LEARN", "MIXED"], "description": "MOCK_TEST 는 시험 모드에서 최근 7 일 안에 본 모의 시험이 없을 때 서버가 넣는다(PRD §95, ADR-0049)." },
+          "skillCode": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]*$", "description": "MIXED · MOCK_TEST 면 null 이다." },
           "problem": {
             "type": ["object", "null"],
             "additionalProperties": false,
             "required": ["code", "title"],
-            "description": "이 블록에서 풀 문제. 다음 행동과 같은 규칙으로 고른다. MIXED 면 null 이다.",
+            "description": "이 블록에서 풀 문제. 다음 행동과 같은 규칙으로 고른다. MIXED · MOCK_TEST 면 null 이다 - 모의 시험 문제는 시험 탭에서 연다.",
             "properties": {
               "code": { "type": "string", "pattern": "^P[0-9]{2,3}_[A-Z0-9_]+$" },
               "title": { "type": "string", "minLength": 1 }

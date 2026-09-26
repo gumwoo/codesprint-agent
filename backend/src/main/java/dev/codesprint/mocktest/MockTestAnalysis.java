@@ -49,10 +49,13 @@ public final class MockTestAnalysis {
      *
      * @param timeSpentSeconds 연 뒤 푼 때까지, 못 풀었으면 시험이 끝날 때까지. 안 열었으면 null.
      * @param overExpected 그 시간이 기대 풀이 시간을 넘었는가. 안 열었으면 null.
+     * @param lateGiveUp 포기 판단이 늦었는가(PRD §95 "문제 포기 전략"). 포기 기준은 그 문제의 기대 풀이
+     *     시간이다 - 기대 시간을 넘기고도 끝내 풀지 못했으면 true. 풀었거나 채점 중이면 false, 안
+     *     열었으면 null. 기준을 새로 어림하지 않고 문제 데이터의 기대 시간을 그대로 쓴다.
      */
     public record ProblemResult(String label, Outcome outcome, Long openedAtSeconds,
             Long firstRunAtSeconds, Long firstSubmitAtSeconds, Long solvedAtSeconds,
-            int submissions, Long timeSpentSeconds, Boolean overExpected) {
+            int submissions, Long timeSpentSeconds, Boolean overExpected, Boolean lateGiveUp) {
     }
 
     /**
@@ -114,7 +117,9 @@ public final class MockTestAnalysis {
                     offset(start, open), offset(start, firstRun.get(label)),
                     offset(start, firstSubmit.get(label)), offset(start, done),
                     submissions.getOrDefault(label, 0), spent,
-                    spent == null ? null : spent > problem.expectedSolveSeconds()));
+                    spent == null ? null : spent > problem.expectedSolveSeconds(),
+                    spent == null ? null : spent > problem.expectedSolveSeconds()
+                            && outcome != Outcome.SOLVED && outcome != Outcome.JUDGING));
         }
 
         List<String> openOrder = new ArrayList<>(opened.keySet());

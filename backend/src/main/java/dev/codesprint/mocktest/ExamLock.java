@@ -36,6 +36,7 @@ public class ExamLock implements WebMvcConfigurer {
         "/api/users/*/skills",
         "/api/users/*/reviews",
         "/api/users/*/diagnostic",
+        "/api/users/*/analytics",
     };
 
     private final MockTestService mockTests;

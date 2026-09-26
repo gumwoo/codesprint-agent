@@ -85,6 +85,7 @@
           "submissions",
           "timeSpentSeconds",
           "overExpected",
+          "lateGiveUp",
           "mistakes"
         ],
         "properties": {
@@ -172,6 +173,13 @@
               "null"
             ],
             "description": "timeSpentSeconds 가 기대 풀이 시간을 넘었는가. 안 열었으면 null."
+          },
+          "lateGiveUp": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "포기 판단이 늦었는가(PRD §95). 기대 풀이 시간을 넘기고도 끝내 풀지 못했으면 true, 풀었거나 채점 중이면 false, 안 열었으면 null. 포기 기준은 문제 데이터의 기대 풀이 시간이다(ADR-0049)."
           },
           "mistakes": {
             "type": "array",

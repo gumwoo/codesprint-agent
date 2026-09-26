@@ -360,6 +360,28 @@ test("늦게 온 이전 사용자의 계획이 지금 사용자의 오늘 화면
   await expect(page.locator("#todayReason")).toHaveText("사용자 2 의 계획");
 });
 
+test("늦게 온 이전 사용자의 분석이 지금 사용자의 분석 화면을 덮지 않는다", async ({ page }) => {
+  // ADR-0049. 분석 탭도 사용자마다 다른 숫자다 - 1 번의 분석이 늦게 오면 2 번 화면에 1 번의 제출 수가 그려진다.
+  const { analyticsFor } = require("../fixtures/api");
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/users/1/analytics", async (route) => {
+    await slow.held;
+    await fulfill(route, analyticsFor(1, 11));
+  });
+  await page.route("**/api/users/2/analytics", (route) => fulfill(route, analyticsFor(2, 22)));
+
+  await asUser(page, "1");
+  await page.click("#tabAnalytics");
+  await page.fill("#userId", "2");
+  await page.dispatchEvent("#userId", "change");
+  await expect(page.locator("#analyticsNote")).toContainText("제출 22");
+
+  await releaseAndSettle(page, slow, "/api/users/1/analytics");
+  await expect(page.locator("#analyticsNote")).toContainText("제출 22");
+  await expect(page.locator("#verdictRows")).toContainText("22");
+});
+
 test("잘못 입력한 하루 시간은 저장하지 않는다 - 정하지 않음으로 바꾸지 않는다", async ({ page }) => {
   // ADR-0038 §4. number 칸에 잘못 쓰면 value 가 "" 가 되어, 그대로 보내면 null 로 저장됐다.
   let puts = 0;

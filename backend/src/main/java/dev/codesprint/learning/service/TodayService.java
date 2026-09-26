@@ -36,21 +36,23 @@ public class TodayService {
     private final ReviewScheduleService reviews;
     private final NextProblemService nextProblem;
     private final ProblemCatalog problems;
+    private final dev.codesprint.mocktest.MockTestService mockTests;
     private final Clock clock;
 
     public TodayService(MasteryService mastery, DailyPlanner planner, DiagnosticService diagnostic,
             ReviewScheduleService reviews, NextProblemService nextProblem, ProblemCatalog problems,
-            Clock clock) {
+            dev.codesprint.mocktest.MockTestService mockTests, Clock clock) {
         this.mastery = mastery;
         this.planner = planner;
         this.diagnostic = diagnostic;
         this.reviews = reviews;
         this.nextProblem = nextProblem;
         this.problems = problems;
+        this.mockTests = mockTests;
         this.clock = clock;
     }
 
-    /** 계획의 한 칸. problem 이 null 이면 MIXED 다. */
+    /** 계획의 한 칸. problem 이 null 이면 MIXED · MOCK_TEST 다(특정 문제가 없다). */
     public record Block(String type, String skillCode, ProblemDefinition problem, int minutes,
             String reason) {
     }
@@ -97,12 +99,15 @@ public class TodayService {
                     ? ActionType.RETRY_VARIANT : ActionType.UNLOCK_NEXT, picked, cost);
         }
 
+        // 시험 전략(§95): 시험 모드일 때만 모의 시험을 볼 때인지 묻는다. 시험을 만들 수 없으면 null 이다.
+        Integer mockTestMinutes = examInDays != null && examInDays <= DailyPlanner.EXAM_MODE_DAYS
+                ? mockTests.dueMinutes(userId, DailyPlanner.EXAM_MODE_DAYS) : null;
         DailyPlanner.Plan plan = planner.plan(states, due, diagnosticSkill, cost,
-                user.dailyMinutes(), examInDays);
+                user.dailyMinutes(), examInDays, mockTestMinutes);
         List<Block> blocks = new ArrayList<>();
         for (DailyPlanner.Block block : plan.blocks()) {
             blocks.add(new Block(block.type().name(), block.skillCode(),
-                    block.type() == BlockType.MIXED ? null : picked.get(block.skillCode()),
+                    block.skillCode() == null ? null : picked.get(block.skillCode()),
                     block.minutes(), block.reason()));
         }
         int mastered = (int) states.stream()

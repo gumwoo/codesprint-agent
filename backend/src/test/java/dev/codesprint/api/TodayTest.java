@@ -171,6 +171,56 @@ class TodayTest {
     }
 
     @Test
+    @DisplayName("시험 모드에서 최근 7 일 안에 본 모의 시험이 없으면 모의 시험 블록을 주고, 보면 사라진다")
+    void examModeAsksForAMockTest() throws Exception {
+        String soon = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(3).toString();
+        assertThat(putSettings("{\"dailyMinutes\": 600, \"examDate\": \"" + soon + "\"}"))
+                .isEqualTo(200);
+        JsonNode plan = today();
+        assertThat(schema("today.schema.json").validate(plan)).isEmpty();
+        JsonNode mock = null;
+        for (JsonNode block : plan.get("blocks")) {
+            if ("MOCK_TEST".equals(block.get("type").asText())) {
+                mock = block;
+            }
+        }
+        assertThat(mock).as("시험 3 일 전, 모의 시험을 본 적 없음").isNotNull();
+        assertThat(mock.get("skillCode").isNull()).isTrue();
+        assertThat(mock.get("problem").isNull()).isTrue();
+
+        // 계획이 말한 시간이 시험 탭이 여는 시험의 시간과 같다 - 같은 규칙으로 잰다
+        JsonNode test = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/users/{id}/mock-tests", userId))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+        long minutes = java.time.Duration.between(java.time.Instant.parse(test.get("startedAt").asText()),
+                java.time.Instant.parse(test.get("endsAt").asText())).toMinutes();
+        assertThat(mock.get("minutes").asLong()).isEqualTo(minutes);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .post("/api/mock-tests/{id}/finish", test.get("mockTestId").asLong())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"userId\": " + userId + "}"));
+
+        JsonNode after = today();
+        for (JsonNode block : after.get("blocks")) {
+            assertThat(block.get("type").asText()).as("방금 모의 시험을 봤다").isNotEqualTo("MOCK_TEST");
+        }
+
+        // 대조: 시험일이 없으면(평소) 모의 시험 블록이 없다 - 막은 것이 시험 전략이다
+        long other = users.save(new UserRow(
+                "mock-normal-" + System.nanoTime() + "@codesprint.dev", "평소", "JOB")).id();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .put("/api/users/{id}/settings", other).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"dailyMinutes\": 600, \"examDate\": null}"));
+        JsonNode normal = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .get("/api/users/{id}/today", other))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+        for (JsonNode block : normal.get("blocks")) {
+            assertThat(block.get("type").asText()).isNotEqualTo("MOCK_TEST");
+        }
+    }
+
+    @Test
     @DisplayName("오답 요약이 계약을 지키고, 제출이 없으면 비어 있다")
     void mistakeSummary() throws Exception {
         JsonNode summary = MAPPER.readTree(mvc.perform(get("/api/users/{id}/mistakes", userId))
