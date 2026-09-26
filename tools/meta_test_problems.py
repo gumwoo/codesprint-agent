@@ -171,8 +171,6 @@ def drop_sample(doc):
     doc["cases"] = [c for c in doc["cases"] if c["type"] != "SAMPLE"]
 
 
-# (설명, 대상 파일, 망가뜨리는 방법, 기대 메시지 조각)
-# 새 불변식을 check_problems.py 에 추가하면 그것을 깨뜨리는 케이스도 여기 함께 추가한다.
 def template_points_nowhere(doc):
     doc["templates"][0]["variants"][0]["problem"] = "P999_NO_SUCH_PROBLEM"
 
@@ -206,6 +204,43 @@ def template_missing_value(doc):
     doc["templates"][1]["variants"][0]["values"].pop("moves")
 
 
+def template_code_twice(doc):
+    # 같은 code 로 가족을 하나 더 적는다. 이 검사가 없으면 "한 문제는 한 가족" 도 같은 code 안에서 뚫린다
+    doc["templates"].append(dict(doc["templates"][2]))
+
+
+def template_unknown_skill(doc):
+    doc["templates"][0]["skill"] = "NO_SUCH_SKILL"
+
+
+def template_single_variant(doc):
+    doc["templates"][2]["variants"] = doc["templates"][2]["variants"][:1]
+
+
+def template_axis_outside_149(doc):
+    doc["templates"][0]["parameters"][0]["axis"] = "난이도"
+
+
+def template_same_problem_twice(doc):
+    # 문제 하나를 두 번 적어 "가족" 을 만든다 - 변형 둘 이상과 쌍 검사를 모두 지나가려는 시도
+    t = doc["templates"][2]
+    t["variants"] = [dict(t["variants"][0], values={"requiredOutput": "a"}),
+                     dict(t["variants"][0], values={"requiredOutput": "b"})]
+
+
+def template_param_twice(doc):
+    doc["templates"][0]["parameters"].append({"name": "requiredOutput", "axis": "제약 조건"})
+
+
+def template_whitespace_only(doc):
+    # 공백 · 대소문자만 다른 값은 같은 변형이다
+    t = doc["templates"][3]
+    first = t["variants"][0]["values"]["requiredOutput"]
+    t["variants"][1]["values"]["requiredOutput"] = "  " + first.upper() + "  "
+
+
+# (설명, 대상 파일, 망가뜨리는 방법, 기대 메시지 조각)
+# 새 불변식을 check_problems.py 에 추가하면 그것을 깨뜨리는 케이스도 여기 함께 추가한다.
 CASES = [
     # -- 템플릿 (ADR-0051) --
     ("템플릿이 없는 문제를 가리키면", "problems/templates.yaml", template_points_nowhere, "없는 문제"),
@@ -213,6 +248,13 @@ CASES = [
     ("한 문제가 두 템플릿에 속하면", "problems/templates.yaml", template_problem_in_two_families, "함께 속한다"),
     ("변형이 숫자만 다르면", "problems/templates.yaml", template_numbers_only, "숫자(제약 조건) 말고는 같은 변형"),
     ("변형이 parameter 값을 빠뜨리면", "problems/templates.yaml", template_missing_value, "values 가 parameters"),
+    ("템플릿 code 가 두 번이면", "problems/templates.yaml", template_code_twice, "두 번 나온다"),
+    ("템플릿이 없는 Skill 을 가리키면", "problems/templates.yaml", template_unknown_skill, "skills.yaml 에 없는 Skill"),
+    ("변형이 하나뿐이면", "problems/templates.yaml", template_single_variant, "is too short"),
+    ("축이 §149 의 여섯 밖이면", "problems/templates.yaml", template_axis_outside_149, "is not one of"),
+    ("한 템플릿에 같은 문제가 두 번이면", "problems/templates.yaml", template_same_problem_twice, "한 템플릿에 두 번"),
+    ("parameter 이름이 두 번이면", "problems/templates.yaml", template_param_twice, "parameter 이름이 두 번"),
+    ("값이 공백 · 대소문자만 다르면", "problems/templates.yaml", template_whitespace_only, "숫자(제약 조건) 말고는 같은 변형"),
 
     # -- Skill 매핑 --
     ("PRIMARY 가 사라지면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", drop_primary, "PRIMARY 는 정확히 하나"),
@@ -274,6 +316,7 @@ CASES = [
 
 # 파일이 있고 없고로만 깨뜨릴 수 있는 것. (설명, 대상, 동작, 기대 메시지 조각)
 FILE_CASES = [
+    ("템플릿 파일이 없으면", "problems/templates.yaml", "delete", "templates.yaml 이 없다"),
     ("힌트 사다리 파일이 없으면",
      "problems/P02_GRID_TRAVERSAL/hints.yaml", "delete",
      "hints.yaml 이 없다"),

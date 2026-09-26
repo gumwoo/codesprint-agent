@@ -377,6 +377,11 @@ def main() -> int:
 NUMERIC_AXIS = "제약 조건"
 
 
+def normalized(value) -> str:
+    """공백 · 대소문자만 다른 값을 다른 변형으로 치지 않는다."""
+    return " ".join(str(value or "").split()).casefold()
+
+
 def check_templates(problem_primary: dict, skills: dict) -> None:
     """problems/templates.yaml - 문제 가족과 변형 축(PRD §63 · §149, ADR-0051)."""
     path = PROBLEMS / "templates.yaml"
@@ -389,7 +394,10 @@ def check_templates(problem_primary: dict, skills: dict) -> None:
         fail("template-schema", f"templates.yaml{list(error.absolute_path)}: {error.message}")
     owner: dict[str, str] = {}
     seen: set[str] = set()
-    for template in doc.get("templates") or []:
+    templates = doc.get("templates") if isinstance(doc, dict) else None
+    for template in templates if isinstance(templates, list) else []:
+        if not isinstance(template, dict):
+            continue  # 스키마 검사가 이미 이유를 적었다
         code = template.get("code")
         if code in seen:
             fail("template", f"{code}: 템플릿 code 가 두 번 나온다")
@@ -397,11 +405,19 @@ def check_templates(problem_primary: dict, skills: dict) -> None:
         skill = template.get("skill")
         if skill not in skills:
             fail("template", f"{code}: skills.yaml 에 없는 Skill {skill!r}")
-        params = template.get("parameters") or []
+        params = [p for p in (template.get("parameters") or []) if isinstance(p, dict)]
         names = [p.get("name") for p in params]
-        variants = template.get("variants") or []
+        if len(set(names)) != len(names):
+            fail("template", f"{code}: parameter 이름이 두 번 나온다 ({names})")
+        variants = [v for v in (template.get("variants") or []) if isinstance(v, dict)]
+        in_template: set[str] = set()
         for v in variants:
             problem = v.get("problem")
+            # 한 템플릿 안에서도 같은 문제를 두 번 적지 않는다 - 문제 하나짜리 "가족" 이 변형 둘 이상과
+            # 쌍 검사를 모두 지나간다(검증 에이전트가 재현했다)
+            if problem in in_template:
+                fail("template", f"{code}: {problem} 가 한 템플릿에 두 번 나온다")
+            in_template.add(problem)
             if problem not in problem_primary:
                 fail("template", f"{code}: 없는 문제 {problem!r}")
                 continue
@@ -419,7 +435,7 @@ def check_templates(problem_primary: dict, skills: dict) -> None:
             for j in range(i + 1, len(variants)):
                 a_values = variants[i].get("values") or {}
                 b_values = variants[j].get("values") or {}
-                if all(a_values.get(n) == b_values.get(n) for n in shaped):
+                if all(normalized(a_values.get(n)) == normalized(b_values.get(n)) for n in shaped):
                     fail("template", f"{code}: {variants[i].get('problem')} 와 {variants[j].get('problem')} 가 "
                                      f"숫자(제약 조건) 말고는 같은 변형이다 - 같은 패턴의 숫자만 바꾼 문제다(PRD §149)")
 
