@@ -78,13 +78,16 @@ public class JudgeResultApplier {
     private final DiagnosticService diagnostic;
     private final ReviewScheduleService reviewSchedules;
     private final NextSkillSelector nextSkills;
+    private final dev.codesprint.curriculum.CurriculumCatalog curriculum;
 
     public JudgeResultApplier(ProblemCatalog catalog, EvidenceStore evidenceStore,
             MasteryService mastery, DecisionEngine decisions, SubmissionRepository submissions,
             UserSkillRepository userSkills, JudgeJobRepository jobs, ReviewService reviews,
             NextProblemService nextProblem, DiagnosticService diagnostic,
-            ReviewScheduleService reviewSchedules, NextSkillSelector nextSkills) {
+            ReviewScheduleService reviewSchedules, NextSkillSelector nextSkills,
+            dev.codesprint.curriculum.CurriculumCatalog curriculum) {
         this.catalog = catalog;
+        this.curriculum = curriculum;
         this.evidenceStore = evidenceStore;
         this.mastery = mastery;
         this.decisions = decisions;
@@ -234,7 +237,16 @@ public class JudgeResultApplier {
         }
         ReviewScheduleRow dueReview = claimed;
 
+        var submissionLanguage = dev.codesprint.learning.domain.SubmissionLanguage.parse(
+                submission.language());
         for (SkillLink link : problem.skills()) {
+            // 한 언어에 매인 Skill 은 그 언어의 제출만 잰다(ADR-0045). Java 로 푼 것은 Python list 를 다룬 증거가
+            // 아니다. PRIMARY 는 접수에서 이미 막았고, 여기 걸리는 것은 SECONDARY 다.
+            var definition = curriculum.skill(link.skillCode());
+            if (submissionLanguage != null && definition != null
+                    && !submissionLanguage.measures(definition.language())) {
+                continue;
+            }
             if (dueReview != null && link.skillCode().equals(primarySkill)) {
                 // PRIMARY 만 복습으로 센다. 곁다리로 걸린 Skill 은 이 복습이 겨냥한
                 // 것이 아니고, 그 Skill 의 일정은 따로 돈다.

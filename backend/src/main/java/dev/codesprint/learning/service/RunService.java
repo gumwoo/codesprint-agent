@@ -36,17 +36,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RunService {
 
-    private static final String SUPPORTED_LANGUAGE = "PYTHON";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ProblemCatalog catalog;
     private final UserRepository users;
     private final JudgeJobRepository jobs;
+    private final dev.codesprint.curriculum.CurriculumCatalog curriculum;
 
-    public RunService(ProblemCatalog catalog, UserRepository users, JudgeJobRepository jobs) {
+    public RunService(ProblemCatalog catalog, UserRepository users, JudgeJobRepository jobs,
+            dev.codesprint.curriculum.CurriculumCatalog curriculum) {
         this.catalog = catalog;
         this.users = users;
         this.jobs = jobs;
+        this.curriculum = curriculum;
     }
 
     public record Request(Long userId, String problemCode, String language, String sourceCode) {
@@ -82,9 +84,10 @@ public class RunService {
      */
     @Transactional
     public long accept(Request request) {
-        if (!SUPPORTED_LANGUAGE.equalsIgnoreCase(request.language())) {
-            throw new UnsupportedLanguage(
-                    "아직 " + SUPPORTED_LANGUAGE + " 만 실행한다: " + request.language());
+        var language = dev.codesprint.learning.domain.SubmissionLanguage.parse(request.language());
+        if (language == null) {
+            throw new UnsupportedLanguage("실행하지 않는 언어다: " + request.language()
+                    + " (PYTHON · JAVA · CPP)");
         }
         ProblemDefinition problem = catalog.find(request.problemCode());
         if (problem == null) {
@@ -93,11 +96,17 @@ public class RunService {
         if (!users.existsById(request.userId())) {
             throw new NotFound("그런 사용자가 없다: " + request.userId());
         }
+        // 제출과 같은 규칙이다. 실행은 되는데 제출은 거절되면, 사용자는 제출해서야 그 언어를 받지 않는다는
+        // 것을 안다.
+        String rejected = SubmissionIntakeService.rejects(curriculum, problem, language);
+        if (rejected != null) {
+            throw new UnsupportedLanguage(rejected);
+        }
 
         // 문제 행을 만들지 않는다. 실행은 이 사용자가 그 문제를 **풀었다는 기록이
         // 아니므로**, 남길 것이 큐의 job 하나뿐이다.
         return jobs.save(JudgeJobRow.forRun(request.userId(), problem.code(),
-                SUPPORTED_LANGUAGE, request.sourceCode())).id();
+                language.name(), request.sourceCode())).id();
     }
 
     /**

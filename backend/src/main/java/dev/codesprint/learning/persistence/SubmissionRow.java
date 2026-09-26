@@ -143,6 +143,11 @@ public class SubmissionRow {
         return userId;
     }
 
+    /** 제출 언어. 채점 이미지를 골랐고, 어떤 Skill 의 증거가 될 수 있는지 정한다(ADR-0045). */
+    public String language() {
+        return language;
+    }
+
     public Long problemId() {
         return problemId;
     }

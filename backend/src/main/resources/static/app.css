@@ -116,6 +116,8 @@ body {
 .file { font-family: var(--mono); }
 .meta, .note { color: var(--muted); font-size: 12px; }
 .meta { margin-left: auto; }
+/* 언어 칸은 .meta 가 있던 오른쪽 끝에 둔다. */
+#language { margin-left: auto; font-size: 12px; }
 
 .pane-body {
   flex: 1 1 auto;

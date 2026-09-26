@@ -221,16 +221,24 @@ class RunTest {
     }
 
     @Test
-    @DisplayName("실행도 Python 만 받는다")
-    void onlyPythonRuns() throws Exception {
-        String body = """
-                {"userId": %d, "language": "JAVA", "sourceCode": "class A {}"}
+    @DisplayName("실행도 채점 이미지가 있는 언어만 받는다(ADR-0045)")
+    void onlyJudgedLanguagesRun() throws Exception {
+        String ruby = """
+                {"userId": %d, "language": "RUBY", "sourceCode": "puts 1"}
                 """.formatted(userId);
-
         assertThat(mvc.perform(post("/api/problems/{code}/run", "P02_GRID_TRAVERSAL")
-                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .contentType(MediaType.APPLICATION_JSON).content(ruby))
                 .andReturn().getResponse().getStatus())
                 .isEqualTo(400);
+
+        // 대조: 이미지가 있는 언어는 받는다 - 막은 것이 언어 전체가 아니라 모르는 언어다
+        String java = """
+                {"userId": %d, "language": "JAVA", "sourceCode": "class Main {}"}
+                """.formatted(userId);
+        assertThat(mvc.perform(post("/api/problems/{code}/run", "P02_GRID_TRAVERSAL")
+                        .contentType(MediaType.APPLICATION_JSON).content(java))
+                .andReturn().getResponse().getStatus())
+                .isEqualTo(202);
     }
 
     @Test

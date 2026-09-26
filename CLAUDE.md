@@ -110,7 +110,17 @@ python tools/meta_test_adoption.py         # 채택 검사가 실제로 거르�
 
 ```bash
 docker build -q -t codesprint-judge:py312 -f judge/Dockerfile .
+docker build -q -t codesprint-judge:cpp -f judge/Dockerfile.cpp .
+docker build -q -t codesprint-judge:java21 -f judge/Dockerfile.java .
 ```
+
+**언어는 이미지에 굽는다**([ADR-0045](docs/adr/0045-java-and-cpp-runners.md)). 하네스는 `JUDGE_LANGUAGE`
+로 제 언어만 돈다 - 요청의 `language` 는 어느 이미지를 띄울지만 고른다. 하네스는 세 이미지에 모두 들어가므로
+**고치면 셋 다 다시 굽는다.** 컴파일 산출물은 exec tmpfs `/build` 에만 두고 `/tmp` 는 noexec 로 남긴다.
+
+`skills.yaml` 의 `language` 가 정해진 Skill 은 그 언어의 제출만 잰다. PRIMARY 가 그런 Skill 이면 다른
+언어는 400, SECONDARY 면 받되 그 링크의 Evidence 를 남기지 않는다. skill control(ADR-0033)은 Python 에서만
+검증돼 있어, C++ 의 AC 는 Python 의 AC 보다 약한 증거다 - ADR-0045 의 남는 위험.
 
 
 `judge/run_submission.py`의 `DOCKER_LIMITS` / `MOUNT_MODE`에서 옵션을 빼면

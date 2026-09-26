@@ -62,6 +62,9 @@ db() {
 build() {
   # 하네스는 이미지에 구워진다. 파일만 고치고 이미지를 두면 옛 하네스로 채점한다.
   docker build -q -t "$IMAGE" -f "$ROOT/judge/Dockerfile" "$ROOT"
+  # Java · C++ 이미지(ADR-0045). 하네스가 세 이미지에 모두 들어가므로 함께 굽는다.
+  docker build -q -t codesprint-judge:cpp -f "$ROOT/judge/Dockerfile.cpp" "$ROOT"
+  docker build -q -t codesprint-judge:java21 -f "$ROOT/judge/Dockerfile.java" "$ROOT"
   # gradle 을 호스트에 요구하지 않는다. wrapper jar 도 저장소에 두지 않는다(CI 와 같은 이유).
   MSYS_NO_PATHCONV=1 docker run --rm -v "$ROOT":/w -w /w/backend gradle:8.10.2-jdk17 \
     gradle bootJar --no-daemon -q

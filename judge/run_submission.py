@@ -39,6 +39,20 @@ import uuid
 
 IMAGE = "codesprint-judge:py312"
 
+# 언어마다 이미지 하나(ADR-0045). **언어는 이미지가 정한다** - 이미지의 ENV 가 하네스에 알려 주고,
+# 사용자 입력을 컨테이너 환경으로 넘기지 않는다. 호스트가 고르는 것은 이미지와 파일 이름뿐이다.
+#
+# (이미지, 마운트에 둘 파일 이름, 컴파일 산출물을 둘 실행 가능한 tmpfs 가 필요한가)
+LANGUAGES = {
+    "PYTHON": (IMAGE, "solution.py", False),
+    "CPP": ("codesprint-judge:cpp", "solution.cpp", True),
+    "JAVA": ("codesprint-judge:java21", "Main.java", True),
+}
+
+# 컴파일 산출물 자리. /tmp 는 noexec 그대로 두고, 실행 가능한 자리를 따로 연다. 크기를 제한한다 -
+# 컴파일러가 거대한 파일을 쓰게 해 메모리를 채우는 것을 막는다.
+BUILD_TMPFS = ["--tmpfs", "/build:rw,exec,nosuid,size=64m"]
+
 # Addendum 51. 각 옵션이 막는 것을 함께 적는다 - 지우려는 사람이 이유를 알아야 한다.
 DOCKER_LIMITS = [
     "--network", "none",              # 외부 통신 차단. 데이터 유출과 원격 도구 다운로드
@@ -234,7 +248,7 @@ def with_output(entry: dict, case: dict, reply: dict, samples_only: bool) -> dic
 
 
 def run(solution: pathlib.Path, job_path: pathlib.Path,
-        samples_only: bool = False) -> dict:
+        samples_only: bool = False, language: str = "PYTHON") -> dict:
     try:
         job = json.loads(job_path.read_text(encoding="utf-8"))
         cases = job.get("cases") or []
@@ -258,14 +272,18 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
     if not cases:
         return system_error("Test Case 가 없다")
     total = len(cases)
+    if language not in LANGUAGES:
+        # 받는 쪽(백엔드)이 이미 막는다. 여기까지 왔으면 우리 잘못이다.
+        return system_error(f"모르는 언어: {language}", total)
+    image, source_name, needs_build = LANGUAGES[language]
 
-    # 마운트할 디렉터리를 따로 만든다. **solution.py 하나만 넣는다** -
+    # 마운트할 디렉터리를 따로 만든다. **제출 코드 하나만 넣는다** -
     # job.json 을 함께 두면 사용자 코드가 정답표를 읽을 수 있다(ADR-0006).
     workdir = pathlib.Path(tempfile.mkdtemp(prefix="codesprint-judge-"))
     name = f"codesprint-judge-{uuid.uuid4().hex[:16]}"
     proc = None
     try:
-        shutil.copyfile(solution, workdir / "solution.py")
+        shutil.copyfile(solution, workdir / source_name)
 
         # 컨테이너는 uid 10001(runner)로 돈다. 호스트의 uid 와 다르므로 마운트한
         # 파일을 읽으려면 other 에 읽기 권한이 있어야 한다. mkdtemp 는 0700 이라
@@ -273,7 +291,7 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
         # Docker Desktop(Windows/macOS)은 마운트에서 unix 권한을 무시해 이 문제가
         # 로컬에서는 드러나지 않는다. Linux CI 에서만 터졌다.
         os.chmod(workdir, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
-        os.chmod(workdir / "solution.py",
+        os.chmod(workdir / source_name,
                  stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
 
         cmd = [
@@ -281,7 +299,8 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
             "--name", name,                          # hard timeout 후 지목해 죽이기 위해
             "-v", f"{workdir}:/job:{MOUNT_MODE}",    # 바인드 마운트(Addendum 60)
             *DOCKER_LIMITS,
-            IMAGE,
+            *(BUILD_TMPFS if needs_build else []),
+            image,
         ]
         try:
             proc = subprocess.Popen(
@@ -335,6 +354,8 @@ def main() -> int:
     parser.add_argument("job", type=pathlib.Path)
     parser.add_argument("--samples-only", action="store_true",
                         help="공개 case 만 돌리고 출력을 함께 돌려준다 (제출 전 실행)")
+    parser.add_argument("--language", default="PYTHON", choices=sorted(LANGUAGES),
+                        help="제출 언어. 이미지를 고른다 (ADR-0045)")
     args = parser.parse_args()
 
     for path in (args.solution, args.job):
@@ -342,7 +363,7 @@ def main() -> int:
             print(json.dumps(system_error(f"파일이 없다: {path.name}"), ensure_ascii=False))
             return 1
 
-    print(json.dumps(run(args.solution, args.job, args.samples_only),
+    print(json.dumps(run(args.solution, args.job, args.samples_only, args.language),
                      ensure_ascii=False, indent=2))
     return 0
 
