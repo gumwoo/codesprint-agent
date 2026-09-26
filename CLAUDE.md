@@ -267,6 +267,12 @@ scripts/local.sh backend    # 터미널 1
 scripts/local.sh worker     # 터미널 2
 ```
 
+**모의 시험도 결정이고, 관측한 것만 평가한다**([ADR-0043](docs/adr/0043-mock-test-and-learning-modes.md)).
+문제는 `MockTestComposer` 가 고르고, 시험 중에는 라벨로만 부른다 - code · 제목 · Skill 이 유형을 알려 준다.
+힌트 · Reviewer 분석 · 다음 행동은 끝난 뒤다. 보고서는 서버가 본 순간(열기 · 실행 · 제출)만 담는다 - 읽기
+시간과 알고리즘 인식은 재지 않는다. 학습 모드는 **무엇을 내주는가**만 바꾸고 다음 행동과 mastery 는
+바꾸지 않는다. 자유 질문 Tutor 는 FREE 모드에서만 답하고 기록을 남기지 않는다([ADR-0044](docs/adr/0044-the-tutor-explains-and-does-not-decide.md)).
+
 **오늘의 계획도 결정이다**([ADR-0038](docs/adr/0038-the-plan-is-decided-not-generated.md)). PRD 가 Planner 를
 Agent 로 불러도 LLM 을 부르지 않는다 - `DailyPlanner` 가 Skill 상태 · 만기 복습 · 진단 · 하루 시간 ·
 시험일로 정한다. 출제 빈도처럼 **잴 수 없는 항은 쓰지 않고**, 하루 시간을 모르면 어림하지 않는다.

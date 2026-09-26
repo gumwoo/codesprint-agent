@@ -30,6 +30,16 @@ for (const file of fs.readdirSync(CONTRACTS).filter((f) => f.endsWith(".json")))
  * 그 상태에서는 `UNCONTRACTED` 의 이유를 통째로 지워도 전부 통과했다.
  */
 const BY_PATH = [
+  [/^\/api\/tutor\/questions$/, "tutor-answer"],
+  [/^\/api\/mock-tests\/\d+\/problems\/[^/]+\/open$/, "mock-test-problem"],
+  [/^\/api\/mock-tests\/\d+\/submissions\/\d+$/, "mock-test-verdict"],
+  [/^\/api\/mock-tests\/\d+\/runs\/\d+$/, "mock-test-run"],
+  [/^\/api\/mock-tests\/\d+\/report$/, "mock-test-report"],
+  [/^\/api\/mock-tests\/\d+\/finish$/, "mock-test"],
+  [/^\/api\/mock-tests\/\d+$/, "mock-test"],
+  [/^\/api\/users\/\d+\/mock-tests\/latest$/, "mock-test"],
+  [/^\/api\/users\/\d+\/mock-tests$/, "mock-test"],
+  [/^\/api\/users\/\d+\/learning-mode$/, "user"],
   [/^\/api\/submissions\/\d+\/next-problem$/, "next-problem"],
   [/^\/api\/submissions\/\d+$/, "submission-status"],
   [/^\/api\/problems\/[^/]+\/submit$/, "submission-status"],
@@ -58,6 +68,10 @@ const BY_PATH = [
 const UNCONTRACTED = {
   "/api/problems/{code}/run": "202 응답(runId)에 대응하는 계약이 없다. "
       + "결과 조회(run-result)만 계약이 있다",
+  "/api/mock-tests/{id}/problems/{label}/run": "202 응답(runId)에 대응하는 계약이 없다. "
+      + "결과 조회(mock-test-run)만 계약이 있다",
+  "/api/mock-tests/{id}/problems/{label}/submit": "202 응답(submissionId)에 대응하는 계약이 없다. "
+      + "판정 조회(mock-test-verdict)만 계약이 있다",
 };
 
 function contractFor(pathname) {

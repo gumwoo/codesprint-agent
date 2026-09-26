@@ -29,16 +29,33 @@ public class HintService {
     private final ProblemRepository problemRows;
     private final HintUsageRepository usage;
     private final ReviewScheduleService clock;
+    private final dev.codesprint.mocktest.MockTestService mockTests;
 
     public HintService(ProblemCatalog problems, HintCatalog hints, UserRepository users,
             ProblemRepository problemRows, HintUsageRepository usage,
-            ReviewScheduleService clock) {
+            ReviewScheduleService clock, dev.codesprint.mocktest.MockTestService mockTests) {
         this.problems = problems;
         this.hints = hints;
         this.users = users;
         this.problemRows = problemRows;
         this.usage = usage;
         this.clock = clock;
+        this.mockTests = mockTests;
+    }
+
+    /**
+     * 지금은 힌트를 줄 수 없다. 409 다 - 요청이 틀린 것이 아니라 그 상태에서 줄 수 없다.
+     *
+     * <p>두 경우다. 학습 모드가 그 단계를 막거나(STRICT 는 H2 까지, EXAM 은 없음 - ADR-0043),
+     * 그 문제가 진행 중인 모의 시험에 들어 있다(PRD §84 - 시험 중에는 힌트를 주지 않는다).
+     */
+    public static class Withheld extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public Withheld(String message) {
+            super(message);
+        }
     }
 
     /** 문제나 사용자가 없을 때. */
@@ -90,12 +107,20 @@ public class HintService {
         if (problem == null) {
             throw new NotFound("그런 문제가 없다: " + problemCode);
         }
-        if (!users.existsById(userId)) {
-            throw new NotFound("그런 사용자가 없다: " + userId);
-        }
+        var user = users.findById(userId)
+                .orElseThrow(() -> new NotFound("그런 사용자가 없다: " + userId));
         String text = hints.textOf(problemCode, level);
         if (text == null) {
             throw new NotFound("그런 힌트 단계가 없다: " + problemCode + " H" + level);
+        }
+
+        // 기록하기 전에 막는다. 막힌 요청이 본 것으로 남으면 받지 않은 도움으로 mastery 가 깎인다.
+        if (mockTests.inProgressContains(userId, problem.code())) {
+            throw new Withheld("시험 중에는 힌트를 주지 않는다");
+        }
+        if (level > user.learningMode().highestHint()) {
+            throw new Withheld("학습 모드 " + user.learningMode() + " 에서는 H"
+                    + user.learningMode().highestHint() + " 까지만 준다 (요청: H" + level + ")");
         }
 
         ProblemRow problemRow = problemRows.ensure(problem.code(), problem.source());

@@ -24,7 +24,7 @@ test("먼저 누른 문제가 늦게 도착해도 마지막에 고른 문제가 
   // PR #30. openProblem 이 표를 받지 않아, P02 -> P03 으로 눌렀는데 P02 가 열렸다.
   const slow = gate();
   await stubApi(page);
-  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL?*", async (route) => {
     await slow.held;
     await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
@@ -44,7 +44,7 @@ test("문제를 기다리는 동안 목록으로 돌아가면 끌려가지 않�
   // 그 문제 화면으로 끌고 갔다.
   const slow = gate();
   await stubApi(page);
-  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL?*", async (route) => {
     await slow.held;
     await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
@@ -64,7 +64,7 @@ test("문제를 기다리는 동안 내 Skill 로 옮겨도 끌려가지 않는�
   // 적으면 하나씩 빠뜨린다.
   const slow = gate();
   await stubApi(page);
-  await page.route("**/api/problems/P02_GRID_TRAVERSAL", async (route) => {
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL?*", async (route) => {
     await slow.held;
     await fulfill(route, problem("P02_GRID_TRAVERSAL", "P02 제목"));
   });
@@ -128,9 +128,9 @@ test("늦게 온 사용자 생성이 나중에 만든 사용자를 덮지 않는
     made += 1;
     if (made === 1) {
       await slow.held;
-      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB", dailyMinutes: null, examDate: null });
+      return fulfill(route, { userId: 11, nickname: "먼저", track: "JOB", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
     }
-    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB", dailyMinutes: null, examDate: null });
+    return fulfill(route, { userId: 12, nickname: "나중", track: "JOB", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
   });
 
   await page.goto("/index.html");
@@ -304,10 +304,10 @@ test("늦게 온 이전 사용자의 목표가 지금 사용자의 목표를 덮
   await stubApi(page);
   await page.route("**/api/users/1", async (route) => {
     await slow.held;
-    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB", dailyMinutes: null, examDate: null });
+    await fulfill(route, { userId: 1, nickname: "하나", track: "JOB", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
   });
   await page.route("**/api/users/2", (route) =>
-    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO", dailyMinutes: null, examDate: null }));
+    fulfill(route, { userId: 2, nickname: "둘", track: "INTRO", dailyMinutes: null, examDate: null, learningMode: "NORMAL" }));
 
   await asUser(page, "1");
   await page.fill("#userId", "2");
@@ -324,7 +324,7 @@ test("목표를 고르지 않으면 새로 시작하지 않는다", async ({ pag
   await stubApi(page);
   await page.route("**/api/users", (route) => {
     created += 1;
-    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO", dailyMinutes: null, examDate: null });
+    return fulfill(route, { userId: 7, nickname: "x", track: "INTRO", dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
   });
 
   await page.goto("/index.html");
@@ -367,7 +367,7 @@ test("잘못 입력한 하루 시간은 저장하지 않는다 - 정하지 않�
   await page.route("**/api/users/1/settings", (route) => {
     puts += 1;
     return fulfill(route, { userId: 1, nickname: "x", track: "JOB", dailyMinutes: null,
-      examDate: null });
+      examDate: null, learningMode: "NORMAL" });
   });
 
   await asUser(page, "1");
@@ -377,4 +377,305 @@ test("잘못 입력한 하루 시간은 저장하지 않는다 - 정하지 않�
   await page.click("#saveSettings");
   await expect(page.locator("#settingsNote")).toHaveText("입력한 값을 읽지 못했다 - 저장하지 않았다");
   expect(puts).toBe(0);
+});
+
+test("늦게 온 이전 사용자의 시험이 지금 사용자의 시험 화면을 덮지 않는다", async ({ page }) => {
+  // ADR-0043. 시험 탭은 가장 최근 시험을 읽어 그린다. 1 번의 시험이 늦게 오면 2 번 화면에
+  // 1 번의 문제 라벨과 "시험 끝내기" 가 나타나고, 누르면 남의 시험을 끝낸다.
+  const slow = gate();
+  const { mockTest } = require("../fixtures/api");
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest", async (route) => {
+    await slow.held;
+    await fulfill(route, mockTest(11, "IN_PROGRESS", ["A", "B", "C"]));
+  });
+  // 2 번은 시험이 없다 - stubApi 가 모르는 경로에 404 를 준다.
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.fill("#userId", "2");
+  await page.dispatchEvent("#userId", "change");
+  await expect(page.locator("#mockStart")).toBeVisible();
+
+  await releaseAndSettle(page, slow, "/api/users/1/mock-tests/latest");
+  await expect(page.locator("#mockStart")).toBeVisible();
+  await expect(page.locator("#mockFinish")).toBeHidden();
+  await expect(page.locator("#mockRows tr")).toHaveCount(0);
+});
+
+test("늦게 온 시험 문제가 그 뒤에 연 일반 문제를 덮지 않는다", async ({ page }) => {
+  // ADR-0043. 시험 문제를 여는 것도 문제 화면의 주인(claimView("problem"))을 쓴다. 통을 따로
+  // 두면 시험 A 를 눌렀다가 목록에서 P03 을 열었을 때 늦게 온 A 가 P03 을 덮는다 - 사용자는
+  // P03 을 푼다고 믿고 시험 A 의 답을 낸다.
+  const slow = gate();
+  const { mockTest, mockSheet } = require("../fixtures/api");
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest",
+      (route) => fulfill(route, mockTest(21, "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/21/problems/A/open", async (route) => {
+    await slow.held;
+    await fulfill(route, mockSheet(21, "A"));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.locator("#mockRows button", { hasText: "문제 A" }).click();
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/mock-tests/21/problems/A/open");
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+  await expect(page.locator("#hintsBox")).toBeVisible();
+});
+
+test("늦게 온 자유 질문의 답이 다른 문제 화면에 붙지 않는다", async ({ page }) => {
+  // ADR-0044. 답은 그 문제의 Skill 에 대한 것이다. P02 에서 물은 답이 P03 을 연 뒤에 오면
+  // P03 의 질문 칸 아래에 붙어, 사용자는 그것을 P03 에 대한 설명으로 읽는다.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, {
+    userId: 1, nickname: "자유", track: "JOB", dailyMinutes: null, examDate: null,
+    learningMode: "FREE" }));
+  await page.route("**/api/tutor/questions", async (route) => {
+    await slow.held;
+    await fulfill(route, { skillCode: "BFS_GRID_TRAVERSAL", answer: "P02 에 대한 늦은 답",
+      followUpQuestion: null, promptVersion: "tutor-v1" });
+  });
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+  await page.fill("#tutorQuestion", "방문 표시는 언제?");
+  await page.click("#tutorAsk");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/tutor/questions");
+  await expect(page.locator("#tutorAnswer")).toBeEmpty();
+});
+
+/** 검증 에이전트가 재현한 학습 모드 · 시험 끝내기 경합(PR #52). */
+function modeUser(mode) {
+  return { userId: 1, nickname: "v", track: "JOB", dailyMinutes: null, examDate: null,
+    learningMode: mode };
+}
+
+test("늦게 온 오늘 탭의 사용자 조회가 방금 바꾼 학습 모드를 덮지 않는다", async ({ page }) => {
+  // 오늘 탭과 학습 모드 저장이 다른 통으로 같은 칸을 썼다. 저장한 뒤에 늦게 온 조회가 옛 모드로 되돌렸다.
+  const slow = gate();
+  let gets = 0;
+  await stubApi(page);
+  await page.route("**/api/users/1", async (route) => {
+    gets += 1;
+    if (gets >= 2) {
+      await slow.held; // 첫 조회(목표)는 보내고, 오늘 탭이 부른 조회를 붙잡는다
+    }
+    await fulfill(route, modeUser("NORMAL"));
+  });
+  await page.route("**/api/users/1/learning-mode", (route) => fulfill(route, modeUser("FREE")));
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+
+  await releaseAndSettle(page, slow, "/api/users/1");
+  await expect(page.locator("#learningMode")).toHaveValue("FREE");
+});
+
+test("학습 모드를 저장하는 동안 칸을 잠가 화면과 서버가 같은 모드를 가리킨다", async ({ page }) => {
+  // 잠그지 않으면 둘을 연달아 골랐을 때 먼저 보낸 PUT 이 나중에 처리되어 화면과 서버가 갈린다.
+  const slow = gate();
+  let serverMode = "NORMAL";
+  let puts = 0;
+  await stubApi(page);
+  await page.route("**/api/users/1/learning-mode", async (route) => {
+    puts += 1;
+    const mode = JSON.parse(route.request().postData()).mode;
+    if (puts === 1) {
+      await slow.held;
+    }
+    serverMode = mode;
+    await fulfill(route, modeUser(mode));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "STRICT");
+  await expect(page.locator("#learningMode")).toBeDisabled();
+
+  await releaseAndSettle(page, slow, "/api/users/1/learning-mode");
+  await expect(page.locator("#learningMode")).toBeEnabled();
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+  await expect(page.locator("#learningMode")).toHaveValue(serverMode);
+  expect(serverMode).toBe("FREE");
+});
+
+test("학습 모드를 저장하는 동안 오늘 탭을 다시 눌러도 저장 응답이 버려지지 않는다", async ({ page }) => {
+  // 읽기(loadLearningMode)가 저장과 같은 통을 써서, 저장 중에 오늘 탭을 다시 누르면 저장의 표를 가져갔다.
+  // PUT 응답이 버려져 화면은 NORMAL, 서버는 FREE 였고, 튜터 칸도 숨었다(검증 에이전트가 재현했다).
+  const slow = gate();
+  let serverMode = "NORMAL";
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, modeUser(serverMode)));
+  await page.route("**/api/users/1/learning-mode", async (route) => {
+    await slow.held; // PUT 이 서버에서 처리되기 전에 오늘 탭의 조회가 먼저 끝난다
+    serverMode = JSON.parse(route.request().postData()).mode;
+    await fulfill(route, modeUser(serverMode));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await page.click("#tabToday");
+  await expect(page.locator("#todayBody")).toBeVisible();
+
+  await releaseAndSettle(page, slow, "/api/users/1/learning-mode");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+  await expect(page.locator("#learningMode")).toHaveValue(serverMode);
+
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+});
+
+test("늦게 온 목표 조회가 방금 저장한 학습 모드의 튜터 칸을 되돌리지 않는다", async ({ page }) => {
+  // 목표를 읽는 refreshUserTrack 도 모드 변수를 따로 적었다 - 칸은 FREE 인데 튜터 칸이 숨었다.
+  const slow = gate();
+  let serverMode = "NORMAL";
+  await stubApi(page);
+  await page.route("**/api/users/1", async (route) => {
+    const stale = modeUser(serverMode); // 조회는 저장 전에 서버에서 처리됐다
+    await slow.held;
+    await fulfill(route, stale);
+  });
+  await page.route("**/api/users/1/learning-mode", (route) => {
+    serverMode = JSON.parse(route.request().postData()).mode;
+    return fulfill(route, modeUser(serverMode));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+
+  await releaseAndSettle(page, slow, "/api/users/1");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#learningMode")).toHaveValue("FREE");
+  await expect(page.locator("#tutorBox")).toBeVisible();
+});
+
+test("학습 모드를 저장하는 동안 사용자를 바꾸면 새 사용자의 모드를 보여 준다", async ({ page }) => {
+  // 저장 중이라 새 사용자의 읽기를 건너뛰었고, 이전 사용자의 저장 응답은 버려져 아무도 새 사용자를 읽지
+  // 않았다 - 칸은 이전 사용자가 고른 값, 튜터 칸은 이전 사용자의 옛 모드였다(검증 에이전트가 재현했다).
+  // 사용자 id 는 실제 입력처럼 Tab 으로 확정한다. 합성 change 는 뒤따르는 blur 가 한 번 더 읽어 결함을 가린다.
+  const slow = gate();
+  const modes = { 1: "NORMAL", 2: "FREE" };
+  await stubApi(page);
+  await page.route(/\/api\/users\/[12]$/, (route) => {
+    const id = Number(new URL(route.request().url()).pathname.split("/").pop());
+    return fulfill(route, { ...modeUser(modes[id]), userId: id });
+  });
+  await page.route("**/api/users/1/learning-mode", async (route) => {
+    await slow.held;
+    modes[1] = JSON.parse(route.request().postData()).mode;
+    await fulfill(route, modeUser(modes[1]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "STRICT");
+  await page.fill("#userId", "2");
+  await page.press("#userId", "Tab");
+
+  await releaseAndSettle(page, slow, "/api/users/1/learning-mode");
+  await expect(page.locator("#learningMode")).toHaveValue("FREE");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+});
+
+test("학습 모드 저장이 거절되면 칸을 서버의 모드로 되돌린다", async ({ page }) => {
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, modeUser("NORMAL")));
+  // 오류 본문은 계약이 없다 - 연결을 끊어 같은 실패 경로로 보낸다.
+  await page.route("**/api/users/1/learning-mode", (route) => route.abort());
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("바꾸지 못했다");
+  await expect(page.locator("#learningMode")).toHaveValue("NORMAL");
+});
+
+test("모드를 읽지 못한 사용자로 바꾸면 이전 사용자의 튜터 칸이 남지 않는다", async ({ page }) => {
+  // 모드를 적는 곳을 loadLearningMode 하나로 모은 뒤, 읽기 실패가 아무것도 적지 않아 이전 사용자의 FREE 가
+  // 남았다(검증 에이전트가 재현했다). 없는 사용자와 연결 실패 둘 다 본다.
+  await stubApi(page);
+  await page.route(/\/api\/users\/1$/, (route) => fulfill(route, modeUser("FREE")));
+  await page.route(/\/api\/users\/2$/, (route) => route.abort());
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+
+  for (const id of ["2", "99"]) {
+    await page.fill("#userId", id);
+    await page.press("#userId", "Tab");
+    await page.click("#toProblems");
+    await page.locator("#problemList button", { hasText: "P02" }).click();
+    await expect(page.locator("#crumbProblem")).toHaveText("P02_GRID_TRAVERSAL");
+    await expect(page.locator("#tutorBox"), `사용자 ${id}`).toBeHidden();
+  }
+});
+
+test("늦게 끝난 시험 끝내기가 그 사이 옮겨 간 오늘 탭에서 사용자를 끌고 가지 않는다", async ({ page }) => {
+  const slow = gate();
+  const { mockTest } = require("../fixtures/api");
+  await stubApi(page);
+  let finished = false;
+  await page.route("**/api/users/1/mock-tests/latest", (route) =>
+    fulfill(route, mockTest(31, finished ? "FINISHED" : "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/31/finish", async (route) => {
+    await slow.held;
+    finished = true;
+    await fulfill(route, mockTest(31, "FINISHED", ["A", "B"]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await expect(page.locator("#mockFinish")).toBeVisible();
+  await page.click("#mockFinish");
+  await page.click("#tabToday");
+  await expect(page.locator("#todayBody")).toBeVisible();
+
+  await releaseAndSettle(page, slow, "/api/mock-tests/31/finish");
+  await expect(page.locator("#todayBody")).toBeVisible();
+  await expect(page.locator("#mockBody")).toBeHidden();
+});
+
+test("늦게 끝난 시험 끝내기가 그 사이 연 일반 문제에서 사용자를 끌고 가지 않는다", async ({ page }) => {
+  const slow = gate();
+  const { mockTest } = require("../fixtures/api");
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest", (route) =>
+    fulfill(route, mockTest(41, "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/41/finish", async (route) => {
+    await slow.held;
+    await fulfill(route, mockTest(41, "FINISHED", ["A", "B"]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.click("#mockFinish");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/mock-tests/41/finish");
+  await expect(page.locator("#statementBody")).toBeVisible();
 });

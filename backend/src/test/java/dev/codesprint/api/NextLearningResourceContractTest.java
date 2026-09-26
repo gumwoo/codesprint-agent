@@ -36,7 +36,12 @@ class NextLearningResourceContractTest {
                 42L, "REVIEW_CONCEPT", concept.skillCode(), null, concept,
                 "반복 실패한 Skill의 개념을 다시 확인한다")));
 
-        ProblemController controller = new ProblemController(mock(ProblemCatalog.class), service);
+        // 시험 · 학습 모드 쪽은 아무것도 하지 않는 가짜다 - 시험 중이 아니고, 모드는 NORMAL 이다.
+        ProblemController controller = new ProblemController(mock(ProblemCatalog.class), service,
+                mock(dev.codesprint.mocktest.MockTestService.class),
+                mock(dev.codesprint.learning.persistence.UserRepository.class),
+                mock(dev.codesprint.learning.persistence.SubmissionRepository.class),
+                mock(dev.codesprint.curriculum.CurriculumCatalog.class));
         ResponseEntity<ProblemController.NextProblemResponse> response = controller.next(42L);
         JsonNode body = MAPPER.valueToTree(response.getBody());
 

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mock-test-verdict.schema.json",
+  "title": "MockTestVerdict",
+  "description": "시험 중의 제출 결과(GET /api/mock-tests/{id}/submissions/{sid}). **판정만 준다** - Reviewer 분석과 다음 행동은 시험이 끝난 뒤다(PRD §84). 일반 조회 GET /api/submissions/{id} 는 시험이 끝날 때까지 409 다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "submissionId",
+    "label",
+    "state",
+    "status",
+    "passed",
+    "total"
+  ],
+  "properties": {
+    "submissionId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "label": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "state": {
+      "enum": [
+        "PENDING",
+        "COMPLETE"
+      ]
+    },
+    "status": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "COMPLETE 일 때의 판정. PENDING 이면 null."
+    },
+    "passed": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "total": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    }
+  }
+}

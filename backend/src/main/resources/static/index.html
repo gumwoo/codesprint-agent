@@ -48,6 +48,7 @@
       <button type="button" class="tab active" id="tabProblem">문제</button>
       <button type="button" class="tab" id="tabToday">오늘</button>
       <button type="button" class="tab" id="tabSkills">내 Skill</button>
+      <button type="button" class="tab" id="tabMock">시험</button>
       <span class="meta" id="problemMeta"></span>
     </div>
 
@@ -88,17 +89,32 @@
       <h2 id="problemTitle"></h2>
       <pre class="statement" id="statement"></pre>
       <div id="samples"></div>
+      <!-- 학습 모드가 GUIDED 면 서버가 개념 자료를 함께 준다(ADR-0043). 화면은 고르지 않는다. -->
+      <div id="problemConcept"></div>
 
       <!--
         단계별 힌트. 한 칸씩만 열리고, 몇 단계까지 봤는지는 서버가 정한다 -
         화면은 세지 않는다(ADR-0027). 그 숫자가 곧 mastery 에 들어가므로,
         화면이 따로 세기 시작하면 사용자가 보는 값과 기록되는 값이 갈린다.
       -->
-      <div class="hints">
+      <div class="hints" id="hintsBox">
         <h3>막히면</h3>
         <ol id="hintList"></ol>
         <button type="button" id="hintButton">힌트 보기</button>
         <p class="note" id="hintNote"></p>
+      </div>
+
+      <!--
+        자유 질문(PRD §90 · §151, ADR-0044). 학습 모드가 FREE 일 때만 서버가 답한다. 답은 설명일 뿐
+        Evidence 가 되지 않는다 - mastery 도 다음 행동도 바꾸지 않는다.
+      -->
+      <div class="hints" id="tutorBox" hidden>
+        <h3>자유 질문</h3>
+        <textarea id="tutorQuestion" rows="3" maxlength="1000"
+                  placeholder="이 문제의 Skill 에 대해 묻는다"></textarea>
+        <button type="button" id="tutorAsk">질문하기</button>
+        <p class="note" id="tutorNote"></p>
+        <div id="tutorAnswer"></div>
       </div>
     </div>
 
@@ -117,6 +133,22 @@
         <button type="button" id="saveSettings" class="ghost">설정 저장</button>
       </div>
       <p class="note" id="settingsNote"></p>
+      <!--
+        학습 모드(PRD §151, ADR-0043). 모드는 무엇을 내주는가(힌트 · 유형 표시 · 개념 자료)만 바꾸고
+        다음 행동과 mastery 는 바꾸지 않는다.
+      -->
+      <div class="settings">
+        <label>학습 모드
+          <select id="learningMode">
+            <option value="GUIDED">GUIDED · 개념 자료를 문제와 함께</option>
+            <option value="NORMAL">NORMAL · 기본</option>
+            <option value="STRICT">STRICT · 힌트 H2 까지</option>
+            <option value="EXAM">EXAM · 힌트 없음, 유형 숨김</option>
+            <option value="FREE">FREE · 힌트는 NORMAL 과 같다</option>
+          </select>
+        </label>
+      </div>
+      <p class="note" id="modeNote"></p>
       <p class="note" id="todaySummary"></p>
       <table class="skills">
         <thead>
@@ -133,6 +165,36 @@
         </thead>
         <tbody id="mistakeRows"></tbody>
       </table>
+    </div>
+
+    <!--
+      모의 시험(PRD §84~86, ADR-0043). 문제는 서버가 고르고, 시험 중에는 라벨로만 부른다 -
+      code · 제목 · Skill 이 유형을 알려 주기 때문이다. 보고서는 서버가 관측한 순간만 담는다.
+    -->
+    <div class="pane-body" id="mockBody" hidden>
+      <p class="note" id="mockNote"></p>
+      <div class="settings">
+        <button type="button" id="mockStart" class="ghost">모의 시험 시작</button>
+        <button type="button" id="mockFinish" class="ghost" hidden>시험 끝내기</button>
+      </div>
+      <table class="skills" id="mockTable" hidden>
+        <thead>
+          <tr><th>문제</th><th>상태</th><th class="num">제출</th></tr>
+        </thead>
+        <tbody id="mockRows"></tbody>
+      </table>
+      <h3 class="sub" id="mockReportHead" hidden>보고서</h3>
+      <p class="note" id="mockSummary"></p>
+      <table class="skills" id="mockReport" hidden>
+        <thead>
+          <tr><th>문제</th><th>결과</th><th class="num">연 때</th><th class="num">첫 실행</th>
+            <th class="num">첫 제출</th><th class="num">푼 때</th><th class="num">기대</th></tr>
+        </thead>
+        <tbody id="mockReportRows"></tbody>
+      </table>
+      <p class="note" id="mockUnmeasured" hidden>
+        읽기 시간과 첫 코드 작성 시간은 나누지 않는다 - 서버는 연 때와 실행 · 제출한 때만 본다.
+      </p>
     </div>
 
     <div class="pane-body" id="skillsBody" hidden>

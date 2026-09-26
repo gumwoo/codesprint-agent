@@ -29,10 +29,22 @@ public class ProblemController {
 
     private final ProblemCatalog catalog;
     private final NextProblemService nextProblem;
+    private final dev.codesprint.mocktest.MockTestService mockTests;
+    private final dev.codesprint.learning.persistence.UserRepository users;
+    private final dev.codesprint.learning.persistence.SubmissionRepository submissions;
+    private final dev.codesprint.curriculum.CurriculumCatalog curriculum;
 
-    public ProblemController(ProblemCatalog catalog, NextProblemService nextProblem) {
+    public ProblemController(ProblemCatalog catalog, NextProblemService nextProblem,
+            dev.codesprint.mocktest.MockTestService mockTests,
+            dev.codesprint.learning.persistence.UserRepository users,
+            dev.codesprint.learning.persistence.SubmissionRepository submissions,
+            dev.codesprint.curriculum.CurriculumCatalog curriculum) {
         this.catalog = catalog;
         this.nextProblem = nextProblem;
+        this.mockTests = mockTests;
+        this.users = users;
+        this.submissions = submissions;
+        this.curriculum = curriculum;
     }
 
     /** weight 를 내보내지 않는다. 채점 가중치는 내부 값이다. */
@@ -42,9 +54,13 @@ public class ProblemController {
     public record SampleView(String input, String expectedOutput) {
     }
 
+    /**
+     * @param skills 학습 모드가 EXAM 이면 null 이다 - 유형을 숨긴다(ADR-0043). 빈 목록이 아니다.
+     * @param concept 학습 모드가 GUIDED 면 PRIMARY Skill 의 개념 자료, 아니면 null 이다.
+     */
     public record ProblemView(String code, String title, String kind, String statement,
             Integer timeLimitMs, Integer memoryLimitMb, Integer expectedSolveSeconds,
-            List<SkillView> skills, List<SampleView> samples) {
+            List<SkillView> skills, List<SampleView> samples, ConceptView concept) {
     }
 
     public record ConceptView(String skillCode, String title, String summary,
@@ -88,12 +104,28 @@ public class ProblemController {
                 .toList());
     }
 
+    /**
+     * @param userId 있으면 그 사용자의 학습 모드를 따른다(ADR-0043). 없으면 NORMAL 과 같다.
+     */
     @GetMapping("/problems/{problemCode}")
-    public ResponseEntity<ProblemView> find(@PathVariable String problemCode) {
+    public ResponseEntity<ProblemView> find(@PathVariable String problemCode,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Long userId) {
         ProblemDefinition problem = catalog.find(problemCode);
-        return problem == null
-                ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(toView(problem));
+        if (problem == null) {
+            return ResponseEntity.notFound().build();
+        }
+        // 진행 중인 시험의 문제는 시험에서 연다 - 여기에는 제목과 Skill 이 있다(ADR-0043).
+        if (userId != null && mockTests.inProgressContains(userId, problemCode)) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).build();
+        }
+        return ResponseEntity.ok(toView(problem, modeOf(userId)));
+    }
+
+    private dev.codesprint.learning.domain.LearningMode modeOf(Long userId) {
+        return userId == null ? dev.codesprint.learning.domain.LearningMode.NORMAL
+                : users.findById(userId)
+                        .map(dev.codesprint.learning.persistence.UserRow::learningMode)
+                        .orElse(dev.codesprint.learning.domain.LearningMode.NORMAL);
     }
 
     /**
@@ -104,19 +136,30 @@ public class ProblemController {
      */
     @GetMapping("/submissions/{submissionId}/next-problem")
     public ResponseEntity<NextProblemResponse> next(@PathVariable long submissionId) {
+        // 시험 중의 제출에는 다음 행동을 보여 주지 않는다(PRD §84). 시험 전에 낸 제출이어도 시험 중에는
+        // 닫는다 - 다음 문제를 고르는 조건이 시험 문제를 고르는 조건과 같아, 시험 문제가 추천으로 나온다.
+        Long owner = submissions.findById(submissionId)
+                .map(dev.codesprint.learning.persistence.SubmissionRow::userId).orElse(null);
+        if (mockTests.hidesUntilEnd(submissionId)
+                || (owner != null && mockTests.inProgress(owner))) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).build();
+        }
+        var mode = modeOf(owner);
         return nextProblem.resolve(submissionId)
                 .map(resolution -> new NextProblemResponse(
                         resolution.submissionId(),
                         resolution.action(),
                         resolution.targetSkill(),
-                        resolution.problem() == null ? null : toView(resolution.problem()),
+                        resolution.problem() == null ? null : toView(resolution.problem(), mode),
                         resolution.concept() == null ? null : toView(resolution.concept()),
                         resolution.reason()))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private ProblemView toView(ProblemDefinition problem) {
+    private ProblemView toView(ProblemDefinition problem,
+            dev.codesprint.learning.domain.LearningMode mode) {
+        var concept = mode.attachesConcept() ? curriculum.concept(problem.primarySkill()) : null;
         return new ProblemView(
                 problem.code(),
                 problem.title(),
@@ -125,14 +168,17 @@ public class ProblemController {
                 problem.timeLimitMs(),
                 problem.memoryLimitMb(),
                 problem.expectedSolveSeconds(),
-                problem.skills().stream()
-                        .map(link -> new SkillView(link.skillCode(), link.role()))
-                        .toList(),
+                mode.showsSkills()
+                        ? problem.skills().stream()
+                                .map(link -> new SkillView(link.skillCode(), link.role()))
+                                .toList()
+                        : null,
                 // 필터는 카탈로그가 한다. 여기서 다시 거르면 두 곳이 되고,
                 // 한쪽을 잊으면 그대로 유출이다.
                 catalog.samplesOf(problem.code()).stream()
                         .map(sample -> new SampleView(sample.input(), sample.expectedOutput()))
-                        .toList());
+                        .toList(),
+                concept == null ? null : toView(concept));
     }
 
     private static ConceptView toView(ConceptDefinition concept) {

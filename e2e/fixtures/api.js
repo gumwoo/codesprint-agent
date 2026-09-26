@@ -94,6 +94,25 @@ function problem(code, title = `${code} 제목`) {
     expectedSolveSeconds: 600,
     skills: [{ skillCode: "BFS_GRID_TRAVERSAL", role: "PRIMARY" }],
     samples: [{ input: "1\n", expectedOutput: "1\n" }],
+    // 학습 모드가 GUIDED 일 때만 개념 자료가 온다(ADR-0043). 기본은 null 이다.
+    concept: null,
+  };
+}
+
+/** 시험 하나(mock-test 계약). 문제를 라벨로만 부른다. */
+function mockTest(mockTestId, state = "IN_PROGRESS", labels = ["A", "B"]) {
+  return {
+    mockTestId, state, startedAt: "2026-09-26T09:00:00Z", endsAt: "2026-09-26T10:00:00Z",
+    remainingSeconds: state === "IN_PROGRESS" ? 3600 : 0,
+    problems: labels.map((label) => ({ label, opened: false, submissions: 0 })),
+  };
+}
+
+/** 시험 중에 연 문제(mock-test-problem 계약). code 도 제목도 없다. */
+function mockSheet(mockTestId, label, statement = `시험 ${label} 본문`) {
+  return {
+    mockTestId, label, statement, timeLimitMs: 2000, memoryLimitMb: 256,
+    samples: [{ input: "1\n", expectedOutput: "1\n" }],
   };
 }
 
@@ -186,7 +205,7 @@ async function stubApi(page, overrides = {}) {
     }
     if (/^\/api\/users\/\d+$/.test(p)) {
       return fulfill(route, { userId: Number(p.split("/").pop()), nickname: "stub", track: "JOB",
-        dailyMinutes: null, examDate: null });
+        dailyMinutes: null, examDate: null, learningMode: "NORMAL" });
     }
     if (p.endsWith("/today")) {
       return fulfill(route, overrides.today || DEFAULTS.today);
@@ -208,5 +227,5 @@ async function stubApi(page, overrides = {}) {
 
 module.exports = {
   gate, releaseAndSettle, stubApi, problem, finished, accepted, hint, conceptFor,
-  fulfill, DEFAULTS,
+  fulfill, DEFAULTS, mockTest, mockSheet,
 };
