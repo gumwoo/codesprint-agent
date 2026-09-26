@@ -40,7 +40,9 @@ Evidence 가 남는다.
 - 선수는 문제가 실제로 잇는 기법이다. P147(불길 속 늦은 출발)은 **여러 출발점 BFS 로 불이 닿는 시각**을 구하고,
   **사람의 최단 거리 BFS** 를 구한 뒤, 둘을 잇는 관찰로 답을 낸다 - 불과 사람이 같은 칸 규칙으로 움직이므로 불 시각은
   이웃한 칸끼리 1 넘게 차이 나지 않고, 그래서 제약은 출구에서만 걸려 W = fire[E] − dist(S, E) − 1 이다. 선수는
-  BFS_VISITED_MANAGEMENT(여러 출발점 동시 퍼짐, P15) · BFS_SHORTEST_PATH
+  BFS_VISITED_MANAGEMENT · BFS_SHORTEST_PATH 이고, 둘을 SECONDARY 로도 적었다. BFS_VISITED_MANAGEMENT 는 **대리 지표**다 -
+  그 Skill 의 정의는 방문 관리이고, 여러 출발점 동시 퍼짐은 그것을 PRIMARY 로 재는 P15 문제의 성질이다(여러 출발점
+  Skill 은 따로 관측할 수 없어 W9b 에서 뺐다, ADR-0047)
 - 답 W 위에서 이분 탐색하며 BFS 로 판정해도 맞고, 힌트 사다리는 그 길을 안내한다. 처음에는 이것을 문제의 조합으로 적고
   PARAMETRIC_SEARCH 를 선수로 두었는데, 2 차 검토에서 이분 탐색 없이 BFS 두 번과 식 하나로 AC 가 났다 - 쓰지 않는 기법이
   Skill 을 잠그므로 선수에서 뺐다

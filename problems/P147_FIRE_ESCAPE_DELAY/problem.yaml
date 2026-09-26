@@ -44,7 +44,7 @@ skills:
 - code: BFS_SHORTEST_PATH
   role: SECONDARY
   weight: 0.1
-- code: GRID_BOUNDARY_CHECK
+- code: BFS_VISITED_MANAGEMENT
   role: SECONDARY
   weight: 0.1
 - code: BFS_GRID_TRAVERSAL
