@@ -451,6 +451,73 @@ test("늦게 온 시험 문제가 그 뒤에 연 일반 문제를 덮지 않는�
   await expect(page.locator("#hintsBox")).toBeVisible();
 });
 
+test("시험을 끝내면 열어 둔 시험 문제의 이름표와 제출 버튼을 놓는다", async ({ page }) => {
+  // 실제 백엔드로 걸어 보고 찾았다. 끝낸 뒤에도 위치 표시가 "시험 · 문제 A" 였고, 제출 버튼은 눌리는데
+  // 아무 일도 일어나지 않았다 - 그 문제로는 더 낼 수 없다.
+  const { mockTest, mockSheet } = require("../fixtures/api");
+  let finished = false;
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest", (route) =>
+    fulfill(route, mockTest(61, finished ? "FINISHED" : "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/61/problems/A/open", (route) => fulfill(route, mockSheet(61, "A")));
+  await page.route("**/api/mock-tests/61/finish", async (route) => {
+    finished = true;
+    await fulfill(route, mockTest(61, "FINISHED", ["A", "B"]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.locator("#mockRows button", { hasText: "문제 A" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("시험 · 문제 A");
+  await expect(page.locator("#submitButton")).toBeEnabled();
+
+  await page.click("#tabMock");
+  await page.click("#mockFinish");
+  await expect(page.locator("#mockStart")).toBeVisible();
+  await expect(page.locator("#crumbProblem")).toHaveText("고르는 중");
+  await expect(page.locator("#problemMeta")).toHaveText("");
+  await expect(page.locator("#submitButton")).toBeDisabled();
+  await expect(page.locator("#runButton")).toBeDisabled();
+});
+
+for (const [button, kind] of [["#submitButton", "submit"], ["#runButton", "run"]]) {
+  test(`시험 문제의 ${kind} 응답이 시험을 끝낸 뒤에 와도 버튼을 다시 풀지 않고 멈추지 않는다`, async ({ page }) => {
+    // 검증 에이전트가 재현했다. 끝내기가 버튼을 잠근 뒤 늦게 온 202 가 finally 에서 버튼을 다시 풀었고,
+    // 이어서 비어 버린 currentProblem 을 읽다 TypeError 로 멈췄다.
+    const { mockTest, mockSheet } = require("../fixtures/api");
+    const slow = gate();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    let finished = false;
+    await stubApi(page);
+    await page.route("**/api/users/1/mock-tests/latest", (route) =>
+      fulfill(route, mockTest(62, finished ? "FINISHED" : "IN_PROGRESS", ["A", "B"])));
+    await page.route("**/api/mock-tests/62/problems/A/open", (route) => fulfill(route, mockSheet(62, "A")));
+    await page.route(`**/api/mock-tests/62/problems/A/${kind}`, async (route) => {
+      await slow.held;
+      await fulfill(route, kind === "submit" ? accepted(1) : { runId: 1 }, 202);
+    });
+    await page.route("**/api/mock-tests/62/finish", async (route) => {
+      finished = true;
+      await fulfill(route, mockTest(62, "FINISHED", ["A", "B"]));
+    });
+
+    await asUser(page, "1");
+    await page.click("#tabMock");
+    await page.locator("#mockRows button", { hasText: "문제 A" }).click();
+    await expect(page.locator("#crumbProblem")).toHaveText("시험 · 문제 A");
+    await page.click(button);
+    await page.click("#tabMock");
+    await page.click("#mockFinish");
+    await expect(page.locator("#crumbProblem")).toHaveText("고르는 중");
+
+    await releaseAndSettle(page, slow, `/api/mock-tests/62/problems/A/${kind}`);
+    await expect(page.locator("#submitButton")).toBeDisabled();
+    await expect(page.locator("#runButton")).toBeDisabled();
+    expect(errors, "페이지 오류").toEqual([]);
+  });
+}
+
 test("늦게 온 자유 질문의 답이 다른 문제 화면에 붙지 않는다", async ({ page }) => {
   // ADR-0044. 답은 그 문제의 Skill 에 대한 것이다. P02 에서 물은 답이 P03 을 연 뒤에 오면
   // P03 의 질문 칸 아래에 붙어, 사용자는 그것을 P03 에 대한 설명으로 읽는다.
@@ -781,4 +848,7 @@ test("늦게 끝난 시험 끝내기가 그 사이 연 일반 문제에서 사�
 
   await releaseAndSettle(page, slow, "/api/mock-tests/41/finish");
   await expect(page.locator("#statementBody")).toBeVisible();
+  // 끝낸 시험의 문제를 놓는 일은 그 시험 문제가 열려 있을 때만이다 - 사이에 연 P03 의 이름표와 버튼은 그대로다.
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+  await expect(page.locator("#submitButton")).toBeEnabled();
 });

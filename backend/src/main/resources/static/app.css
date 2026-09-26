@@ -507,6 +507,9 @@ table.runcases pre {
   color: var(--muted);
 }
 
+/* 설명 · 질문 칸은 한 줄 전체를 쓴다. 기본 폭(스무 글자 남짓)으로 두면 두 문장을 쓰는 동안 한 번에 몇 단어만 보였다. */
+.hints textarea { display: block; width: 100%; margin-bottom: 8px; resize: vertical; }
+
 #hintList {
   margin: 0 0 10px;
   padding-left: 22px;

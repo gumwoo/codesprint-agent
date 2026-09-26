@@ -160,15 +160,17 @@ async function loadProblems() {
 /**
  * 지금 버튼이 살아 있어도 되는 화면인가.
  *
- * <p>버튼을 잠그는 곳은 {@link showPicker} 하나뿐이다. 그래서 <b>목록이 보이는지</b>만
- * 본다 - {@code statementBody} 가 보이는지로 보면 "내 Skill" 탭을 열어 둔 채 요청이
+ * <p>버튼을 잠그는 곳은 {@link showPicker} 와, 열어 둔 시험 문제를 놓는 {@link finishMock} 이다. 그래서
+ * <b>목록이 보이는지</b>와 <b>열린 문제가 있는지</b>를 본다 - {@code statementBody} 가 보이는지로 보면 "내 Skill" 탭을 열어 둔 채 요청이
  * 끝났을 때 잠긴 채로 남는다. 그 탭은 버튼을 잠근 적이 없는데도.
  *
  * <p>표(claimView)만으로는 부족하다. 목록으로 돌아가는 것은 요청을
  * 무효화하지 않으므로 - 접수된 채점은 그대로 관찰한다 - 번호가 그대로다.
  */
 function onAProblemScreen() {
-  return $("picker").hidden;
+  // 열린 문제도 있어야 한다. 시험을 끝내면 목록으로 가지 않고도 문제를 놓는데(finishMock), 그 전에 보낸
+  // 제출의 응답이 늦게 오면 이 조건만으로는 잠근 버튼을 다시 풀었다(검증 에이전트가 재현했다).
+  return $("picker").hidden && currentProblem !== null;
 }
 
 function showPicker() {
@@ -768,6 +770,12 @@ async function finishMock(mockTestId) {
     // 끝났으면 시험 문제 화면을 놓는다 - 그 문제로 더 낼 수 없다.
     if (currentProblem && currentProblem.mockTestId === mockTestId) {
       currentProblem = null;
+      // 이름표와 버튼도 놓는다. currentProblem 만 비우면 위치 표시는 "시험 · 문제 A" 로 남고 제출 버튼은
+      // 눌리는데 아무 일도 일어나지 않았다(실제 백엔드로 끝까지 걸어 보고 찾았다).
+      $("crumbProblem").textContent = "고르는 중";
+      $("problemMeta").textContent = "";
+      $("submitButton").disabled = true;
+      $("runButton").disabled = true;
     }
     // **시험 탭이 아직 보일 때만** 다시 그린다. 응답을 기다리는 동안 다른 탭이나 문제로 옮겼으면 그대로
     // 둔다 - 표("mock")는 시험 탭의 것이지 사용자가 지금 보는 화면의 것이 아니다. 다음에 탭을 열면 다시 읽는다.
@@ -1546,6 +1554,9 @@ async function submit() {
   if (!currentProblem) {
     return;
   }
+  // 이 요청이 어느 문제의 것인지 여기서 고정한다. 기다리는 동안 시험이 끝나면 currentProblem 이 비어,
+  // 접수된 뒤에 그것을 읽다 TypeError 로 멈췄다(검증 에이전트가 재현했다).
+  const problem = currentProblem;
   const button = $("submitButton");
   button.disabled = true;
   // **접수되기 전에는 화면을 건드리지 않는다.** 거절될 수 있고, 그때 앞 제출은
@@ -1566,16 +1577,16 @@ async function submit() {
   try {
     // 시험 문제는 시험으로 낸다. 연 · 낸 시각은 서버가 시험 기록에 남긴다(ADR-0043) -
     // 그래서 풀이 시간을 보내지 않는다.
-    const exam = currentProblem.mockTestId;
+    const exam = problem.mockTestId;
     const response = exam
-        ? await fetch(`/api/mock-tests/${exam}/problems/${currentProblem.label}/submit`, {
+        ? await fetch(`/api/mock-tests/${exam}/problems/${problem.label}/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: submittingUserId, language: language(), sourceCode: sourceCode(),
           }),
         })
-        : await fetch(`/api/problems/${currentProblem.code}/submit`, {
+        : await fetch(`/api/problems/${problem.code}/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1633,7 +1644,7 @@ async function submit() {
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
   await waitForResult(accepted.submissionId, startedAt,
-      currentProblem.mockTestId || null, submittingUserId);
+      problem.mockTestId || null, submittingUserId);
 }
 
 /**
@@ -1646,6 +1657,9 @@ async function runSamples() {
   if (!currentProblem) {
     return;
   }
+  // 이 요청이 어느 문제의 것인지 여기서 고정한다. 기다리는 동안 시험이 끝나면 currentProblem 이 비어,
+  // 접수된 뒤에 그것을 읽다 TypeError 로 멈췄다(검증 에이전트가 재현했다).
+  const problem = currentProblem;
   const button = $("runButton");
   const runningUserId = Number($("userId").value);
   // **POST 를 보내기 전에 표를 받는다.** 202 를 기다리는 동안 문제나 사용자가
@@ -1657,17 +1671,17 @@ async function runSamples() {
   let accepted;
   try {
     // 시험 문제는 시험으로 실행한다 - 첫 실행 시각이 관측이다(ADR-0043).
-    const exam = currentProblem.mockTestId;
+    const exam = problem.mockTestId;
     const payload = JSON.stringify({
       userId: runningUserId,
       language: language(),
       sourceCode: sourceCode(),
     });
     const response = exam
-        ? await fetch(`/api/mock-tests/${exam}/problems/${currentProblem.label}/run`, {
+        ? await fetch(`/api/mock-tests/${exam}/problems/${problem.label}/run`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: payload,
         })
-        : await fetch(`/api/problems/${currentProblem.code}/run`, {
+        : await fetch(`/api/problems/${problem.code}/run`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: payload,
         });
     if (!response.ok) {
@@ -1695,7 +1709,7 @@ async function runSamples() {
   }
   // 여기서부터가 화면이 보는 실행이다. 앞의 것은 이제 놓는다.
   dropActiveRun();
-  await waitForRun(accepted.runId, runningUserId, currentProblem.mockTestId || null);
+  await waitForRun(accepted.runId, runningUserId, problem.mockTestId || null);
 }
 
 /** 보고 있던 실행을 놓는다. 그 폴러는 다음 응답에서 스스로 멈춘다. */
