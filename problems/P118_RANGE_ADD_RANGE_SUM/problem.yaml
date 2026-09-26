@@ -1,0 +1,51 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P118_RANGE_ADD_RANGE_SUM
+title: 구간 더하기와 구간 합
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(N + Q log N)
+statement: |
+  길이 N 인 정수 수열 A_1, A_2, ..., A_N 이 있다. 다음 두 종류의 연산 Q 개를 주어진 순서대로 처리한다.
+
+  - `1 l r x` : A_l, A_{l+1}, ..., A_r 각각에 x 를 더한다.
+  - `2 l r` : 그 시점의 A_l + A_{l+1} + ... + A_r 를 출력한다.
+
+  위치는 1 부터 센다.
+
+  입력
+  첫 줄에 N 과 Q 가 공백으로 주어진다.
+  둘째 줄에 A_1 부터 A_N 까지 N 개의 정수가 공백으로 주어진다.
+  다음 Q 개의 줄에 연산이 한 줄에 하나씩 위 형식으로 주어진다.
+
+  출력
+  2 번 연산마다 그 결과를 한 줄에 하나씩, 연산이 주어진 순서대로 출력한다.
+
+  제약
+  - 1 <= N <= 100000
+  - 1 <= Q <= 20000
+  - -1000 <= A_i <= 1000
+  - -1000 <= x <= 1000
+  - 1 <= l <= r <= N
+  - 2 번 연산은 적어도 하나 있다.
+
+  예시
+  수열이 1 2 3 4 5 일 때 `1 2 4 3` 을 처리하면 수열은 1 5 6 7 5 가 되고, 이어서 `2 1 5` 는 24 를 출력한다.
+skills:
+- code: SEGMENT_TREE_LAZY
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 리스트에서 1 번 연산마다 l..r 의 원소를 하나씩 고치고, 2 번 연산마다 l..r 를 직접 더한다.

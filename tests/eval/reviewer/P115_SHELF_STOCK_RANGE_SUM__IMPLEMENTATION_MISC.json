@@ -1,0 +1,33 @@
+{
+  "problemCode": "P115_SHELF_STOCK_RANGE_SUM",
+  "problemTitle": "선반 재고 구간 합",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "FENWICK_PREFIX_SUM",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    a = [0] * (n + 1)\n    tree = [0] * (n + 1)\n    for i in range(1, n + 1):\n        v = int(data[1 + i])\n        a[i] = v\n        tree[i] += v\n        j = i + (i & -i)\n        if j <= n:\n            tree[j] += tree[i]\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        t = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if t == b\"1\":\n            d = y\n            a[x] = y\n            i = x\n            while i <= n:\n                tree[i] += d\n                i += i & -i\n        else:\n            s = 0\n            i = y\n            while i > 0:\n                s += tree[i]\n                i -= i & -i\n            i = x - 1\n            while i > 0:\n                s -= tree[i]\n                i -= i & -i\n            out.append(s)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

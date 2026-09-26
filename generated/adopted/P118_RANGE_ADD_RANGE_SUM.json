@@ -1,0 +1,11 @@
+{
+  "id": "SEGMENT_TREE_LAZY-1790393902164-1",
+  "skill": "SEGMENT_TREE_LAZY",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T03:52:29+00:00",
+  "code": "P118_RANGE_ADD_RANGE_SUM",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, q = int(data[0]), int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    updates = []\n    out = []\n    pos = 2 + n\n    for _ in range(q):\n        if data[pos] == \"1\":\n            l, r, x = int(data[pos + 1]), int(data[pos + 2]), int(data[pos + 3])\n            updates.append((l, r, x))\n            pos += 4\n        else:\n            l, r = int(data[pos + 1]), int(data[pos + 2])\n            pos += 3\n            total = 0\n            for i in range(l, r + 1):\n                total += a[i - 1]\n                for ul, ur, x in updates:\n                    if ul <= i <= ur:\n                        total += x\n            out.append(total)\n    print(\"\\n\".join(map(str, out)))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nq = rng.randint(1, 12)\na = [rng.randint(-20, 20) for _ in range(n)]\nops = []\nfor i in range(q):\n    l = rng.randint(1, n)\n    r = rng.randint(l, n)\n    if i == q - 1 or rng.random() < 0.5:\n        ops.append(f\"2 {l} {r}\")\n    else:\n        ops.append(f\"1 {l} {r} {rng.randint(-20, 20)}\")\nprint(n, q)\nprint(*a)\nprint(\"\\n\".join(ops))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 100000\nq = 12000\na = [rng.randint(-1000, 1000) for _ in range(n)]\nops = []\nfor i in range(q):\n    l = rng.randint(1, n // 10)\n    r = rng.randint(n - n // 10, n)\n    if i == q - 1 or rng.random() < 0.5:\n        ops.append(f\"2 {l} {r}\")\n    else:\n        x = rng.randint(-1000, 1000)\n        if x == 0:\n            x = 1\n        ops.append(f\"1 {l} {r} {x}\")\nprint(n, q)\nprint(*a)\nprint(\"\\n\".join(ops))\n"
+}

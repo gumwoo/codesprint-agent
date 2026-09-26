@@ -1,0 +1,78 @@
+{
+  "id": "SEGMENT_TREE_RANGE_QUERY-1790393775117-2",
+  "skill": "SEGMENT_TREE_RANGE_QUERY",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T03:55:49+00:00",
+  "stage": "중복",
+  "code": "P121_RANGE_MIN_WITH_POSITION",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P120_RANGE_MIN_WITH_UPDATES 에 포함된다 - 점 갱신과 구간 최솟값에 그 위치(같으면 작은 번호)를 함께 내는 것뿐이고, 제약도 P120 보다 작다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "SEGMENT_TREE_RANGE_QUERY-1790393775117-2",
+    "skill": "SEGMENT_TREE_RANGE_QUERY",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T03:36:15.117774Z",
+    "draft": {
+      "codeSuffix": "RANGE_MIN_WITH_POSITION",
+      "title": "수위 측정소의 최저 수위와 위치",
+      "statement": "강을 따라 N 개의 수위 측정소가 0 번부터 N-1 번까지 번호가 붙어 있다. 처음 각 측정소의 수위 A[0], A[1], ..., A[N-1] 이 주어진다. 이어서 Q 개의 연산이 순서대로 주어진다. 연산은 두 종류다.\n\n- `1 i v` : i 번 측정소의 수위를 v 로 바꾼다.\n- `2 l r` : l 번부터 r 번까지(양 끝 포함) 측정소 중 수위가 가장 낮은 측정소를 찾아, 그 수위와 측정소 번호를 공백 하나로 구분해 한 줄에 출력한다. 가장 낮은 수위를 가진 측정소가 여럿이면 번호가 가장 작은 측정소를 출력한다.\n\n측정소 번호는 0 부터 센다.\n\n입력 형식\n첫 줄에 N 과 Q 가 공백으로 구분되어 주어진다.\n둘째 줄에 A[0] 부터 A[N-1] 까지 N 개의 정수가 공백으로 구분되어 주어진다.\n다음 Q 줄에 연산이 한 줄에 하나씩 주어진다.\n\n출력 형식\n`2 l r` 연산마다 한 줄에 `수위 번호` 를 출력한다.\n\n제약\n- 1 ≤ N ≤ 30000\n- 1 ≤ Q ≤ 30000\n- -1000000 ≤ A[i], v ≤ 1000000\n- `1 i v` 에서 0 ≤ i ≤ N-1\n- `2 l r` 에서 0 ≤ l ≤ r ≤ N-1\n- `2 l r` 연산은 적어도 하나 주어진다.\n\n예시\nN=5, A = [3, 1, 4, 1, 5] 에서 `2 0 4` 의 답은 `1 1` 이다. 수위 1 인 측정소가 1 번과 3 번에 있고 번호가 더 작은 1 번을 고른다.",
+      "secondarySkills": [],
+      "referenceComplexity": "O((N + Q) log N)",
+      "expectedSolveSeconds": 1500,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "INPUT_PARSE",
+        "INDEX_ERROR"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "최저 수위가 여러 측정소에 있을 때 번호가 가장 큰 측정소를 출력한다.",
+      "sampleInputs": [
+        "5 5\n3 1 4 1 5\n2 0 4\n2 2 4\n1 1 7\n2 0 4\n2 1 2",
+        "6 5\n-2 0 -2 3 -5 -5\n2 0 3\n2 3 5\n1 4 4\n2 0 5\n2 1 1"
+      ],
+      "edgeCases": [
+        {
+          "type": "SINGLE",
+          "input": "1 1\n7\n2 0 0"
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "5 3\n4 4 4 4 4\n2 0 4\n2 1 3\n2 3 4"
+        },
+        {
+          "type": "DUPLICATE",
+          "input": "6 4\n3 -1 5 -1 2 -1\n2 0 5\n1 1 0\n2 0 5\n2 2 3"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "3 3\n1000000 -1000000 -1000000\n2 0 2\n1 1 1000000\n2 0 2"
+        },
+        {
+          "type": "MINIMUM",
+          "input": "1 2\n-1000000\n1 0 1000000\n2 0 0"
+        }
+      ],
+      "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 10)\nq = rng.randint(1, 10)\na = [rng.randint(-5, 5) for _ in range(n)]\nlines = [f'{n} {q}', ' '.join(map(str, a))]\nfor k in range(q):\n    if k > 0 and rng.random() < 0.4:\n        lines.append(f'1 {rng.randrange(n)} {rng.randint(-5, 5)}')\n    else:\n        l = rng.randrange(n)\n        r = rng.randrange(l, n)\n        lines.append(f'2 {l} {r}')\nprint('\\n'.join(lines))\n",
+      "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    OFF = 10 ** 6\n    SH = 15\n    mask = (1 << SH) - 1\n    INF = 1 << 62\n    size = 1\n    while size < n:\n        size *= 2\n    t = [INF] * (2 * size)\n    for i in range(n):\n        t[size + i] = ((int(data[2 + i]) + OFF) << SH) | i\n    for i in range(size - 1, 0, -1):\n        a = t[2 * i]\n        b = t[2 * i + 1]\n        t[i] = a if a < b else b\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        op = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if op == b'1':\n            p = x + size\n            t[p] = ((y + OFF) << SH) | x\n            p >>= 1\n            while p:\n                a = t[2 * p]\n                b = t[2 * p + 1]\n                t[p] = a if a < b else b\n                p >>= 1\n        else:\n            lo = x + size\n            hi = y + size + 1\n            best = INF\n            while lo < hi:\n                if lo & 1:\n                    if t[lo] < best:\n                        best = t[lo]\n                    lo += 1\n                if hi & 1:\n                    hi -= 1\n                    if t[hi] < best:\n                        best = t[hi]\n                lo >>= 1\n                hi >>= 1\n            out.append(f'{(best >> SH) - OFF} {best & mask}')\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        op = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if op == '1':\n            a[x] = y\n        else:\n            best_v = None\n            best_i = -1\n            for j in range(x, y + 1):\n                if best_v is None or a[j] < best_v:\n                    best_v = a[j]\n                    best_i = j\n            out.append(f'{best_v} {best_i}')\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+      "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    OFF = 10 ** 6\n    SH = 15\n    mask = (1 << SH) - 1\n    INF = 1 << 62\n    size = 1\n    while size < n:\n        size *= 2\n    t = [INF] * (2 * size)\n    for i in range(n):\n        t[size + i] = ((int(data[2 + i]) + OFF) << SH) | (mask - i)\n    for i in range(size - 1, 0, -1):\n        a = t[2 * i]\n        b = t[2 * i + 1]\n        t[i] = a if a < b else b\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        op = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if op == b'1':\n            p = x + size\n            t[p] = ((y + OFF) << SH) | (mask - x)\n            p >>= 1\n            while p:\n                a = t[2 * p]\n                b = t[2 * p + 1]\n                t[p] = a if a < b else b\n                p >>= 1\n        else:\n            lo = x + size\n            hi = y + size + 1\n            best = INF\n            while lo < hi:\n                if lo & 1:\n                    if t[lo] < best:\n                        best = t[lo]\n                    lo += 1\n                if hi & 1:\n                    hi -= 1\n                    if t[hi] < best:\n                        best = t[hi]\n                lo >>= 1\n                hi >>= 1\n            out.append(f'{(best >> SH) - OFF} {mask - (best & mask)}')\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+      "hints": [
+        "질의마다 l 부터 r 까지 모두 훑으면 한 질의에 최대 N 번을 본다. N 과 Q 가 모두 3만이면 전체 작업량이 수억 번이 된다. 최솟값은 합처럼 빼서 되돌릴 수 없으므로 누적 배열로는 구간 답을 만들 수 없다.",
+        "수열을 절반씩 나눈 구간들의 답을 미리 저장해 두고, 질의 구간을 그런 조각 몇 개의 합집합으로 덮어 조각 답만 합치는 구간 분할 방식을 떠올린다. 값 하나가 바뀌면 그 위치를 포함하는 조각들만 다시 계산하면 된다.",
+        "길이 2의 거듭제곱 크기의 완전 이진 트리를 배열 하나로 표현한다. 잎에는 각 측정소의 (수위, 번호) 쌍을, 내부 노드에는 두 자식 중 더 작은 쌍을 저장한다. 쌍을 수위 먼저, 번호 다음으로 비교하면 같은 수위일 때 번호가 작은 쪽이 자연스럽게 남는다.",
+        "갱신은 잎을 바꾼 뒤 부모로 올라가며 각 노드를 두 자식의 최솟값으로 다시 채운다. 질의는 양 끝 위치에서 출발해 한 단계씩 올라가면서, 구간에 온전히 속하는 노드만 답 후보에 넣고 두 끝이 만나면 멈춘다. 두 연산 모두 트리 높이만큼만 움직인다.",
+        "트리 배열 t, 잎 시작 위치 S\n갱신(i, v): p = S+i 에 (v, i) 저장; p 를 부모로 옮기며 t[p] = min(t[왼자식], t[오른자식]) 반복\n질의(l, r): lo = S+l, hi = S+r+1, 답 = 무한대\n  lo < hi 인 동안: lo 가 오른쪽 자식이면 t[lo] 를 답에 반영하고 lo 를 한 칸 오른쪽으로; hi 가 오른쪽 자식이면 hi 를 한 칸 왼쪽으로 옮기고 t[hi] 를 답에 반영; lo, hi 를 부모로\n  답의 (수위, 번호) 출력"
+      ],
+      "skillControl": {
+        "approach": "질의마다 구간을 잘라 min 으로 최솟값을 구하고 index 로 첫 위치를 찾는다.",
+        "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    a = [int(x) for x in data[2:2 + n]]\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        op = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if op == b'1':\n            a[x] = y\n        else:\n            m = min(a[x:y + 1])\n            out.append(f'{m} {a.index(m, x, y + 1)}')\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 30000\nq = 30000\na = [rng.randint(-10 ** 6, 10 ** 6) for _ in range(n)]\nlines = [f'{n} {q}', ' '.join(map(str, a))]\nlines.append(f'2 {rng.randrange(n // 4)} {rng.randrange(3 * n // 4, n)}')\nfor _ in range(q - 1):\n    if rng.random() < 0.25:\n        lines.append(f'1 {rng.randrange(n)} {rng.randint(-10 ** 6, 10 ** 6)}')\n    else:\n        l = rng.randrange(n // 4)\n        r = rng.randrange(3 * n // 4, n)\n        lines.append(f'2 {l} {r}')\nprint('\\n'.join(lines))\n"
+      }
+    }
+  }
+}

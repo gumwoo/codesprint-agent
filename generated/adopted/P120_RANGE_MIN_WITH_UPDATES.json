@@ -1,0 +1,11 @@
+{
+  "id": "SEGMENT_TREE_RANGE_QUERY-1790393690148-1",
+  "skill": "SEGMENT_TREE_RANGE_QUERY",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T03:53:12+00:00",
+  "code": "P120_RANGE_MIN_WITH_UPDATES",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    arr = [int(v) for v in data[2:2 + n]]\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        op = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if op == '1':\n            arr[x - 1] = y\n        else:\n            best = arr[x - 1]\n            for k in range(x, y):\n                if arr[k] < best:\n                    best = arr[k]\n            out.append(str(best))\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nq = rng.randint(1, 12)\narr = [rng.randint(1, 20) for _ in range(n)]\nlines = [f'{n} {q}', ' '.join(map(str, arr))]\nfor k in range(q):\n    if k < q - 1 and rng.random() < 0.4:\n        lines.append(f'1 {rng.randint(1, n)} {rng.randint(1, 20)}')\n    else:\n        l = rng.randint(1, n)\n        r = rng.randint(l, n)\n        lines.append(f'2 {l} {r}')\nprint('\\n'.join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nq = 35000\nlines = [f'{n} {q}', ' '.join(str(rng.randint(1, 10 ** 6)) for _ in range(n))]\nfor k in range(q):\n    if k < q - 1 and rng.random() < 0.3:\n        lines.append(f'1 {rng.randint(1, n)} {rng.randint(1, 10 ** 6)}')\n    else:\n        l = rng.randint(1, n // 2)\n        r = rng.randint(l + n // 4, n)\n        lines.append(f'2 {l} {r}')\nprint('\\n'.join(lines))\n"
+}

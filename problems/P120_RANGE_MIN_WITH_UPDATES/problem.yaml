@@ -1,0 +1,50 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P120_RANGE_MIN_WITH_UPDATES
+title: 값이 바뀌는 수열의 구간 최솟값
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O((N + Q) log N)
+statement: |
+  길이 N 인 정수 수열 A 가 주어진다. 이어서 Q 개의 연산이 순서대로 주어진다. 연산은 두 종류다.
+
+  - `1 i v` : A 의 i 번째 값을 v 로 바꾼다.
+  - `2 l r` : A 의 l 번째부터 r 번째까지(양 끝 포함) 값 중 가장 작은 값을 출력한다.
+
+  위치는 1 부터 센다. 연산은 앞선 연산의 결과가 반영된 수열에 대해 수행한다.
+
+  입력 형식
+  - 첫 줄에 N 과 Q 가 공백으로 구분되어 주어진다.
+  - 둘째 줄에 A 의 값 N 개가 공백으로 구분되어 주어진다.
+  - 다음 Q 줄에 연산이 한 줄에 하나씩 주어진다.
+
+  출력 형식
+  - `2 l r` 연산마다 답을 한 줄에 하나씩, 연산이 주어진 순서대로 출력한다.
+
+  제약
+  - 1 <= N <= 100000
+  - 1 <= Q <= 50000
+  - 1 <= A 의 값, v <= 1000000000
+  - 1 <= i <= N
+  - 1 <= l <= r <= N
+  - `2 l r` 연산은 적어도 하나 있다.
+
+  예시
+  수열이 5 3 8 6 2 일 때 `2 2 5` 의 답은 3, 8, 6, 2 중 가장 작은 2 다. 이어서 `1 5 9` 로 다섯 번째 값을 9 로 바꾸면 `2 1 5` 의 답은 3 이다.
+skills:
+- code: SEGMENT_TREE_RANGE_QUERY
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 질의마다 수열의 l..r 부분을 잘라 min 으로 최솟값을 구하고, 갱신은 리스트 값을 바로 바꾼다.

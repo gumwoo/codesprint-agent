@@ -1,0 +1,33 @@
+{
+  "problemCode": "P118_RANGE_ADD_RANGE_SUM",
+  "problemTitle": "구간 더하기와 구간 합",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SEGMENT_TREE_LAZY"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, q = int(data[0]), int(data[1])\n    size = 1\n    h = 0\n    while size < n:\n        size <<= 1\n        h += 1\n    tree = [0] * (2 * size)\n    lazy = [0] * size\n    length = [1] * (2 * size)\n    tree[size:size + n] = map(int, data[2:2 + n])\n    for i in range(size - 1, 0, -1):\n        tree[i] = tree[2 * i] + tree[2 * i + 1]\n        length[i] = length[2 * i] * 2\n\n    def push(p):\n        for s in range(h, 0, -1):\n            i = p >> s\n            v = lazy[i]\n            if v:\n                c = 2 * i\n                half = length[c]\n                tree[c] += v * half\n                tree[c + 1] += v * half\n                if c < size:\n                    lazy[c] += v\n                    lazy[c + 1] += v\n                lazy[i] = 0\n\n    def pull(p):\n        p >>= 1\n        while p:\n            tree[p] = tree[2 * p] + tree[2 * p + 1] + lazy[p] * length[p]\n            p >>= 1\n\n    out = []\n    pos = 2 + n\n    for _ in range(q):\n        l = int(data[pos + 1]) - 1 + size\n        r = int(data[pos + 2]) + size\n        push(l)\n        push(r - 1)\n        a, b = l, r\n        if data[pos] == b\"1\":\n            v = int(data[pos + 3])\n            pos += 4\n            while a < b:\n                if a & 1:\n                    tree[a] += v\n                    if a < size:\n                        lazy[a] += v\n                    a += 1\n                if b & 1:\n                    b -= 1\n                    tree[b] += v\n                    if b < size:\n                        lazy[b] += v\n                a >>= 1\n                b >>= 1\n            pull(l)\n            pull(r - 1)\n        else:\n            pos += 3\n            res = 0\n            while a < b:\n                if a & 1:\n                    res += tree[a]\n                    a += 1\n                if b & 1:\n                    b -= 1\n                    res += tree[b]\n                a >>= 1\n                b >>= 1\n            out.append(res)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 11,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "failedCaseIds": [
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}
