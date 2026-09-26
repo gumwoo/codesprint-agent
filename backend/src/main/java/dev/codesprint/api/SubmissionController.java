@@ -129,8 +129,10 @@ public class SubmissionController {
                             + ", solutionViewed=" + request.solutionViewed() + ")");
         }
 
-        // 진행 중인 시험의 문제는 시험에서 낸다 - 여기로 내면 관측(ADR-0043)에 남지 않는다.
-        if (mockTests.inProgressContains(request.userId(), problemCode)) {
+        // 시험 중에는 일반 제출을 받지 않는다(ADR-0043). 시험 문제는 시험에서 낸다 - 여기로 내면 관측에 남지
+        // 않는다. 시험 밖 문제도 받지 않는다 - 그 결과의 skillUpdates 에는 시험 제출이 바꾼 before 값이 실려,
+        // 닫아 둔 Skill 지도 대신 시험 문제의 유형을 알려 준다(검증 에이전트가 재현했다).
+        if (mockTests.inProgress(request.userId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 

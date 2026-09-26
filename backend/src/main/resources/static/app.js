@@ -442,6 +442,7 @@ async function saveSettings() {
 
 const OUTCOME_LABEL = {
   SOLVED: "풀었다",
+  JUDGING: "채점 중",
   ATTEMPTED: "냈지만 못 풀었다",
   OPENED: "열고 내지 않았다",
   UNOPENED: "열지 않았다",
@@ -736,13 +737,28 @@ async function openMockProblem(mockTestId, label) {
   openedAt = Date.now();
 }
 
-/** 지금 사용자의 학습 모드를 칸에 적는다. 저장과 같은 통("mode")을 쓴다. */
+/**
+ * 학습 모드를 적는 곳은 여기 하나다. 칸 · 튜터 표시 · 모드 변수가 따로 적히면 한쪽만 맞는다 -
+ * 칸은 FREE 인데 튜터가 숨는 식으로(검증 에이전트가 재현했다).
+ */
+function applyLearningMode(mode) {
+  $("learningMode").value = mode;
+  currentLearningMode = mode;
+  applyTutorVisibility();
+}
+
+/**
+ * 지금 사용자의 학습 모드를 읽어 적는다. **저장과 다른 통("modeLoad")을 쓴다.** 같은 통이면 저장하는 동안
+ * 오늘 탭을 다시 눌렀을 때 읽기가 저장의 표를 가져가, 저장 응답이 버려지고 화면에 옛 모드가 남는다.
+ * 저장 중이면(칸이 잠겨 있으면) 읽지 않는다 - 곧 올 저장 응답이 정본이다. 저장이 시작되면 그 전에 떠난 읽기는
+ * 무효가 된다(saveLearningMode).
+ */
 async function loadLearningMode() {
   const userId = Number($("userId").value);
-  if (!userId) {
+  if (!userId || $("learningMode").disabled) {
     return;
   }
-  const mine = claimView("mode");
+  const mine = claimView("modeLoad");
   let user;
   try {
     user = await getJson(`/api/users/${userId}`);
@@ -750,7 +766,7 @@ async function loadLearningMode() {
     return;
   }
   if (mine()) {
-    $("learningMode").value = user.learningMode;
+    applyLearningMode(user.learningMode);
   }
 }
 
@@ -762,6 +778,8 @@ async function saveLearningMode() {
     return;
   }
   const mine = claimView("mode");
+  // 저장 전에 떠난 읽기는 PUT 이전의 모드를 가져온다 - 늦게 도착해도 쓰지 못하게 한다.
+  invalidateView("modeLoad");
   const select = $("learningMode");
   // **저장하는 동안 칸을 잠근다.** 잠그지 않으면 둘을 연달아 골랐을 때 먼저 보낸 PUT 이 서버에서 나중에
   // 처리되어, 화면은 마지막 것을, 서버는 먼저 것을 가진다(목표를 바꿀 때와 같은 이유).
@@ -787,10 +805,8 @@ async function saveLearningMode() {
   }
   const user = await response.json();
   if (mine()) {
-    $("learningMode").value = user.learningMode;
+    applyLearningMode(user.learningMode);
     $("modeNote").textContent = `학습 모드 ${user.learningMode}. 다음에 여는 문제부터 적용된다.`;
-    currentLearningMode = user.learningMode;
-    applyTutorVisibility();
   }
 }
 
@@ -1928,9 +1944,14 @@ async function refreshUserTrack() {
   if (!userId) {
     // 사용자가 없으면 이전 사용자의 목표를 남기지 않는다 - 그대로 "새로 시작" 하면 그 목표로 만들어진다.
     invalidateView("userTrack");
+    invalidateView("modeLoad");
     $("track").value = "";
+    currentLearningMode = null;
+    applyTutorVisibility();
     return;
   }
+  // 학습 모드는 여기서 적지 않는다 - 모드를 적는 통은 loadLearningMode 하나다.
+  loadLearningMode();
   const mine = claimView("userTrack");
   let user = null;
   try {
@@ -1944,8 +1965,6 @@ async function refreshUserTrack() {
   }
   // 없는 사용자면 이전 사용자의 목표를 남기지 않는다.
   $("track").value = user ? user.track : "";
-  currentLearningMode = user ? user.learningMode : null;
-  applyTutorVisibility();
 }
 
 /**

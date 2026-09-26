@@ -514,6 +514,61 @@ test("학습 모드를 저장하는 동안 칸을 잠가 화면과 서버가 같
   expect(serverMode).toBe("FREE");
 });
 
+test("학습 모드를 저장하는 동안 오늘 탭을 다시 눌러도 저장 응답이 버려지지 않는다", async ({ page }) => {
+  // 읽기(loadLearningMode)가 저장과 같은 통을 써서, 저장 중에 오늘 탭을 다시 누르면 저장의 표를 가져갔다.
+  // PUT 응답이 버려져 화면은 NORMAL, 서버는 FREE 였고, 튜터 칸도 숨었다(검증 에이전트가 재현했다).
+  const slow = gate();
+  let serverMode = "NORMAL";
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, modeUser(serverMode)));
+  await page.route("**/api/users/1/learning-mode", async (route) => {
+    await slow.held; // PUT 이 서버에서 처리되기 전에 오늘 탭의 조회가 먼저 끝난다
+    serverMode = JSON.parse(route.request().postData()).mode;
+    await fulfill(route, modeUser(serverMode));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await page.click("#tabToday");
+  await expect(page.locator("#todayBody")).toBeVisible();
+
+  await releaseAndSettle(page, slow, "/api/users/1/learning-mode");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+  await expect(page.locator("#learningMode")).toHaveValue(serverMode);
+
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+});
+
+test("늦게 온 목표 조회가 방금 저장한 학습 모드의 튜터 칸을 되돌리지 않는다", async ({ page }) => {
+  // 목표를 읽는 refreshUserTrack 도 모드 변수를 따로 적었다 - 칸은 FREE 인데 튜터 칸이 숨었다.
+  const slow = gate();
+  let serverMode = "NORMAL";
+  await stubApi(page);
+  await page.route("**/api/users/1", async (route) => {
+    const stale = modeUser(serverMode); // 조회는 저장 전에 서버에서 처리됐다
+    await slow.held;
+    await fulfill(route, stale);
+  });
+  await page.route("**/api/users/1/learning-mode", (route) => {
+    serverMode = JSON.parse(route.request().postData()).mode;
+    return fulfill(route, modeUser(serverMode));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+
+  await releaseAndSettle(page, slow, "/api/users/1");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#learningMode")).toHaveValue("FREE");
+  await expect(page.locator("#tutorBox")).toBeVisible();
+});
+
 test("늦게 끝난 시험 끝내기가 그 사이 옮겨 간 오늘 탭에서 사용자를 끌고 가지 않는다", async ({ page }) => {
   const slow = gate();
   const { mockTest } = require("../fixtures/api");
