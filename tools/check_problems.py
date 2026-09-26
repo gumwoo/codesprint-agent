@@ -426,15 +426,15 @@ def check_templates(problem_primary: dict, skills: dict) -> None:
             if problem in owner and owner[problem] != code:
                 fail("template", f"{problem}: 템플릿 {owner[problem]} 와 {code} 에 함께 속한다 - 한 문제는 한 가족이다")
             owner.setdefault(problem, code)
-            values = v.get("values") or {}
+            values = v.get("values") if isinstance(v.get("values"), dict) else {}
             if set(values) != set(names):
                 fail("template", f"{code}/{problem}: values 가 parameters({names}) 와 다르다 ({sorted(values)})")
         # 숫자(제약 조건) 말고 다른 축에서 달라야 한다 - 아니면 숫자만 바꾼 같은 문제다(§149)
         shaped = [p.get("name") for p in params if p.get("axis") != NUMERIC_AXIS]
         for i in range(len(variants)):
             for j in range(i + 1, len(variants)):
-                a_values = variants[i].get("values") or {}
-                b_values = variants[j].get("values") or {}
+                a_values = variants[i].get("values") if isinstance(variants[i].get("values"), dict) else {}
+                b_values = variants[j].get("values") if isinstance(variants[j].get("values"), dict) else {}
                 if all(normalized(a_values.get(n)) == normalized(b_values.get(n)) for n in shaped):
                     fail("template", f"{code}: {variants[i].get('problem')} 와 {variants[j].get('problem')} 가 "
                                      f"숫자(제약 조건) 말고는 같은 변형이다 - 같은 패턴의 숫자만 바꾼 문제다(PRD §149)")

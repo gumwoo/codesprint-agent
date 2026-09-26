@@ -236,7 +236,8 @@ def template_whitespace_only(doc):
     # 공백 · 대소문자만 다른 값은 같은 변형이다
     t = doc["templates"][3]
     first = t["variants"][0]["values"]["requiredOutput"]
-    t["variants"][1]["values"]["requiredOutput"] = "  " + first.upper() + "  "
+    # 대문자 K 를 소문자로, 안쪽 공백을 늘려 - 앞뒤 공백만 보는 정규화는 이것을 놓친다(검증 에이전트)
+    t["variants"][1]["values"]["requiredOutput"] = first.lower().replace(" ", "   ")
 
 
 # (설명, 대상 파일, 망가뜨리는 방법, 기대 메시지 조각)
