@@ -768,6 +768,12 @@ async function finishMock(mockTestId) {
     // 끝났으면 시험 문제 화면을 놓는다 - 그 문제로 더 낼 수 없다.
     if (currentProblem && currentProblem.mockTestId === mockTestId) {
       currentProblem = null;
+      // 이름표와 버튼도 놓는다. currentProblem 만 비우면 위치 표시는 "시험 · 문제 A" 로 남고 제출 버튼은
+      // 눌리는데 아무 일도 일어나지 않았다(실제 백엔드로 끝까지 걸어 보고 찾았다).
+      $("crumbProblem").textContent = "고르는 중";
+      $("problemMeta").textContent = "";
+      $("submitButton").disabled = true;
+      $("runButton").disabled = true;
     }
     // **시험 탭이 아직 보일 때만** 다시 그린다. 응답을 기다리는 동안 다른 탭이나 문제로 옮겼으면 그대로
     // 둔다 - 표("mock")는 시험 탭의 것이지 사용자가 지금 보는 화면의 것이 아니다. 다음에 탭을 열면 다시 읽는다.

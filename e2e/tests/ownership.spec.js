@@ -451,6 +451,34 @@ test("늦게 온 시험 문제가 그 뒤에 연 일반 문제를 덮지 않는�
   await expect(page.locator("#hintsBox")).toBeVisible();
 });
 
+test("시험을 끝내면 열어 둔 시험 문제의 이름표와 제출 버튼을 놓는다", async ({ page }) => {
+  // 실제 백엔드로 걸어 보고 찾았다. 끝낸 뒤에도 위치 표시가 "시험 · 문제 A" 였고, 제출 버튼은 눌리는데
+  // 아무 일도 일어나지 않았다 - 그 문제로는 더 낼 수 없다.
+  const { mockTest, mockSheet } = require("../fixtures/api");
+  let finished = false;
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest", (route) =>
+    fulfill(route, mockTest(61, finished ? "FINISHED" : "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/61/problems/A/open", (route) => fulfill(route, mockSheet(61, "A")));
+  await page.route("**/api/mock-tests/61/finish", async (route) => {
+    finished = true;
+    await fulfill(route, mockTest(61, "FINISHED", ["A", "B"]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.locator("#mockRows button", { hasText: "문제 A" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("시험 · 문제 A");
+  await expect(page.locator("#submitButton")).toBeEnabled();
+
+  await page.click("#tabMock");
+  await page.click("#mockFinish");
+  await expect(page.locator("#mockStart")).toBeVisible();
+  await expect(page.locator("#crumbProblem")).toHaveText("고르는 중");
+  await expect(page.locator("#submitButton")).toBeDisabled();
+  await expect(page.locator("#runButton")).toBeDisabled();
+});
+
 test("늦게 온 자유 질문의 답이 다른 문제 화면에 붙지 않는다", async ({ page }) => {
   // ADR-0044. 답은 그 문제의 Skill 에 대한 것이다. P02 에서 물은 답이 P03 을 연 뒤에 오면
   // P03 의 질문 칸 아래에 붙어, 사용자는 그것을 P03 에 대한 설명으로 읽는다.

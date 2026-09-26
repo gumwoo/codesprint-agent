@@ -155,3 +155,19 @@ test.describe("390px 첫 방문", () => {
     await expect(page.locator("#welcome")).toBeVisible();
   });
 });
+
+test("자유 질문 칸은 칸 폭을 다 쓴다", async ({ page }) => {
+  // 기본 textarea 폭(스무 글자 남짓)이라 두 문장을 쓰는 동안 몇 단어만 보였다(실제 백엔드로 걸어 보고 찾았다).
+  // 설명해 보기 칸도 같은 규칙(.hints textarea)을 쓴다.
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, {
+    userId: 1, nickname: "자유", track: "JOB", dailyMinutes: null, examDate: null,
+    learningMode: "FREE" }));
+  await asUser(page);
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+  const [field, box] = await page.evaluate(() => [
+    document.getElementById("tutorQuestion").getBoundingClientRect().width,
+    document.getElementById("tutorBox").getBoundingClientRect().width]);
+  expect(field, `질문 칸 ${field}px / 상자 ${box}px`).toBeGreaterThan(box * 0.9);
+});
