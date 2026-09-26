@@ -1,0 +1,35 @@
+{
+  "problemCode": "P130_NEAREST_SHELTER_GRID",
+  "problemTitle": "가장 가까운 대피소",
+  "problemSource": "DEV_FIXTURE",
+  "label": "BOUNDARY_CHECK",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MULTI_SOURCE_SHORTEST_PATH",
+    "GRID_COORDINATE",
+    "GRID_BOUNDARY_CHECK",
+    "BFS_GRID_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    grid = data[2:2 + n]\n    dist = [[-1] * m for _ in range(n)]\n    q = deque()\n    for r in range(n):\n        for c in range(m):\n            if grid[r][c] == 'S':\n                dist[r][c] = 0\n                q.append((r, c))\n    while q:\n        r, c = q.popleft()\n        nd = dist[r][c] + 1\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if nr >= 0 and nc >= 0 and grid[nr][nc] != '#' and dist[nr][nc] == -1:\n                dist[nr][nc] = nd\n                q.append((nr, nc))\n    sys.stdout.write('\\n'.join(' '.join(map(str, row)) for row in dist) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "RUNTIME_ERROR",
+    "failedCaseId": 1,
+    "stderr": "Traceback (most recent call last):\n  File \"solution.py\", line 28, in <module>\n    main()\n  File \"solution.py\", line 22, in main\n    if nr >= 0 and nc >= 0 and grid[nr][nc] != '#' and dist[nr][nc] == -1:\n                               ~~~~^^^^\nIndexError: list index out of range\n",
+    "passedCaseIds": [
+      7
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}
