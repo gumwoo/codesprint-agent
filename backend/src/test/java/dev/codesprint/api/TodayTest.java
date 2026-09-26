@@ -81,6 +81,12 @@ class TodayTest {
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
+    @Autowired
+    private dev.codesprint.judge.JudgeJobRepository jobs;
+
+    @Autowired
+    private dev.codesprint.learning.service.JudgeResultPoller poller;
+
     private MockMvc mvc;
     private long userId;
 
@@ -170,9 +176,34 @@ class TodayTest {
         assertThat(after.get("mode").asText()).isEqualTo("NORMAL");
     }
 
+    /** 틀린 제출 하나를 채점까지 반영한다. 그 Skill 에 Evidence 가 생겨 계획이 연습 블록을 준다. */
+    private void wrong(String code) throws Exception {
+        String body = MAPPER.createObjectNode().put("userId", userId).put("language", "PYTHON")
+                .put("sourceCode", "x").toString();
+        long id = MAPPER.readTree(mvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/problems/{code}/submit", code)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse().getContentAsString()).get("submissionId").asLong();
+        var result = MAPPER.createObjectNode().put("status", "WRONG_ANSWER").put("passed", 1)
+                .put("total", 6).put("executionMs", 100).put("memoryKb", 20480)
+                .put("failedCaseId", 2);
+        result.putNull("stderr");
+        result.set("cases", MAPPER.createArrayNode());
+        dev.codesprint.support.JudgeResultFixture.finish(jdbc, result.toString(),
+                jobs.findBySubmissionId(id).orElseThrow().id());
+        poller.applyFinishedJobs();
+    }
+
     @Test
     @DisplayName("시험 모드에서 최근 7 일 안에 본 모의 시험이 없으면 모의 시험 블록을 주고, 보면 사라진다")
     void examModeAsksForAMockTest() throws Exception {
+        // 여러 Skill 에 틀린 제출을 남겨 계획이 연습 블록(다음 문제)을 보여 주게 한다. 연습 문제는 아직 내지 않은
+        // 문제라 모의 시험 후보와 겹칠 수 있다 - 겹치지 않는지 보려면 겹칠 수 있는 상황이어야 한다.
+        for (String code : new String[] {"P02_GRID_TRAVERSAL", "P05_SHORTEST_PATH",
+            "P14_GRAPH_REACHABLE", "P13_EDGE_CELLS", "P11_LIST_BASIC", "P12_GRID_COORDINATE"}) {
+            wrong(code);
+        }
         String soon = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(3).toString();
         assertThat(putSettings("{\"dailyMinutes\": 600, \"examDate\": \"" + soon + "\"}"))
                 .isEqualTo(200);
@@ -196,6 +227,19 @@ class TodayTest {
         long minutes = java.time.Duration.between(java.time.Instant.parse(test.get("startedAt").asText()),
                 java.time.Instant.parse(test.get("endsAt").asText())).toMinutes();
         assertThat(mock.get("minutes").asLong()).isEqualTo(minutes);
+
+        // 계획이 보여 준 문제는 곧 만든 시험에 없다 - 있으면 시작하기 전에 유형이 드러난다(검증 에이전트)
+        java.util.Set<String> shown = new java.util.HashSet<>();
+        for (JsonNode block : plan.get("blocks")) {
+            if (!block.get("problem").isNull()) {
+                shown.add(block.get("problem").get("code").asText());
+            }
+        }
+        assertThat(shown).as("대조가 성립하려면 계획이 문제를 보여 줘야 한다").isNotEmpty();
+        java.util.List<String> inTest = jdbc.queryForList(
+                "select problem_code from mock_test_problems where mock_test_id = ?", String.class,
+                test.get("mockTestId").asLong());
+        assertThat(inTest).isNotEmpty().doesNotContainAnyElementsOf(shown);
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                 .post("/api/mock-tests/{id}/finish", test.get("mockTestId").asLong())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"userId\": " + userId + "}"));

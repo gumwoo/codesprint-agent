@@ -102,16 +102,6 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
      *     상수는 {@code SubmissionEvidenceFactory.INDEPENDENT_HINT_CEILING} 하나뿐이며
      *     호출자가 넘긴다 - 여기 숫자를 박으면 정본이 둘이 된다.
      */
-    /**
-     * 학습 분석(PRD §99 · §160, ADR-0049)이 세는 원자료 - 판정 · 제출 시각 · 문제. 한 사용자의 제출 전부다.
-     * 화면이 세지 않게 서버가 여기서 읽어 센다.
-     */
-    @Query("""
-            select s.status, s.submittedAt, s.problemId from SubmissionRow s
-            where s.userId = :userId
-            """)
-    List<Object[]> findStatusTimesAndProblems(@Param("userId") Long userId);
-
     @Query("""
             select distinct s.problemId from SubmissionRow s
             where s.userId = :userId
@@ -121,6 +111,16 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             """)
     List<Long> findIndependentlySolvedProblemIds(@Param("userId") Long userId,
             @Param("hintCeiling") int hintCeiling);
+
+    /**
+     * 학습 분석(PRD §99 · §160, ADR-0049)이 세는 원자료 - 판정 · 제출 시각 · 문제. 한 사용자의 제출 전부다.
+     * 화면이 세지 않게 서버가 여기서 읽어 센다.
+     */
+    @Query("""
+            select s.status, s.submittedAt, s.problemId from SubmissionRow s
+            where s.userId = :userId
+            """)
+    List<Object[]> findStatusTimesAndProblems(@Param("userId") Long userId);
 
     /**
      * 이 문제에서 개념 자료를 <b>실제로 건넨 적이 있는가.</b>

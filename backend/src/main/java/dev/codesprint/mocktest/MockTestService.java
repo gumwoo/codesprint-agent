@@ -184,14 +184,35 @@ public class MockTestService {
      */
     @Transactional(readOnly = true)
     public Integer dueMinutes(long userId, int days) {
+        Upcoming upcoming = upcoming(userId, days, mastery.statesOf(userId));
+        return upcoming == null ? null : upcoming.minutes();
+    }
+
+    /** 곧 만들 모의 시험. 문제 code 는 서버 안에서만 쓴다 - 응답에 싣지 않는다. */
+    public record Upcoming(int minutes, java.util.Set<String> problemCodes) {
+    }
+
+    /**
+     * {@link #dueMinutes} 와 같지만 이미 계산한 Skill 상태를 받아 다시 계산하지 않고, 만들 시험의 문제도 준다.
+     * 오늘의 계획이 그 문제들을 연습 · 진단 블록에 보여 주지 않게 쓴다(ADR-0049) - 계획이 보여 준 문제가 곧 시험에
+     * 들어가면 시험을 시작하기 전에 그 문제의 유형이 드러난다(검증 에이전트가 12/15 경우에서 재현했다).
+     */
+    @Transactional(readOnly = true)
+    public Upcoming upcoming(long userId, int days, List<SkillState> states) {
         Instant since = clock.instant().minus(Duration.ofDays(days));
         boolean recent = tests.findByUserIdOrderByStartedAtDesc(userId).stream()
                 .anyMatch(test -> !test.startedAt().isBefore(since));
         if (recent) {
             return null;
         }
-        MockTestComposer.Composition composition = MockTestComposer.compose(candidates(userId));
-        return composition.picks().isEmpty() ? null : composition.minutes();
+        MockTestComposer.Composition composition =
+                MockTestComposer.compose(candidates(userId, states));
+        if (composition.picks().isEmpty()) {
+            return null;
+        }
+        java.util.Set<String> codes = new java.util.LinkedHashSet<>();
+        composition.picks().forEach(pick -> codes.add(pick.problem().code()));
+        return new Upcoming(composition.minutes(), java.util.Set.copyOf(codes));
     }
 
     /**
@@ -199,8 +220,12 @@ public class MockTestService {
      * 일반 문제. 드릴 · 복습 문제는 시험 문제가 아니다.
      */
     private List<MockTestComposer.Candidate> candidates(long userId) {
+        return candidates(userId, mastery.statesOf(userId));
+    }
+
+    private List<MockTestComposer.Candidate> candidates(long userId, List<SkillState> states) {
         Map<String, SkillStatus> status = new HashMap<>();
-        for (SkillState state : mastery.statesOf(userId)) {
+        for (SkillState state : states) {
             status.put(state.skillCode(), state.status());
         }
         Set<String> seen = new HashSet<>(submissions.submittedProblemCodes(userId));

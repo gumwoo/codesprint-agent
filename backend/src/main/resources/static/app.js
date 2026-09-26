@@ -350,8 +350,7 @@ async function showAnalytics() {
       (w) => numberRow(w.weekStart, w.submissions, w.accepted)));
   $("statusRows").replaceChildren(...data.skills.map((s) => numberRow(s.status, s.count)));
   $("mockHistoryRows").replaceChildren(...(data.mockTests.length
-      ? data.mockTests.map((t) => numberRow(t.startedAt.slice(0, 16).replace("T", " "),
-          `${t.solved} / ${t.total}`))
+      ? data.mockTests.map((t) => numberRow(when(t.startedAt), `${t.solved} / ${t.total}`))
       : [numberRow("끝난 모의 시험이 없다")]));
 }
 
@@ -692,10 +691,10 @@ async function loadMockReport(mockTestId, userId, mine) {
       outcome.append(over);
     }
     if (problem.lateGiveUp) {
-      // 포기 기준은 기대 시간이다(서버가 정한 값). 넘기고도 못 풀었으면 다음 문제로 갔어야 했다.
+      // 포기 기준은 연 뒤 기대 시간이다(서버가 정한 값). 그 뒤에도 실행 · 제출했다는 것은 서버가 본 사실이다.
       const late = document.createElement("div");
       late.className = "what";
-      late.textContent = `포기가 늦었다 - 기준 ${clockText(problem.expectedSolveSeconds)} 을 넘기고도 못 풀었다`;
+      late.textContent = `기준 ${clockText(problem.expectedSolveSeconds)} 을 넘긴 뒤에도 실행 · 제출했고 끝내 못 풀었다`;
       outcome.append(late);
     }
     tr.append(name, outcome);

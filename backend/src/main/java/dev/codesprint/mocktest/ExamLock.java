@@ -45,6 +45,23 @@ public class ExamLock implements WebMvcConfigurer {
         this.mockTests = mockTests;
     }
 
+    /**
+     * 컨트롤러의 {@code @PathVariable long} 과 <b>같은 변환</b>으로 읽는다. 처음에는 {@code [0-9]{1,18}} 에 맞지
+     * 않으면 그냥 통과시켰는데, Spring 은 {@code +1} · {@code 0x1} · {@code #1} · 앞뒤 공백을 받아들여 같은 사용자로
+     * 응답했다 - 잠금만 건너뛰고 시험 중에 오늘 탭이 시험 문제를 보여 줬다(검증 에이전트가 재현했다). 읽지 못하면
+     * null 이고, 그때는 컨트롤러도 같은 이유로 400 을 낸다.
+     */
+    static Long parse(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return org.springframework.util.NumberUtils.parseNumber(raw, Long.class);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
@@ -54,9 +71,9 @@ public class ExamLock implements WebMvcConfigurer {
                 @SuppressWarnings("unchecked")
                 Map<String, String> variables = (Map<String, String>) request.getAttribute(
                         HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-                String userId = variables == null ? null : variables.get("userId");
-                if (userId == null || !userId.matches("[0-9]{1,18}")
-                        || !mockTests.inProgress(Long.parseLong(userId))) {
+                String raw = variables == null ? null : variables.get("userId");
+                Long userId = parse(raw);
+                if (userId == null || !mockTests.inProgress(userId)) {
                     return true;
                 }
                 response.setStatus(HttpStatus.CONFLICT.value());

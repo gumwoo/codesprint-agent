@@ -1,5 +1,7 @@
 package dev.codesprint.learning.service;
 
+import dev.codesprint.mocktest.MockTestService;
+
 import dev.codesprint.learning.domain.ActionType;
 import dev.codesprint.learning.domain.DailyPlanner;
 import dev.codesprint.learning.domain.DailyPlanner.BlockType;
@@ -36,12 +38,12 @@ public class TodayService {
     private final ReviewScheduleService reviews;
     private final NextProblemService nextProblem;
     private final ProblemCatalog problems;
-    private final dev.codesprint.mocktest.MockTestService mockTests;
+    private final MockTestService mockTests;
     private final Clock clock;
 
     public TodayService(MasteryService mastery, DailyPlanner planner, DiagnosticService diagnostic,
             ReviewScheduleService reviews, NextProblemService nextProblem, ProblemCatalog problems,
-            dev.codesprint.mocktest.MockTestService mockTests, Clock clock) {
+            MockTestService mockTests, Clock clock) {
         this.mastery = mastery;
         this.planner = planner;
         this.diagnostic = diagnostic;
@@ -82,26 +84,30 @@ public class TodayService {
         String diagnosticSkill = step.done() || step.problem() == null ? null : step.targetSkill();
         List<String> due = reviews.due(userId).stream().map(ReviewScheduleRow::skillCode).toList();
 
+        // 시험 전략(§95): 시험 모드일 때만 모의 시험을 볼 때인지 묻는다. 볼 때면 곧 만들 시험의 문제를 계획에서
+        // 뺀다 - 계획이 보여 준 문제가 시험에 들어가면 시작하기 전에 유형이 드러난다(ADR-0049).
+        MockTestService.Upcoming upcoming = examInDays != null && examInDays <= DailyPlanner.EXAM_MODE_DAYS
+                ? mockTests.upcoming(userId, DailyPlanner.EXAM_MODE_DAYS, states) : null;
+        java.util.Set<String> excluded = upcoming == null ? java.util.Set.of() : upcoming.problemCodes();
+
         // 문제를 먼저 고른다. 줄 문제가 없는 Skill 은 계획에 넣지 않는다 - 갈 곳 없는 칸이 된다.
         Map<String, ProblemDefinition> picked = new LinkedHashMap<>();
         Map<String, Integer> cost = new LinkedHashMap<>();
         if (diagnosticSkill != null) {
-            choose(userId, diagnosticSkill, ActionType.DIAGNOSTIC_PROBE, picked, cost);
+            choose(userId, diagnosticSkill, ActionType.DIAGNOSTIC_PROBE, picked, cost, excluded);
         }
         for (String skill : due) {
-            choose(userId, skill, ActionType.REVIEW_DUE, picked, cost);
+            choose(userId, skill, ActionType.REVIEW_DUE, picked, cost, excluded);
         }
         for (SkillState state : states) {
             if (state.status() == SkillStatus.LOCKED || state.status() == SkillStatus.MASTERED) {
                 continue;
             }
             choose(userId, state.skillCode(), state.evidenceCount() > 0
-                    ? ActionType.RETRY_VARIANT : ActionType.UNLOCK_NEXT, picked, cost);
+                    ? ActionType.RETRY_VARIANT : ActionType.UNLOCK_NEXT, picked, cost, excluded);
         }
 
-        // 시험 전략(§95): 시험 모드일 때만 모의 시험을 볼 때인지 묻는다. 시험을 만들 수 없으면 null 이다.
-        Integer mockTestMinutes = examInDays != null && examInDays <= DailyPlanner.EXAM_MODE_DAYS
-                ? mockTests.dueMinutes(userId, DailyPlanner.EXAM_MODE_DAYS) : null;
+        Integer mockTestMinutes = upcoming == null ? null : upcoming.minutes();
         DailyPlanner.Plan plan = planner.plan(states, due, diagnosticSkill, cost,
                 user.dailyMinutes(), examInDays, mockTestMinutes);
         List<Block> blocks = new ArrayList<>();
@@ -117,11 +123,12 @@ public class TodayService {
     }
 
     private void choose(Long userId, String skill, ActionType action,
-            Map<String, ProblemDefinition> picked, Map<String, Integer> cost) {
+            Map<String, ProblemDefinition> picked, Map<String, Integer> cost,
+            java.util.Set<String> excluded) {
         if (picked.containsKey(skill)) {
             return;
         }
-        String code = nextProblem.select(userId, action, skill, null).problemCode();
+        String code = nextProblem.select(userId, action, skill, null, excluded).problemCode();
         ProblemDefinition problem = code == null ? null : problems.find(code);
         if (problem == null) {
             return;

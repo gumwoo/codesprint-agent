@@ -64,11 +64,11 @@ class MockTestAnalysisTest {
         assertThat(a.solvedAtSeconds()).isNull();
         assertThat(a.timeSpentSeconds()).as("못 풀었으면 시험 끝까지").isEqualTo(3100);
         assertThat(a.overExpected()).isTrue();
-        assertThat(a.lateGiveUp()).as("기대 시간을 넘기고도 못 풀었다 - 포기가 늦었다").isTrue();
+        assertThat(a.lateGiveUp()).as("연 뒤 1200 초 기준을 넘긴 2000 초에 제출했고 끝내 못 풀었다").isTrue();
 
         assertThat(of(result, "C").outcome()).isEqualTo(Outcome.OPENED);
         assertThat(of(result, "C").overExpected()).as("600 <= 900").isFalse();
-        assertThat(of(result, "C").lateGiveUp()).as("못 풀었지만 기준 안에서 멈췄다").isFalse();
+        assertThat(of(result, "C").lateGiveUp()).as("열기만 하고 손대지 않았다").isFalse();
         ProblemResult d = of(result, "D");
         assertThat(d.outcome()).isEqualTo(Outcome.UNOPENED);
         assertThat(d.openedAtSeconds()).isNull();
@@ -128,5 +128,26 @@ class MockTestAnalysisTest {
         Result judged = MockTestAnalysis.analyze(START, END, PROBLEMS, events,
                 Map.of(4L, "WRONG_ANSWER", 5L, "WRONG_ANSWER"));
         assertThat(of(judged, "A").outcome()).isEqualTo(Outcome.ATTEMPTED);
+    }
+
+    @Test
+    @DisplayName("포기가 늦었는지는 기준을 넘긴 뒤의 실행 · 제출로만 본다 - 열고 바로 넘어간 문제는 경과가 커도 아니다")
+    void lateGiveUpIsObservedNotElapsed() {
+        List<Event> events = List.of(
+                // A(기준 1200 초): 열고 30 초 만에 떠났다. 시험이 끝날 때까지의 경과는 크지만 붙잡고 있지 않았다
+                new Event("A", Kind.OPENED, null, at(0)),
+                // B(기준 300 초): 기준 안(100 초)에만 실행했고 그 뒤로 손대지 않았다
+                new Event("B", Kind.OPENED, null, at(30)),
+                new Event("B", Kind.RUN, null, at(130)),
+                // C(기준 900 초): 기준을 넘긴 뒤(1500 초)에 제출했고 채점이 아직이다 - 모른다
+                new Event("C", Kind.OPENED, null, at(400)),
+                new Event("C", Kind.SUBMITTED, 7L, at(1500)));
+        Result result = MockTestAnalysis.analyze(START, END, PROBLEMS, events, Map.of());
+
+        assertThat(of(result, "A").overExpected()).as("경과(3600) 는 기준(1200) 을 넘는다").isTrue();
+        assertThat(of(result, "A").lateGiveUp()).as("그래도 포기가 늦은 것은 아니다").isFalse();
+        assertThat(of(result, "B").lateGiveUp()).as("기준 안에서만 손댔다").isFalse();
+        assertThat(of(result, "C").outcome()).isEqualTo(Outcome.JUDGING);
+        assertThat(of(result, "C").lateGiveUp()).as("채점 중이면 모른다").isNull();
     }
 }

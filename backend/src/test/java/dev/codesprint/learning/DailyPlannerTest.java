@@ -179,4 +179,24 @@ class DailyPlannerTest {
         assertThat(unbudgeted.blocks()).extracting(Block::type)
                 .startsWith(BlockType.REVIEW, BlockType.MOCK_TEST);
     }
+
+    @Test
+    @DisplayName("하루 시간이 미정이라 앞 블록만 보여 줄 때, 이유는 잘려 나간 블록을 말하지 않는다")
+    void unbudgetedReasonNamesOnlyShownBlocks() {
+        Map<String, Integer> cost = new java.util.HashMap<>(COST);
+        cost.put("R2", 10);
+        cost.put("R3", 10);
+        Plan plan = planner.plan(STATES, List.of("REVIEWED", "R2", "R3"), null, cost, null, 3, 60);
+        assertThat(plan.blocks()).extracting(Block::type)
+                .containsExactly(BlockType.REVIEW, BlockType.REVIEW, BlockType.REVIEW);
+        assertThat(plan.reason()).startsWith("복습 순서로 채웠다").doesNotContain("모의 시험")
+                .doesNotContain("연습");
+    }
+
+    @Test
+    @DisplayName("시험 당일은 '0일 남아' 가 아니라 '오늘' 이라고 말한다")
+    void examDayWording() {
+        Plan plan = planner.plan(STATES, List.of(), null, COST, 60, 0, null);
+        assertThat(plan.reason()).contains("시험이 오늘이라").doesNotContain("0일");
+    }
 }

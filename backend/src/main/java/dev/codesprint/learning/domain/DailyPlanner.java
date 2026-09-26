@@ -190,33 +190,22 @@ public class DailyPlanner {
             }
         }
 
-        // 무엇으로 채웠는지 실제 블록에서 말한다. 고정 문구는 연습이 하나도 없어도 "연습" 을 말했다.
-        java.util.LinkedHashSet<String> kinds = new java.util.LinkedHashSet<>();
-        for (Block block : candidates) {
-            kinds.add(switch (block.type()) {
-                case DIAGNOSE -> "진단";
-                case REVIEW -> "복습";
-                case MOCK_TEST -> "모의 시험";
-                case PRACTICE -> "연습";
-                case LEARN -> "새로 배우기";
-                case MIXED -> "혼합";
-            });
-        }
-        String how = (kinds.isEmpty() ? "지금 줄 할 일이 없다"
-                : String.join(" · ", kinds) + " 순서로 채웠다")
-                + (mode == Mode.EXAM ? " - 시험이 " + examInDays + "일 남아 새로 배우지 않고 굳힌다" : "")
-                + mockNote;
+        String examNote = (mode == Mode.EXAM
+                ? " - 시험이 " + (examInDays == 0 ? "오늘이라" : examInDays + "일 남아") + " 새로 배우지 않고 굳힌다"
+                : "") + mockNote;
 
         if (dailyMinutes == null) {
-            return new Plan(null, examInDays, mode,
-                    List.copyOf(candidates.subList(0, Math.min(UNBUDGETED_BLOCKS, candidates.size()))),
-                    how + " - 하루 공부 시간을 정하지 않아 시간을 나누지 않았다");
+            List<Block> shown = List.copyOf(
+                    candidates.subList(0, Math.min(UNBUDGETED_BLOCKS, candidates.size())));
+            return new Plan(null, examInDays, mode, shown,
+                    describe(shown) + examNote + " - 하루 공부 시간을 정하지 않아 시간을 나누지 않았다");
         }
 
         // 진단과 만기 복습은 **예산과 상관없이** 맨 앞에 둔다. 들어가지 않는다고 건너뛰면 그
         // 자리를 우선순위가 낮은 블록이 채우고, 계획이 결과 패널과 다른 곳을 가리킨다 - 하루
         // 10 분인 새 사용자에게 진단(20 분) 대신 다른 Skill 이 나왔다(검증 에이전트).
         List<Block> blocks = new ArrayList<>();
+        String how = "";
         int left = dailyMinutes;
         for (Block block : candidates) {
             boolean mandatory = block.type() == BlockType.DIAGNOSE || block.type() == BlockType.REVIEW;
@@ -236,7 +225,27 @@ public class DailyPlanner {
                 how += " - 남은 " + (left - mixed) + "분은 지금 줄 문제가 없어 비워 둔다";
             }
         }
-        return new Plan(dailyMinutes, examInDays, mode, List.copyOf(blocks), how);
+        return new Plan(dailyMinutes, examInDays, mode, List.copyOf(blocks),
+                describe(blocks) + examNote + how);
+    }
+
+    /**
+     * 무엇으로 채웠는지 <b>최종 블록에서</b> 말한다. 후보에서 만들면 하루 시간에 들어가지 않아 빠진 블록(연습 ·
+     * 모의 시험)을 "채웠다" 고 말한다(검증 에이전트가 재현했다). 혼합은 남은 시간을 채우는 칸이라 이름을 대지 않는다.
+     */
+    private static String describe(List<Block> blocks) {
+        java.util.LinkedHashSet<String> kinds = new java.util.LinkedHashSet<>();
+        for (Block block : blocks) {
+            switch (block.type()) {
+                case DIAGNOSE -> kinds.add("진단");
+                case REVIEW -> kinds.add("복습");
+                case MOCK_TEST -> kinds.add("모의 시험");
+                case PRACTICE -> kinds.add("연습");
+                case LEARN -> kinds.add("새로 배우기");
+                case MIXED -> { }
+            }
+        }
+        return kinds.isEmpty() ? "지금 줄 할 일이 없다" : String.join(" · ", kinds) + " 순서로 채웠다";
     }
 
     private static double weakness(SkillState state) {
