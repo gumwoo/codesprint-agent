@@ -421,12 +421,14 @@ class SubmissionFlowTest {
     @DisplayName("지원하지 않는 언어는 400 이고 큐에 넣지 않는다")
     void unsupportedLanguageIsRejected() throws Exception {
         String body = """
-                {"userId": %d, "language": "JAVA", "sourceCode": "class Main {}",
+                {"userId": %d, "language": "RUBY", "sourceCode": "puts 1",
                  "solveSeconds": 120}
                 """.formatted(userId);
 
         long before = jobs.count();
-        int status = mvc.perform(post("/api/problems/{code}/submit", "P01_QUEUE_BASIC")
+        // P02 는 언어에 매인 Skill 을 PRIMARY 로 갖지 않는다 - 400 의 이유가 언어 규칙(ADR-0045)이 아니라
+        // 채점 이미지가 없는 언어여야 한다.
+        int status = mvc.perform(post("/api/problems/{code}/submit", "P02_GRID_TRAVERSAL")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andReturn().getResponse().getStatus();
