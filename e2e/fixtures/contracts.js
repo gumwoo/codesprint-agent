@@ -98,7 +98,9 @@ async function fulfill(route, body, status = 200) {
   if (name === undefined) {
     // 규칙은 하나다 - 계약이 있거나, 이유가 있거나.
     const excuse = UNCONTRACTED[url.pathname]
-        || UNCONTRACTED[url.pathname.replace(/\/api\/problems\/[^/]+\//, "/api/problems/{code}/")];
+        || UNCONTRACTED[url.pathname.replace(/\/api\/problems\/[^/]+\//, "/api/problems/{code}/")]
+        || UNCONTRACTED[url.pathname.replace(/\/api\/mock-tests\/\d+\/problems\/[^/]+\//,
+            "/api/mock-tests/{id}/problems/{label}/")];
     if (!excuse) {
       throw new Error(
           `계약을 모르는 경로다: ${url.pathname}\n`
