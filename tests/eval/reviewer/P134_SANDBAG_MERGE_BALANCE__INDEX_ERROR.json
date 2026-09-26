@@ -1,0 +1,33 @@
+{
+  "problemCode": "P134_SANDBAG_MERGE_BALANCE",
+  "problemTitle": "모래주머니 합치기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "INTERVAL_DP"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    w = list(map(int, data[1:1 + n]))\n    pre = [0] * (n + 1)\n    for i in range(n):\n        pre[i + 1] = pre[i] + w[i]\n    dp = [[0] * n for _ in range(n)]\n    for length in range(2, n + 1):\n        for i in range(n - length + 1):\n            j = i + length - 1\n            row = dp[i]\n            total = pre[j + 1] - pre[i]\n            best = 10 ** 18\n            for k in range(i, j - 1):\n                a = pre[k + 1] - pre[i]\n                b = total - a\n                c = row[k] + dp[k + 1][j] + (a - b if a > b else b - a)\n                if c < best:\n                    best = c\n            row[j] = best\n    print(dp[0][n - 1])\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}

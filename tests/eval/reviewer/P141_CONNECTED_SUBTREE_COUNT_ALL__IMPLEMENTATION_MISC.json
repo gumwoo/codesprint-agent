@@ -1,0 +1,33 @@
+{
+  "problemCode": "P141_CONNECTED_SUBTREE_COUNT_ALL",
+  "problemTitle": "정점마다 연결 부분집합 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "REROOTING_DP",
+    "TREE_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    MOD = 10**9 + 7\n    adj = [[] for _ in range(n + 1)]\n    for i in range(n - 1):\n        u = int(data[1 + 2 * i]); v = int(data[2 + 2 * i])\n        adj[u].append(v); adj[v].append(u)\n    parent = [0] * (n + 1)\n    parent[1] = -1\n    order = []\n    stack = [1]\n    while stack:\n        v = stack.pop()\n        order.append(v)\n        for w in adj[v]:\n            if w != parent[v]:\n                parent[w] = v\n                stack.append(w)\n    down = [1] * (n + 1)\n    for v in reversed(order):\n        p = parent[v]\n        if p > 0:\n            down[p] = down[p] * (down[v] + 1) % MOD\n    up = [0] * (n + 1)\n    for v in order:\n        ch = [w for w in adj[v] if w != parent[v]]\n        k = len(ch)\n        if k == 0:\n            continue\n        pre = [1] * (k + 1)\n        for i in range(k):\n            pre[i + 1] = pre[i] * (down[ch[i]] + 1) % MOD\n        suf = 1\n        for i in range(k - 1, -1, -1):\n            up[ch[i]] = pre[i] * suf % MOD\n            suf = suf * (down[ch[i]] + 1) % MOD\n    out = [str(down[v] * (up[v] + 1) % MOD) for v in range(1, n + 1)]\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

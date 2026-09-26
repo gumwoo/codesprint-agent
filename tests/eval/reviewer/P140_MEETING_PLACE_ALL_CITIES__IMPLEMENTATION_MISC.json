@@ -1,0 +1,33 @@
+{
+  "problemCode": "P140_MEETING_PLACE_ALL_CITIES",
+  "problemTitle": "모든 도시의 모임 비용",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "REROOTING_DP",
+    "TREE_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    a = [0] + [int(x) for x in data[1:1 + n]]\n    adj = [[] for _ in range(n + 1)]\n    pos = 1 + n\n    for _ in range(n - 1):\n        u = int(data[pos]); v = int(data[pos + 1]); w = int(data[pos + 2])\n        pos += 3\n        adj[u].append((v, w))\n        adj[v].append((u, w))\n    parent = [0] * (n + 1)\n    pw = [0] * (n + 1)\n    dist = [0] * (n + 1)\n    order = []\n    seen = [False] * (n + 1)\n    seen[1] = True\n    stack = [1]\n    while stack:\n        x = stack.pop()\n        order.append(x)\n        for y, w in adj[x]:\n            if not seen[y]:\n                seen[y] = True\n                parent[y] = x\n                pw[y] = w\n                dist[y] = dist[x] + w\n                stack.append(y)\n    sub = a[:]\n    for x in reversed(order):\n        if x != 1:\n            sub[parent[x]] += sub[x]\n    total = sub[1]\n    ans = [0] * (n + 1)\n    ans[1] = sum(a[x] * dist[x] for x in range(1, n + 1))\n    for x in order:\n        if x != 1:\n            ans[x] = ans[parent[x]] + (total - 2 * sub[x])\n    sys.stdout.write('\\n'.join(map(str, ans[1:])) + '\\n')\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      6
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

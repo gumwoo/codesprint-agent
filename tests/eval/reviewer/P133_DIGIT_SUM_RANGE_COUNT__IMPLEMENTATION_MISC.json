@@ -1,0 +1,32 @@
+{
+  "problemCode": "P133_DIGIT_SUM_RANGE_COUNT",
+  "problemTitle": "구간의 자릿수 합 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "DIGIT_DP"
+  ],
+  "sourceCode": "\nimport sys\n\nMAXD = 19\nMAXS = 171\n\n\ndef build():\n    cnt = [[0] * (MAXS + 1) for _ in range(MAXD + 1)]\n    cnt[0][0] = 1\n    for d in range(1, MAXD + 1):\n        prev = cnt[d - 1]\n        cur = cnt[d]\n        for s in range(MAXS + 1):\n            if prev[s]:\n                for c in range(10):\n                    if s + c <= MAXS:\n                        cur[s + c] += prev[s]\n    return cnt\n\n\ndef count_upto(n, target, cnt):\n    if n <= 0:\n        return 0\n    ds = [int(ch) for ch in str(n)]\n    length = len(ds)\n    prefix = 0\n    res = 0\n    for i, dig in enumerate(ds):\n        rem = length - 1 - i\n        for c in range(dig):\n            t = target - prefix - c\n            if 0 <= t <= MAXS:\n                res += cnt[rem][t]\n        prefix += dig\n        if prefix > target:\n            return res\n    if prefix == target:\n        res += 1\n    return res\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    cnt = build()\n    out = []\n    idx = 1\n    for _ in range(q):\n        l = int(data[idx])\n        r = int(data[idx + 1])\n        s = int(data[idx + 2])\n        idx += 3\n        out.append(count_upto(r, s, cnt) - count_upto(l, s, cnt))\n    print(\"\\n\".join(map(str, out)))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      4,
+      5,
+      7,
+      9,
+      10
+    ],
+    "failedCaseIds": [
+      1,
+      3,
+      6,
+      8,
+      11
+    ]
+  },
+  "probes": {}
+}
