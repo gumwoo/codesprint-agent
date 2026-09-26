@@ -450,17 +450,9 @@ prerequisites:
     minimum_mastery: 0.65
 
   - skill: SKILL_COMPOSITION
-    requires: PREFIX_SUM
-    minimum_mastery: 0.65
-
-  - skill: SKILL_COMPOSITION
-    requires: BINARY_SEARCH_BOUNDS
-    minimum_mastery: 0.65
-
-  - skill: SKILL_COMPOSITION
     requires: BFS_SHORTEST_PATH
     minimum_mastery: 0.65
 
   - skill: SKILL_COMPOSITION
-    requires: HASH_MAP_COUNTING
+    requires: PARAMETRIC_SEARCH
     minimum_mastery: 0.65

@@ -1448,4 +1448,4 @@ concepts:
           j = bisect_left(prefix, prefix[i] + s)   # prefix[j] - prefix[i] >= s 인 첫 j
           if j <= len(a):
               best = j - i if best is None else min(best, j - i)
-    self_check: K 번까지 벽을 부술 수 있을 때 최단 거리를 구하는 문제를 두 기법의 조합으로 나누어 설명해 보세요.
+    self_check: 배열에서 합이 S 이상인 연속 구간의 개수를 세는 문제를, 느린 풀이에서 가장 많이 도는 연산을 찾아 두 조각으로 나누어 설명해 보세요.

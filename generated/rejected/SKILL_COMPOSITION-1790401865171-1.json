@@ -1,0 +1,76 @@
+{
+  "id": "SKILL_COMPOSITION-1790401865171-1",
+  "skill": "SKILL_COMPOSITION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T07:07:36+00:00",
+  "stage": "중복",
+  "code": "P142_WALL_BREAK_PATH",
+  "reasons": [
+    "검증 에이전트 검토에서 철회했다 - 기존 P73_WALL_BREAK_K_BFS(STATE_SPACE_BFS) 와 같은 계산이다 - 격자 문자와 N 상한만 다르고, P73 reference 에 입력 문자만 바꿔 부른 풀이가 모든 case 를 맞혔다",
+    "섞인 문제로 다시 내면 CORE 에서 푼 문제를 SKILL_COMPOSITION 으로 재측정하게 된다"
+  ],
+  "draft": {
+    "id": "SKILL_COMPOSITION-1790401865171-1",
+    "skill": "SKILL_COMPOSITION",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T05:51:05.175423Z",
+    "draft": {
+      "codeSuffix": "WALL_BREAK_PATH",
+      "title": "벽 부수며 가기",
+      "statement": "N행 M열 격자가 주어진다. 각 칸은 빈 칸 '.' 또는 벽 '#' 이다. 행과 열은 0부터 센다. 로봇은 (0, 0) 에서 출발해 (N-1, M-1) 에 도착하려 한다. 한 번의 이동으로 상하좌우로 인접한 칸 하나로 옮겨 가며, 격자 밖으로는 나갈 수 없다. 로봇은 벽 칸으로 들어갈 수 있지만, 벽 칸에 들어갈 때마다 그 벽을 부순 것으로 보고 부순 횟수가 1 늘어난다. 한 번 부순 벽 칸에 다시 들어가도 횟수는 또 1 늘어난다. 이동 전체에서 부순 횟수는 K 이하여야 한다. 도착하는 데 필요한 최소 이동 횟수를 구한다.\n\n입력\n첫 줄에 N M K 가 공백으로 구분되어 주어진다. 이어서 N줄에 걸쳐 길이 M 의 문자열이 주어진다.\n\n제약\n1 <= N, M <= 100\n0 <= K <= 5\n격자 문자는 '.' 또는 '#' 뿐이다.\n(0, 0) 과 (N-1, M-1) 은 항상 '.' 이다.\n\n출력\n최소 이동 횟수를 한 줄에 출력한다. 도착할 수 없으면 -1 을 출력한다. 출발 칸과 도착 칸이 같으면 0 을 출력한다.",
+      "secondarySkills": [
+        "BFS_SHORTEST_PATH",
+        "STATE_SPACE_BFS"
+      ],
+      "referenceComplexity": "O(N * M * K)",
+      "expectedSolveSeconds": 1200,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "BOUNDARY_CHECK"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "방문 기록을 좌표 (행, 열) 로만 해서, 벽을 더 많이 부수고 먼저 도착한 경로가 같은 칸을 차지하면 벽을 덜 부순 뒤늦은 경로를 버린다.",
+      "sampleInputs": [
+        "4 5 1\n..#..\n#.#.#\n..##.\n.#...",
+        "5 4 1\n.###\n....\n.##.\n#...\n#.#."
+      ],
+      "edgeCases": [
+        {
+          "type": "SINGLE",
+          "input": "1 1 0\n."
+        },
+        {
+          "type": "MINIMUM",
+          "input": "1 5 0\n..#.."
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "3 3 4\n.##\n###\n##."
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "2 6 1\n.#.#..\n.#.#.."
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "5 5 1\n.#...\n.#.#.\n.#.#.\n...#.\n####."
+        }
+      ],
+      "inputGenerator": "import random\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 5)\nm = rng.randint(1, 5)\nk = rng.randint(0, 2)\np = rng.choice([0.2, 0.35, 0.5])\nrows = []\nfor r in range(n):\n    rows.append(''.join('#' if rng.random() < p else '.' for _ in range(m)))\nrows[0] = '.' + rows[0][1:]\nrows[n - 1] = rows[n - 1][:m - 1] + '.'\nprint(n, m, k)\nprint('\\n'.join(rows))\n",
+      "reference": "import sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    grid = data[3:3 + n]\n    dist = [[[-1] * (k + 1) for _ in range(m)] for _ in range(n)]\n    dist[0][0][0] = 0\n    q = deque([(0, 0, 0)])\n    while q:\n        r, c, b = q.popleft()\n        if r == n - 1 and c == m - 1:\n            print(dist[r][c][b])\n            return\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < n and 0 <= nc < m:\n                nb = b + (grid[nr][nc] == '#')\n                if nb <= k and dist[nr][nc][nb] == -1:\n                    dist[nr][nc][nb] = dist[r][c][b] + 1\n                    q.append((nr, nc, nb))\n    print(-1)\n\nmain()\n",
+      "bruteForce": "import sys\nfrom collections import deque\nfrom itertools import combinations\n\ndef plain_bfs(n, m, open_cells):\n    seen = {(0, 0): 0}\n    q = deque([(0, 0)])\n    while q:\n        r, c = q.popleft()\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            p = (r + dr, c + dc)\n            if p in open_cells and p not in seen:\n                seen[p] = seen[(r, c)] + 1\n                q.append(p)\n    return seen.get((n - 1, m - 1), -1)\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    grid = data[3:3 + n]\n    walls = [(r, c) for r in range(n) for c in range(m) if grid[r][c] == '#']\n    base = {(r, c) for r in range(n) for c in range(m) if grid[r][c] == '.'}\n    best = -1\n    for cnt in range(min(k, len(walls)) + 1):\n        for chosen in combinations(walls, cnt):\n            d = plain_bfs(n, m, base | set(chosen))\n            if d != -1 and (best == -1 or d < best):\n                best = d\n    print(best)\n\nmain()\n",
+      "wrong": "import sys\nfrom collections import deque\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    grid = data[3:3 + n]\n    dist = [[-1] * m for _ in range(n)]\n    dist[0][0] = 0\n    q = deque([(0, 0, 0)])\n    while q:\n        r, c, b = q.popleft()\n        if r == n - 1 and c == m - 1:\n            print(dist[r][c])\n            return\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < n and 0 <= nc < m:\n                nb = b + (grid[nr][nc] == '#')\n                if nb <= k and dist[nr][nc] == -1:\n                    dist[nr][nc] = dist[r][c] + 1\n                    q.append((nr, nc, nb))\n    print(-1)\n\nmain()\n",
+      "hints": [
+        "같은 칸에 같은 이동 횟수로 도착해도, 그때까지 부순 벽 수가 다르면 앞으로 갈 수 있는 곳이 달라진다.",
+        "모든 이동의 비용이 1 이므로 너비 우선 탐색으로 최소 이동 횟수를 구할 수 있다. 다만 칸만으로는 상태가 부족하다.",
+        "상태를 (행, 열, 지금까지 부순 벽 수) 로 잡고, 거리 배열도 이 세 값으로 인덱싱한다. 상태 수는 N * M * (K + 1) 이다.",
+        "이웃 칸이 벽이면 부순 수가 1 늘어난 상태로, 빈 칸이면 그대로인 상태로 옮긴다. 부순 수가 K 를 넘으면 버리고, 그 상태를 처음 볼 때만 거리를 적고 큐에 넣는다.",
+        "큐에 (0,0,0) 을 넣는다 / 꺼낸 상태가 도착 칸이면 거리를 출력하고 끝낸다 / 네 방향 이웃마다 범위 확인, 새 부순 수 계산, K 이하이고 미방문이면 거리 기록 후 넣기 / 큐가 비면 -1 출력"
+      ],
+      "skillControl": null
+    }
+  }
+}
