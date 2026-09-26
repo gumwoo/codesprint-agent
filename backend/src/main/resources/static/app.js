@@ -955,6 +955,7 @@ function resetExplain() {
   $("explainText").value = "";
   $("explainNote").textContent = "";
   $("explainAnswer").replaceChildren();
+  $("explainSend").disabled = false;
   $("explainBox").hidden = true;
 }
 

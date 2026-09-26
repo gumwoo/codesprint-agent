@@ -511,6 +511,40 @@ test("늦게 온 설명 분석이 다른 문제 화면에 붙지 않는다", asy
   await expect(page.locator("#explainBox")).toBeHidden();
 });
 
+test("분석을 기다리는 동안 시험을 시작하면 늦은 분석이 붙지 않는다", async ({ page }) => {
+  // ADR-0050. 시험이 시작되면 그 전에 보낸 설명의 분석은 시험 중 화면에 나타나면 안 된다 - startMock 이 놓는다.
+  const { mockTest } = require("../fixtures/api");
+  const slow = gate();
+  const solved = finished(1, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL", "다음");
+  solved.result.judge = { status: "ACCEPTED", passed: 6, total: 6, executionMs: 90,
+    memoryKb: 20480, failedCaseId: null, stderr: null };
+  await stubApi(page);
+  await page.route("**/api/problems/*/submit", (route) => fulfill(route, accepted(1), 202));
+  await page.route("**/api/submissions/1", (route) => fulfill(route, solved));
+  await page.route("**/api/problems/*/explanations", async (route) => {
+    await slow.held;
+    await fulfill(route, { problemCode: "P02_GRID_TRAVERSAL", skillCode: "BFS_GRID_TRAVERSAL",
+      question: "왜 이 문제에서 격자 BFS 이(가) 통하는지 두 문장으로 설명해 보세요.",
+      coveredPoints: ["시험 전에 보낸 늦은 분석"], missingPoints: [], misconception: null,
+      followUpQuestion: null, promptVersion: "explain-v1" });
+  });
+  await page.route("**/api/users/1/mock-tests", (route) =>
+    fulfill(route, mockTest(51, "IN_PROGRESS", ["A", "B"]), 201));
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#submitButton");
+  await expect(page.locator("#explainBox")).toBeVisible();
+  await page.fill("#explainText", "방문 표시를 큐에 넣을 때 한다.");
+  await page.click("#explainSend");
+  await page.click("#tabMock");
+  await page.click("#mockStart");
+
+  await releaseAndSettle(page, slow, "/api/problems/P02_GRID_TRAVERSAL/explanations");
+  await expect(page.locator("#explainAnswer")).toBeEmpty();
+  await expect(page.locator("#explainBox")).toBeHidden();
+});
+
 test("설명해 보기는 푼 결과에서만 열린다", async ({ page }) => {
   // 풀기 전에 설명을 분석해 주면 빠진 요점이 힌트 사다리 밖의 힌트가 된다(서버도 409 로 막는다).
   await stubApi(page);
