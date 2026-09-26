@@ -71,6 +71,16 @@ public interface SubmissionRepository extends JpaRepository<SubmissionRow, Long>
             @Param("submissionId") Long submissionId,
             Pageable page);
 
+    /**
+     * 이 사용자가 한 번이라도 제출한 문제의 code. 모의 시험은 처음 보는 문제로 만든다(ADR-0043) -
+     * 이미 낸 문제는 답을 기억하고 있을 수 있다.
+     */
+    @Query("""
+            select distinct p.code from SubmissionRow s, ProblemRow p
+            where p.id = s.problemId and s.userId = :userId
+            """)
+    List<String> submittedProblemCodes(@Param("userId") Long userId);
+
     /** 이 사용자의 최근 제출 id. 새것부터다. 오답 분석(PRD §123)의 창이다. */
     @Query("""
             select s.id from SubmissionRow s

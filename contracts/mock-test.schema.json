@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mock-test.schema.json",
+  "title": "MockTest",
+  "description": "모의 시험 하나의 상태(ADR-0043). POST /api/users/{id}/mock-tests, GET /api/mock-tests/{id}, POST /api/mock-tests/{id}/finish 가 같은 모양을 돌려준다. **문제 code · 제목 · Skill 이 없다** - 셋 다 유형을 알려 주므로 끝난 뒤 보고서에서만 보인다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mockTestId",
+    "state",
+    "startedAt",
+    "endsAt",
+    "remainingSeconds",
+    "problems"
+  ],
+  "properties": {
+    "mockTestId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "state": {
+      "enum": [
+        "IN_PROGRESS",
+        "FINISHED"
+      ]
+    },
+    "startedAt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO-8601 시각."
+    },
+    "endsAt": {
+      "type": "string",
+      "description": "만들 때 정한다. 시험 중에 늘일 수 없다. ISO-8601 시각.",
+      "minLength": 1
+    },
+    "remainingSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "이 응답 시점의 남은 시간. 끝났으면 0 이다."
+    },
+    "problems": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "opened",
+          "submissions"
+        ],
+        "properties": {
+          "label": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "opened": {
+            "type": "boolean"
+          },
+          "submissions": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

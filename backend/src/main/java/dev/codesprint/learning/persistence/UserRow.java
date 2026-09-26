@@ -35,6 +35,13 @@ public class UserRow {
     @Column(name = "exam_date")
     private java.time.LocalDate examDate;
 
+    /**
+     * 학습 모드(ADR-0043). 값을 여기서 채운다 - JPA 는 null 을 그대로 넣으므로 DB 기본값에 기대면
+     * NOT NULL 에 걸린다.
+     */
+    @Column(name = "learning_mode", nullable = false, length = 10)
+    private String learningMode = dev.codesprint.learning.domain.LearningMode.NORMAL.name();
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -73,6 +80,14 @@ public class UserRow {
 
     public java.time.LocalDate examDate() {
         return examDate;
+    }
+
+    public dev.codesprint.learning.domain.LearningMode learningMode() {
+        return dev.codesprint.learning.domain.LearningMode.valueOf(learningMode);
+    }
+
+    public void changeLearningMode(dev.codesprint.learning.domain.LearningMode mode) {
+        this.learningMode = mode.name();
     }
 
     /** 둘 다 바꾼다. null 은 "정하지 않았다" 로 적는다 - 생략과 같게 다루지 않는다. */

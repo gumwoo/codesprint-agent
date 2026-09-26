@@ -38,10 +38,13 @@ public class SubmissionController {
 
     private final SubmissionIntakeService intake;
     private final SubmissionQueryService queries;
+    private final dev.codesprint.mocktest.MockTestService mockTests;
 
-    public SubmissionController(SubmissionIntakeService intake, SubmissionQueryService queries) {
+    public SubmissionController(SubmissionIntakeService intake, SubmissionQueryService queries,
+            dev.codesprint.mocktest.MockTestService mockTests) {
         this.intake = intake;
         this.queries = queries;
+        this.mockTests = mockTests;
     }
 
     /**
@@ -126,6 +129,11 @@ public class SubmissionController {
                             + ", solutionViewed=" + request.solutionViewed() + ")");
         }
 
+        // 진행 중인 시험의 문제는 시험에서 낸다 - 여기로 내면 관측(ADR-0043)에 남지 않는다.
+        if (mockTests.inProgressContains(request.userId(), problemCode)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
         long submissionId = intake.accept(new SubmissionIntakeService.Request(
                 request.userId(), problemCode, request.language(), request.sourceCode(),
                 request.solveSeconds()));
@@ -137,6 +145,10 @@ public class SubmissionController {
 
     @GetMapping("/submissions/{submissionId}")
     public ResponseEntity<SubmissionStatusResponse> find(@PathVariable long submissionId) {
+        // 시험 중의 제출은 판정만 시험에서 본다. 여기에는 Reviewer 분석과 다음 행동이 있다(PRD §84).
+        if (mockTests.hidesUntilEnd(submissionId)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
         return queries.find(submissionId)
                 .map(SubmissionController::toResponse)
                 .map(ResponseEntity::ok)

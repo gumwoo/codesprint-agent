@@ -53,6 +53,11 @@ public class HintController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(HintService.Withheld.class)
+    public ResponseEntity<Map<String, String>> withheld(HintService.Withheld e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler(HintService.SkippedLadder.class)
     public ResponseEntity<Map<String, String>> skipped(HintService.SkippedLadder e) {
         return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

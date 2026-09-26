@@ -30,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class RunController {
 
     private final RunService runs;
+    private final dev.codesprint.mocktest.MockTestService mockTests;
 
-    public RunController(RunService runs) {
+    public RunController(RunService runs, dev.codesprint.mocktest.MockTestService mockTests) {
         this.runs = runs;
+        this.mockTests = mockTests;
     }
 
     /**
@@ -61,6 +63,10 @@ public class RunController {
     public ResponseEntity<AcceptedResponse> run(@PathVariable String code,
             @Valid @RequestBody RunRequest request) {
 
+        // 진행 중인 시험의 문제는 시험에서 실행한다 - 첫 실행 시각이 관측이다(ADR-0043).
+        if (mockTests.inProgressContains(request.userId(), code)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
         long runId = runs.accept(new RunService.Request(
                 request.userId(), code, request.language(), request.sourceCode()));
         return ResponseEntity.accepted().body(new AcceptedResponse(runId));
@@ -77,6 +83,12 @@ public class RunController {
     public ResponseEntity<RunResponse> result(@PathVariable long runId,
             @RequestParam long userId) {
 
+        // 진행 중인 시험의 실행은 시험에서 본다 - 여기에는 문제 code 가 있다(ADR-0043).
+        if (runs.find(runId, userId)
+                .map(result -> mockTests.inProgressContains(userId, result.problemCode()))
+                .orElse(false)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
         return runs.find(runId, userId)
                 .map(result -> ResponseEntity.ok(new RunResponse(result.runId(),
                         result.problemCode(), result.status(), result.judged(),

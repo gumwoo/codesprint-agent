@@ -60,9 +60,13 @@ public class UserController {
     /**
      * @param dailyMinutes 하루 공부 시간(분). 정하지 않았으면 null
      * @param examDate 시험일(YYYY-MM-DD). 없으면 null
+     * @param learningMode 학습 모드(ADR-0043). 기본은 NORMAL 이다
      */
     public record UserView(long userId, String nickname, String track, Integer dailyMinutes,
-            String examDate) {
+            String examDate, String learningMode) {
+    }
+
+    public record ChangeLearningModeRequest(@NotBlank String mode) {
     }
 
     public record ChangeTrackRequest(@NotBlank String track) {
@@ -151,8 +155,27 @@ public class UserController {
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * 학습 모드를 바꾼다(ADR-0043). 모드는 힌트 · 유형 표시 · 개념 자료만 바꾸고 다음 행동과
+     * mastery 는 바꾸지 않는다. 모르는 값은 400 이다 - 조용히 NORMAL 로 두지 않는다.
+     */
+    @PutMapping("/users/{userId}/learning-mode")
+    @Transactional
+    public ResponseEntity<UserView> changeLearningMode(@PathVariable Long userId,
+            @RequestBody @Validated ChangeLearningModeRequest request) {
+        var mode = dev.codesprint.learning.domain.LearningMode.parse(request.mode());
+        if (mode == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return users.findById(userId).map(user -> {
+            user.changeLearningMode(mode);
+            return ResponseEntity.ok(view(users.save(user)));
+        }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     private static UserView view(UserRow user) {
         return new UserView(user.id(), user.nickname(), user.track(), user.dailyMinutes(),
-                user.examDate() == null ? null : user.examDate().toString());
+                user.examDate() == null ? null : user.examDate().toString(),
+                user.learningMode().name());
     }
 }

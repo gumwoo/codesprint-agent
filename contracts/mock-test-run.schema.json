@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mock-test-run.schema.json",
+  "title": "MockTestRun",
+  "description": "시험 중의 실행 결과(GET /api/mock-tests/{id}/runs/{runId}). 일반 실행 조회와 같되 문제 code 가 없다 - 유형을 알려 준다(ADR-0043).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "status",
+    "judged",
+    "failureReason"
+  ],
+  "properties": {
+    "runId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "judged": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "아직 안 끝났으면 null. 모양은 run-result 의 judged 와 같다."
+    },
+    "failureReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

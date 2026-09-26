@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mock-test-report.schema.json",
+  "title": "MockTestReport",
+  "description": "끝난 시험의 보고서(GET /api/mock-tests/{id}/report, 끝나기 전에는 409). **관측한 것만 담는다**(ADR-0043) - 서버가 본 순간은 열기 · 실행 · 제출뿐이다. 읽기 시간과 첫 코드 작성 시간은 나눌 수 없고, 알고리즘 인식은 판정하지 않는다. 그래서 그 항목이 없다. 시각은 모두 시작 후 초이며, 그 일이 없었으면 null 이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mockTestId",
+    "startedAt",
+    "closedAt",
+    "durationSeconds",
+    "solved",
+    "total",
+    "openOrder",
+    "easiestFirst",
+    "problems"
+  ],
+  "properties": {
+    "mockTestId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "startedAt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO-8601 시각."
+    },
+    "closedAt": {
+      "type": "string",
+      "description": "실제로 끝난 시각. 일찍 끝냈으면 그 시각이다. ISO-8601 시각.",
+      "minLength": 1
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "주어진 시험 시간."
+    },
+    "solved": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 4
+    },
+    "openOrder": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      "description": "처음 연 순서."
+    },
+    "easiestFirst": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "처음 연 문제가 기대 풀이 시간이 가장 짧은 문제인가. 아무것도 안 열었으면 null."
+    },
+    "problems": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "problemCode",
+          "title",
+          "primarySkill",
+          "expectedSolveSeconds",
+          "outcome",
+          "openedAtSeconds",
+          "firstRunAtSeconds",
+          "firstSubmitAtSeconds",
+          "solvedAtSeconds",
+          "submissions",
+          "timeSpentSeconds",
+          "overExpected",
+          "mistakes"
+        ],
+        "properties": {
+          "label": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "problemCode": {
+            "type": "string",
+            "pattern": "^P[0-9]{2,3}_[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "primarySkill": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+          },
+          "expectedSolveSeconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "outcome": {
+            "enum": [
+              "SOLVED",
+              "ATTEMPTED",
+              "OPENED",
+              "UNOPENED"
+            ],
+            "description": "ATTEMPTED 는 냈지만 못 풀었다 - 버린 문제다."
+          },
+          "openedAtSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "처음 연 때."
+          },
+          "firstRunAtSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "처음 실행한 때."
+          },
+          "firstSubmitAtSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "처음 낸 때."
+          },
+          "solvedAtSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "처음 ACCEPTED 를 낸 제출의 시각."
+          },
+          "submissions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timeSpentSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "연 뒤 푼 때까지, 못 풀었으면 시험이 끝날 때까지. 안 열었으면 null."
+          },
+          "overExpected": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "timeSpentSeconds 가 기대 풀이 시간을 넘었는가. 안 열었으면 null."
+          },
+          "mistakes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "submissionId",
+                "mistake",
+                "status"
+              ],
+              "properties": {
+                "submissionId": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "mistake": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "시스템이 매긴 확정 상태(ADR-0014). Reviewer 가 스스로 매기지 않는다."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

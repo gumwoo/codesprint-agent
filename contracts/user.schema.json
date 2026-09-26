@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codesprint.dev/contracts/user.schema.json",
   "title": "User",
-  "description": "학습 이력을 매달 자리(인증이 아니다 - UserController). POST /api/users, GET /api/users/{id}, PUT /api/users/{id}/track 이 같은 모양을 돌려준다. track 은 curriculum/tracks.yaml 의 code 이며 켜지는 Skill 범위를 정한다(ADR-0035). 기본값이 없다 - 목표를 고르지 않은 사용자와 한 트랙을 고른 사용자가 구별되지 않게 되기 때문이다. dailyMinutes · examDate 는 학습 계획의 입력이다(ADR-0038). PUT /api/users/{id}/settings 는 두 키를 모두 받아야 한다 - null 은 '정하지 않았다' 로 저장한다.",
+  "description": "학습 이력을 매달 자리(인증이 아니다 - UserController). POST /api/users, GET /api/users/{id}, PUT /api/users/{id}/track 이 같은 모양을 돌려준다. track 은 curriculum/tracks.yaml 의 code 이며 켜지는 Skill 범위를 정한다(ADR-0035). 기본값이 없다 - 목표를 고르지 않은 사용자와 한 트랙을 고른 사용자가 구별되지 않게 되기 때문이다. dailyMinutes · examDate 는 학습 계획의 입력이다(ADR-0038). PUT /api/users/{id}/settings 는 두 키를 모두 받아야 한다 - null 은 '정하지 않았다' 로 저장한다. learningMode 는 PUT /api/users/{id}/learning-mode 로 바꾼다.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,8 @@
     "nickname",
     "track",
     "dailyMinutes",
-    "examDate"
+    "examDate",
+    "learningMode"
   ],
   "properties": {
     "userId": {
@@ -43,6 +44,16 @@
       ],
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
       "description": "시험일. 없으면 null 이다."
+    },
+    "learningMode": {
+      "enum": [
+        "GUIDED",
+        "NORMAL",
+        "STRICT",
+        "EXAM",
+        "FREE"
+      ],
+      "description": "학습 모드(PRD §151, ADR-0043). 힌트 · 유형 표시 · 개념 자료만 바꾸고 다음 행동과 mastery 는 바꾸지 않는다. 기본은 NORMAL 이다 - PRD 가 '기본' 이라고 적은 모드다. PUT /api/users/{id}/learning-mode 로 바꾼다."
     }
   }
 }

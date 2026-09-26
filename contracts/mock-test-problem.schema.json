@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codesprint.dev/contracts/mock-test-problem.schema.json",
+  "title": "MockTestProblem",
+  "description": "시험 중에 연 문제(POST /api/mock-tests/{id}/problems/{label}/open). code · 제목 · Skill 이 없다 - 유형을 알려 준다(PRD §84). 여는 요청이 연 시각을 남긴다(ADR-0043).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mockTestId",
+    "label",
+    "statement",
+    "timeLimitMs",
+    "memoryLimitMb",
+    "samples"
+  ],
+  "properties": {
+    "mockTestId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "label": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeLimitMs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "memoryLimitMb": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "input",
+          "expectedOutput"
+        ],
+        "properties": {
+          "input": {
+            "type": "string"
+          },
+          "expectedOutput": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
