@@ -106,7 +106,10 @@ function attachEditor() {
 async function getJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`${url} -> ${response.status}`);
+    // 서버가 이유를 주면 그대로 싣는다 - 예를 들어 시험 중에는 학습 상태 화면이 409 로 닫힌다(ADR-0043).
+    const body = await response.json().catch(() => null);
+    throw new Error(body && body.message
+        ? `${body.message} (${response.status})` : `${url} -> ${response.status}`);
   }
   return response.json();
 }
@@ -284,6 +287,9 @@ const BLOCK_LABEL = {
  */
 async function showToday() {
   showLeft("todayBody");
+  // 학습 모드 칸은 이 표(today)가 아니라 "mode" 통이 쓴다. 한 칸을 두 통이 쓰면, 저장한 뒤에 늦게 온
+  // 계획이 옛 모드로 칸을 되돌린다(검증 에이전트가 재현했다).
+  loadLearningMode();
   const userId = Number($("userId").value);
   const mine = claimView("today");
   const rows = $("planRows");
@@ -308,7 +314,6 @@ async function showToday() {
     }
     $("dailyMinutes").value = user.dailyMinutes === null ? "" : user.dailyMinutes;
     $("examDate").value = user.examDate === null ? "" : user.examDate;
-    $("learningMode").value = user.learningMode;
 
     const parts = [];
     if (today.examInDays !== null) {
@@ -661,7 +666,11 @@ async function finishMock(mockTestId) {
     if (currentProblem && currentProblem.mockTestId === mockTestId) {
       currentProblem = null;
     }
-    showMock();
+    // **시험 탭이 아직 보일 때만** 다시 그린다. 응답을 기다리는 동안 다른 탭이나 문제로 옮겼으면 그대로
+    // 둔다 - 표("mock")는 시험 탭의 것이지 사용자가 지금 보는 화면의 것이 아니다. 다음에 탭을 열면 다시 읽는다.
+    if (!$("mockBody").hidden) {
+      showMock();
+    }
   }
 }
 
@@ -727,6 +736,24 @@ async function openMockProblem(mockTestId, label) {
   openedAt = Date.now();
 }
 
+/** 지금 사용자의 학습 모드를 칸에 적는다. 저장과 같은 통("mode")을 쓴다. */
+async function loadLearningMode() {
+  const userId = Number($("userId").value);
+  if (!userId) {
+    return;
+  }
+  const mine = claimView("mode");
+  let user;
+  try {
+    user = await getJson(`/api/users/${userId}`);
+  } catch (error) {
+    return;
+  }
+  if (mine()) {
+    $("learningMode").value = user.learningMode;
+  }
+}
+
 /** 학습 모드를 바꾼다(ADR-0043). 모드의 뜻은 서버가 정한다 - 화면은 값을 보낼 뿐이다. */
 async function saveLearningMode() {
   const userId = Number($("userId").value);
@@ -735,15 +762,21 @@ async function saveLearningMode() {
     return;
   }
   const mine = claimView("mode");
+  const select = $("learningMode");
+  // **저장하는 동안 칸을 잠근다.** 잠그지 않으면 둘을 연달아 골랐을 때 먼저 보낸 PUT 이 서버에서 나중에
+  // 처리되어, 화면은 마지막 것을, 서버는 먼저 것을 가진다(목표를 바꿀 때와 같은 이유).
+  select.disabled = true;
   let response;
   try {
     response = await fetch(`/api/users/${userId}/learning-mode`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: $("learningMode").value }),
+      body: JSON.stringify({ mode: select.value }),
     });
   } catch (error) {
     response = null;
+  } finally {
+    select.disabled = false;
   }
   if (!mine()) {
     return;

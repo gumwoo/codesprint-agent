@@ -374,6 +374,14 @@ public class MockTestService {
                 .orElse(false);
     }
 
+    /** 이 사용자에게 진행 중인 시험이 있는가. 있으면 학습 상태 화면을 닫는다({@link ExamLock}). */
+    @Transactional(readOnly = true)
+    public boolean inProgress(long userId) {
+        Instant now = clock.instant();
+        return tests.findByUserIdAndFinishedAtIsNull(userId)
+                .filter(test -> !test.isOver(now)).isPresent();
+    }
+
     /**
      * 이 제출이 아직 진행 중인 시험의 것인가. 그렇다면 일반 조회(분석 · 다음 행동)를 막는다.
      */

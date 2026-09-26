@@ -455,3 +455,108 @@ test("늦게 온 자유 질문의 답이 다른 문제 화면에 붙지 않는�
   await releaseAndSettle(page, slow, "/api/tutor/questions");
   await expect(page.locator("#tutorAnswer")).toBeEmpty();
 });
+
+/** 검증 에이전트가 재현한 학습 모드 · 시험 끝내기 경합(PR #52). */
+function modeUser(mode) {
+  return { userId: 1, nickname: "v", track: "JOB", dailyMinutes: null, examDate: null,
+    learningMode: mode };
+}
+
+test("늦게 온 오늘 탭의 사용자 조회가 방금 바꾼 학습 모드를 덮지 않는다", async ({ page }) => {
+  // 오늘 탭과 학습 모드 저장이 다른 통으로 같은 칸을 썼다. 저장한 뒤에 늦게 온 조회가 옛 모드로 되돌렸다.
+  const slow = gate();
+  let gets = 0;
+  await stubApi(page);
+  await page.route("**/api/users/1", async (route) => {
+    gets += 1;
+    if (gets >= 2) {
+      await slow.held; // 첫 조회(목표)는 보내고, 오늘 탭이 부른 조회를 붙잡는다
+    }
+    await fulfill(route, modeUser("NORMAL"));
+  });
+  await page.route("**/api/users/1/learning-mode", (route) => fulfill(route, modeUser("FREE")));
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+
+  await releaseAndSettle(page, slow, "/api/users/1");
+  await expect(page.locator("#learningMode")).toHaveValue("FREE");
+});
+
+test("학습 모드를 저장하는 동안 칸을 잠가 화면과 서버가 같은 모드를 가리킨다", async ({ page }) => {
+  // 잠그지 않으면 둘을 연달아 골랐을 때 먼저 보낸 PUT 이 나중에 처리되어 화면과 서버가 갈린다.
+  const slow = gate();
+  let serverMode = "NORMAL";
+  let puts = 0;
+  await stubApi(page);
+  await page.route("**/api/users/1/learning-mode", async (route) => {
+    puts += 1;
+    const mode = JSON.parse(route.request().postData()).mode;
+    if (puts === 1) {
+      await slow.held;
+    }
+    serverMode = mode;
+    await fulfill(route, modeUser(mode));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "STRICT");
+  await expect(page.locator("#learningMode")).toBeDisabled();
+
+  await releaseAndSettle(page, slow, "/api/users/1/learning-mode");
+  await expect(page.locator("#learningMode")).toBeEnabled();
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("FREE");
+  await expect(page.locator("#learningMode")).toHaveValue(serverMode);
+  expect(serverMode).toBe("FREE");
+});
+
+test("늦게 끝난 시험 끝내기가 그 사이 옮겨 간 오늘 탭에서 사용자를 끌고 가지 않는다", async ({ page }) => {
+  const slow = gate();
+  const { mockTest } = require("../fixtures/api");
+  await stubApi(page);
+  let finished = false;
+  await page.route("**/api/users/1/mock-tests/latest", (route) =>
+    fulfill(route, mockTest(31, finished ? "FINISHED" : "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/31/finish", async (route) => {
+    await slow.held;
+    finished = true;
+    await fulfill(route, mockTest(31, "FINISHED", ["A", "B"]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await expect(page.locator("#mockFinish")).toBeVisible();
+  await page.click("#mockFinish");
+  await page.click("#tabToday");
+  await expect(page.locator("#todayBody")).toBeVisible();
+
+  await releaseAndSettle(page, slow, "/api/mock-tests/31/finish");
+  await expect(page.locator("#todayBody")).toBeVisible();
+  await expect(page.locator("#mockBody")).toBeHidden();
+});
+
+test("늦게 끝난 시험 끝내기가 그 사이 연 일반 문제에서 사용자를 끌고 가지 않는다", async ({ page }) => {
+  const slow = gate();
+  const { mockTest } = require("../fixtures/api");
+  await stubApi(page);
+  await page.route("**/api/users/1/mock-tests/latest", (route) =>
+    fulfill(route, mockTest(41, "IN_PROGRESS", ["A", "B"])));
+  await page.route("**/api/mock-tests/41/finish", async (route) => {
+    await slow.held;
+    await fulfill(route, mockTest(41, "FINISHED", ["A", "B"]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabMock");
+  await page.click("#mockFinish");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+
+  await releaseAndSettle(page, slow, "/api/mock-tests/41/finish");
+  await expect(page.locator("#statementBody")).toBeVisible();
+});

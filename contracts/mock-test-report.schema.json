@@ -115,11 +115,12 @@
           "outcome": {
             "enum": [
               "SOLVED",
+              "JUDGING",
               "ATTEMPTED",
               "OPENED",
               "UNOPENED"
             ],
-            "description": "ATTEMPTED 는 냈지만 못 풀었다 - 버린 문제다."
+            "description": "JUDGING 은 낸 제출 가운데 아직 채점되지 않은 것이 있다 - 못 풀었다고 단정하지 않는다(끝나기 직전 제출은 끝난 뒤에 채점된다). ATTEMPTED 는 낸 제출이 전부 채점됐고 풀지 못했다 - 버린 문제다."
           },
           "openedAtSeconds": {
             "type": [

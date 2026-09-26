@@ -109,13 +109,20 @@ class MockTestAnalysisTest {
     }
 
     @Test
-    @DisplayName("아직 채점 중인 제출은 푼 것으로 세지 않는다")
-    void pendingIsNotSolved() {
-        Result result = MockTestAnalysis.analyze(START, END, PROBLEMS,
-                List.of(new Event("A", Kind.OPENED, null, at(1)),
-                        new Event("A", Kind.SUBMITTED, 5L, at(100))),
-                Map.of(5L, "QUEUED"));
+    @DisplayName("아직 채점 중인 제출이 있으면 못 풀었다고 단정하지 않는다 - JUDGING 이고 푼 수에 넣지 않는다")
+    void pendingIsJudgingNotAttempted() {
+        List<Event> events = List.of(new Event("A", Kind.OPENED, null, at(1)),
+                new Event("A", Kind.SUBMITTED, 4L, at(50)),
+                new Event("A", Kind.SUBMITTED, 5L, at(100)));
 
-        assertThat(of(result, "A").outcome()).isEqualTo(Outcome.ATTEMPTED);
+        Result judging = MockTestAnalysis.analyze(START, END, PROBLEMS, events,
+                Map.of(4L, "WRONG_ANSWER", 5L, "QUEUED"));
+        assertThat(of(judging, "A").outcome()).isEqualTo(Outcome.JUDGING);
+        assertThat(judging.solved()).isZero();
+
+        // 대조: 채점이 끝나 틀렸으면 그때 ATTEMPTED 다
+        Result judged = MockTestAnalysis.analyze(START, END, PROBLEMS, events,
+                Map.of(4L, "WRONG_ANSWER", 5L, "WRONG_ANSWER"));
+        assertThat(of(judged, "A").outcome()).isEqualTo(Outcome.ATTEMPTED);
     }
 }

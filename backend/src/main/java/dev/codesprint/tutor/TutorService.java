@@ -25,13 +25,15 @@ public class TutorService {
     private final UserRepository users;
     private final CurriculumCatalog curriculum;
     private final MockTestService mockTests;
+    private final dev.codesprint.learning.service.MasteryService mastery;
 
     public TutorService(TutorPort tutor, UserRepository users, CurriculumCatalog curriculum,
-            MockTestService mockTests) {
+            MockTestService mockTests, dev.codesprint.learning.service.MasteryService mastery) {
         this.tutor = tutor;
         this.users = users;
         this.curriculum = curriculum;
         this.mockTests = mockTests;
+        this.mastery = mastery;
     }
 
     public static class NotFound extends RuntimeException {
@@ -93,6 +95,10 @@ public class TutorService {
         var skill = curriculum.skill(skillCode);
         if (skill == null) {
             throw new NotFound("그런 Skill 이 없다: " + skillCode);
+        }
+        // 사용자의 트랙 안 Skill 만 묻는다(ADR-0035). 트랙 밖을 설명하면 그 사용자의 학습 범위가 흐려진다.
+        if (!mastery.activeSkills(userId).contains(skillCode)) {
+            throw new Withheld("트랙 " + user.track() + " 밖의 Skill 이다: " + skillCode);
         }
         if (question == null || question.isBlank() || question.length() > MAX_QUESTION) {
             throw new BadQuestion("질문은 1~" + MAX_QUESTION + " 자다");

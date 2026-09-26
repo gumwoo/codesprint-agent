@@ -30,7 +30,8 @@
       "description": "기대 풀이 시간. speed 관측의 기준이며(Addendum 13), 사용자에게도 목표로 보여준다. 없으면 null 이고 그때는 speed 를 관측하지 않는다."
     },
     "skills": {
-      "type": "array",
+      "type": ["array", "null"],
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -40,7 +41,7 @@
           "role": { "enum": ["PRIMARY", "SECONDARY"] }
         }
       },
-      "description": "weight 는 내보내지 않는다. 채점 가중치는 내부 값이고, 사용자가 그것을 보고 문제를 고를 이유가 없다. 학습 모드가 EXAM 이면 비어 있다 - 유형을 숨긴다(ADR-0043). 그 밖에는 PRIMARY 가 하나 이상 있다."
+      "description": "weight 는 내보내지 않는다. 채점 가중치는 내부 값이고, 사용자가 그것을 보고 문제를 고를 이유가 없다. 학습 모드가 EXAM 이면 null 이다 - 유형을 숨긴다(ADR-0043). 빈 배열로 두지 않는다 - 그러면 'Skill 이 없는 문제' 와 '숨긴 것' 이 구별되지 않는다."
     },
     "samples": {
       "type": "array",

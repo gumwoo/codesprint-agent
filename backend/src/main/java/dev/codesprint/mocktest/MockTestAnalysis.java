@@ -23,12 +23,20 @@ public final class MockTestAnalysis {
     public enum Outcome {
         /** 처음 ACCEPTED 를 낸 제출이 있다. */
         SOLVED,
-        /** 냈지만 풀지 못했다 - 버린 문제다. */
+        /**
+         * 낸 제출 가운데 아직 채점되지 않은 것이 있다. 못 풀었다고 단정하지 않는다 - 끝나기 직전에 낸
+         * 제출은 시험이 끝난 뒤에 채점되고, 그때 SOLVED 로 바뀔 수 있다(검증 에이전트가 재현했다).
+         */
+        JUDGING,
+        /** 냈지만 풀지 못했다 - 버린 문제다. 낸 제출이 전부 채점됐다. */
         ATTEMPTED,
         /** 열었지만 내지 않았다. */
         OPENED,
         UNOPENED
     }
+
+    /** 아직 판정이 없는 제출의 상태. */
+    private static final java.util.Set<String> PENDING = java.util.Set.of("QUEUED", "RUNNING");
 
     public record ProblemInput(String label, int expectedSolveSeconds) {
     }
@@ -69,6 +77,7 @@ public final class MockTestAnalysis {
         Map<String, Instant> firstSubmit = new LinkedHashMap<>();
         Map<String, Instant> solved = new LinkedHashMap<>();
         Map<String, Integer> submissions = new LinkedHashMap<>();
+        Map<String, Boolean> judging = new LinkedHashMap<>();
         for (Event event : ordered) {
             if (event.at().isAfter(closedAt)) {
                 continue; // 끝난 뒤의 기록은 시험이 아니다
@@ -79,8 +88,11 @@ public final class MockTestAnalysis {
                 case SUBMITTED -> {
                     firstSubmit.putIfAbsent(event.label(), event.at());
                     submissions.merge(event.label(), 1, Integer::sum);
-                    if ("ACCEPTED".equals(statusOf.get(event.submissionId()))) {
+                    String status = statusOf.get(event.submissionId());
+                    if ("ACCEPTED".equals(status)) {
                         solved.putIfAbsent(event.label(), event.at());
+                    } else if (status == null || PENDING.contains(status)) {
+                        judging.put(event.label(), true);
                     }
                 }
                 default -> throw new IllegalStateException(event.kind().name());
@@ -93,6 +105,7 @@ public final class MockTestAnalysis {
             Instant open = opened.get(label);
             Instant done = solved.get(label);
             Outcome outcome = done != null ? Outcome.SOLVED
+                    : judging.containsKey(label) ? Outcome.JUDGING
                     : submissions.containsKey(label) ? Outcome.ATTEMPTED
                     : open != null ? Outcome.OPENED : Outcome.UNOPENED;
             Long spent = open == null ? null

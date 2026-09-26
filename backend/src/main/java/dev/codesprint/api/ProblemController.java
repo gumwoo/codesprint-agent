@@ -55,7 +55,7 @@ public class ProblemController {
     }
 
     /**
-     * @param skills 학습 모드가 EXAM 이면 비어 있다 - 유형을 숨긴다(ADR-0043).
+     * @param skills 학습 모드가 EXAM 이면 null 이다 - 유형을 숨긴다(ADR-0043). 빈 목록이 아니다.
      * @param concept 학습 모드가 GUIDED 면 PRIMARY Skill 의 개념 자료, 아니면 null 이다.
      */
     public record ProblemView(String code, String title, String kind, String statement,
@@ -114,6 +114,10 @@ public class ProblemController {
         if (problem == null) {
             return ResponseEntity.notFound().build();
         }
+        // 진행 중인 시험의 문제는 시험에서 연다 - 여기에는 제목과 Skill 이 있다(ADR-0043).
+        if (userId != null && mockTests.inProgressContains(userId, problemCode)) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).build();
+        }
         return ResponseEntity.ok(toView(problem, modeOf(userId)));
     }
 
@@ -132,12 +136,15 @@ public class ProblemController {
      */
     @GetMapping("/submissions/{submissionId}/next-problem")
     public ResponseEntity<NextProblemResponse> next(@PathVariable long submissionId) {
-        // 시험 중의 제출에는 다음 행동을 보여 주지 않는다(PRD §84).
-        if (mockTests.hidesUntilEnd(submissionId)) {
+        // 시험 중의 제출에는 다음 행동을 보여 주지 않는다(PRD §84). 시험 전에 낸 제출이어도 시험 중에는
+        // 닫는다 - 다음 문제를 고르는 조건이 시험 문제를 고르는 조건과 같아, 시험 문제가 추천으로 나온다.
+        Long owner = submissions.findById(submissionId)
+                .map(dev.codesprint.learning.persistence.SubmissionRow::userId).orElse(null);
+        if (mockTests.hidesUntilEnd(submissionId)
+                || (owner != null && mockTests.inProgress(owner))) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).build();
         }
-        var mode = modeOf(submissions.findById(submissionId)
-                .map(dev.codesprint.learning.persistence.SubmissionRow::userId).orElse(null));
+        var mode = modeOf(owner);
         return nextProblem.resolve(submissionId)
                 .map(resolution -> new NextProblemResponse(
                         resolution.submissionId(),
@@ -165,7 +172,7 @@ public class ProblemController {
                         ? problem.skills().stream()
                                 .map(link -> new SkillView(link.skillCode(), link.role()))
                                 .toList()
-                        : List.of(),
+                        : null,
                 // 필터는 카탈로그가 한다. 여기서 다시 거르면 두 곳이 되고,
                 // 한쪽을 잊으면 그대로 유출이다.
                 catalog.samplesOf(problem.code()).stream()

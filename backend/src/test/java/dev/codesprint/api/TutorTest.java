@@ -210,6 +210,7 @@ class TutorTest {
     void disabledUnknownAndBlank() throws Exception {
         mode("FREE");
         assertThat(ask("NO_SUCH_SKILL", "질문").getStatus()).isEqualTo(404);
+        assertThat(ask("DIJKSTRA", "질문").getStatus()).as("JOB 트랙 밖 Skill").isEqualTo(409);
         assertThat(ask("BFS_BASIC", " ").getStatus()).isEqualTo(400);
         assertThat(ask("BFS_BASIC", "x".repeat(1001)).getStatus()).isEqualTo(400);
 

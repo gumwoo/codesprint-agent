@@ -169,7 +169,7 @@ class LearningModeTest {
         assertThat(seenLevel()).isNull();
 
         JsonNode view = problemView();
-        assertThat(view.get("skills")).isEmpty();
+        assertThat(view.get("skills").isNull()).as("숨긴 것은 null 이다 - 빈 목록이 아니다").isTrue();
         assertThat(schema("problem-view.schema.json").validate(view)).isEmpty();
 
         JsonNode anonymous = MAPPER.readTree(mvc.perform(get("/api/problems/{code}", PROBLEM))

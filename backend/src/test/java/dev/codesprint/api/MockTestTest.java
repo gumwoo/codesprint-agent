@@ -338,6 +338,71 @@ class MockTestTest {
     }
 
     @Test
+    @DisplayName("시험 중에는 학습 상태 · 추천 화면이 닫히고, 끝나면 열린다 - 다른 사용자는 닫히지 않는다")
+    void learningScreensAreClosedDuringTheTest() throws Exception {
+        // 검증 에이전트가 재현했다: 오늘 계획이 시험 문제를 code 와 제목째 추천했고, 시험 제출 전후의
+        // Skill 지도를 비교하면 그 문제의 유형이 드러났다.
+        long before = json(postJson("/api/problems/{code}/submit", codeBody(), "P01_QUEUE_BASIC"))
+                .get("submissionId").asLong();
+        long id = start().get("mockTestId").asLong();
+        String code = codeOf(id, "A");
+        String[] screens = {"/api/users/%d/today", "/api/users/%d/mistakes", "/api/users/%d/skills",
+            "/api/users/%d/reviews", "/api/users/%d/diagnostic"};
+
+        for (String screen : screens) {
+            MockHttpServletResponse response = mvc.perform(get(screen.formatted(userId)))
+                    .andReturn().getResponse();
+            assertThat(response.getStatus()).as(screen).isEqualTo(409);
+            assertThat(response.getContentAsString(StandardCharsets.UTF_8)).as(screen)
+                    .doesNotContain(code);
+        }
+        assertThat(mvc.perform(get("/api/problems/{code}", code).param("userId", "" + userId))
+                .andReturn().getResponse().getStatus()).as("시험 문제를 code 로 열기").isEqualTo(409);
+        assertThat(mvc.perform(get("/api/submissions/{id}/next-problem", before)).andReturn()
+                .getResponse().getStatus()).as("시험 전 제출의 다음 문제").isEqualTo(409);
+
+        // 대조: 시험이 없는 사용자는 같은 화면을 본다 - 막은 것이 그 사용자의 시험이다
+        long other = users.save(new UserRow(
+                "mock-free-" + System.nanoTime() + "@codesprint.dev", "자유", "JOB")).id();
+        for (String screen : screens) {
+            assertThat(mvc.perform(get(screen.formatted(other))).andReturn().getResponse()
+                    .getStatus()).as("대조 " + screen).isEqualTo(200);
+        }
+
+        postJson("/api/mock-tests/{id}/finish", userBody(), id);
+        for (String screen : screens) {
+            assertThat(mvc.perform(get(screen.formatted(userId))).andReturn().getResponse()
+                    .getStatus()).as("끝난 뒤 " + screen).isEqualTo(200);
+        }
+        assertThat(mvc.perform(get("/api/problems/{code}", code).param("userId", "" + userId))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("끝나기 직전에 낸 제출이 아직 채점 중이면 보고서는 JUDGING 이고, 채점 뒤에 결과가 붙는다")
+    void lateJudgedSubmissionIsNotCalledAFailure() throws Exception {
+        JsonNode test = start();
+        long id = test.get("mockTestId").asLong();
+        postJson("/api/mock-tests/{id}/problems/{label}/open", userBody(), id, "A");
+        clock.advance(Duration.ofSeconds(test.get("remainingSeconds").asLong() - 5));
+        long last = json(postJson("/api/mock-tests/{id}/problems/{label}/submit", codeBody(),
+                id, "A")).get("submissionId").asLong();
+        clock.advance(Duration.ofSeconds(10));
+
+        JsonNode pending = json(mvc.perform(get("/api/mock-tests/{id}/report", id)
+                .param("userId", "" + userId)).andReturn().getResponse());
+        assertThat(byLabel(pending, "A").get("outcome").asText()).isEqualTo("JUDGING");
+        assertThat(pending.get("solved").asInt()).isZero();
+        assertThat(schema("mock-test-report.schema.json").validate(pending)).isEmpty();
+
+        judge(last, "ACCEPTED");
+        JsonNode judged = json(mvc.perform(get("/api/mock-tests/{id}/report", id)
+                .param("userId", "" + userId)).andReturn().getResponse());
+        assertThat(byLabel(judged, "A").get("outcome").asText()).isEqualTo("SOLVED");
+        assertThat(judged.get("solved").asInt()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("남의 시험은 없는 것과 같다")
     void othersTestIsNotFound() throws Exception {
         long id = start().get("mockTestId").asLong();
