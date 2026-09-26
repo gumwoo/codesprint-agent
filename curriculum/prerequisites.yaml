@@ -276,3 +276,56 @@ prerequisites:
   - skill: MONOTONIC_STACK
     requires: STACK_BASIC
     minimum_mastery: 0.65
+
+  # ── W6c · INTERMEDIATE 수학 · 문자열 · 스위핑 · 기하 (ADR-0042) ─────────────
+  - skill: PRIME_SIEVE
+    requires: PYTHON_LIST_BASIC
+    minimum_mastery: 0.65
+
+  - skill: SMALLEST_PRIME_FACTOR
+    requires: PRIME_SIEVE
+    minimum_mastery: 0.65
+
+  - skill: BINOMIAL_MOD
+    requires: MATH_GCD_LCM
+    minimum_mastery: 0.65
+
+  - skill: BINOMIAL_MOD
+    requires: COMBINATORIAL_ENUMERATION
+    minimum_mastery: 0.65
+
+  - skill: TRIE_PREFIX
+    requires: HASH_MAP_COUNTING
+    minimum_mastery: 0.65
+
+  - skill: TRIE_PREFIX
+    requires: STRING_MANIPULATION
+    minimum_mastery: 0.65
+
+  - skill: PREFIX_FUNCTION
+    requires: STRING_MANIPULATION
+    minimum_mastery: 0.65
+
+  - skill: PREFIX_FUNCTION
+    requires: TWO_POINTER
+    minimum_mastery: 0.65
+
+  - skill: INTERVAL_SWEEP
+    requires: SORT_THEN_SCAN
+    minimum_mastery: 0.65
+
+  - skill: INTERVAL_SWEEP
+    requires: DIFFERENCE_ARRAY
+    minimum_mastery: 0.65
+
+  - skill: CCW_ORIENTATION
+    requires: GRID_COORDINATE
+    minimum_mastery: 0.65
+
+  - skill: CONVEX_HULL
+    requires: CCW_ORIENTATION
+    minimum_mastery: 0.65
+
+  - skill: CONVEX_HULL
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65

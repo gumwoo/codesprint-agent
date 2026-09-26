@@ -1,0 +1,76 @@
+{
+  "id": "BINOMIAL_MOD-1790378058235-2",
+  "skill": "BINOMIAL_MOD",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:30:21+00:00",
+  "stage": "중복",
+  "code": "P102_GRID_PATH_COUNT_QUERIES",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P101_BINOMIAL_QUERIES 와 같은 계산이다 - 격자 경로 수는 C(r+c, r) 이라 질의마다 이항 계수 하나를 나머지로 구하는 문제이고, 이야기만 다르다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "GRID_PATH_COUNT_QUERIES",
+    "title": "오른쪽 · 아래 경로 세기 질의",
+    "statement": "끝없이 넓은 격자가 있다. 칸의 좌표는 (행, 열)이고 행과 열은 모두 0 부터 센다. 맨 왼쪽 위 칸이 (0, 0) 이다.\n\n말 하나가 (0, 0) 에서 출발한다. 말은 한 번에 오른쪽으로 한 칸(열 + 1) 또는 아래로 한 칸(행 + 1)만 움직일 수 있다. 두 경로는 거쳐 가는 칸의 순서가 하나라도 다르면 서로 다른 경로다.\n\n질의 Q 개가 주어진다. 각 질의는 목표 칸 (r, c) 이다. (0, 0) 에서 (r, c) 까지 가는 서로 다른 경로의 수를 1,000,000,007 로 나눈 나머지를 출력한다. 목표 칸이 (0, 0) 이면 움직이지 않는 경로 하나만 있으므로 답은 1 이다.\n\n예: 목표가 (1, 1) 이면 오른쪽→아래, 아래→오른쪽 두 가지다. 목표가 (0, 3) 이면 오른쪽으로만 세 번 가는 한 가지다.\n\n입력\n- 첫 줄: 질의 수 Q\n- 다음 Q 줄: 각 줄에 정수 r c (공백 하나로 구분)\n\n출력\n- 질의마다 한 줄에 답 하나를, 입력 순서대로 출력한다.\n\n제약\n- 1 ≤ Q ≤ 60,000\n- 0 ≤ r ≤ 300,000\n- 0 ≤ c ≤ 300,000\n- 같은 질의가 여러 번 나올 수 있다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(N + Q), N = 입력에서 가장 큰 r + c",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "INDEX_ERROR",
+      "INPUT_PARSE",
+      "OUTPUT_FORMAT"
+    ],
+    "negativeControl": {
+      "mistake": "INDEX_ERROR",
+      "expectedStatus": "RUNTIME_ERROR"
+    },
+    "wrongDescription": "팩토리얼 · 역원 배열을 가장 큰 r + c 칸이 아니라 그보다 한 칸 작게 만들어, 가장 먼 목표 칸을 계산할 때 범위를 벗어난 인덱스를 읽는다.",
+    "sampleInputs": [
+      "3\n1 2\n2 2\n0 4",
+      "2\n3 0\n4 3"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n0 0"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "3\n0 5\n7 0\n0 0"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "4\n5 3\n3 5\n5 3\n0 1"
+      },
+      {
+        "type": "ALL_SAME",
+        "input": "3\n1 1\n1 1\n1 1"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "2\n30 30\n600 400"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "1\n900 900"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nq = rng.randint(1, 8)\nlines = [str(q)]\nfor _ in range(q):\n    lines.append(f\"{rng.randint(0, 12)} {rng.randint(0, 12)}\")\nprint(\"\\n\".join(lines))\n",
+    "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    rows = [int(x) for x in data[1:1 + 2 * q:2]]\n    cols = [int(x) for x in data[2:2 + 2 * q:2]]\n    MOD = 1_000_000_007\n    n = max(r + c for r, c in zip(rows, cols))\n    fact = [1] * (n + 1)\n    for i in range(1, n + 1):\n        fact[i] = fact[i - 1] * i % MOD\n    inv = [1] * (n + 1)\n    inv[n] = pow(fact[n], MOD - 2, MOD)\n    for i in range(n, 0, -1):\n        inv[i - 1] = inv[i] * i % MOD\n    out = [fact[r + c] * inv[r] % MOD * inv[c] % MOD for r, c in zip(rows, cols)]\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    queries = [(int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(q)]\n    MOD = 1_000_000_007\n    max_r = max(r for r, _ in queries)\n    max_c = max(c for _, c in queries)\n    wanted = {}\n    for r, c in queries:\n        wanted.setdefault(r, set()).add(c)\n    found = {}\n    row = [1] * (max_c + 1)\n    for r in range(max_r + 1):\n        if r > 0:\n            new_row = [0] * (max_c + 1)\n            for c in range(max_c + 1):\n                ways = row[c]\n                if c > 0:\n                    ways += new_row[c - 1]\n                new_row[c] = ways % MOD\n            row = new_row\n        for c in wanted.get(r, ()):\n            found[(r, c)] = row[c]\n    print(\"\\n\".join(str(found[(r, c)]) for r, c in queries))\n\n\nmain()\n",
+    "wrong": "# 팩토리얼 · 역원 배열을 가장 큰 r + c 칸이 아니라 그보다 한 칸 작게 만들어, 가장 먼 목표 칸을 계산할 때 범위를 벗어난 인덱스를 읽는다.\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    rows = [int(x) for x in data[1:1 + 2 * q:2]]\n    cols = [int(x) for x in data[2:2 + 2 * q:2]]\n    MOD = 1_000_000_007\n    n = max(r + c for r, c in zip(rows, cols))\n    fact = [1] * n\n    for i in range(1, n):\n        fact[i] = fact[i - 1] * i % MOD\n    inv = [1] * n\n    inv[n - 1] = pow(fact[n - 1], MOD - 2, MOD)\n    for i in range(n - 1, 0, -1):\n        inv[i - 1] = inv[i] * i % MOD\n    out = [fact[r + c] * inv[r] % MOD * inv[c] % MOD for r, c in zip(rows, cols)]\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "경로 하나는 오른쪽 이동 몇 번과 아래 이동 몇 번을 어떤 순서로 늘어놓은 것이다. (r, c) 까지 가는 모든 경로에서 두 이동의 횟수는 늘 같고 순서만 다르다.",
+      "결국 전체 이동 자리 가운데 어느 자리를 아래 이동으로 정하느냐를 세는 조합 문제다. 값이 커지므로 소수 모듈러 위에서 계산하고, 나눗셈은 모듈러 역원으로 바꾼다.",
+      "가장 큰 r + c 까지의 팩토리얼 나머지를 담는 배열과, 같은 길이의 팩토리얼 역원 배열 두 개를 질의를 처리하기 전에 한 번만 만든다. 두 배열 모두 인덱스 r + c 까지 들어가야 한다.",
+      "역원 배열은 맨 끝 칸 하나만 페르마의 소정리로 거듭제곱해 구하고, 나머지 칸은 뒤에서부터 한 칸 앞 값에 현재 인덱스를 곱해 채운다. 그러면 각 질의는 곱셈 두 번과 나머지 연산으로 끝난다.",
+      "입력을 모두 읽는다 → N = 질의 중 가장 큰 r + c → 0..N 팩토리얼 나머지 배열 → 끝 칸 역원을 거듭제곱으로 구하고 뒤에서 앞으로 역원 배열 채움 → 질의마다 (전체 이동 수의 팩토리얼) × (r 의 팩토리얼 역원) × (c 의 팩토리얼 역원) 을 나머지로 계산 → 줄마다 출력"
+    ],
+    "skillControl": {
+      "approach": "질의마다 math.comb 로 큰 정수 이항 계수를 그대로 구한 뒤 나머지를 취한다.",
+      "solution": "import sys\nfrom math import comb\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    MOD = 1_000_000_007\n    out = []\n    for i in range(q):\n        r = int(data[1 + 2 * i])\n        c = int(data[2 + 2 * i])\n        out.append(comb(r + c, r) % MOD)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nq = 60000\nlines = [str(q)]\nfor _ in range(q):\n    lines.append(f\"{rng.randint(150000, 300000)} {rng.randint(150000, 300000)}\")\nprint(\"\\n\".join(lines))\n"
+    }
+  }
+}

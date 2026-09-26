@@ -1,0 +1,33 @@
+{
+  "problemCode": "P103_TURN_DIRECTIONS",
+  "problemTitle": "경로의 회전 방향",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "CCW_ORIENTATION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    pts = [(int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)]\n    out = []\n    for i in range(1, n - 1):\n        ax, ay = pts[i - 1]\n        bx, by = pts[i]\n        cx, cy = pts[i + 1]\n        cr = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)\n        if cr >= 0:\n            out.append('L')\n        else:\n            out.append('R')\n    print(''.join(out))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      4,
+      5,
+      8,
+      9,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      10,
+      12
+    ]
+  },
+  "probes": {}
+}

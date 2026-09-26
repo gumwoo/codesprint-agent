@@ -1,0 +1,11 @@
+{
+  "id": "TRIE_PREFIX-1790378196049-2",
+  "skill": "TRIE_PREFIX",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:35:05+00:00",
+  "code": "P114_SHORTEST_UNIQUE_PREFIX",
+  "crossCheckedInputs": 36,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    words = data[1:1 + n]\n    for i, w in enumerate(words):\n        ans = -1\n        for k in range(1, len(w) + 1):\n            p = w[:k]\n            shared = False\n            for j, v in enumerate(words):\n                if j != i and v[:k] == p:\n                    shared = True\n                    break\n            if not shared:\n                ans = k\n                break\n        print(ans)\n\n\nmain()\n",
+  "inputGenerator": "import random\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nalpha = 'abc'[:rng.randint(2, 3)]\nwords = set()\nwhile len(words) < n:\n    words.add(''.join(rng.choice(alpha) for _ in range(rng.randint(1, 6))))\nwords = sorted(words)\nrng.shuffle(words)\nprint(n)\nfor w in words:\n    print(w)\n",
+  "stressInputGenerator": null
+}

@@ -1,0 +1,38 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P114_SHORTEST_UNIQUE_PREFIX
+title: 자기만의 접두사 길이
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(L), L 은 모든 단어 길이의 합
+statement: |
+  서로 다른 단어 N 개가 주어진다. 각 단어 W 에 대해, W 의 접두사 중 W 를 제외한 다른 어떤 단어의 접두사도 아닌 것들 가운데 가장 짧은 것의 길이를 구한다. 접두사는 W 의 앞에서부터 1 글자 이상 연속으로 잘라 낸 문자열이며, W 자신도 W 의 접두사다. 그런 접두사가 없으면 -1 을 출력한다. 예를 들어 단어가 apple, app, apply 이면 apple 의 답은 5 (apple 은 다른 단어의 접두사가 아니고, appl 은 apply 의 접두사다), app 의 답은 -1 (app 는 apple 의 접두사다)이다.
+
+  입력 형식
+  첫 줄에 정수 N 이 주어진다. 이어서 N 줄에 걸쳐 한 줄에 단어 하나가 주어진다. 단어는 입력 순서대로 1 번부터 N 번까지다(1-based).
+
+  출력 형식
+  N 줄을 출력한다. i 번째 줄에는 i 번 단어의 답을 정수로 출력한다.
+
+  제약
+  1 ≤ N ≤ 100000
+  각 단어는 영어 소문자로만 이루어지며 길이는 1 이상 100 이하다.
+  모든 단어의 길이 합은 300000 이하다.
+  모든 단어는 서로 다르다.
+skills:
+- code: TRIE_PREFIX
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl: null

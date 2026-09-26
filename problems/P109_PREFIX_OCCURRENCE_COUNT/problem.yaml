@@ -1,0 +1,33 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P109_PREFIX_OCCURRENCE_COUNT
+title: 접두사가 나타나는 횟수
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(|S|)
+statement: |
+  소문자로 된 문자열 S 가 주어진다. 길이 L 인 S 의 접두사(S 의 앞에서부터 L 글자, L 은 1 부터 |S| 까지)마다, 그 접두사가 S 안에서 몇 번 나타나는지 구한다. 위치는 0 부터 센다. 시작 위치 i (0 <= i <= |S| - L) 에서 L 글자가 그 접두사와 같으면 한 번 나타난 것으로 센다. 서로 겹치는 등장도 모두 센다. 위치 0 의 등장, 즉 접두사 자신도 센다.
+
+  예: S = abab 이면 a 는 위치 0, 2 에서 2 번, ab 는 위치 0, 2 에서 2 번, aba 는 1 번, abab 는 1 번이다.
+
+  입력: 첫 줄에 S 가 주어진다. 1 <= |S| <= 100000 이고 S 는 영어 소문자로만 이루어진다.
+
+  출력: 한 줄에 정수 |S| 개를 공백으로 구분해 출력한다. L 번째 정수는 길이 L 인 접두사가 나타나는 횟수다.
+skills:
+- code: PREFIX_FUNCTION
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INDEX_ERROR
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 길이 L 마다 모든 시작 위치에서 접두사와 같은지 직접 비교해 센다.

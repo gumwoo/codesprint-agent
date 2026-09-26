@@ -1,0 +1,11 @@
+{
+  "id": "PRIME_SIEVE-1790377995385-1",
+  "skill": "PRIME_SIEVE",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:33:20+00:00",
+  "code": "P110_PRIME_RANGE_COUNT",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef is_prime(n):\n    if n < 2:\n        return False\n    d = 2\n    while d * d <= n:\n        if n % d == 0:\n            return False\n        d += 1\n    return True\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for k in range(q):\n        l = int(data[1 + 2 * k])\n        r = int(data[2 + 2 * k])\n        cnt = 0\n        for x in range(l, r + 1):\n            if is_prime(x):\n                cnt += 1\n        out.append(str(cnt))\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\n\ndef main():\n    seed = int(sys.stdin.readline())\n    rng = random.Random(seed)\n    q = rng.randint(1, 8)\n    hi = rng.choice([5, 30, 120, 300])\n    lines = [str(q)]\n    for _ in range(q):\n        a = rng.randint(1, hi)\n        b = rng.randint(1, hi)\n        if a > b:\n            a, b = b, a\n        lines.append(f'{a} {b}')\n    print('\\n'.join(lines))\n\n\nmain()\n",
+  "stressInputGenerator": "import random\n\n\ndef main():\n    rng = random.Random(20260926)\n    q = 50000\n    lines = [str(q)]\n    for _ in range(q):\n        a = rng.randint(1, 2000000)\n        b = rng.randint(1, 2000000)\n        if a > b:\n            a, b = b, a\n        lines.append(f'{a} {b}')\n    print('\\n'.join(lines))\n\n\nmain()\n"
+}

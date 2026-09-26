@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P110_PRIME_RANGE_COUNT
+title: 구간 속 소수 세기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(M log log M + Q), M 은 R 의 최댓값
+statement: |
+  1보다 큰 자연수 중에서 1과 자기 자신으로만 나누어떨어지는 수를 소수라 한다. 1은 소수가 아니다.
+
+  Q개의 질의가 주어진다. 각 질의는 두 정수 L, R 로 이루어지며, L 이상 R 이하의 정수 가운데 소수가 몇 개인지 구한다. 구간은 양 끝을 모두 포함한다. L 과 R 은 위치(인덱스)가 아니라 수의 값 그 자체다.
+
+  예: L = 1, R = 10 이면 2, 3, 5, 7 의 4개다. L = 14, R = 16 이면 0개다.
+
+  입력 형식
+  - 첫 줄에 질의 수 Q 가 주어진다.
+  - 다음 Q 줄에 각 질의의 L 과 R 이 공백 하나로 구분되어 주어진다.
+
+  출력 형식
+  - 질의가 주어진 순서대로 한 줄에 하나씩, 그 구간에 있는 소수의 개수를 출력한다.
+
+  제약
+  - 1 ≤ Q ≤ 50,000
+  - 1 ≤ L ≤ R ≤ 2,000,000
+  - 모든 값은 정수다.
+skills:
+- code: PRIME_SIEVE
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: RUNTIME_ERROR
+skillControl:
+  approach: 질의마다 L 부터 R 까지 모든 수를 2 부터 제곱근까지 나누어 보며 소수인지 하나씩 판정한다.

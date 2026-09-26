@@ -1,0 +1,11 @@
+{
+  "id": "CONVEX_HULL-1790378322906-1",
+  "skill": "CONVEX_HULL",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:31:00+00:00",
+  "code": "P104_FENCE_CORNERS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    pts = list(set((int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)))\n    if len(pts) == 1:\n        print(1, 0)\n        return\n    corners = set()\n    area2 = 0\n    for a in pts:\n        for b in pts:\n            if a == b:\n                continue\n            ok = True\n            for c in pts:\n                cr = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])\n                if cr < 0:\n                    ok = False\n                    break\n                if cr == 0:\n                    if not (min(a[0], b[0]) <= c[0] <= max(a[0], b[0]) and min(a[1], b[1]) <= c[1] <= max(a[1], b[1])):\n                        ok = False\n                        break\n            if ok:\n                corners.add(a)\n                corners.add(b)\n                area2 += a[0] * b[1] - b[0] * a[1]\n    print(len(corners), abs(area2))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nr = rng.choice([1, 3, 5])\nprint(n)\nfor _ in range(n):\n    print(rng.randint(-r, r), rng.randint(-r, r))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\npts = set()\nfor x in rng.sample(range(-19999, 20000), 29998):\n    pts.add((x, x * x))\npts.add((-20000, 400000000))\npts.add((20000, 400000000))\nwhile len(pts) < 50000:\n    x = rng.randint(-19999, 19999)\n    pts.add((x, rng.randint(x * x + 1, 399999999)))\npts = list(pts)\nrng.shuffle(pts)\nout = [str(len(pts))]\nfor x, y in pts:\n    out.append(f\"{x} {y}\")\nprint(\"\\n\".join(out))\n"
+}

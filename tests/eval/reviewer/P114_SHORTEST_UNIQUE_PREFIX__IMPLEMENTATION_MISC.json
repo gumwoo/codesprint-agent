@@ -1,0 +1,31 @@
+{
+  "problemCode": "P114_SHORTEST_UNIQUE_PREFIX",
+  "problemTitle": "자기만의 접두사 길이",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "TRIE_PREFIX"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    words = data[1:1 + n]\n    children = [{}]\n    cnt = [0]\n    for w in words:\n        node = 0\n        for ch in w:\n            nxt = children[node].get(ch)\n            if nxt is None:\n                nxt = len(children)\n                children[node][ch] = nxt\n                children.append({})\n                cnt.append(0)\n            node = nxt\n            cnt[node] += 1\n    out = []\n    for w in words:\n        node = 0\n        ans = len(w)\n        for i, ch in enumerate(w):\n            node = children[node][ch]\n            if cnt[node] == 1:\n                ans = i + 1\n                break\n        out.append(str(ans))\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      6
+    ],
+    "failedCaseIds": [
+      1,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  "probes": {}
+}

@@ -1,0 +1,11 @@
+{
+  "id": "PREFIX_FUNCTION-1790378159890-1",
+  "skill": "PREFIX_FUNCTION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:32:36+00:00",
+  "code": "P108_REPEATED_PREFIX_SUM",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\ns = sys.stdin.readline().strip()\nn = len(s)\ntotal = 0\nfor length in range(1, n + 1):\n    best = 1\n    for d in range(1, length + 1):\n        if length % d:\n            continue\n        ok = True\n        for i in range(d, length):\n            if s[i] != s[i - d]:\n                ok = False\n                break\n        if ok:\n            best = length // d\n            break\n    total += best\nprint(total)\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nletters = rng.choice([\"a\", \"ab\", \"abc\"])\nn = rng.randint(1, 14)\nif rng.random() < 0.6:\n    block = \"\".join(rng.choice(letters) for _ in range(rng.randint(1, 4)))\n    s = list((block * n)[:n])\n    if rng.random() < 0.5:\n        s[rng.randrange(n)] = rng.choice(letters)\n    s = \"\".join(s)\nelse:\n    s = \"\".join(rng.choice(letters) for _ in range(n))\nprint(s)\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nseg = \"\".join(rng.choice(\"ab\") for _ in range(3))\nwhile len(seg) < 500000:\n    seg = seg * rng.randint(2, 3) + rng.choice(\"abc\")\n    if rng.random() < 0.3:\n        pos = rng.randrange(len(seg))\n        seg = seg[:pos] + rng.choice(\"abc\") + seg[pos + 1:]\nprint(seg[:500000])\n"
+}

@@ -1,0 +1,34 @@
+{
+  "problemCode": "P104_FENCE_CORNERS",
+  "problemTitle": "울타리 모서리 세기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "CONVEX_HULL",
+    "CCW_ORIENTATION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef cross(o, a, b):\n    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    pts = sorted(set((int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)))\n    if len(pts) == 1:\n        print(1, 0)\n        return\n    lower = []\n    for p in pts:\n        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) < 0:\n            lower.pop()\n        lower.append(p)\n    upper = []\n    for p in reversed(pts):\n        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) < 0:\n            upper.pop()\n        upper.append(p)\n    hull = lower[:-1] + upper[:-1]\n    area2 = 0\n    for i in range(len(hull)):\n        x1, y1 = hull[i]\n        x2, y2 = hull[(i + 1) % len(hull)]\n        area2 += x1 * y2 - x2 * y1\n    print(len(hull), abs(area2))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      5,
+      9,
+      12
+    ],
+    "failedCaseIds": [
+      1,
+      6,
+      7,
+      8,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

@@ -1,0 +1,75 @@
+{
+  "id": "SMALLEST_PRIME_FACTOR-1790378150919-2",
+  "skill": "SMALLEST_PRIME_FACTOR",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T23:34:23+00:00",
+  "stage": "중복",
+  "code": "P112_PRIME_FACTOR_SUM",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P111_DIVISOR_COUNT_QUERIES 와 같은 계산이다 - 가장 작은 소인수 표로 소인수분해한 뒤 모으는 값(약수 개수 · 소인수 합)만 다르다. P25 · P26 을 같은 이유로 철회했다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "codeSuffix": "PRIME_FACTOR_SUM",
+    "title": "소인수 합 질의",
+    "statement": "양의 정수 Q개가 주어진다. 각 수 x 를 소수들의 곱으로 나타냈을 때, 곱에 쓰인 소수를 같은 소수가 여러 번 쓰이면 쓰인 횟수만큼 모두 더한 값을 구한다.\n\n예를 들어 12 = 2 × 2 × 3 이므로 답은 2 + 2 + 3 = 7 이다. 100 = 2 × 2 × 5 × 5 이므로 답은 14 이다. 7 은 소수이므로 답은 7 이다. 1 은 곱에 쓰이는 소수가 없으므로 답은 0 이다.\n\n입력\n첫째 줄에 Q 가 주어진다. (1 ≤ Q ≤ 100000)\n다음 Q개의 줄에 한 줄에 하나씩 정수 x_i 가 주어진다. (1 ≤ x_i ≤ 1000000) i 는 1 부터 센다.\n\n출력\nQ개의 줄에 걸쳐 i 번째 줄에 x_i 의 답을 출력한다. 입력 순서대로 출력한다.",
+    "secondarySkills": [],
+    "referenceComplexity": "O(M log log M + Q log M), M 은 x_i 의 최댓값",
+    "expectedSolveSeconds": 900,
+    "commonMistakes": [
+      "IMPLEMENTATION_MISC",
+      "INPUT_PARSE"
+    ],
+    "negativeControl": {
+      "mistake": "IMPLEMENTATION_MISC",
+      "expectedStatus": "WRONG_ANSWER"
+    },
+    "wrongDescription": "같은 소인수가 여러 번 나와도 한 번만 더한다(중복도를 무시한다).",
+    "sampleInputs": [
+      "5\n12\n1\n7\n100\n999983\n",
+      "3\n2\n64\n30\n"
+    ],
+    "edgeCases": [
+      {
+        "type": "MINIMUM",
+        "input": "1\n1\n"
+      },
+      {
+        "type": "MAXIMUM",
+        "input": "1\n1000000\n"
+      },
+      {
+        "type": "SINGLE",
+        "input": "1\n999983\n"
+      },
+      {
+        "type": "BOUNDARY",
+        "input": "3\n2\n4\n998001\n"
+      },
+      {
+        "type": "DUPLICATE",
+        "input": "4\n720720\n720720\n1\n1\n"
+      },
+      {
+        "type": "ADVERSARIAL",
+        "input": "4\n994009\n524288\n999999\n997\n"
+      }
+    ],
+    "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nq = rng.randint(1, 20)\nlines = [str(q)]\nfor _ in range(q):\n    r = rng.random()\n    if r < 0.1:\n        x = 1\n    elif r < 0.8:\n        x = rng.randint(1, 1000)\n    else:\n        x = rng.randint(1000, 5000)\n    lines.append(str(x))\nprint(\"\\n\".join(lines))\n",
+    "reference": "import sys\nfrom math import isqrt\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    xs = [int(v) for v in data[1:1 + q]]\n    n = max(xs)\n    spf = list(range(n + 1))\n    composite = bytearray(n + 1)\n    root = isqrt(n)\n    for i in range(2, root + 1):\n        if not composite[i]:\n            composite[i * i::i] = b\"\\x01\" * len(range(i * i, n + 1, i))\n    primes = [i for i in range(2, root + 1) if not composite[i]]\n    for p in reversed(primes):\n        spf[p * p::p] = [p] * len(range(p * p, n + 1, p))\n    out = []\n    for x in xs:\n        s = 0\n        while x > 1:\n            p = spf[x]\n            s += p\n            x //= p\n        out.append(s)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    q = int(data[0])\n    out = []\n    for i in range(1, q + 1):\n        x = int(data[i])\n        s = 0\n        d = 2\n        while x > 1:\n            if x % d == 0:\n                s += d\n                x //= d\n            else:\n                d += 1\n        out.append(str(s))\n    print(\"\\n\".join(out))\n\n\nmain()\n",
+    "wrong": "import sys\nfrom math import isqrt\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    xs = [int(v) for v in data[1:1 + q]]\n    n = max(xs)\n    spf = list(range(n + 1))\n    composite = bytearray(n + 1)\n    root = isqrt(n)\n    for i in range(2, root + 1):\n        if not composite[i]:\n            composite[i * i::i] = b\"\\x01\" * len(range(i * i, n + 1, i))\n    primes = [i for i in range(2, root + 1) if not composite[i]]\n    for p in reversed(primes):\n        spf[p * p::p] = [p] * len(range(p * p, n + 1, p))\n    out = []\n    for x in xs:\n        s = 0\n        last = 0\n        while x > 1:\n            p = spf[x]\n            if p != last:\n                s += p\n                last = p\n            x //= p\n        out.append(s)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+    "hints": [
+      "질의가 최대 10만 개이고 값의 범위는 100만까지로 정해져 있다. 질의마다 처음부터 나누어 보는 비용과, 값의 범위 전체에 대해 한 번만 미리 계산해 두는 비용을 비교해 본다.",
+      "소수를 찾는 체(에라토스테네스의 체)를 변형해, 전처리 한 번으로 모든 질의에 답하는 방식이다.",
+      "크기가 최댓값+1 인 배열을 두고, 각 칸에 그 수를 나누는 가장 작은 소수를 적어 둔다. 소수 칸에는 자기 자신이 들어간다.",
+      "x 의 칸에 적힌 소수 p 는 x 의 소인수 중 하나다. p 를 답에 더하고 x 를 x / p 로 바꾸면 남은 수의 소인수분해 문제로 줄어든다. x 가 1 이 되면 멈춘다.",
+      "표를 모두 자기 자신으로 초기화한다 → 제곱근 이하의 각 소수 p 에 대해 p*p 부터 p 간격의 칸 중 아직 더 작은 소수가 적히지 않은 칸에 p 를 적는다 → 각 질의 x 에 대해 합을 0 으로 두고, x 가 1 보다 큰 동안 표에서 소수를 꺼내 합에 더하고 x 를 그 소수로 나눈다 → 합을 출력한다."
+    ],
+    "skillControl": {
+      "approach": "질의마다 2 부터 제곱근까지 차례로 나누어 보며 소인수분해한다.",
+      "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    q = int(data[0])\n    out = []\n    for i in range(1, q + 1):\n        x = int(data[i])\n        s = 0\n        d = 2\n        while d * d <= x:\n            while x % d == 0:\n                s += d\n                x //= d\n            d += 1\n        if x > 1:\n            s += x\n        out.append(s)\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+      "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nN = 10 ** 6\nsieve = bytearray([1]) * (N + 1)\nsieve[0] = 0\nsieve[1] = 0\nfor i in range(2, 1001):\n    if sieve[i]:\n        sieve[i * i::i] = bytearray(len(range(i * i, N + 1, i)))\nbig = [p for p in range(500000, N + 1) if sieve[p]]\nmid = [p for p in range(300, 3334) if sieve[p]]\nQ = 100000\nout = [str(Q)]\nfor _ in range(Q):\n    if rng.random() < 0.5:\n        out.append(str(rng.choice(big)))\n    else:\n        while True:\n            a = rng.choice(mid)\n            b = rng.choice(mid)\n            if a * b <= N:\n                break\n        out.append(str(a * b))\nprint(\"\\n\".join(out))\n"
+    }
+  }
+}
