@@ -43,7 +43,7 @@ reviewer/      Reviewer 프롬프트 (파일 이름이 버전이다)
 tutor/         Tutor 프롬프트 (같은 규칙)
 explain/       Explain Back 프롬프트 (같은 규칙)
 e2e/           실제 브라우저로 보는 화면 비동기 순서 검사 (Playwright)
-tests/         golden fixture + Reviewer 평가 케이스
+tests/         golden fixture + Reviewer 평가 케이스 + 채택 메타테스트용 고정 초안(generation/)
 tools/         계약 · 문제 데이터 검사 + 메타테스트
 scripts/       내 PC 에서 끝까지 띄우는 스크립트 (+ 문제 초안 생성 · 채택)
 generator/     문제 초안 생성기 프롬프트 (파일 이름이 버전이다)
@@ -57,8 +57,9 @@ docs/_archive/ 원본 PRD / Implementation Spec (현재 정본)
 배포하지 않는다. 만든 사람이 자기 PC 에서 돌린다.
 
 **필요한 것:** Docker Desktop(켜진 상태) · Java 17+ · Python 3.12+ ·
-`pip install -r requirements-dev.txt`. Claude CLI 는 선택이다 — 없으면 오답 분석 · Tutor ·
-Explain Back 만 빠지고 판정 · mastery · 다음 행동 · 오늘의 계획은 그대로 돈다.
+`pip install -r requirements-dev.txt`. Claude CLI 는 선택이다 — 없으면 앱에서는 오답 분석 · Tutor ·
+Explain Back 만 빠지고 판정 · mastery · 다음 행동 · 오늘의 계획은 그대로 돈다(문제 초안 생성과
+Reviewer 평가는 CLI 가 있어야 한다).
 
 ```bash
 scripts/local.sh check      # 필요한 것이 다 있는가 (포트 충돌도 본다)
@@ -197,8 +198,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | Explain Back - 푼 문제의 설명 분석, 기록하지 않음 (ADR-0050) | 완료 — 기본은 꺼져 있다 |
 
 슬라이스 1 범위는 Python 3.12 + BFS Grid 계열 8개 Skill + Mistake 2종 자동 드릴이었다. 지금은
-PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 모두 마쳐 도메인 마흔여섯이 전부
-켜져 있고 Skill 은 일흔여덟이다. 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
-도메인 레지스트리는 **45개 알고리즘 도메인 + Programming Foundations 1개 = 총 46개
-Registry Entry**다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
+PRD 의 웨이브(W1~W9, [ADR-0034](docs/adr/0034-the-road-to-the-full-prd.md))를 모두 마쳐 레지스트리의 도메인이
+전부 켜져 있다(개수는 위 표). 사용자의 목표(학습 트랙)가 그중 켜지는 범위를 정한다.
+도메인 레지스트리는 **알고리즘 도메인 + Programming Foundations 1개**로 이뤄진다. `curriculum/domains.yaml`에 골격으로 전부 등록돼 있고, 검증된 Skill만
 `skills.yaml`로 승격한다.

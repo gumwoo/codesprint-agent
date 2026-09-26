@@ -41,7 +41,7 @@ check() {
     || say "[!] 샌드박스 이미지가 없다 - scripts/local.sh build"
   [ -f "$JAR" ] || say "[!] 백엔드 jar 가 없다 - scripts/local.sh build"
   command -v claude >/dev/null \
-    || say "[-] claude CLI 가 없다 - Reviewer 없이 돈다 (판정 · mastery · 다음 행동은 그대로)"
+    || say "[-] claude CLI 가 없다 - Reviewer · Tutor · Explain Back 없이 돈다 (판정 · mastery · 다음 행동은 그대로)"
   # 출력을 먼저 받아 둔다. pipefail 아래서 `netstat | grep -q` 로 쓰면 grep 이 먼저
   # 끝날 때 netstat 이 SIGPIPE 로 죽어 조건 전체가 거짓이 된다 - 실제로 이 검사가
   # 사용 중인 8080 을 "비어 있다" 로 통과시켰다.
@@ -68,7 +68,7 @@ build() {
   # gradle 을 호스트에 요구하지 않는다. wrapper jar 도 저장소에 두지 않는다(CI 와 같은 이유).
   MSYS_NO_PATHCONV=1 docker run --rm -v "$ROOT":/w -w /w/backend gradle:8.10.2-jdk17 \
     gradle bootJar --no-daemon -q
-  say "[OK] $IMAGE · $(basename "$JAR")"
+  say "[OK] $IMAGE · codesprint-judge:cpp · codesprint-judge:java21 · $(basename "$JAR")"
 }
 
 backend() {
@@ -76,9 +76,10 @@ backend() {
   export DB_URL="jdbc:postgresql://localhost:$DB_PORT/codesprint"
   export CODESPRINT_REPO_ROOT="$ROOT"
   export CODESPRINT_PROBLEMS_DIR="$ROOT/problems"
-  # Reviewer 는 기본으로 꺼져 있다. 켜려면 CODESPRINT_REVIEWER_ENABLED=true 로 부른다.
+  # LLM 기능은 기본으로 꺼져 있다. 켜려면 CODESPRINT_REVIEWER_ENABLED · CODESPRINT_TUTOR_ENABLED ·
+  # CODESPRINT_EXPLAIN_ENABLED 를 true 로 부른다.
   export PORT="$APP_PORT"
-  say "화면: http://localhost:$APP_PORT  (Reviewer: ${CODESPRINT_REVIEWER_ENABLED:-false})"
+  say "화면: http://localhost:$APP_PORT  (Reviewer: ${CODESPRINT_REVIEWER_ENABLED:-false} · Tutor: ${CODESPRINT_TUTOR_ENABLED:-false} · Explain Back: ${CODESPRINT_EXPLAIN_ENABLED:-false})"
   exec java -jar "$JAR"
 }
 
