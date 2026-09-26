@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "kitten\nsitting\n",
+      "expectedOutput": "3\n",
+      "probes": []
+    },
+    {
+      "id": 2,
+      "type": "SAMPLE",
+      "hidden": false,
+      "input": "sunday\nsaturday\n",
+      "expectedOutput": "3\n",
+      "probes": []
+    },
+    {
+      "id": 3,
+      "type": "MINIMUM",
+      "hidden": true,
+      "input": "a\na\n",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 4,
+      "type": "SINGLE",
+      "hidden": true,
+      "input": "a\nb\n",
+      "expectedOutput": "1\n",
+      "probes": []
+    },
+    {
+      "id": 5,
+      "type": "BOUNDARY",
+      "hidden": true,
+      "input": "xyzab\nab\n",
+      "expectedOutput": "3\n",
+      "probes": []
+    },
+    {
+      "id": 6,
+      "type": "ALL_SAME",
+      "hidden": true,
+      "input": "aaaa\naaaaaaa\n",
+      "expectedOutput": "3\n",
+      "probes": []
+    },
+    {
+      "id": 7,
+      "type": "DUPLICATE",
+      "hidden": true,
+      "input": "abcab\nabcab\n",
+      "expectedOutput": "0\n",
+      "probes": []
+    },
+    {
+      "id": 8,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "abcdef\nfedcba\n",
+      "expectedOutput": "6\n",
+      "probes": []
+    },
+    {
+      "id": 9,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "ababb\nbbaabab\n",
+      "expectedOutput": "3\n",
+      "probes": []
+    },
+    {
+      "id": 10,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "bbccaac\nbccaa\n",
+      "expectedOutput": "2\n",
+      "probes": []
+    },
+    {
+      "id": 11,
+      "type": "RANDOM",
+      "hidden": true,
+      "input": "aabcbab\nabcbaca\n",
+      "expectedOutput": "3\n",
+      "probes": []
+    },
+    {
+      "id": 12,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "cbashqfubdlpyhhewxnwbxjwrtgstyowfgzdqklihkanlrixazcfrmvpxyzfnvdremeffxzgclybrbohijnvbvdelxddrsbshzguqomcyeblenupnomyijsrqrtbnjrfemasasbjhpffhpvtxacokirjqsprfmajasxdpyjsufkavhaltzytqrbpbtnlllxqkimzlasoxsjodzznarootceorntymyyaebgeccimijkenfbxgtodacrayxlmsqadxmtysbbumnwuqvsfdtyaptaiwlqfzxcqtaoaztfakahjvyugdnkensbnjtugutwdgfylazbtcpmpxdinyxdecqytssaqqooblsmmvvwayfpnjokrgcwigwjpgeyqijlzcagcybxzodhugujwbdxgbbxpsoesshwwhguvvdxmzazmnregnotdqzisoskgidxqtxrostekteqmjtzzmkyunmumilsefxksiwiwajekqgvejggxajyuovaxfrcvwcytdlcbfhvuttxghdpmjufxmezavydefkgdgliyunmyvkdpvmqcqwttknvkxlqqnlnbzaugjgcqhprpwlpfhfugyoyuroowhrwmtnwfovpwevafxqizzowawjhapcjtafcfcfhgnmswsmdbmlrkfgugvzgdddokantjedfcutgvxckkhbtbqlwkiybefjzkmzdlojdtoxopyuifjbhyyzxcdwbkcgoeygmvguntrruuvjfugslwowjfnbvjihrkgvpdwmifduqankxlqimtreunhwnjlyhkpdtrxaksqykdyydxtwmiojhlsgnzjofoxmldxzydhrprevwqyyqdvcyecrswthahneadeiacjwjawadxvvrxkdyaqsyhcutyyqupbwlwmdjnvmenzeqxfshjgqsrgamgsxcjwnhpzmzcdacapzxpdctunrncuyczzquiyumcxkojoflbutquarcstfvzmijdhnccdccumzyp\npsbmevrzdiumcqlpcwclpfobjmoezzupmqabdjxgklwtijnodjeavzumtlwvytwqasanfiwzhvacxjaseomistgnlpnsudtmahvoiwmfmawzpjiwgretmchrucxzvcxdqvnfixgdabjbqngwjurmpyvmowbqhgbmkcrijdltjwtoqzaekhhwvmupgmwurhzyelsgoknzvtetqwirxmidotthlugvgejvtjhjiwprhscqbiivurwujqkmndmwctimnhpbuymnviultolqmhxiludinesymjdqkvoswlsvcfiwxhkzmdwepahwpdayexlypvchodrhxgdvnrbqnmodilgogrtrfflveroztxhuleoslypuaufnehrpvzhqmmxstlqqiluekalgansmuccmepyvqltksqdjbuntvpigxawitmymhiggqaelkfwczqxvghicvgfiteyykqoqjofqmqednbofsedjzqdchglypadahpkpyzzwvvtdrutxyofwwkewsnvrmecozdaeyrhfgjbkjbuboobsytmtculsekvyxgsumuaolcfruuvxgjtigiqsnwbyawvzuwpbjkbkrifmjxfwarcjffdvrtsfjhhtkmodznomcqtollzadwxnvbcpcsejypypxdsvmlpfuhtouwvdroguozoegeklthfsbyxipssyjshtcprhimbgpbtpwfnteduxtsfhfmkpshfauuwvlzycptwsvgrxrozaxbkjcgajlpwoelcyypkpbjhiaqhzljmpzvkzhixevesaszmpknizgtgnciiwegcrlfnrzvsgaxdseadtikkqciuoodposvcrxbwdiquosjhxpbxmtvethxrkqratvwnddlhfxadfurzsrsybbusxbteyokfvhsuevzhrycqhjmibldrbkirqobjvrodhgbvuvigrmlysitzvmkpwxcqbsqykkgmtoqwhrnoqivnfrfsfxuvuiamyugfgwkae\n",
+      "expectedOutput": "895\n",
+      "probes": []
+    },
+    {
+      "id": 13,
+      "type": "ADVERSARIAL",
+      "hidden": true,
+      "input": "caadedaecbacadcbbcecddcdcdadaeedcaecaabcaadccaebedcbdadcadadcdeeaebbdbedddaaccecacacacbebccacbcdebaebdeccbcacecdeddbcaaacebbdddcaaceaddadcdaaedbadaccbeabebddecebdddacecedabadbcbebecdcacceeaedaddaacecbebadeceadbdeadcaddaeecabcdaeebabedcbeddcecababebddebeacdabcccecbbdbdcaeaaceeaaaaecabbdcececdcbcbddbaaccbcbbbdbbbcedabbecececacbeedceedaeadcedccdddcaecabdedbdebbcaaccdecbcdcdbdbdbebaceaeccbabbbbaaaebaaddbebddabbebdeadaedcdaaccbaeabbbacbeeecdabebadaedeccdcdaabdceacaeebccaaabbaecdedebdbdcdddacaaccabbabbccbaeebaddaaedddbcecdccddaacdbbccbaeaaacdadbcaedbacadcbcaaebbacabebadbdceababdedeabcabbcdecddcbcacaaacabccaddabcbcebabeeaadecdeedddacdedbadedeaddebcdecddeecddadedbaceddeacadabedacacbcdbcabaebaaddbcbccdcabacbcacdcbeabacceedcbeaeaebacdddbbbbabddccbddacecbcaebddadadebeaeeaeadbacadcdaddbddbceadeeceeacaabcecbeabdedcbddeecccaeabecadcdeaabbcebdaacbebbcedeedcbdadeeaaddbbeedadeddaeeceabcceedaacbebadeeeebacbdaacaacbdbbebabecebdadecbecaaedcdaabceacbcecbecbdaeeabeacbdaaedaaaeeddbaddabeebbdedadeeebaadddbaed\ncaadedaecbacdcbbcecddcdcaadaeedcaecaabcaadccaebedcbdadcadadcdeeaebbdbedddaaccecacacacbebccacbcdebaebdeccbcacecdeddbcaaacebbdddcaaceaddadcdaaedbadaccbeabebdecdebdddacecedabadbcbebecdcacceeaedaddaacecbebadeceadbdeadcaddaeecabcdaeebabedcbeddcecababebddebeacdabcaccecbbdbdcaeaaceeaaaaecabbdcececdcbcdbddbaaccbcbbdbbbceedbbbeececacbeedceedaeadceccdddcaecabdedbdebbcaaccdecbcdcdbdbdbebaceaeccbabbbbaaaebaaddbebddabbebdeadaedacdaaccbaeabbbacbeeecdabebadaedeccdedaabdcacaeebccaaabbaecdedebdbdcdddacaaccabbabbccbaeebeddaaedddbcecdccddaacdbdcbaeaaacdadbcaedbacadcbcaaebbacabebadbdceababdedaeabcabbcdecddcbcaeaaacabccaddabcbcebabeeaadecdcedddacdedbadedaaddebcdecddeecddadedbaceddeacadabedacacbcdbcabaebaaddbcbccdcabacbcacdcbebacceedcbeaeaebacdddbbbbabddccbddacecbcaebddadadebeaeeaeadbacadcdaddbddbceadeeceeacaabcacbeabdedcbddeeccaeabecaedcdeaabbcebdaacbaebbcedeedcbdaeeaaddbbeedadeddabeceabcceedaacbebadeeeebacbdaacaacbbdbbebabecebdadecbecaaedacdaabceacbceabcbdaeeabeacbdaaedaaaeeddbaddabeebbdedadeeebaaddbeaed\n",
+      "expectedOutput": "34\n",
+      "probes": []
+    },
+    {
+      "id": 14,
+      "type": "MAXIMUM",
+      "hidden": true,
+      "input": "baaababababbbabaaaabbabbaaaababbaabbbaabaaaabbbabbbabaabbbaabbaabbbabbbbbaabbabbbabaabbaaaaaaabaabbbbbbbaabbaabbbaaabaaabaaaaaaabbaaaabbababbabaabbaaaababbaabaabbbbbabaabaaaabaabbbabaabababbabbabbaabbbabbbabbbbaaabaabbbbbbbbaaabbbabaababbaaababbbbbabbbbaaaaaababbaaaaaabbbbbabaabbbbbbbaaabbabbabbbabbabaabbbbbaaabaaababbabbbbabbbbbbabbaaabbbaabaaaaabaaabaaaaaabaaabaabaaabbabbbababbbabbbabaabababaaabababaabaaabbbbbbaaababaabaabbbbbbaaabbbbaabaabbbaaaaaabbabbbabbababaabbabbbabbbbabbaaabbbabbbbabbabbbabaabbbabbabbabbbbabbbabaaabbbababaabaaaabaabababbbaaabaababbbbaaaabbabbababbabaaaabaaabaaabbaaababaababbbabaaababaabbabaaabaabbbbabbbbababaababbbbbbbbbabbababbbbbbababbababbaabaabbaabbbbaabaaabaabbaabbaaaabbabbabbaaababbbbbaabbaabbbaaabaabaaabbbabbbbaabbabbbbabbbbaaaaaabbbabbabbbababbabbababaaabbbbbbaaaaabaabbbaaabbbabaaabbbbaaabaabbaaabbbbbbaaabaabbababbaaaabbababbbaabbbabbbbbaabbbbabaabbaaaabaaabababaabbabbabababbaaaaabbababbbbbaabbaabbbbbabaaabaaaaabaabbaaabbaaabbbbbbaaabbaabbbaaabaabaaabbb\nabbaaaaabbbaaaaaaabbbaaaaaaabbabaabbbaabbababbababbbbaababaaaaaaaabbabaaabbabbababbaaaaabaaababbbaaabbbbbbbbabbbbbbaabaaaababaababaabbbaabaaababbbaababababbaaaabbbaabaabaaaababbaaaaaaabababbaabbbbababaaaaabbbaabbbaabbaababaaabbbaaaaaabbabbabaabbabaab\n",
+      "expectedOutput": "750\n",
+      "probes": []
+    }
+  ]
+}

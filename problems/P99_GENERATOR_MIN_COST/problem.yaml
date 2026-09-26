@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P99_GENERATOR_MIN_COST
+title: 발전기 가동 비용 최소화
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N * K)
+statement: |
+  발전소에 발전기가 N 개 있다. i 번째 발전기(1 부터 센다)는 켜면 출력 s_i 를 내고 가동 비용 c_i 가 든다. 각 발전기는 켜거나 끄거나 둘 중 하나이며, 한 발전기를 두 번 켜거나 일부만 켤 수 없다. 켠 발전기들의 출력 합이 K 이상이 되도록 할 때, 켠 발전기들의 가동 비용 합의 최솟값을 구하라. 출력 합이 K 를 넘어도 된다. 모든 발전기를 켜도 출력 합이 K 미만이면 -1 을 출력한다.
+
+  입력 형식
+  첫 줄에 정수 N, K 가 공백으로 구분되어 주어진다.
+  다음 N 개의 줄 중 i 번째 줄에 정수 s_i, c_i 가 공백으로 구분되어 주어진다.
+
+  출력 형식
+  가동 비용 합의 최솟값을 한 줄에 출력한다. 불가능하면 -1 을 출력한다.
+
+  제약
+  1 <= N <= 100
+  1 <= K <= 5000
+  1 <= s_i <= 5000
+  1 <= c_i <= 1000000
+  발전기 번호는 1 부터 세지만 답에는 번호가 쓰이지 않는다.
+
+  예시 설명
+  N=2, K=10 이고 발전기가 (출력 5, 비용 1), (출력 10, 비용 100) 이면, 첫 번째 발전기는 한 번만 켤 수 있으므로 출력 합 10 이상을 만들려면 두 번째 발전기를 켜야 하고 답은 100 이다.
+skills:
+- code: ZERO_ONE_KNAPSACK
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 발전기마다 켜는 경우와 끄는 경우를 재귀로 모두 따라가 2^N 개 조합을 전부 확인한다.

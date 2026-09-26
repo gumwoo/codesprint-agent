@@ -1,0 +1,32 @@
+{
+  "problemCode": "P97_POSTAGE_COMBINATIONS",
+  "problemTitle": "우표 금액 맞추기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "UNBOUNDED_KNAPSACK"
+  ],
+  "sourceCode": "\nimport sys\n\nMOD = 1_000_000_007\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    coins = [int(x) for x in data[2:2 + n]]\n    dp = [0] * (m + 1)\n    dp[0] = 1\n    for s in range(1, m + 1):\n        for c in coins:\n            if c <= s:\n                dp[s] = (dp[s] + dp[s - c]) % MOD\n    print(dp[m])\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      5,
+      9
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      6,
+      7,
+      8,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

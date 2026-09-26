@@ -1,0 +1,11 @@
+{
+  "id": "MONOTONIC_STACK-1790375208450-1",
+  "skill": "MONOTONIC_STACK",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:51:13+00:00",
+  "code": "P95_NEXT_HIGHER_PEAK_DISTANCE",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    a = [int(v) for v in data[1:1 + n]]\n    ans = [0] * n\n    for j in range(n):\n        for i in range(j):\n            if ans[i] == 0 and a[j] > a[i]:\n                ans[i] = j - i\n    print(' '.join(str(v) for v in ans))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.read().split()[0])\nr = random.Random(seed)\nn = r.randint(1, 12)\nhi = r.choice([2, 3, 5, 10, 1000000])\na = [r.randint(1, hi) for _ in range(n)]\nprint(n)\nprint(' '.join(map(str, a)))\n",
+  "stressInputGenerator": "import random\n\nr = random.Random(20260926)\nn = 100000\na = []\npeak = 1000000\nwhile len(a) < n:\n    a.append(peak)\n    nxt = peak - r.randint(-3, 12)\n    for _ in range(r.randint(1, 6)):\n        a.append(r.randint(1, nxt - 1))\n    peak = nxt\na = a[:n]\nprint(n)\nprint(' '.join(map(str, a)))\n"
+}

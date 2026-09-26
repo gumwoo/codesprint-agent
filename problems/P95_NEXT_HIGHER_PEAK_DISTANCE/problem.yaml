@@ -1,0 +1,40 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P95_NEXT_HIGHER_PEAK_DISTANCE
+title: 더 높은 봉우리까지의 거리
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N)
+statement: |
+  일직선 위에 봉우리 N 개가 왼쪽부터 차례로 서 있다. 봉우리의 번호는 0 부터 N-1 까지 0-based 로 센다. i 번 봉우리의 높이는 A_i 이다.
+
+  각 봉우리 i 에 대해, i 보다 오른쪽에 있고 높이가 A_i 보다 엄격히 큰 봉우리 중 i 에 가장 가까운 봉우리를 j 라 할 때 j - i 를 구한다. 그런 봉우리가 없으면 0 이다. 높이가 같은 봉우리는 더 높은 봉우리가 아니다.
+
+  예: A = [4, 4, 2, 3, 4, 5] 이면 0 번 봉우리보다 높은 첫 봉우리는 5 번이므로 답은 5, 2 번 봉우리(높이 2)는 바로 오른쪽 3 번(높이 3)이 더 높으므로 답은 1, 5 번 봉우리는 오른쪽에 봉우리가 없으므로 답은 0 이다.
+
+  입력
+  첫째 줄에 N 이 주어진다. (1 ≤ N ≤ 100000)
+  둘째 줄에 A_0, A_1, ..., A_{N-1} 이 공백으로 구분되어 주어진다. (1 ≤ A_i ≤ 1000000)
+
+  출력
+  한 줄에 0 번부터 N-1 번 봉우리까지의 답 N 개를 공백으로 구분하여 출력한다.
+skills:
+- code: MONOTONIC_STACK
+  role: PRIMARY
+  weight: 0.7
+- code: STACK_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- OUTPUT_FORMAT
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 봉우리마다 오른쪽으로 한 칸씩 훑어 처음으로 더 높은 봉우리를 찾는다.

@@ -1,0 +1,46 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P90_QUEST_ORDER_DISCOUNT
+title: 퀘스트 완료 순서
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(2^N * N)
+statement: |
+  모험가가 N 개의 퀘스트를 모두 한 번씩 완료하려 한다. 퀘스트에는 0 부터 N-1 까지 번호가 붙어 있다(0-based). 한 번에 퀘스트 하나만 진행하며, 순서는 자유롭게 정할 수 있다.
+
+  퀘스트 i 의 기본 소요 시간은 t[i] 이다. 퀘스트 j 를 이미 완료했다면 그 뒤에 진행하는 퀘스트 i 의 소요 시간이 d[j][i] 만큼 줄어든다. 여러 퀘스트를 이미 완료했다면 줄어드는 양은 모두 더해진다. 단, 소요 시간은 1 보다 작아지지 않는다. 즉 퀘스트 i 를 진행할 때의 실제 소요 시간은 max(1, t[i] - (그때까지 완료한 모든 퀘스트 j 에 대한 d[j][i] 의 합)) 이다. d[j][i] 와 d[i][j] 는 다를 수 있다.
+
+  예를 들어 N = 2, t = [10, 10], d[0][1] = 9, d[1][0] = 0 이면 0 번을 먼저 하면 10 + 1 = 11, 1 번을 먼저 하면 10 + 10 = 20 이다.
+
+  모든 퀘스트를 완료하는 데 걸리는 총 소요 시간의 최솟값을 구하라.
+
+  입력 형식
+  - 첫 줄: 정수 N
+  - 둘째 줄: 정수 N 개 t[0] t[1] ... t[N-1]
+  - 다음 N 줄: i 번째 줄(0-based)에 정수 N 개 d[i][0] d[i][1] ... d[i][N-1]
+
+  출력 형식
+  - 총 소요 시간의 최솟값을 정수 하나로 출력한다.
+
+  제약
+  - 1 <= N <= 15
+  - 1 <= t[i] <= 1000
+  - 0 <= d[i][j] <= 100
+  - d[i][i] = 0
+skills:
+- code: BITMASK_DP
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 가능한 모든 완료 순서를 재귀로 하나씩 만들어 총 소요 시간을 계산한다.

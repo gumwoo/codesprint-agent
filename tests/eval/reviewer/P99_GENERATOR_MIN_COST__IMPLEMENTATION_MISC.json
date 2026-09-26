@@ -1,0 +1,35 @@
+{
+  "problemCode": "P99_GENERATOR_MIN_COST",
+  "problemTitle": "발전기 가동 비용 최소화",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "ZERO_ONE_KNAPSACK"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    k = int(data[1])\n    INF = float(\"inf\")\n    best = [INF] * (k + 1)\n    best[0] = 0\n    idx = 2\n    for _ in range(n):\n        s = int(data[idx])\n        c = int(data[idx + 1])\n        idx += 2\n        for j in range(1, k + 1):\n            p = j - s\n            if p < 0:\n                p = 0\n            v = best[p] + c\n            if v < best[j]:\n                best[j] = v\n    print(best[k] if best[k] != INF else -1)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      7,
+      8,
+      9,
+      11,
+      13
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      10,
+      12,
+      14
+    ]
+  },
+  "probes": {}
+}

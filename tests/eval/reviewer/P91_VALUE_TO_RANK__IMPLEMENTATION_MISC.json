@@ -1,0 +1,32 @@
+{
+  "problemCode": "P91_VALUE_TO_RANK",
+  "problemTitle": "값을 순위로 바꾸기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "COORDINATE_COMPRESSION"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    a = list(map(int, data[1:1 + n]))\n    rank = {}\n    for i, v in enumerate(sorted(a)):\n        if v not in rank:\n            rank[v] = i\n    sys.stdout.write(\" \".join(str(rank[x]) for x in a) + \"\\n\")\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      2,
+      3,
+      4,
+      6
+    ],
+    "failedCaseIds": [
+      1,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

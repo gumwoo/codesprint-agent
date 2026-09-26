@@ -1,0 +1,35 @@
+{
+  "problemCode": "P89_DELIVERY_ROUTE_ORDER",
+  "problemTitle": "배달 순서 정하기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "BITMASK_DP",
+    "PYTHON_LIST_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    t = [[int(data[1 + i * n + j]) for j in range(n)] for i in range(n)]\n    INF = float('inf')\n    full = 1 << n\n    dp = [[INF] * n for _ in range(full)]\n    dp[1][0] = 0\n    for mask in range(1, full, 2):\n        row = dp[mask]\n        for last in range(n):\n            cur = row[last]\n            if cur == INF:\n                continue\n            tl = [t[k][last] for k in range(n)]\n            for nxt in range(n):\n                if mask >> nxt & 1:\n                    continue\n                nm = mask | (1 << nxt)\n                v = cur + tl[nxt]\n                if v < dp[nm][nxt]:\n                    dp[nm][nxt] = v\n    print(min(dp[full - 1]))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "probes": {}
+}

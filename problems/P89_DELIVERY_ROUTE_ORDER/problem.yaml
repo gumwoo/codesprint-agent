@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P89_DELIVERY_ROUTE_ORDER
+title: 배달 순서 정하기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(2^N * N^2)
+statement: |
+  배달원이 물류 창고에서 출발해 N 곳의 장소를 모두 한 번씩 방문하려 한다. 장소에는 0 부터 N-1 까지 번호가 붙어 있고(0-based), 0 번 장소가 물류 창고다. 배달원은 0 번 장소에서 출발하며, 0 번을 포함한 모든 장소를 정확히 한 번씩 방문한다. 마지막 장소에 도착하면 배달이 끝나고, 0 번으로 돌아오지 않는다.
+
+  i 번 장소에서 j 번 장소로 바로 이동하는 데 걸리는 시간은 T[i][j] 이다. 일방통행 길이 있어서 T[i][j] 와 T[j][i] 는 다를 수 있다. 장소를 방문하는 순서를 정해 전체 이동 시간의 합이 가장 작게 되도록 할 때, 그 최솟값을 구하라.
+
+  예를 들어 N = 3 이고 순서를 0, 2, 1 로 정하면 전체 이동 시간은 T[0][2] + T[2][1] 이다.
+
+  입력 형식
+  첫째 줄에 정수 N 이 주어진다. (1 ≤ N ≤ 13)
+  다음 N 개의 줄 중 i 번째 줄(i 는 0 부터 센다)에 정수 N 개 T[i][0], T[i][1], ..., T[i][N-1] 이 공백으로 구분되어 주어진다.
+  T[i][i] = 0 이고, i ≠ j 이면 1 ≤ T[i][j] ≤ 1000 이다.
+
+  출력 형식
+  전체 이동 시간의 최솟값을 정수 하나로 한 줄에 출력한다. N = 1 이면 0 을 출력한다.
+skills:
+- code: BITMASK_DP
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- INDEX_ERROR
+- INPUT_PARSE
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: INDEX_ERROR
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 0 번에서 시작해 방문하지 않은 장소를 하나씩 고르는 DFS 로 모든 방문 순서를 끝까지 시도한다.

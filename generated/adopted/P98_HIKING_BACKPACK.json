@@ -1,0 +1,11 @@
+{
+  "id": "ZERO_ONE_KNAPSACK-1790375038559-1",
+  "skill": "ZERO_ONE_KNAPSACK",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:52:32+00:00",
+  "code": "P98_HIKING_BACKPACK",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    cap = int(data[1])\n    items = []\n    for i in range(n):\n        items.append((int(data[2 + 2 * i]), int(data[3 + 2 * i])))\n    answer = 0\n    for mask in range(1 << n):\n        total_w = 0\n        total_v = 0\n        for i in range(n):\n            if mask >> i & 1:\n                total_w += items[i][0]\n                total_v += items[i][1]\n        if total_w <= cap and total_v > answer:\n            answer = total_v\n    print(answer)\n\n\nmain()\n",
+  "inputGenerator": "import sys\nimport random\n\n\ndef main():\n    seed = int(sys.stdin.read().split()[0])\n    rng = random.Random(seed)\n    n = rng.randint(1, 10)\n    cap = rng.randint(1, 50)\n    lines = [f\"{n} {cap}\"]\n    for _ in range(n):\n        lines.append(f\"{rng.randint(1, 20)} {rng.randint(1, 30)}\")\n    print(\"\\n\".join(lines))\n\n\nmain()\n",
+  "stressInputGenerator": "import random\n\n\ndef main():\n    rng = random.Random(20260926)\n    n = 100\n    cap = 10000\n    lines = [f\"{n} {cap}\"]\n    for _ in range(n):\n        lines.append(f\"{rng.randint(50, 300)} {rng.randint(1, 1000000)}\")\n    print(\"\\n\".join(lines))\n\n\nmain()\n"
+}

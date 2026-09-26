@@ -1,0 +1,11 @@
+{
+  "id": "COORDINATE_COMPRESSION-1790375218402-2",
+  "skill": "COORDINATE_COMPRESSION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:50:03+00:00",
+  "code": "P92_POINT_GRID_SHRINK",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef rank(v, vals):\n    return sum(1 for u in vals if u < v)\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    pts = []\n    for i in range(n):\n        pts.append((int(data[1 + 2 * i]), int(data[2 + 2 * i])))\n    dx = []\n    dy = []\n    for x, y in pts:\n        if x not in dx:\n            dx.append(x)\n        if y not in dy:\n            dy.append(y)\n    h, w = len(dy), len(dx)\n    out = [f'{h} {w}']\n    for r in range(h):\n        row = []\n        for c in range(w):\n            cnt = 0\n            for x, y in pts:\n                if rank(y, dy) == r and rank(x, dx) == c:\n                    cnt += 1\n            row.append(str(cnt))\n        out.append(' '.join(row))\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\npx = [rng.randint(-10**9, 10**9) for _ in range(rng.randint(1, 4))]\npy = [rng.randint(-10**9, 10**9) for _ in range(rng.randint(1, 4))]\nlines = [str(n)]\nfor _ in range(n):\n    lines.append(f'{rng.choice(px)} {rng.choice(py)}')\nprint('\\n'.join(lines))\n",
+  "stressInputGenerator": null
+}

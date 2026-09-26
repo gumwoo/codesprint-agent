@@ -1,0 +1,33 @@
+{
+  "problemCode": "P94_BOOKSHELF_MIN_REMOVE",
+  "problemTitle": "책장 정리",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "LIS_NLOGN"
+  ],
+  "sourceCode": "\nimport sys\nfrom bisect import bisect_left\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    tails = []\n    for x in map(int, data[1:1 + n]):\n        pos = bisect_left(tails, x)\n        if pos == len(tails):\n            tails.append(x)\n        else:\n            tails[pos] = x\n    print(n - len(tails))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      6,
+      9,
+      10,
+      11
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      7,
+      8,
+      12
+    ]
+  },
+  "probes": {}
+}

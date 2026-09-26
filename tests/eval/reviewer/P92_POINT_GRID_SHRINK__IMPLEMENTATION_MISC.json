@@ -1,0 +1,33 @@
+{
+  "problemCode": "P92_POINT_GRID_SHRINK",
+  "problemTitle": "점 지도 줄이기",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "COORDINATE_COMPRESSION",
+    "GRID_COORDINATE"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    pts = [(int(data[1 + 2 * i]), int(data[2 + 2 * i])) for i in range(n)]\n    xs = sorted(p[0] for p in pts)\n    ys = sorted(p[1] for p in pts)\n    xr = {v: i for i, v in enumerate(xs)}\n    yr = {v: i for i, v in enumerate(ys)}\n    h, w = len(ys), len(xs)\n    grid = [[0] * w for _ in range(h)]\n    for x, y in pts:\n        grid[yr[y]][xr[x]] += 1\n    out = [f'{h} {w}']\n    out.extend(' '.join(map(str, row)) for row in grid)\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "probes": {}
+}

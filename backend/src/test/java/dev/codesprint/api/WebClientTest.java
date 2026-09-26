@@ -351,10 +351,15 @@ class WebClientTest {
         assertThat(problems).isNotEmpty();
 
         // 순서를 고정한다. 카탈로그의 Map 은 순서를 보장하지 않아, 정렬하지 않으면
-        // 같은 데이터인데 실행할 때마다 목록이 다르게 보인다.
+        // 같은 데이터인데 실행할 때마다 목록이 다르게 보인다. 순서는 **번호 순**이다 - 글자
+        // 순이면 P100 이 P11 앞에 온다(ADR-0035). 운영의 비교자를 가져다 쓰지 않고 여기서
+        // 번호를 다시 읽는다 - 같은 비교자로 재면 틀려도 서로 맞는다.
         var codes = new java.util.ArrayList<String>();
         problems.forEach(problem -> codes.add(problem.get("code").asText()));
-        assertThat(codes).isSorted();
+        var numbers = codes.stream()
+                .map(code -> Integer.parseInt(code.substring(1, code.indexOf('_'))))
+                .toList();
+        assertThat(numbers).as("문제 번호 순").isSorted();
     }
 
     /**

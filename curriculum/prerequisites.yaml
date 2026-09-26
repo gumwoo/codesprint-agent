@@ -235,3 +235,44 @@ prerequisites:
   - skill: TOPOLOGICAL_ORDER
     requires: BFS_BASIC
     minimum_mastery: 0.65
+
+  # ── W6b · INTERMEDIATE DP · 수열 · 단조 스택 (ADR-0041) ─────────────────
+  - skill: BITMASK_DP
+    requires: DP_1D
+    minimum_mastery: 0.65
+
+  - skill: BITMASK_DP
+    requires: BRUTE_FORCE_ENUMERATION
+    minimum_mastery: 0.65
+
+  - skill: LIS_NLOGN
+    requires: DP_1D
+    minimum_mastery: 0.65
+
+  - skill: LIS_NLOGN
+    requires: BINARY_SEARCH_BOUNDS
+    minimum_mastery: 0.65
+
+  - skill: EDIT_DISTANCE
+    requires: DP_2D
+    minimum_mastery: 0.65
+
+  - skill: ZERO_ONE_KNAPSACK
+    requires: DP_2D
+    minimum_mastery: 0.65
+
+  - skill: UNBOUNDED_KNAPSACK
+    requires: DP_1D
+    minimum_mastery: 0.65
+
+  - skill: COORDINATE_COMPRESSION
+    requires: SORT_CUSTOM_KEY
+    minimum_mastery: 0.65
+
+  - skill: COORDINATE_COMPRESSION
+    requires: BINARY_SEARCH_BOUNDS
+    minimum_mastery: 0.65
+
+  - skill: MONOTONIC_STACK
+    requires: STACK_BASIC
+    minimum_mastery: 0.65

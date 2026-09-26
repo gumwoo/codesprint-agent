@@ -1,0 +1,11 @@
+{
+  "id": "BITMASK_DP-1790375038537-1",
+  "skill": "BITMASK_DP",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-25T22:49:11+00:00",
+  "code": "P89_DELIVERY_ROUTE_ORDER",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\nfrom itertools import permutations\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    t = [[int(data[1 + i * n + j]) for j in range(n)] for i in range(n)]\n    best = None\n    for order in permutations(range(1, n)):\n        cost = 0\n        prev = 0\n        for p in order:\n            cost += t[prev][p]\n            prev = p\n        if best is None or cost < best:\n            best = cost\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 7)\nprint(n)\nfor i in range(n):\n    print(' '.join('0' if i == j else str(rng.randint(1, 50)) for j in range(n)))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 13\nprint(n)\nfor i in range(n):\n    print(' '.join('0' if i == j else str(rng.randint(1, 1000)) for j in range(n)))\n"
+}

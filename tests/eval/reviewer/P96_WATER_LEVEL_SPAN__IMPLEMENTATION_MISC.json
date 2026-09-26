@@ -1,0 +1,33 @@
+{
+  "problemCode": "P96_WATER_LEVEL_SPAN",
+  "problemTitle": "수위 기록의 연속 구간",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MONOTONIC_STACK",
+    "STACK_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    a = list(map(int, data[1:1 + n]))\n    stack = []\n    res = [0] * n\n    for i in range(n):\n        x = a[i]\n        while stack and a[stack[-1]] < x:\n            stack.pop()\n        res[i] = i - stack[-1] if stack else i + 1\n        stack.append(i)\n    print(\" \".join(map(str, res)))\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 2,
+    "stderr": null,
+    "passedCaseIds": [
+      1,
+      3,
+      5,
+      7,
+      8,
+      9,
+      10
+    ],
+    "failedCaseIds": [
+      2,
+      4,
+      6,
+      11
+    ]
+  },
+  "probes": {}
+}

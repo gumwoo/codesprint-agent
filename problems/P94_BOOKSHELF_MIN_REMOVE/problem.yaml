@@ -1,0 +1,37 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P94_BOOKSHELF_MIN_REMOVE
+title: 책장 정리
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N log N)
+statement: |
+  책장에 책 N권이 왼쪽부터 한 줄로 꽂혀 있다. 왼쪽에서 i번째 책(1부터 센다)의 권 번호는 A_i 이다. 몇 권을 빼내고, 남은 책은 자리를 바꾸지 않는다. 남은 책을 왼쪽부터 읽었을 때 권 번호가 한 번도 줄어들지 않아야 한다. 같은 권 번호가 연달아 남는 것은 허용된다. 예를 들어 3 1 2 2 5 4 에서 3 과 4 를 빼면 1 2 2 5 가 남아 조건을 만족한다. 빼내야 하는 책의 최소 권수를 구하라.
+
+  입력 형식
+  첫째 줄에 N 이 주어진다.
+  둘째 줄에 A_1 A_2 ... A_N 이 공백으로 구분되어 주어진다.
+
+  출력 형식
+  빼내야 하는 책의 최소 권수를 정수 하나로 출력한다.
+
+  제약
+  1 ≤ N ≤ 100000
+  1 ≤ A_i ≤ 10^9
+  책의 위치는 1부터 센다.
+skills:
+- code: LIS_NLOGN
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 각 책마다 앞의 모든 책을 보고 그 책으로 끝나는 가장 긴 줄어들지 않는 부분 수열 길이를 갱신하는 O(N^2) 동적 계획법

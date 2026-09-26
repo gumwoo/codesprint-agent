@@ -1,0 +1,42 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P98_HIKING_BACKPACK
+title: 등산 배낭 꾸리기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 900
+referenceComplexity: O(N * W)
+statement: |
+  등산을 앞두고 챙길 수 있는 물건이 N 개 있다. 각 물건은 무게와 가치가 정해져 있고, 같은 물건은 하나씩만 있다. 즉 물건마다 배낭에 넣거나 넣지 않거나 둘 중 하나만 고를 수 있으며, 한 물건을 쪼개거나 두 번 넣을 수 없다. 배낭에 넣은 물건들의 무게 합은 W 이하여야 한다. 이 조건을 지키면서 배낭에 넣은 물건들의 가치 합이 가장 크게 되도록 할 때, 그 최대 가치 합을 구하라. 아무것도 넣지 않을 수도 있으며, 그 경우 가치 합은 0 이다.
+
+  입력 형식
+  첫 줄에 물건 수 N 과 무게 한도 W 가 공백으로 구분되어 주어진다.
+  다음 N 개의 줄에 물건 하나의 무게 w 와 가치 v 가 공백으로 구분되어 주어진다. 물건은 입력 순서대로 1 번부터 N 번까지 1-based 로 번호가 붙지만, 출력에는 번호를 쓰지 않는다.
+
+  출력 형식
+  무게 합이 W 이하가 되도록 고른 물건들의 가치 합 중 최댓값을 정수 하나로 한 줄에 출력한다.
+
+  제약
+  1 <= N <= 100
+  1 <= W <= 10000
+  1 <= w <= 10000
+  1 <= v <= 1000000
+
+  예시 설명
+  입력이 "2 10 / 4 10 / 3 9" 이면 두 물건을 모두 넣어 무게 7, 가치 19 가 최대다. 무게 3 짜리 물건은 하나뿐이므로 여러 번 넣을 수 없다.
+skills:
+- code: ZERO_ONE_KNAPSACK
+  role: PRIMARY
+  weight: 1.0
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 물건마다 넣는 경우와 넣지 않는 경우를 재귀로 모두 시도하고, 무게 한도를 넘는 가지만 잘라낸다(메모이제이션 없음).
