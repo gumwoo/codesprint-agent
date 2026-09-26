@@ -6,7 +6,7 @@ code: P111_DIVISOR_COUNT_QUERIES
 title: 약수 개수 질의
 kind: NORMAL
 source: DEV_FIXTURE
-timeLimitMs: 2000
+timeLimitMs: 1000
 memoryLimitMb: 256
 expectedSolveSeconds: 900
 referenceComplexity: O(M log log M + Q log M), M 은 x_i 의 최댓값
