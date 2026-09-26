@@ -1,0 +1,7 @@
+{
+  "problemCode": "P55_RANGE_COUNT_SORTED",
+  "label": "SOUND",
+  "explanation": "배열이 정렬돼 있으므로 L 이상이 처음 나오는 위치는 bisect_left(a, L), R 을 넘는 값이 처음 나오는 위치는 bisect_right(a, R) 로 각각 로그 시간에 찾는다. 두 위치 사이의 값은 전부 L 이상 R 이하이므로 개수는 bisect_right(a, R) - bisect_left(a, L) 이고, 질의마다 이 계산만 하므로 질의가 10만 개여도 빠르다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

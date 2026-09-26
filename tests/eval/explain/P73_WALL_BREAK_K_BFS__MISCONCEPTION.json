@@ -1,0 +1,7 @@
+{
+  "problemCode": "P73_WALL_BREAK_K_BFS",
+  "label": "MISCONCEPTION",
+  "explanation": "정점을 (행, 열, 부순 벽 수) 로 두고 BFS 를 한다. visited 는 칸마다 한 번만 표시하면 충분한데, 먼저 도착한 경로가 항상 더 짧으므로 나중에 벽을 덜 부수고 온 경로는 버려도 된다.",
+  "omittedPoint": null,
+  "plantedMisconception": "visited 를 칸 단위로만 두어도 된다고 했다 - 벽을 덜 부수고 늦게 온 경로가 나중에 벽을 넘어야 할 때 필요하다"
+}

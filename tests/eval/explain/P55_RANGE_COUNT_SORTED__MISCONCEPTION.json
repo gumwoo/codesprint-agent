@@ -1,0 +1,7 @@
+{
+  "problemCode": "P55_RANGE_COUNT_SORTED",
+  "label": "MISCONCEPTION",
+  "explanation": "배열이 정렬돼 있으므로 bisect 로 위치를 찾는다. L 이상이 처음 나오는 위치는 bisect_right(a, L), R 이하가 끝나는 위치는 bisect_left(a, R) 이므로 개수는 bisect_left(a, R) - bisect_right(a, L) 이다.",
+  "omittedPoint": null,
+  "plantedMisconception": "bisect_left 와 bisect_right 의 의미를 뒤바꿨다 - L 과 같은 값과 R 과 같은 값을 빠뜨린다"
+}

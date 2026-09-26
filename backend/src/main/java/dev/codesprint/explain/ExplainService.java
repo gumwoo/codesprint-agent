@@ -105,6 +105,20 @@ public class ExplainService {
         return "왜 이 문제에서 " + skillName + " 이(가) 통하는지 두 문장으로 설명해 보세요.";
     }
 
+    /**
+     * 모델에 보낼 요청. <b>평가 하네스도 이것을 부른다</b>(ADR-0052) - 따로 조립하면 평가가 재는 입력이 앱이
+     * 보내는 입력과 달라져, 잰 값이 실제와 무관해진다.
+     */
+    public static ExplainPort.Request request(ProblemCatalog.ProblemDefinition problem,
+            CurriculumCatalog curriculum, String explanation) {
+        var skill = curriculum.skill(problem.primarySkill());
+        var concept = curriculum.concept(problem.primarySkill());
+        return new ExplainPort.Request(problem.title(), skill.code(), skill.name(),
+                concept == null ? "(개념 자료 없음)" : concept.title() + " - " + concept.summary(),
+                concept == null ? List.of() : concept.keyPoints(), question(skill.name()),
+                explanation.strip());
+    }
+
     public Result explain(long userId, String problemCode, String explanation) {
         users.findById(userId).orElseThrow(() -> new NotFound("그런 사용자가 없다: " + userId));
         var problem = problems.find(problemCode);
@@ -130,15 +144,10 @@ public class ExplainService {
         if (!explainer.enabled()) {
             throw new Disabled("Explain Back 이 꺼져 있다 - CODESPRINT_EXPLAIN_ENABLED=true 로 켠다");
         }
-        var skill = curriculum.skill(problem.primarySkill());
-        var concept = curriculum.concept(problem.primarySkill());
-        String question = question(skill.name());
-        ExplainPort.Request request = new ExplainPort.Request(problem.title(), skill.code(),
-                skill.name(),
-                concept == null ? "(개념 자료 없음)" : concept.title() + " - " + concept.summary(),
-                concept == null ? List.of() : concept.keyPoints(), question, explanation.strip());
+        ExplainPort.Request request = request(problem, curriculum, explanation);
+        String question = request.question();
         return explainer.analyze(request)
-                .map(a -> new Result(problemCode, skill.code(), question, a.coveredPoints(),
+                .map(a -> new Result(problemCode, request.skillCode(), question, a.coveredPoints(),
                         a.missingPoints(), a.misconception(), a.followUpQuestion(),
                         explainer.promptVersion()))
                 .orElseThrow(() -> new Unusable("설명 분석을 쓸 수 없었다 - 다시 보낸다"));

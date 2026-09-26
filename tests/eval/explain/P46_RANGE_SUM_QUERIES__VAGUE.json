@@ -1,0 +1,7 @@
+{
+  "problemCode": "P46_RANGE_SUM_QUERIES",
+  "label": "VAGUE",
+  "explanation": "누적합을 쓰면 빠르다. 그래서 누적합을 썼다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

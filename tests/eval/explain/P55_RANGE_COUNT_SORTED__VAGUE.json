@@ -1,0 +1,7 @@
+{
+  "problemCode": "P55_RANGE_COUNT_SORTED",
+  "label": "VAGUE",
+  "explanation": "정렬돼 있으면 이분 탐색을 쓴다. 그래서 빨리 풀렸다.",
+  "omittedPoint": null,
+  "plantedMisconception": null
+}

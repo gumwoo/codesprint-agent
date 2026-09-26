@@ -1,0 +1,7 @@
+{
+  "problemCode": "P46_RANGE_SUM_QUERIES",
+  "label": "MISCONCEPTION",
+  "explanation": "prefix[i] 를 A_1 부터 A_i 까지의 합으로 두면 구간 합을 뺄셈 한 번으로 구한다. 구간 l..r 의 합은 prefix[r] - prefix[l] 이다.",
+  "omittedPoint": null,
+  "plantedMisconception": "구간 l..r 의 합을 prefix[r] - prefix[l] 로 구한다고 했다 - A_l 이 빠진다"
+}
