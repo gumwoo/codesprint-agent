@@ -1,0 +1,44 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P128_PIPE_NETWORK_MAX_FLOW
+title: 배수관 네트워크의 최대 송수량
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1800
+referenceComplexity: O(N^2 * M) (Dinic)
+statement: |
+  정수장 N개와 한 방향으로만 물이 흐르는 배수관 M개가 있다. 정수장은 1번부터 N번까지 1-based 번호를 갖는다. i번째 배수관은 정수장 u_i 에서 v_i 로 초당 최대 c_i 만큼 물을 보낼 수 있다. 같은 두 정수장 사이에 배수관이 여러 개 있을 수 있고, 서로 반대 방향 배수관이 함께 있을 수도 있다.
+
+  1번 정수장에서 물을 내보내 N번 정수장에 모은다. 각 배수관에 흐르는 양은 0 이상 그 배수관의 한도 이하이고, 1번과 N번을 뺀 모든 정수장에서는 들어오는 양의 합과 나가는 양의 합이 같아야 한다. 이때 N번 정수장에 초당 도착하는 물의 양(N번으로 들어오는 양의 합 - N번에서 나가는 양의 합)의 최댓값을 구한다. 이 값은 항상 정수다.
+
+  입력
+  첫 줄에 N, M 이 공백으로 주어진다.
+  다음 M개 줄의 i번째 줄에 u_i v_i c_i 가 공백으로 주어진다.
+
+  출력
+  최댓값을 정수 하나로 한 줄에 출력한다. 1번에서 N번으로 물을 보낼 수 없으면 0 을 출력한다.
+
+  제약
+  2 <= N <= 60
+  1 <= M <= 1000
+  1 <= u_i, v_i <= N, u_i != v_i
+  1 <= c_i <= 1000000
+skills:
+- code: MAX_FLOW
+  role: PRIMARY
+  weight: 0.7
+- code: BFS_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 1번을 포함하고 N번을 포함하지 않는 정점 집합을 모두 나열해 그 집합에서 밖으로 나가는 간선 용량 합의 최솟값을 구한다.

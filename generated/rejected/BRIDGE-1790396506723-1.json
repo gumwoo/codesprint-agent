@@ -1,0 +1,79 @@
+{
+  "id": "BRIDGE-1790396506723-1",
+  "skill": "BRIDGE",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:55:28+00:00",
+  "stage": "중복",
+  "code": "P126_CRITICAL_CABLES",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P127_ROAD_CLOSURE_QUERY 에 포함된다 - 둘 다 단절선 집합을 구하고, P127 은 같은 두 정점 사이의 중복 간선까지 다룬 뒤 질의로 묻는다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "BRIDGE-1790396506723-1",
+    "skill": "BRIDGE",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T04:21:46.728600200Z",
+    "draft": {
+      "codeSuffix": "CRITICAL_CABLES",
+      "title": "끊기면 안 되는 케이블",
+      "statement": "컴퓨터 N대와 케이블 M개가 있다. 컴퓨터는 1번부터 N번까지, 케이블은 입력 순서대로 1번부터 M번까지 번호가 붙는다(1-based). 각 케이블은 서로 다른 두 컴퓨터를 양방향으로 잇는다. 두 컴퓨터는 케이블을 따라 오갈 수 있으면 통신할 수 있다. 전체 네트워크가 처음부터 하나로 이어져 있지 않을 수도 있다.\n\n케이블 하나만 끊었을 때, 끊기 전에는 통신할 수 있던 두 컴퓨터 중 통신할 수 없게 되는 쌍이 하나라도 생기면 그 케이블을 '중요 케이블'이라 한다. 모든 중요 케이블의 번호를 구하라.\n\n입력\n첫 줄에 N M 이 주어진다.\n다음 M줄의 i번째 줄에 i번 케이블이 잇는 두 컴퓨터 번호 u v 가 주어진다.\n\n제약\n2 <= N <= 50000\n1 <= M <= 100000\n1 <= u, v <= N, u != v\n같은 두 컴퓨터를 잇는 케이블은 두 개 이상 주어지지 않는다.\n\n출력\n첫 줄에 중요 케이블의 개수 K 를 출력한다.\nK > 0 이면 둘째 줄에 중요 케이블 번호를 오름차순으로 공백 하나씩 띄워 출력한다. K = 0 이면 첫 줄만 출력한다.",
+      "secondarySkills": [
+        "DFS_TRAVERSAL"
+      ],
+      "referenceComplexity": "O(N + M)",
+      "expectedSolveSeconds": 1500,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "OUTPUT_FORMAT"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "자식에서 올라온 최소 방문 순서가 부모의 방문 순서와 같을 때도 중요 케이블로 판정한다(엄격한 비교 대신 같음을 포함하는 비교). 사이클의 첫 간선이 잘못 포함된다.",
+      "sampleInputs": [
+        "6 6\n1 2\n2 3\n3 1\n2 4\n4 5\n4 6\n",
+        "6 5\n1 2\n2 3\n3 1\n4 5\n5 6\n"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "2 1\n1 2\n"
+        },
+        {
+          "type": "SINGLE",
+          "input": "3 3\n1 2\n2 3\n3 1\n"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "5 6\n1 2\n2 3\n3 1\n3 4\n4 5\n5 3\n"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "7 7\n1 2\n2 3\n3 1\n3 4\n4 5\n5 6\n6 4\n"
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "5 4\n1 2\n1 3\n1 4\n1 5\n"
+        }
+      ],
+      "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(2, 8)\npairs = [(u, v) for u in range(1, n + 1) for v in range(u + 1, n + 1)]\nm = rng.randint(1, min(len(pairs), 12))\nchosen = rng.sample(pairs, m)\nprint(n, m)\nfor u, v in chosen:\n    if rng.random() < 0.5:\n        u, v = v, u\n    print(u, v)\n",
+      "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    for i in range(m):\n        u = int(data[2 + 2 * i])\n        v = int(data[3 + 2 * i])\n        adj[u].append((v, i))\n        adj[v].append((u, i))\n    disc = [-1] * (n + 1)\n    low = [0] * (n + 1)\n    bridge = [False] * m\n    t = 0\n    for s in range(1, n + 1):\n        if disc[s] != -1:\n            continue\n        disc[s] = low[s] = t\n        t += 1\n        vs = [s]\n        pe = [-1]\n        it = [0]\n        while vs:\n            u = vs[-1]\n            i = it[-1]\n            if i < len(adj[u]):\n                it[-1] = i + 1\n                w, e = adj[u][i]\n                if e == pe[-1]:\n                    continue\n                if disc[w] == -1:\n                    disc[w] = low[w] = t\n                    t += 1\n                    vs.append(w)\n                    pe.append(e)\n                    it.append(0)\n                elif disc[w] < low[u]:\n                    low[u] = disc[w]\n            else:\n                vs.pop()\n                e = pe.pop()\n                it.pop()\n                if vs:\n                    p = vs[-1]\n                    if low[u] < low[p]:\n                        low[p] = low[u]\n                    if low[u] > disc[p]:\n                        bridge[e] = True\n    ans = [str(i + 1) for i in range(m) if bridge[i]]\n    out = [str(len(ans))]\n    if ans:\n        out.append(\" \".join(ans))\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    edges = [(int(data[2 + 2 * i]), int(data[3 + 2 * i])) for i in range(m)]\n\n    def find(par, x):\n        while par[x] != x:\n            par[x] = par[par[x]]\n            x = par[x]\n        return x\n\n    ans = []\n    for i in range(m):\n        par = list(range(n + 1))\n        for j in range(m):\n            if j == i:\n                continue\n            a = find(par, edges[j][0])\n            b = find(par, edges[j][1])\n            if a != b:\n                par[a] = b\n        if find(par, edges[i][0]) != find(par, edges[i][1]):\n            ans.append(i + 1)\n    print(len(ans))\n    if ans:\n        print(\" \".join(map(str, ans)))\n\n\nmain()\n",
+      "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    for i in range(m):\n        u = int(data[2 + 2 * i])\n        v = int(data[3 + 2 * i])\n        adj[u].append((v, i))\n        adj[v].append((u, i))\n    disc = [-1] * (n + 1)\n    low = [0] * (n + 1)\n    bridge = [False] * m\n    t = 0\n    for s in range(1, n + 1):\n        if disc[s] != -1:\n            continue\n        disc[s] = low[s] = t\n        t += 1\n        vs = [s]\n        pe = [-1]\n        it = [0]\n        while vs:\n            u = vs[-1]\n            i = it[-1]\n            if i < len(adj[u]):\n                it[-1] = i + 1\n                w, e = adj[u][i]\n                if e == pe[-1]:\n                    continue\n                if disc[w] == -1:\n                    disc[w] = low[w] = t\n                    t += 1\n                    vs.append(w)\n                    pe.append(e)\n                    it.append(0)\n                elif disc[w] < low[u]:\n                    low[u] = disc[w]\n            else:\n                vs.pop()\n                e = pe.pop()\n                it.pop()\n                if vs:\n                    p = vs[-1]\n                    if low[u] < low[p]:\n                        low[p] = low[u]\n                    if low[u] >= disc[p]:\n                        bridge[e] = True\n    ans = [str(i + 1) for i in range(m) if bridge[i]]\n    out = [str(len(ans))]\n    if ans:\n        out.append(\" \".join(ans))\n    sys.stdout.write(\"\\n\".join(out) + \"\\n\")\n\n\nmain()\n",
+      "hints": [
+        "케이블 하나가 중요하지 않다는 것은 그 케이블 없이도 양 끝을 잇는 다른 길이 있다는 뜻이다. 즉 그 케이블이 어떤 순환 경로 위에 있는지가 핵심이다.",
+        "케이블마다 끊어 보고 연결을 다시 확인하면 너무 느리다. 깊이 우선 탐색 한 번으로 모든 케이블을 판정하는 방법을 찾는다.",
+        "각 컴퓨터에 탐색에서 처음 방문된 순서와, 그 컴퓨터의 탐색 서브트리에서 되돌아가는 간선 하나를 타고 닿을 수 있는 가장 이른 방문 순서를 저장한다. 방금 타고 내려온 케이블은 부모로 되돌아가는 길로 치지 않는다.",
+        "자식 c 의 서브트리가 부모 p 또는 그보다 먼저 방문된 컴퓨터로 되돌아갈 수 없으면, 즉 c 에서 닿는 가장 이른 순서가 p 의 방문 순서보다 엄격히 뒤이면 p-c 케이블이 중요 케이블이다. 되돌아가는 간선을 만나면 현재 컴퓨터의 값을 상대의 방문 순서로 줄이고, 자식 처리가 끝나면 자식의 값으로 부모의 값을 줄인다.",
+        "모든 컴퓨터 s 에 대해 아직 방문 전이면 s 에서 탐색 시작\n  방문 시: 방문 순서 부여, 최솟값 = 방문 순서\n  인접 (w, 케이블 e) 마다: e 가 들어온 케이블이면 건너뜀\n    w 미방문이면 w 로 내려감\n    이미 방문했으면 최솟값 갱신\n  자식 처리 후: 부모 최솟값 갱신, 자식 최솟값 > 부모 방문 순서면 e 표시\n깊이가 N 까지 커질 수 있으므로 재귀 대신 명시적 스택을 쓴다.\n표시된 케이블 번호를 오름차순으로 출력"
+      ],
+      "skillControl": {
+        "approach": "케이블마다 그 케이블을 빼고 한 끝에서 BFS 를 돌려 다른 끝에 닿는지 확인한다.",
+        "solution": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    edges = []\n    adj = [[] for _ in range(n + 1)]\n    for i in range(m):\n        u = int(data[2 + 2 * i])\n        v = int(data[3 + 2 * i])\n        edges.append((u, v))\n        adj[u].append((v, i))\n        adj[v].append((u, i))\n    ans = []\n    for i in range(m):\n        u, v = edges[i]\n        seen = [False] * (n + 1)\n        seen[u] = True\n        q = deque([u])\n        while q:\n            x = q.popleft()\n            for y, e in adj[x]:\n                if e != i and not seen[y]:\n                    seen[y] = True\n                    q.append(y)\n        if not seen[v]:\n            ans.append(i + 1)\n    print(len(ans))\n    if ans:\n        print(\" \".join(map(str, ans)))\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 50000\nperm = list(range(1, n + 1))\nrng.shuffle(perm)\nedges = []\nused = 0\nblocks = []\nwhile used < n:\n    left = n - used\n    if rng.random() < 0.6 and left >= 3:\n        size = min(left, rng.randint(1500, 5000))\n        cyc = list(range(used, used + size))\n        for k in range(size):\n            edges.append((cyc[k], cyc[(k + 1) % size]))\n        if size >= 9:\n            for _ in range(rng.randint(0, 4)):\n                a = rng.randrange(size)\n                b = (a + rng.randint(2, size // 3)) % size\n                if abs(a - b) > 1 and {a, b} != {0, size - 1}:\n                    edges.append((cyc[a], cyc[b]))\n    else:\n        size = min(left, rng.randint(50, 800))\n        for k in range(1, size):\n            edges.append((used + k, used + rng.randrange(max(0, k - 5), k)))\n    if blocks and rng.random() < 0.97:\n        pb = rng.choice(blocks)\n        edges.append((rng.randrange(pb[0], pb[1]), rng.randrange(used, used + size)))\n    blocks.append((used, used + size))\n    used += size\nseen = set()\nout = []\nfor a, b in edges:\n    key = (min(a, b), max(a, b))\n    if a == b or key in seen:\n        continue\n    seen.add(key)\n    u, v = perm[a], perm[b]\n    if rng.random() < 0.5:\n        u, v = v, u\n    out.append(str(u) + \" \" + str(v))\nrng.shuffle(out)\nprint(n, len(out))\nprint(\"\\n\".join(out))\n"
+      }
+    }
+  }
+}

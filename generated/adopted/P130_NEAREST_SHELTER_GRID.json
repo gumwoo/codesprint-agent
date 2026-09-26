@@ -1,0 +1,11 @@
+{
+  "id": "MULTI_SOURCE_SHORTEST_PATH-1790397232778-1",
+  "skill": "MULTI_SOURCE_SHORTEST_PATH",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:52:20+00:00",
+  "code": "P130_NEAREST_SHELTER_GRID",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\nINF = float('inf')\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    grid = data[2:2 + n]\n    dist = [[0 if grid[r][c] == 'S' else INF for c in range(m)] for r in range(n)]\n    changed = True\n    while changed:\n        changed = False\n        for r in range(n):\n            for c in range(m):\n                if grid[r][c] == '#':\n                    continue\n                best = dist[r][c]\n                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                    if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] != '#':\n                        if dist[nr][nc] + 1 < best:\n                            best = dist[nr][nc] + 1\n                if best < dist[r][c]:\n                    dist[r][c] = best\n                    changed = True\n    out = []\n    for r in range(n):\n        out.append(' '.join('-1' if grid[r][c] == '#' or dist[r][c] == INF else str(dist[r][c]) for c in range(m)))\n    print('\\n'.join(out))\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 6)\nm = rng.randint(1, 6)\ncells = [rng.choice('..........###S') for _ in range(n * m)]\nif 'S' not in cells:\n    cells[rng.randrange(n * m)] = 'S'\nprint(n, m)\nfor r in range(n):\n    print(''.join(cells[r * m:(r + 1) * m]))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = m = 300\ncells = ['#' if rng.random() < 0.25 else '.' for _ in range(n * m)]\nfor i in rng.sample(range(n * m), 1500):\n    cells[i] = 'S'\nout = [f'{n} {m}']\nfor r in range(n):\n    out.append(''.join(cells[r * m:(r + 1) * m]))\nprint('\\n'.join(out))\n"
+}

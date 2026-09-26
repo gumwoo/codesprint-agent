@@ -1,0 +1,11 @@
+{
+  "id": "BIPARTITE_MATCHING-1790397102787-2",
+  "skill": "BIPARTITE_MATCHING",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:50:28+00:00",
+  "code": "P125_DOMINO_TILE_FLOOR",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\nfrom functools import lru_cache\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    grid = data[2:2 + n]\n    total = n * m\n    sys.setrecursionlimit(100000)\n\n    @lru_cache(maxsize=None)\n    def f(pos, mask):\n        if pos == total:\n            return 0\n        r, c = divmod(pos, m)\n        if mask & 1 or grid[r][c] == '#':\n            return f(pos + 1, mask >> 1)\n        best = f(pos + 1, mask >> 1)\n        if c + 1 < m and not (mask & 2) and grid[r][c + 1] == '.':\n            best = max(best, 1 + f(pos + 1, (mask >> 1) | 1))\n        if r + 1 < n and grid[r + 1][c] == '.':\n            best = max(best, 1 + f(pos + 1, (mask >> 1) | (1 << (m - 1))))\n        return best\n\n    print(f(0, 0))\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\n\ndef main():\n    seed = int(sys.stdin.read().split()[0])\n    rng = random.Random(seed)\n    n = rng.randint(1, 5)\n    m = rng.randint(1, 5)\n    print(n, m)\n    for _ in range(n):\n        print(''.join('#' if rng.random() < 0.3 else '.' for _ in range(m)))\n\n\nmain()\n",
+  "stressInputGenerator": "import random\n\n\ndef main():\n    rng = random.Random(20260926)\n    n, m = 30, 30\n    print(n, m)\n    for _ in range(n):\n        print(''.join('#' if rng.random() < 0.25 else '.' for _ in range(m)))\n\n\nmain()\n"
+}

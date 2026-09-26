@@ -1,0 +1,11 @@
+{
+  "id": "MAX_FLOW-1790396785491-1",
+  "skill": "MAX_FLOW",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:51:36+00:00",
+  "code": "P128_PIPE_NETWORK_MAX_FLOW",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = []\n    for i in range(m):\n        u, v, c = int(data[2 + 3 * i]), int(data[3 + 3 * i]), int(data[4 + 3 * i])\n        edges.append((u - 1, v - 1, c))\n    best = None\n    middle = n - 2\n    for mask in range(1 << middle):\n        side = 1 | (mask << 1)\n        cut = 0\n        for u, v, c in edges:\n            if (side >> u) & 1 and not (side >> v) & 1:\n                cut += c\n        if best is None or cut < best:\n            best = cut\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(2, 9)\nm = rng.randint(1, 14)\nprint(n, m)\nfor _ in range(m):\n    u = rng.randint(1, n)\n    v = rng.randint(1, n - 1)\n    if v >= u:\n        v += 1\n    print(u, v, rng.randint(1, 20))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 60\nm = 900\nprint(n, m)\nfor _ in range(m):\n    u = rng.randint(1, n)\n    v = rng.randint(1, n - 1)\n    if v >= u:\n        v += 1\n    print(u, v, rng.randint(1, 1000000))\n"
+}
