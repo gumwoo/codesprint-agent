@@ -1,0 +1,34 @@
+{
+  "problemCode": "P117_SCC_SINK_GROUPS",
+  "problemTitle": "소식이 멈추는 모임",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SCC_DECOMPOSITION",
+    "DFS_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    adj = [[] for _ in range(n)]\n    for i in range(m):\n        u = int(data[2 + 2 * i]) - 1\n        v = int(data[3 + 2 * i]) - 1\n        adj[u].append(v)\n    index = [-1] * n\n    low = [0] * n\n    onst = [False] * n\n    comp = [-1] * n\n    it = [0] * n\n    st = []\n    cnt = 0\n    c = 0\n    for s in range(n):\n        if index[s] != -1:\n            continue\n        index[s] = low[s] = cnt\n        cnt += 1\n        st.append(s)\n        onst[s] = True\n        call = [s]\n        while call:\n            v = call[-1]\n            if it[v] < len(adj[v]):\n                w = adj[v][it[v]]\n                it[v] += 1\n                if index[w] == -1:\n                    index[w] = low[w] = cnt\n                    cnt += 1\n                    st.append(w)\n                    onst[w] = True\n                    call.append(w)\n                elif onst[w]:\n                    if index[w] < low[v]:\n                        low[v] = index[w]\n            else:\n                call.pop()\n                if call:\n                    p = call[-1]\n                    if low[v] < low[p]:\n                        low[p] = low[v]\n                if low[v] == index[v]:\n                    while True:\n                        w = st.pop()\n                        onst[w] = False\n                        comp[w] = c\n                        if w == v:\n                            break\n                    c += 1\n    out = [False] * c\n    for u in range(n):\n        cu = comp[u]\n        for v in adj[u]:\n            out[cu] = True\n    sinks = sum(1 for x in out if not x)\n    print(c)\n    print(sinks)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      5,
+      11,
+      12
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  "probes": {}
+}

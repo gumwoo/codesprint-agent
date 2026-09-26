@@ -1,0 +1,33 @@
+{
+  "problemCode": "P120_RANGE_MIN_WITH_UPDATES",
+  "problemTitle": "값이 바뀌는 수열의 구간 최솟값",
+  "problemSource": "DEV_FIXTURE",
+  "label": "INDEX_ERROR",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "SEGMENT_TREE_RANGE_QUERY"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    size = 1\n    while size < n:\n        size *= 2\n    inf = 1 << 62\n    tree = [inf] * (2 * size)\n    for i in range(n):\n        tree[size + i] = int(data[2 + i])\n    for i in range(size - 1, 0, -1):\n        a = tree[2 * i]\n        b = tree[2 * i + 1]\n        tree[i] = a if a < b else b\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        op = data[pos]\n        x = int(data[pos + 1])\n        y = int(data[pos + 2])\n        pos += 3\n        if op == b'1':\n            i = size + x - 1\n            tree[i] = y\n            i >>= 1\n            while i:\n                a = tree[2 * i]\n                b = tree[2 * i + 1]\n                tree[i] = a if a < b else b\n                i >>= 1\n        else:\n            lo = size + x - 1\n            hi = size + y - 1\n            res = inf\n            while lo < hi:\n                if lo & 1:\n                    if tree[lo] < res:\n                        res = tree[lo]\n                    lo += 1\n                if hi & 1:\n                    hi -= 1\n                    if tree[hi] < res:\n                        res = tree[hi]\n                lo >>= 1\n                hi >>= 1\n            out.append(res)\n    sys.stdout.write('\\n'.join(map(str, out)) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      7
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  },
+  "probes": {}
+}
