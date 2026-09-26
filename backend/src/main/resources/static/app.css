@@ -394,6 +394,8 @@ table.skills td {
 }
 
 table.skills .num { text-align: right; font-family: var(--mono); }
+/* 숫자는 한 덩어리다. 위의 anywhere 가 숫자 칸까지 끊어 58:20 이 58 / :2 / 0 으로 쪼개졌다(검증 에이전트). */
+table.skills td.num { overflow-wrap: normal; white-space: nowrap; }
 table.skills .code { font-family: var(--mono); font-size: 12px; }
 table.skills .what { color: var(--muted); font-size: 11px; }
 

@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { stubApi, fulfill } = require("../fixtures/api");
+const { stubApi, fulfill, mockTest } = require("../fixtures/api");
 
 /**
  * 좁은 화면. 정본: backend/src/main/resources/static/app.css 의 @media (max-width: 900px).
@@ -93,6 +93,46 @@ for (const width of [320, 390]) {
       await expect(page.locator("#mockStart")).toBeVisible();
       await expect(page.locator("#mockReport")).toBeHidden();
       await expect(page.locator("#mockTable")).toBeHidden();
+    });
+  });
+}
+
+/** 끝난 시험의 보고서. 결과 칸의 긴 문장이 폭을 가져가, 숫자 칸이 최소폭까지 눌리는 모양이다. */
+function finishedReport() {
+  const row = (label, code, outcome, opened, run, submit, solved) => ({
+    label, problemCode: code, title: `${label} 문제`, primarySkill: "BFS_GRID_TRAVERSAL",
+    expectedSolveSeconds: 900, outcome, openedAtSeconds: opened, firstRunAtSeconds: run,
+    firstSubmitAtSeconds: submit, solvedAtSeconds: solved, submissions: 3,
+    timeSpentSeconds: 3488, overExpected: true, lateGiveUp: outcome === "ATTEMPTED", mistakes: [],
+  });
+  return {
+    mockTestId: 31, startedAt: "2026-09-26T09:00:00Z", closedAt: "2026-09-26T10:00:00Z",
+    durationSeconds: 3600, solved: 1, total: 2, openOrder: ["A", "B"], easiestFirst: true,
+    problems: [row("A", "P02_GRID_TRAVERSAL", "SOLVED", 12, 3000, 3400, 3500),
+      row("B", "P03_CONNECTED_COMPONENT", "ATTEMPTED", 40, 3100, 3450, null)],
+  };
+}
+
+for (const width of [390, 1440]) {
+  test.describe(`${width}px 보고서`, () => {
+    test.use({ viewport: { width, height: 900 } });
+
+    test("시험 보고서의 시각은 칸 안에서 끊기지 않는다", async ({ page }) => {
+      await stubApi(page);
+      await page.route("**/api/users/1/mock-tests/latest",
+          (route) => fulfill(route, mockTest(31, "FINISHED", ["A", "B"])));
+      await page.route("**/api/mock-tests/31/report*", (route) => fulfill(route, finishedReport()));
+      await asUser(page);
+      await page.click("#tabMock");
+      await expect(page.locator("#mockReportRows tr")).toHaveCount(2);
+      const broken = await page.evaluate(() => [...document.querySelectorAll("#mockReport td.num")]
+          .map((td) => {
+            const range = document.createRange();
+            range.selectNodeContents(td);
+            return [td.textContent, range.getClientRects().length];
+          })
+          .filter(([, lines]) => lines > 1));
+      expect(broken, "여러 줄로 쪼개진 숫자 칸").toEqual([]);
     });
   });
 }
