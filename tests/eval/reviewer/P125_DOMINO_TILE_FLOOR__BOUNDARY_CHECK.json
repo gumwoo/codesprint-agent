@@ -17,7 +17,8 @@
     "passedCaseIds": [
       2,
       4,
-      6
+      6,
+      12
     ],
     "failedCaseIds": [
       1,

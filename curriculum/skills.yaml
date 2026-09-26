@@ -835,17 +835,6 @@ skills:
       짝 조합을 모두 시도하는 풀이는 사람이 많으면 끝나지 않는다.
 
   # ── ADVANCED_SHORTEST_PATH ──────────────────────────────────────────
-  - code: MULTI_SOURCE_SHORTEST_PATH
-    name: 여러 출발점의 최단 거리
-    domain: ADVANCED_SHORTEST_PATH
-    tier: ADVANCED
-    language: null
-    slice: 9
-    needs_skill_control: true
-    description: >-
-      여러 출발점 가운데 가장 가까운 곳까지의 최단 거리를 모든 정점에 대해 한 번의 탐색으로 구한다. 출발점마다
-      따로 탐색하는 풀이는 출발점이 많으면 시간 안에 끝나지 않는다.
-
   - code: STATE_GRAPH_DIJKSTRA
     name: 상태를 붙인 다익스트라
     domain: ADVANCED_SHORTEST_PATH

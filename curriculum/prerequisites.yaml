@@ -392,14 +392,6 @@ prerequisites:
     requires: GRAPH_REPRESENTATION
     minimum_mastery: 0.65
 
-  - skill: MULTI_SOURCE_SHORTEST_PATH
-    requires: DIJKSTRA
-    minimum_mastery: 0.65
-
-  - skill: MULTI_SOURCE_SHORTEST_PATH
-    requires: BFS_SHORTEST_PATH
-    minimum_mastery: 0.65
-
   - skill: STATE_GRAPH_DIJKSTRA
     requires: DIJKSTRA
     minimum_mastery: 0.65
