@@ -1,0 +1,77 @@
+{
+  "id": "SEGMENT_TREE_LAZY-1790394076400-2",
+  "skill": "SEGMENT_TREE_LAZY",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T03:55:49+00:00",
+  "stage": "중복",
+  "code": "P119_SHELF_STOCK_RANGE_ADD",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P118_RANGE_ADD_RANGE_SUM 과 같은 계산이다 - 구간 더하기와 구간 합이고, 위치를 0 부터 세는 것과 명령 이름만 다르다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "SEGMENT_TREE_LAZY-1790394076400-2",
+    "skill": "SEGMENT_TREE_LAZY",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T03:41:16.400388400Z",
+    "draft": {
+      "codeSuffix": "SHELF_STOCK_RANGE_ADD",
+      "title": "선반 재고 장부",
+      "statement": "창고에 선반 칸 N 개가 한 줄로 놓여 있고, 칸 번호는 왼쪽부터 0, 1, ..., N-1 이다(0-based). 칸 i 의 장부상 재고는 정수 A_i 다. 장부에는 음수도 적힐 수 있으며 그대로 계산한다.\n\n명령 Q 개를 주어진 순서대로 처리한다.\n- `ADD l r x` : 칸 l, l+1, ..., r 의 재고 각각에 x 를 더한다. x 는 음수일 수 있다.\n- `SUM l r` : 그 시점의 칸 l 부터 칸 r 까지(양 끝 포함) 재고의 합을 출력한다.\n\n예를 들어 재고가 [1, 2, 3, 4, 5] 일 때 `ADD 1 3 10` 을 처리하면 [1, 12, 13, 14, 5] 가 되고, 이어서 `SUM 2 4` 는 32 를 출력한다.\n\n입력 형식\n- 첫째 줄: N Q\n- 둘째 줄: A_0 A_1 ... A_{N-1} (공백으로 구분)\n- 다음 Q 줄: 명령 하나씩. 명령어는 대문자 `ADD` 또는 `SUM` 이다.\n\n출력 형식\n- `SUM` 명령마다 합을 한 줄에 하나씩, 명령 순서대로 출력한다.\n\n제약\n- 1 <= N <= 100000\n- 1 <= Q <= 50000\n- -1000 <= A_i <= 1000\n- -1000 <= x <= 1000\n- 0 <= l <= r <= N-1\n- `SUM` 명령은 한 개 이상 있다.",
+      "secondarySkills": [],
+      "referenceComplexity": "O(N + Q log N)",
+      "expectedSolveSeconds": 1500,
+      "commonMistakes": [
+        "INDEX_ERROR",
+        "IMPLEMENTATION_MISC"
+      ],
+      "negativeControl": {
+        "mistake": "INDEX_ERROR",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "0-based 인 오른쪽 끝 r 을 1-based 로 바꾸지 않아 갱신과 질의 모두에서 칸 r 이 빠진다.",
+      "sampleInputs": [
+        "5 4\n1 2 3 4 5\nSUM 0 4\nADD 1 3 10\nSUM 2 4\nSUM 0 0\n",
+        "3 3\n-5 0 7\nADD 0 2 -3\nADD 2 2 4\nSUM 0 2\n"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "1 1\n0\nSUM 0 0\n"
+        },
+        {
+          "type": "SINGLE",
+          "input": "1 4\n-1000\nADD 0 0 1000\nSUM 0 0\nADD 0 0 -1000\nSUM 0 0\n"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "6 5\n1 1 1 1 1 1\nADD 0 0 7\nADD 5 5 -7\nADD 0 5 2\nSUM 0 5\nSUM 5 5\n"
+        },
+        {
+          "type": "DUPLICATE",
+          "input": "4 5\n3 -2 8 0\nADD 1 2 5\nADD 1 2 5\nSUM 1 2\nSUM 1 2\nSUM 0 3\n"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "5 5\n1000 -1000 1000 -1000 1000\nADD 0 4 1000\nADD 0 4 1000\nADD 1 3 -1000\nSUM 0 4\nSUM 1 3\n"
+        }
+      ],
+      "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 12)\nq = rng.randint(1, 15)\na = [rng.randint(-1000, 1000) for _ in range(n)]\nops = []\nfor k in range(q):\n    l = rng.randint(0, n - 1)\n    r = rng.randint(l, n - 1)\n    if k == q - 1 or rng.random() < 0.5:\n        ops.append(f\"SUM {l} {r}\")\n    else:\n        ops.append(f\"ADD {l} {r} {rng.randint(-1000, 1000)}\")\nprint(n, q)\nprint(*a)\nprint(\"\\n\".join(ops))\n",
+      "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    base = [0] * (n + 1)\n    for i in range(n):\n        base[i + 1] = base[i] + int(data[2 + i])\n    b1 = [0] * (n + 1)\n    b2 = [0] * (n + 1)\n\n    def add(i, v1, v2):\n        while i <= n:\n            b1[i] += v1\n            b2[i] += v2\n            i += i & -i\n\n    def prefix(i):\n        s1 = 0\n        s2 = 0\n        j = i\n        while j > 0:\n            s1 += b1[j]\n            s2 += b2[j]\n            j -= j & -j\n        return base[i] + s1 * i - s2\n\n    out = []\n    pos = 2 + n\n    for _ in range(q):\n        cmd = data[pos]\n        l = int(data[pos + 1]) + 1\n        r = int(data[pos + 2]) + 1\n        if cmd == b\"ADD\":\n            x = int(data[pos + 3])\n            pos += 4\n            add(l, x, x * (l - 1))\n            add(r + 1, -x, -x * r)\n        else:\n            pos += 3\n            out.append(prefix(r) - prefix(l - 1))\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    tokens = sys.stdin.read().split()\n    n = int(tokens[0])\n    q = int(tokens[1])\n    a = [int(tokens[2 + i]) for i in range(n)]\n    pos = 2 + n\n    out = []\n    for _ in range(q):\n        cmd = tokens[pos]\n        l = int(tokens[pos + 1])\n        r = int(tokens[pos + 2])\n        if cmd == \"ADD\":\n            x = int(tokens[pos + 3])\n            pos += 4\n            for i in range(l, r + 1):\n                a[i] += x\n        else:\n            pos += 3\n            total = 0\n            for i in range(l, r + 1):\n                total += a[i]\n            out.append(total)\n    print(\"\\n\".join(map(str, out)))\n\n\nmain()\n",
+      "wrong": "# 0-based 인 오른쪽 끝 r 을 1-based 로 바꾸지 않아 갱신과 질의 모두에서 칸 r 이 빠진다.\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    base = [0] * (n + 1)\n    for i in range(n):\n        base[i + 1] = base[i] + int(data[2 + i])\n    b1 = [0] * (n + 1)\n    b2 = [0] * (n + 1)\n\n    def add(i, v1, v2):\n        while i <= n:\n            b1[i] += v1\n            b2[i] += v2\n            i += i & -i\n\n    def prefix(i):\n        s1 = 0\n        s2 = 0\n        j = i\n        while j > 0:\n            s1 += b1[j]\n            s2 += b2[j]\n            j -= j & -j\n        return base[i] + s1 * i - s2\n\n    out = []\n    pos = 2 + n\n    for _ in range(q):\n        cmd = data[pos]\n        l = int(data[pos + 1]) + 1\n        r = int(data[pos + 2])\n        if cmd == b\"ADD\":\n            x = int(data[pos + 3])\n            pos += 4\n            add(l, x, x * (l - 1))\n            add(r + 1, -x, -x * r)\n        else:\n            pos += 3\n            out.append(prefix(r) - prefix(l - 1))\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+      "hints": [
+        "ADD 한 번이 최대 N 칸을 건드리고 명령이 최대 50000 개다. 명령마다 칸을 하나씩 고치거나 하나씩 더하면 N×Q 에 가까운 연산이 된다. 갱신을 칸마다 바로 반영하지 않고 미뤄 둘 방법이 필요하다.",
+        "구간 갱신과 구간 합을 둘 다 로그 시간에 처리하는 트리 자료구조를 쓴다. 지연 전파(lazy propagation) 세그먼트 트리가 대표적이고, 펜윅 트리 두 개로도 같은 일을 할 수 있다.",
+        "세그먼트 트리라면 노드마다 두 값을 둔다: 그 노드 구간의 현재 합, 그리고 구간 전체에 더해야 하지만 아직 자식에게 내려보내지 않은 값. 펜윅 트리라면 prefix 합을 '위치에 비례하는 성분'과 '보정 성분'으로 나눠 트리 두 개에 저장한다.",
+        "노드 구간이 갱신 구간 안에 통째로 들어가면 그 노드의 합에 x × (노드 구간 길이)를 더하고, 대기값에 x 를 누적한 뒤 더 내려가지 않는다. 걸쳐 있는 노드는 자식으로 내려가기 전에 자신의 대기값을 두 자식에게 먼저 넘기고, 자식을 처리한 뒤 두 자식 합으로 자신의 합을 다시 계산한다. 질의도 같은 방식으로 내려가며 통째로 포함된 노드의 합만 모은다.",
+        "update(node, 구간 s..e, l, r, x): 겹치지 않으면 반환 / l<=s 이고 e<=r 이면 합 += x*(e-s+1), 대기 += x, 반환 / 대기값을 자식에게 넘김 / 왼쪽·오른쪽 자식 update / 합 = 두 자식 합. query(node, s..e, l, r): 겹치지 않으면 0 / 통째로 포함이면 합 / 대기값을 넘긴 뒤 두 자식 query 의 합. 명령마다 ADD 면 update, SUM 이면 query 결과를 출력."
+      ],
+      "skillControl": {
+        "approach": "ADD 마다 구간의 모든 칸에 x 를 직접 더하고, SUM 마다 구간을 직접 합한다.",
+        "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n = int(data[0])\n    q = int(data[1])\n    a = [int(v) for v in data[2:2 + n]]\n    out = []\n    pos = 2 + n\n    for _ in range(q):\n        cmd = data[pos]\n        l = int(data[pos + 1])\n        r = int(data[pos + 2])\n        if cmd == b\"ADD\":\n            x = int(data[pos + 3])\n            pos += 4\n            a[l:r + 1] = [v + x for v in a[l:r + 1]]\n        else:\n            pos += 3\n            out.append(sum(a[l:r + 1]))\n    sys.stdout.write(\"\\n\".join(map(str, out)) + \"\\n\")\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 100000\nq = 30000\nlines = [f\"{n} {q}\", \" \".join(str(rng.randint(-9, 9)) for _ in range(n))]\nhas_sum = False\nfor k in range(q):\n    l = rng.randint(0, n - 1)\n    r = rng.randint(0, n - 1)\n    if l > r:\n        l, r = r, l\n    if rng.random() < 0.5 or (k == q - 1 and not has_sum):\n        lines.append(f\"SUM {l} {r}\")\n        has_sum = True\n    else:\n        lines.append(f\"ADD {l} {r} {rng.randint(-999, 999)}\")\nprint(\"\\n\".join(lines))\n"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "FENWICK_PREFIX_SUM-1790394251054-1",
+  "skill": "FENWICK_PREFIX_SUM",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T03:51:20+00:00",
+  "code": "P115_SHELF_STOCK_RANGE_SUM",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    lines = sys.stdin.read().split(\"\\n\")\n    n, q = map(int, lines[0].split())\n    shelves = list(map(int, lines[1].split()))\n    for k in range(q):\n        t, x, y = map(int, lines[2 + k].split())\n        if t == 1:\n            shelves[x - 1] = y\n        else:\n            total = 0\n            for idx in range(x - 1, y):\n                total += shelves[idx]\n            print(total)\n\n\nmain()\n",
+  "inputGenerator": "import random\nimport sys\n\nseed = int(sys.stdin.readline())\nrng = random.Random(seed)\nn = rng.randint(1, 8)\nq = rng.randint(1, 10)\nvalues = [rng.randint(0, 10) for _ in range(n)]\nops = []\nfor _ in range(q):\n    if rng.random() < 0.5:\n        ops.append(f\"1 {rng.randint(1, n)} {rng.randint(0, 10)}\")\n    else:\n        l = rng.randint(1, n)\n        r = rng.randint(l, n)\n        ops.append(f\"2 {l} {r}\")\nif not any(op.startswith(\"2\") for op in ops):\n    l = rng.randint(1, n)\n    ops[-1] = f\"2 {l} {rng.randint(l, n)}\"\nprint(n, q)\nprint(*values)\nprint(\"\\n\".join(ops))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 80000\nq = 40000\nvalues = [rng.randint(0, 1000) for _ in range(n)]\nops = []\nfor _ in range(q):\n    if rng.random() < 0.3:\n        ops.append(f\"1 {rng.randint(1, n)} {rng.randint(0, 1000)}\")\n    else:\n        l = rng.randint(1, n // 4)\n        r = rng.randint(3 * n // 4, n)\n        ops.append(f\"2 {l} {r}\")\nprint(n, q)\nprint(*values)\nprint(\"\\n\".join(ops))\n"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "SCC_DECOMPOSITION-1790394576152-2",
+  "skill": "SCC_DECOMPOSITION",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T03:52:07+00:00",
+  "code": "P117_SCC_SINK_GROUPS",
+  "crossCheckedInputs": 38,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n = int(data[0])\n    m = int(data[1])\n    reach = [1 << i for i in range(n)]\n    for i in range(m):\n        u = int(data[2 + 2 * i]) - 1\n        v = int(data[3 + 2 * i]) - 1\n        reach[u] |= 1 << v\n    for k in range(n):\n        bk = 1 << k\n        for i in range(n):\n            if reach[i] & bk:\n                reach[i] |= reach[k]\n    masks = set()\n    for i in range(n):\n        mask = 0\n        for j in range(n):\n            if (reach[i] >> j) & 1 and (reach[j] >> i) & 1:\n                mask |= 1 << j\n        masks.add(mask)\n    sinks = 0\n    for mask in masks:\n        i = (mask & -mask).bit_length() - 1\n        if reach[i] == mask:\n            sinks += 1\n    print(len(masks))\n    print(sinks)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 8)\nm = r.randint(0, 12)\nprint(n, m)\nfor _ in range(m):\n    print(r.randint(1, n), r.randint(1, n))\n",
+  "stressInputGenerator": "import random\n\nr = random.Random(20260926)\nn = 50000\nm = 70000\nout = [str(n) + ' ' + str(m)]\nfor _ in range(m):\n    u = r.randint(1, n)\n    v = r.randint(1, n)\n    while v == u:\n        v = r.randint(1, n)\n    out.append(str(u) + ' ' + str(v))\nprint('\\n'.join(out))\n"
+}

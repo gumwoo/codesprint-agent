@@ -1,0 +1,53 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P115_SHELF_STOCK_RANGE_SUM
+title: 선반 재고 구간 합
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1200
+referenceComplexity: O((N + Q) log N)
+statement: |
+  창고에 선반 N개가 한 줄로 놓여 있고, 왼쪽부터 1번, 2번, ..., N번이다(1-based). i번 선반의 재고는 A_i 개다. 다음 두 종류의 작업이 Q개 주어진다.
+
+  - `1 i x`: i번 선반의 재고를 x개로 바꾼다. 더하는 것이 아니라 새 값으로 덮어쓴다.
+  - `2 l r`: l번부터 r번 선반까지(양 끝 포함) 재고의 합을 출력한다.
+
+  작업은 주어진 순서대로 처리하고, 각 질의는 그 시점의 재고로 답한다.
+
+  입력
+  첫째 줄에 N과 Q가 공백으로 구분되어 주어진다.
+  둘째 줄에 A_1 A_2 ... A_N 이 공백으로 구분되어 주어진다.
+  다음 Q줄에 작업이 한 줄에 하나씩 주어진다.
+
+  출력
+  `2 l r` 작업마다 구간 합을 한 줄에 하나씩, 작업 순서대로 출력한다.
+
+  제약
+  - 1 ≤ N ≤ 100000
+  - 1 ≤ Q ≤ 50000
+  - 0 ≤ A_i ≤ 1000, 0 ≤ x ≤ 1000
+  - 1 ≤ i ≤ N, 1 ≤ l ≤ r ≤ N
+  - `2 l r` 작업은 적어도 하나 있다.
+
+  예시
+  선반이 [3, 1, 4, 1, 5] 일 때 `2 2 4` 의 답은 1 + 4 + 1 = 6 이다. 이어서 `1 3 10` 을 하면 선반은 [3, 1, 10, 1, 5] 가 되고, `2 1 3` 의 답은 14 다.
+skills:
+- code: FENWICK_PREFIX_SUM
+  role: PRIMARY
+  weight: 0.7
+- code: PYTHON_LIST_BASIC
+  role: SECONDARY
+  weight: 0.3
+commonMistakes:
+- IMPLEMENTATION_MISC
+- INDEX_ERROR
+- INPUT_PARSE
+negativeControl:
+  mistake: IMPLEMENTATION_MISC
+  expectedStatus: WRONG_ANSWER
+skillControl:
+  approach: 값 배열만 두고 질의마다 l..r 구간을 슬라이스해 sum 으로 직접 더한다.
