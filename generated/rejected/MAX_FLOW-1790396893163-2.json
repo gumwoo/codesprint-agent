@@ -1,0 +1,83 @@
+{
+  "id": "MAX_FLOW-1790396893163-2",
+  "skill": "MAX_FLOW",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:55:28+00:00",
+  "stage": "중복",
+  "code": "P129_CABLE_CUT_MIN_COST",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P128_PIPE_NETWORK_MAX_FLOW 와 같은 계산이다 - 최소 컷의 비용은 최대 유량이고, 무방향 간선은 양쪽 용량을 둔 방향 간선 둘이다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "MAX_FLOW-1790396893163-2",
+    "skill": "MAX_FLOW",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T04:28:13.163640900Z",
+    "draft": {
+      "codeSuffix": "CABLE_CUT_MIN_COST",
+      "title": "두 서버 사이 통신 차단 최소 비용",
+      "statement": "서버 N대와 케이블 M개로 이루어진 통신망이 있다. 서버는 1번부터 N번까지 1-based 번호를 갖는다. i번째 케이블은 서버 u_i 와 v_i 를 잇고, 신호는 케이블을 양쪽 방향 모두로 지날 수 있다. 이 케이블을 끊는 데 드는 비용은 c_i 이다. 같은 두 서버 사이에 케이블이 여러 개 있을 수 있다.\n\n1번 서버에서 N번 서버로 어떤 경로로도 신호가 닿지 않도록 케이블 몇 개를 끊으려 한다. 끊는 케이블 비용의 합의 최솟값을 출력한다. 처음부터 두 서버가 이어져 있지 않으면 0 을 출력한다.\n\n예를 들어 케이블이 1-2(비용 3), 3-2(비용 2), 3-4(비용 5) 이고 N=4 이면 3-2 케이블 하나만 끊으면 되므로 답은 2 이다.\n\n입력 형식\n첫 줄에 N M 이 공백으로 주어진다.\n다음 M 줄의 i번째 줄에 u_i v_i c_i 가 공백으로 주어진다.\n\n출력 형식\n최소 비용을 정수 하나로 한 줄에 출력한다.\n\n제약\n2 <= N <= 100\n1 <= M <= 1000\n1 <= u_i, v_i <= N, u_i != v_i\n1 <= c_i <= 1000000\n서버 번호는 1부터 센다.",
+      "secondarySkills": [
+        "BFS_BASIC"
+      ],
+      "referenceComplexity": "O(N^2 * M) (Dinic)",
+      "expectedSolveSeconds": 1500,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "INPUT_PARSE"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "양방향 케이블을 u에서 v로 가는 한 방향 간선으로만 넣어, 입력에 거꾸로 적힌 케이블로는 신호가 지나가지 못하는 것으로 계산한다.",
+      "sampleInputs": [
+        "4 3\n1 2 3\n3 2 2\n3 4 5",
+        "5 7\n1 2 4\n1 3 2\n2 3 1\n4 2 3\n3 5 2\n4 5 5\n3 4 2"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "2 1\n1 2 7"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "3 1\n1 2 5"
+        },
+        {
+          "type": "DUPLICATE",
+          "input": "3 4\n1 2 3\n2 1 4\n2 3 10\n1 3 1"
+        },
+        {
+          "type": "MAXIMUM",
+          "input": "2 2\n1 2 1000000\n2 1 1000000"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "4 5\n1 2 1\n1 3 1\n2 3 1\n2 4 1\n3 4 1"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "4 3\n2 1 5\n3 2 4\n4 3 6"
+        }
+      ],
+      "inputGenerator": "import sys\nimport random\n\nseed = int(sys.stdin.readline())\nr = random.Random(seed)\nn = r.randint(2, 8)\nm = r.randint(1, 12)\nlines = [f'{n} {m}']\nfor _ in range(m):\n    u = r.randint(1, n)\n    v = r.randint(1, n)\n    while v == u:\n        v = r.randint(1, n)\n    c = r.randint(1, 20)\n    lines.append(f'{u} {v} {c}')\nprint('\\n'.join(lines))\n",
+      "reference": "import sys\nfrom collections import deque\n\n\ndef main():\n    sys.setrecursionlimit(10000)\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    graph = [[] for _ in range(n + 1)]\n    idx = 2\n    for _ in range(m):\n        u = int(data[idx]); v = int(data[idx + 1]); c = int(data[idx + 2])\n        idx += 3\n        graph[u].append([v, c, len(graph[v])])\n        graph[v].append([u, c, len(graph[u]) - 1])\n    s, t = 1, n\n    flow = 0\n    while True:\n        level = [-1] * (n + 1)\n        level[s] = 0\n        q = deque([s])\n        while q:\n            x = q.popleft()\n            for e in graph[x]:\n                if e[1] > 0 and level[e[0]] < 0:\n                    level[e[0]] = level[x] + 1\n                    q.append(e[0])\n        if level[t] < 0:\n            break\n        it = [0] * (n + 1)\n\n        def dfs(x, f):\n            if x == t:\n                return f\n            while it[x] < len(graph[x]):\n                e = graph[x][it[x]]\n                if e[1] > 0 and level[e[0]] == level[x] + 1:\n                    d = dfs(e[0], min(f, e[1]))\n                    if d > 0:\n                        e[1] -= d\n                        graph[e[0]][e[2]][1] += d\n                        return d\n                it[x] += 1\n            return 0\n\n        while True:\n            f = dfs(s, 1 << 60)\n            if f == 0:\n                break\n            flow += f\n    print(flow)\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = []\n    for i in range(m):\n        u = int(data[2 + 3 * i]); v = int(data[3 + 3 * i]); c = int(data[4 + 3 * i])\n        edges.append((u, v, c))\n    k = n - 2\n    best = None\n    for mask in range(1 << k):\n        side = [False] * (n + 1)\n        side[1] = True\n        for i in range(k):\n            if (mask >> i) & 1:\n                side[i + 2] = True\n        total = 0\n        for u, v, c in edges:\n            if side[u] != side[v]:\n                total += c\n        if best is None or total < best:\n            best = total\n    print(best)\n\n\nmain()\n",
+      "wrong": "import sys\nfrom collections import deque\n\n\ndef main():\n    sys.setrecursionlimit(10000)\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    graph = [[] for _ in range(n + 1)]\n    idx = 2\n    for _ in range(m):\n        u = int(data[idx]); v = int(data[idx + 1]); c = int(data[idx + 2])\n        idx += 3\n        graph[u].append([v, c, len(graph[v])])\n        graph[v].append([u, 0, len(graph[u]) - 1])\n    s, t = 1, n\n    flow = 0\n    while True:\n        level = [-1] * (n + 1)\n        level[s] = 0\n        q = deque([s])\n        while q:\n            x = q.popleft()\n            for e in graph[x]:\n                if e[1] > 0 and level[e[0]] < 0:\n                    level[e[0]] = level[x] + 1\n                    q.append(e[0])\n        if level[t] < 0:\n            break\n        it = [0] * (n + 1)\n\n        def dfs(x, f):\n            if x == t:\n                return f\n            while it[x] < len(graph[x]):\n                e = graph[x][it[x]]\n                if e[1] > 0 and level[e[0]] == level[x] + 1:\n                    d = dfs(e[0], min(f, e[1]))\n                    if d > 0:\n                        e[1] -= d\n                        graph[e[0]][e[2]][1] += d\n                        return d\n                it[x] += 1\n            return 0\n\n        while True:\n            f = dfs(s, 1 << 60)\n            if f == 0:\n                break\n            flow += f\n    print(flow)\n\n\nmain()\n",
+      "hints": [
+        "끊어야 하는 케이블은 1번 쪽 서버 묶음과 N번 쪽 서버 묶음 사이를 잇는 케이블이다. 서버를 두 편으로 나누는 경우를 모두 보면 N=100 에서 끝나지 않는다. 비용을 '케이블이 한 번에 실어 나를 수 있는 양'으로 보고, 1번에서 N번으로 동시에 흘려 보낼 수 있는 최대 양을 생각해 본다.",
+        "최대 유량 문제다. 흘려 보낼 수 있는 최대 양이 곧 끊어야 하는 최소 비용과 같다. 증가 경로를 반복해서 찾는 방식(Edmonds-Karp, Dinic)을 쓴다.",
+        "각 간선에 남은 용량과 짝이 되는 반대 간선의 위치를 함께 저장하는 인접 리스트를 쓴다. 양방향 케이블은 두 방향 모두 용량 c 를 가진 간선 한 쌍으로 넣는다.",
+        "남은 용량이 양수인 간선만 따라 1번에서 N번으로 가는 경로를 찾는다. 경로 위 최소 남은 용량만큼 보내고, 지나간 간선의 남은 용량은 그만큼 줄이고 짝 간선의 남은 용량은 그만큼 늘린다. 경로가 없을 때까지 반복한다.",
+        "total = 0\n반복:\n  BFS 로 남은 용량 > 0 인 간선만 써서 각 정점의 층을 구한다\n  N 에 닿지 않으면 멈춘다\n  층이 1 씩 늘어나는 간선만 따라 DFS 로 경로를 찾을 때마다\n    병목 b 만큼 정방향 용량 -= b, 짝 간선 용량 += b, total += b\ntotal 을 출력"
+      ],
+      "skillControl": {
+        "approach": "정점 2..N-1 을 1번 편과 N번 편으로 나누는 모든 경우를 세고, 그때 두 편을 잇는 케이블 비용 합의 최솟값을 고른다.",
+        "solution": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = []\n    for i in range(m):\n        edges.append((int(data[2 + 3 * i]), int(data[3 + 3 * i]), int(data[4 + 3 * i])))\n    side = [False] * (n + 1)\n    side[1] = True\n    best = [None]\n\n    def go(v):\n        if v == n:\n            total = 0\n            for a, b, c in edges:\n                if side[a] != side[b]:\n                    total += c\n            if best[0] is None or total < best[0]:\n                best[0] = total\n            return\n        side[v] = True\n        go(v + 1)\n        side[v] = False\n        go(v + 1)\n\n    go(2)\n    print(best[0])\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nr = random.Random(20260926)\nn = 100\nA = list(range(1, 51))\nB = list(range(51, 101))\nedges = []\nfor group in (A, B):\n    for _ in range(440):\n        u, v = r.sample(group, 2)\n        edges.append((u, v, r.randint(1000, 1000000)))\nfor _ in range(120):\n    u = r.choice(A)\n    v = r.choice(B)\n    if r.random() < 0.5:\n        u, v = v, u\n    edges.append((u, v, r.randint(1, 1000)))\nr.shuffle(edges)\nout = [f'{n} {len(edges)}']\nfor u, v, c in edges:\n    out.append(f'{u} {v} {c}')\nprint('\\n'.join(out))\n"
+      }
+    }
+  }
+}

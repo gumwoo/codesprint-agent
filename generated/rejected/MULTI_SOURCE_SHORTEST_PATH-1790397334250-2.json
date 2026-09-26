@@ -1,0 +1,85 @@
+{
+  "id": "MULTI_SOURCE_SHORTEST_PATH-1790397334250-2",
+  "skill": "MULTI_SOURCE_SHORTEST_PATH",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:55:28+00:00",
+  "stage": "중복",
+  "code": "P131_NEAREST_FIRE_STATION",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P130_NEAREST_SHELTER_GRID 와 같은 계산이다 - 둘 다 가중치 없는 여러 출발점 BFS 이고, 격자인지 인접 리스트인지만 다르다",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "MULTI_SOURCE_SHORTEST_PATH-1790397334250-2",
+    "skill": "MULTI_SOURCE_SHORTEST_PATH",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T04:35:34.250215400Z",
+    "draft": {
+      "codeSuffix": "NEAREST_FIRE_STATION",
+      "title": "가장 가까운 소방서까지",
+      "statement": "도시에 교차로 N개가 있고 1번부터 N번까지 번호가 붙어 있다(1-based). 도로 M개가 있으며 각 도로는 서로 다른 두 교차로를 양방향으로 잇는다. 한 도로를 지나는 데 걸리는 시간은 모두 1이다. 같은 두 교차로를 잇는 도로가 여러 개 있을 수 있다.\n\n교차로 가운데 K개에 소방서가 있다. 각 교차로에 대해, 그 교차로에서 도로를 따라 갈 수 있는 소방서들 가운데 가장 가까운 곳까지 걸리는 최소 시간을 구하라. 소방서가 있는 교차로의 값은 0이다. 어떤 소방서에도 갈 수 없는 교차로의 값은 -1이다.\n\n입력\n- 첫 줄에 N, M, K 가 공백으로 구분되어 주어진다.\n- 다음 M개 줄에 도로가 잇는 두 교차로 번호 a, b 가 주어진다 (1 ≤ a, b ≤ N, a ≠ b).\n- 마지막 줄에 소방서가 있는 교차로 번호 K개가 공백으로 구분되어 주어진다. 번호는 서로 다르다.\n\n제약\n- 1 ≤ N ≤ 50000\n- 0 ≤ M ≤ 60000\n- 1 ≤ K ≤ N\n\n출력\n한 줄에 N개의 정수를 공백으로 구분하여 출력한다. i번째 정수는 i번 교차로의 값이다.\n\n예시\n교차로 6개가 1-2-3-4-5-6 으로 한 줄로 이어져 있고 소방서가 1번과 2번에 있으면 출력은 0 0 1 2 3 4 이다.",
+      "secondarySkills": [
+        "BFS_SHORTEST_PATH",
+        "BFS_VISITED_MANAGEMENT"
+      ],
+      "referenceComplexity": "O(N + M)",
+      "expectedSolveSeconds": 900,
+      "commonMistakes": [
+        "VISITED_TIMING",
+        "NO_VISITED",
+        "INPUT_PARSE"
+      ],
+      "negativeControl": {
+        "mistake": "VISITED_TIMING",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "방문 표시를 큐에서 꺼낼 때 하고, 큐에 넣을 때마다 거리를 덮어써서 이미 더 짧은 거리가 기록된 정점(인접한 소방서 포함)의 거리가 더 큰 값으로 바뀐다.",
+      "sampleInputs": [
+        "6 5 2\n1 2\n2 3\n3 4\n4 5\n5 6\n1 2\n",
+        "8 7 2\n1 2\n2 3\n3 4\n4 5\n2 6\n6 7\n5 7\n1 5\n"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "1 0 1\n1\n"
+        },
+        {
+          "type": "SINGLE",
+          "input": "3 0 1\n2\n"
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "4 3 4\n1 2\n2 3\n3 4\n4 3 2 1\n"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "7 4 1\n1 2\n2 3\n4 5\n6 7\n2\n"
+        },
+        {
+          "type": "DUPLICATE",
+          "input": "5 6 2\n1 2\n2 1\n2 3\n3 4\n4 5\n5 4\n1 5\n"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "7 8 2\n1 2\n2 3\n3 4\n4 5\n5 6\n6 7\n7 1\n2 6\n4 1\n"
+        }
+      ],
+      "inputGenerator": "import random\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(1, 9)\nedges = []\nif n >= 2:\n    m = rng.randint(0, 12)\n    for _ in range(m):\n        a = rng.randint(1, n)\n        b = rng.randint(1, n - 1)\n        if b >= a:\n            b += 1\n        edges.append((a, b))\nk = rng.randint(1, n)\nsources = rng.sample(range(1, n + 1), k)\nprint(n, len(edges), k)\nfor a, b in edges:\n    print(a, b)\nprint(*sources)\n",
+      "reference": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    adj = [[] for _ in range(n + 1)]\n    p = 3\n    for _ in range(m):\n        a = int(data[p])\n        b = int(data[p + 1])\n        p += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    dist = [-1] * (n + 1)\n    dq = deque()\n    for i in range(k):\n        s = int(data[p + i])\n        dist[s] = 0\n        dq.append(s)\n    while dq:\n        v = dq.popleft()\n        nd = dist[v] + 1\n        for u in adj[v]:\n            if dist[u] == -1:\n                dist[u] = nd\n                dq.append(u)\n    sys.stdout.write(' '.join(map(str, dist[1:])) + '\\n')\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    INF = float('inf')\n    d = [[INF] * (n + 1) for _ in range(n + 1)]\n    for i in range(1, n + 1):\n        d[i][i] = 0\n    p = 3\n    for _ in range(m):\n        a = int(data[p])\n        b = int(data[p + 1])\n        p += 2\n        d[a][b] = 1\n        d[b][a] = 1\n    sources = [int(x) for x in data[p:p + k]]\n    for w in range(1, n + 1):\n        for i in range(1, n + 1):\n            for j in range(1, n + 1):\n                if d[i][w] + d[w][j] < d[i][j]:\n                    d[i][j] = d[i][w] + d[w][j]\n    out = []\n    for v in range(1, n + 1):\n        best = INF\n        for s in sources:\n            if d[s][v] < best:\n                best = d[s][v]\n        out.append(-1 if best == INF else best)\n    print(' '.join(map(str, out)))\n\n\nmain()\n",
+      "wrong": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    adj = [[] for _ in range(n + 1)]\n    p = 3\n    for _ in range(m):\n        a = int(data[p])\n        b = int(data[p + 1])\n        p += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    dist = [-1] * (n + 1)\n    visited = [False] * (n + 1)\n    dq = deque()\n    for i in range(k):\n        s = int(data[p + i])\n        dist[s] = 0\n        dq.append(s)\n    while dq:\n        v = dq.popleft()\n        if visited[v]:\n            continue\n        visited[v] = True\n        for u in adj[v]:\n            if not visited[u]:\n                dist[u] = dist[v] + 1\n                dq.append(u)\n    sys.stdout.write(' '.join(map(str, dist[1:])) + '\\n')\n\n\nmain()\n",
+      "hints": [
+        "각 교차로의 답은 여러 소방서 중 가장 가까운 한 곳까지의 거리다. 소방서마다 따로 거리를 구하면 소방서 수만큼 전체 탐색이 반복된다.",
+        "도로의 길이가 모두 같으므로 너비 우선 탐색으로 최단 거리를 구할 수 있다. 소방서 전체를 하나의 출발 집합으로 보고 탐색을 한 번만 한다.",
+        "교차로마다 거리를 담는 배열(아직 모르면 -1)과 큐 하나를 둔다. 탐색 시작 전에 모든 소방서의 거리를 0으로 기록하고 큐에 넣어 둔다.",
+        "큐에서 교차로를 꺼내면 이웃 가운데 거리가 아직 기록되지 않은 곳에만 꺼낸 교차로의 거리보다 1 큰 값을 기록하고 큐에 넣는다. 큐에 넣는 순간 기록한 값이 곧 최종 답이며 다시 바뀌지 않는다.",
+        "거리 배열을 모두 -1 로 만든다 → 소방서 교차로들을 거리 0 으로 기록하고 큐에 넣는다 → 큐가 빌 때까지: 앞에서 하나 꺼내고, 이웃 중 거리가 -1 인 곳마다 거리를 (꺼낸 곳 거리 + 1)로 기록하고 큐 뒤에 넣는다 → 1번부터 N번까지 거리를 공백으로 이어 출력한다."
+      ],
+      "skillControl": {
+        "approach": "소방서마다 따로 너비 우선 탐색을 하고 교차로별로 최솟값을 취한다.",
+        "solution": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    adj = [[] for _ in range(n + 1)]\n    p = 3\n    for _ in range(m):\n        a = int(data[p])\n        b = int(data[p + 1])\n        p += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    sources = [int(x) for x in data[p:p + k]]\n    best = [-1] * (n + 1)\n    for s in sources:\n        dist = [-1] * (n + 1)\n        dist[s] = 0\n        dq = deque([s])\n        while dq:\n            v = dq.popleft()\n            for u in adj[v]:\n                if dist[u] == -1:\n                    dist[u] = dist[v] + 1\n                    dq.append(u)\n        for v in range(1, n + 1):\n            if dist[v] != -1 and (best[v] == -1 or dist[v] < best[v]):\n                best[v] = dist[v]\n    sys.stdout.write(' '.join(map(str, best[1:])) + '\\n')\n\n\nmain()\n",
+        "stressInputGenerator": "import random\nrng = random.Random(20260926)\nn = 50000\nperm = list(range(1, n + 1))\nrng.shuffle(perm)\nedges = []\nfor v in range(1, n):\n    p = rng.randint(max(0, v - 3), v - 1)\n    edges.append((perm[v], perm[p]))\nfor _ in range(10000):\n    a = rng.randint(1, n)\n    b = rng.randint(1, n - 1)\n    if b >= a:\n        b += 1\n    edges.append((a, b))\nrng.shuffle(edges)\nk = 1000\nsources = rng.sample(range(1, n + 1), k)\nlines = [f'{n} {len(edges)} {k}']\nlines.extend(f'{a} {b}' for a, b in edges)\nlines.append(' '.join(map(str, sources)))\nprint('\\n'.join(lines))\n"
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "problemCode": "P122_CUT_VERTICES",
+  "problemTitle": "통신망의 급소",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "ARTICULATION_POINT",
+    "DFS_TRAVERSAL"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n + 1)]\n    idx = 2\n    for _ in range(m):\n        a = int(data[idx])\n        b = int(data[idx + 1])\n        idx += 2\n        adj[a].append(b)\n        adj[b].append(a)\n    disc = [0] * (n + 1)\n    low = [0] * (n + 1)\n    parent = [0] * (n + 1)\n    ptr = [0] * (n + 1)\n    cut = [False] * (n + 1)\n    timer = 0\n    for s in range(1, n + 1):\n        if disc[s]:\n            continue\n        timer += 1\n        disc[s] = low[s] = timer\n        stack = [s]\n        while stack:\n            v = stack[-1]\n            if ptr[v] < len(adj[v]):\n                u = adj[v][ptr[v]]\n                ptr[v] += 1\n                if disc[u] == 0:\n                    parent[u] = v\n                    timer += 1\n                    disc[u] = low[u] = timer\n                    stack.append(u)\n                elif u != parent[v]:\n                    if disc[u] < low[v]:\n                        low[v] = disc[u]\n            else:\n                stack.pop()\n                if stack:\n                    p = stack[-1]\n                    if low[v] < low[p]:\n                        low[p] = low[v]\n                    if low[v] >= disc[p]:\n                        cut[p] = True\n    res = [v for v in range(1, n + 1) if cut[v]]\n    out = [str(len(res))]\n    if res:\n        out.append(' '.join(map(str, res)))\n    sys.stdout.write('\\n'.join(out) + '\\n')\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      6
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "probes": {}
+}

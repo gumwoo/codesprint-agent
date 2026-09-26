@@ -1,0 +1,45 @@
+# 정본 형식: contracts/problem.schema.json
+# 문제 초안 생성기가 만들고 채택 검사가 받아 들였다(ADR-0032).
+# 기대 출력은 reference.py 를 실행해 만들었고, bruteForce 와 무작위 입력 30개에서 교차 검증했다.
+
+code: P125_DOMINO_TILE_FLOOR
+title: 막힌 바닥에 타일 깔기
+kind: NORMAL
+source: DEV_FIXTURE
+timeLimitMs: 2000
+memoryLimitMb: 256
+expectedSolveSeconds: 1500
+referenceComplexity: O(V·E) — V ≤ 900(빈 칸), E ≤ 1800(인접한 빈 칸 쌍)
+statement: |
+  N행 M열 바닥이 있다. 각 칸은 비어 있거나('.') 막혀 있다('#'). 1×2 크기의 타일을 빈 칸에 깔려고 한다. 타일 하나는 상하 또는 좌우로 인접한 빈 칸 두 개를 정확히 덮는다. 타일은 가로로도 세로로도 놓을 수 있다. 타일끼리 겹칠 수 없고, 막힌 칸이나 바닥 밖을 덮을 수 없다. 모든 빈 칸을 덮을 필요는 없다. 동시에 깔 수 있는 타일의 최대 개수를 구하라.
+
+  입력 형식
+  첫 줄에 정수 N과 M이 공백으로 구분되어 주어진다. (1 ≤ N ≤ 30, 1 ≤ M ≤ 30)
+  다음 N줄에 걸쳐 길이 M의 문자열이 한 줄에 하나씩 주어진다. 각 문자는 '.' 또는 '#'이다.
+
+  출력 형식
+  깔 수 있는 타일의 최대 개수를 정수 하나로 출력한다.
+
+  인덱스 기준
+  행은 위에서부터, 열은 왼쪽에서부터 0번으로 센다(0-based). 출력에는 좌표를 쓰지 않는다.
+
+  예시
+  2 3 / '...' / '.#.' 에서는 윗줄 가운데와 오른쪽 칸을 가로 타일로, 왼쪽 열 두 칸을 세로 타일로 덮으면 2개를 깔 수 있다.
+skills:
+- code: BIPARTITE_MATCHING
+  role: PRIMARY
+  weight: 0.7
+- code: GRID_COORDINATE
+  role: SECONDARY
+  weight: 0.15
+- code: GRID_BOUNDARY_CHECK
+  role: SECONDARY
+  weight: 0.15
+commonMistakes:
+- BOUNDARY_CHECK
+- INDEX_ERROR
+negativeControl:
+  mistake: BOUNDARY_CHECK
+  expectedStatus: RUNTIME_ERROR
+skillControl:
+  approach: 행 우선 순서로 첫 빈 칸을 골라 오른쪽 타일 · 아래쪽 타일 · 비워 두기 세 경우를 모두 되추적으로 시도한다.

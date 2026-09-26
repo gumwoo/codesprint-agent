@@ -1,0 +1,36 @@
+{
+  "problemCode": "P128_PIPE_NETWORK_MAX_FLOW",
+  "problemTitle": "배수관 네트워크의 최대 송수량",
+  "problemSource": "DEV_FIXTURE",
+  "label": "IMPLEMENTATION_MISC",
+  "labelSource": "negativeControl",
+  "skillCodes": [
+    "MAX_FLOW",
+    "BFS_BASIC"
+  ],
+  "sourceCode": "\nimport sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    cap = [[0] * (n + 1) for _ in range(n + 1)]\n    order = [[] for _ in range(n + 1)]\n    for i in range(m):\n        u, v, c = int(data[2 + 3 * i]), int(data[3 + 3 * i]), int(data[4 + 3 * i])\n        if cap[u][v] == 0:\n            order[u].append(v)\n        cap[u][v] += c\n\n    def dfs(x, limit, seen):\n        if x == n:\n            return limit\n        seen[x] = True\n        for y in order[x]:\n            if not seen[y] and cap[x][y] > 0:\n                f = dfs(y, min(limit, cap[x][y]), seen)\n                if f > 0:\n                    cap[x][y] -= f\n                    return f\n        return 0\n\n    total = 0\n    while True:\n        f = dfs(1, float('inf'), [False] * (n + 1))\n        if f == 0:\n            break\n        total += f\n    print(total)\n\n\nmain()\n",
+  "judge": {
+    "status": "WRONG_ANSWER",
+    "failedCaseId": 1,
+    "stderr": null,
+    "passedCaseIds": [
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "failedCaseIds": [
+      1,
+      2,
+      6,
+      13,
+      14
+    ]
+  },
+  "probes": {}
+}

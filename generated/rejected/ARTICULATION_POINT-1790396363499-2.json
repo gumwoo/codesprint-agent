@@ -1,0 +1,79 @@
+{
+  "id": "ARTICULATION_POINT-1790396363499-2",
+  "skill": "ARTICULATION_POINT",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:55:28+00:00",
+  "stage": "중복",
+  "code": "P123_MAX_SPLIT_BY_REMOVAL",
+  "reasons": [
+    "채택 검사를 통과한 뒤 스스로 점검에서 철회했다 - P122_CUT_VERTICES 와 같은 계산이다 - 같은 order · low 에서 정점마다 떨어져 나가는 부분 트리 수를 세는 것이고, 모으는 값만 다르다(P25 · P26 과 같은 이유)",
+    "글자 유사도로는 잡히지 않는 의미 중복이다(ADR-0032 남는 위험)"
+  ],
+  "draft": {
+    "id": "ARTICULATION_POINT-1790396363499-2",
+    "skill": "ARTICULATION_POINT",
+    "promptVersion": "problem-v3",
+    "generatedAt": "2026-09-26T04:19:23.499633700Z",
+    "draft": {
+      "codeSuffix": "MAX_SPLIT_BY_REMOVAL",
+      "title": "한 정점 제거로 만드는 최대 조각 수",
+      "statement": "정점 N개, 간선 M개로 이루어진 무방향 그래프가 주어진다. 정점 번호는 0부터 N-1까지다(0-based). 자기 자신으로 가는 간선과 같은 두 정점을 잇는 중복 간선은 없다. 그래프는 처음부터 여러 연결 요소로 나뉘어 있을 수 있다.\n\n정점 v 하나를 골라 v 와 v 에 붙은 간선을 모두 지운다. 이때 남은 그래프의 연결 요소 개수를 구한다. 남은 정점이 하나도 없으면 연결 요소는 0개다. 모든 v 중 이 개수가 가장 큰 값 K 와, K 를 만드는 정점 중 번호가 가장 작은 정점 번호를 출력한다.\n\n예: 간선 0-1, 1-2 만 있는 그래프에서 1 을 지우면 {0}, {2} 두 연결 요소가 남는다. 0 을 지우면 {1, 2} 하나가 남는다. 고립된 정점을 지우면 그 정점이 이루던 연결 요소가 사라진다.\n\n입력\n첫 줄에 N M 이 공백으로 주어진다.\n다음 M 줄에 간선의 두 끝 u v 가 공백으로 주어진다.\n\n제약\n1 ≤ N ≤ 50000\n0 ≤ M ≤ 70000\n0 ≤ u, v ≤ N-1, u ≠ v\n\n출력\nK 와 정점 번호를 공백으로 구분해 한 줄에 출력한다.",
+      "secondarySkills": [
+        "DFS_TRAVERSAL"
+      ],
+      "referenceComplexity": "O(N + M)",
+      "expectedSolveSeconds": 1800,
+      "commonMistakes": [
+        "IMPLEMENTATION_MISC",
+        "INDEX_ERROR"
+      ],
+      "negativeControl": {
+        "mistake": "IMPLEMENTATION_MISC",
+        "expectedStatus": "WRONG_ANSWER"
+      },
+      "wrongDescription": "DFS 루트도 루트가 아닌 정점처럼 부모 쪽 조각이 하나 더 남는다고 세어 루트를 지웠을 때의 조각 수를 1 크게 센다.",
+      "sampleInputs": [
+        "3 2\n0 1\n1 2",
+        "6 6\n0 1\n1 2\n2 0\n2 3\n3 4\n3 5"
+      ],
+      "edgeCases": [
+        {
+          "type": "MINIMUM",
+          "input": "1 0"
+        },
+        {
+          "type": "SINGLE",
+          "input": "3 0"
+        },
+        {
+          "type": "BOUNDARY",
+          "input": "5 4\n0 1\n0 2\n0 3\n0 4"
+        },
+        {
+          "type": "ALL_SAME",
+          "input": "4 4\n0 1\n1 2\n2 3\n3 0"
+        },
+        {
+          "type": "ADVERSARIAL",
+          "input": "7 7\n0 1\n1 2\n2 0\n2 3\n3 4\n4 2\n5 6"
+        }
+      ],
+      "inputGenerator": "import random\n\nseed = int(input())\nr = random.Random(seed)\nn = r.randint(1, 8)\npairs = [(u, v) for u in range(n) for v in range(u + 1, n)]\nr.shuffle(pairs)\nm = r.randint(0, min(len(pairs), 10))\nprint(n, m)\nfor u, v in pairs[:m]:\n    if r.random() < 0.5:\n        u, v = v, u\n    print(u, v)\n",
+      "reference": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n)]\n    pos = 2\n    for _ in range(m):\n        u = int(data[pos])\n        v = int(data[pos + 1])\n        pos += 2\n        adj[u].append(v)\n        adj[v].append(u)\n    disc = [-1] * n\n    low = [0] * n\n    parent = [-1] * n\n    it = [0] * n\n    cut = [0] * n\n    comps = 0\n    timer = 0\n    for s in range(n):\n        if disc[s] != -1:\n            continue\n        comps += 1\n        disc[s] = low[s] = timer\n        timer += 1\n        stack = [s]\n        while stack:\n            v = stack[-1]\n            nb = adj[v]\n            if it[v] < len(nb):\n                w = nb[it[v]]\n                it[v] += 1\n                if disc[w] == -1:\n                    parent[w] = v\n                    disc[w] = low[w] = timer\n                    timer += 1\n                    stack.append(w)\n                elif w != parent[v] and disc[w] < low[v]:\n                    low[v] = disc[w]\n            else:\n                stack.pop()\n                p = parent[v]\n                if p != -1:\n                    if low[v] < low[p]:\n                        low[p] = low[v]\n                    if low[v] >= disc[p]:\n                        cut[p] += 1\n    best = -1\n    best_v = -1\n    for v in range(n):\n        pieces = cut[v] if parent[v] == -1 else cut[v] + 1\n        total = comps - 1 + pieces\n        if total > best:\n            best = total\n            best_v = v\n    print(best, best_v)\n\n\nmain()\n",
+      "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m = int(data[0]), int(data[1])\n    edges = [(int(data[2 + 2 * i]), int(data[3 + 2 * i])) for i in range(m)]\n    best = -1\n    best_v = -1\n    for x in range(n):\n        root = list(range(n))\n\n        def find(a):\n            while root[a] != a:\n                root[a] = root[root[a]]\n                a = root[a]\n            return a\n\n        for u, v in edges:\n            if u == x or v == x:\n                continue\n            ru, rv = find(u), find(v)\n            if ru != rv:\n                root[ru] = rv\n        total = sum(1 for v in range(n) if v != x and find(v) == v)\n        if total > best:\n            best = total\n            best_v = x\n    print(best, best_v)\n\n\nmain()\n",
+      "wrong": "import sys\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n)]\n    pos = 2\n    for _ in range(m):\n        u = int(data[pos])\n        v = int(data[pos + 1])\n        pos += 2\n        adj[u].append(v)\n        adj[v].append(u)\n    disc = [-1] * n\n    low = [0] * n\n    parent = [-1] * n\n    it = [0] * n\n    cut = [0] * n\n    comps = 0\n    timer = 0\n    for s in range(n):\n        if disc[s] != -1:\n            continue\n        comps += 1\n        disc[s] = low[s] = timer\n        timer += 1\n        stack = [s]\n        while stack:\n            v = stack[-1]\n            nb = adj[v]\n            if it[v] < len(nb):\n                w = nb[it[v]]\n                it[v] += 1\n                if disc[w] == -1:\n                    parent[w] = v\n                    disc[w] = low[w] = timer\n                    timer += 1\n                    stack.append(w)\n                elif w != parent[v] and disc[w] < low[v]:\n                    low[v] = disc[w]\n            else:\n                stack.pop()\n                p = parent[v]\n                if p != -1:\n                    if low[v] < low[p]:\n                        low[p] = low[v]\n                    if low[v] >= disc[p]:\n                        cut[p] += 1\n    best = -1\n    best_v = -1\n    for v in range(n):\n        pieces = cut[v] + 1\n        total = comps - 1 + pieces\n        if total > best:\n            best = total\n            best_v = v\n    print(best, best_v)\n\n\nmain()\n",
+      "hints": [
+        "정점 v 를 지워도 v 가 속하지 않은 연결 요소는 그대로다. v 의 연결 요소가 몇 조각으로 갈라지는지만 알면 된다. 정점마다 지우고 다시 탐색하면 N 번 탐색하게 되어 느리다.",
+        "깊이 우선 탐색 한 번으로 탐색 트리를 만들고, 각 부분 트리가 트리 간선이 아닌 간선으로 조상 쪽에 닿는지를 본다. 단절점을 찾는 방법과 같은 범주다.",
+        "정점마다 방문 순서 번호, 그 정점의 부분 트리에서 트리 밖 간선 하나로 닿을 수 있는 가장 이른 방문 순서, 그리고 떨어져 나가는 자식 부분 트리 개수를 배열로 둔다. 재귀 깊이가 N 까지 갈 수 있으니 명시적 스택으로 탐색한다.",
+        "자식 c 의 부분 트리가 v 보다 먼저 방문된 정점에 닿지 못하면 v 를 지울 때 그 부분 트리가 따로 떨어진다. 루트가 아닌 v 는 부모 쪽 조각이 하나 더 남고, 탐색 루트는 부모 쪽 조각이 없다. 고립 정점을 지우면 조각이 0개가 되어 전체 연결 요소가 하나 준다.",
+        "전체 연결 요소 수 C 를 센다.\n아직 방문하지 않은 정점마다 스택 DFS 를 시작한다.\n  새 정점에 들어가면 방문 순서를 매기고 도달값을 방문 순서로 둔다.\n  이미 방문한 이웃이 부모가 아니면 도달값을 그 이웃의 방문 순서와 비교해 줄인다.\n  자식을 끝내고 부모로 돌아올 때 부모의 도달값을 자식의 도달값과 비교해 줄이고,\n  자식의 도달값이 부모의 방문 순서 이상이면 부모의 떨어지는 조각 수를 1 늘린다.\n정점마다 조각 수(루트면 그대로, 아니면 1 더함)로 C - 1 + 조각 수를 계산한다.\n가장 큰 값과, 처음 그 값을 낸 정점을 출력한다."
+      ],
+      "skillControl": {
+        "approach": "정점마다 그 정점을 지운 그래프에서 BFS 로 연결 요소 수를 다시 센다.",
+        "solution": "import sys\nfrom collections import deque\n\n\ndef main():\n    data = sys.stdin.buffer.read().split()\n    n, m = int(data[0]), int(data[1])\n    adj = [[] for _ in range(n)]\n    for i in range(m):\n        u = int(data[2 + 2 * i])\n        v = int(data[3 + 2 * i])\n        adj[u].append(v)\n        adj[v].append(u)\n    best = -1\n    best_v = -1\n    for x in range(n):\n        seen = [False] * n\n        seen[x] = True\n        total = 0\n        for s in range(n):\n            if seen[s]:\n                continue\n            total += 1\n            seen[s] = True\n            q = deque([s])\n            while q:\n                v = q.popleft()\n                for w in adj[v]:\n                    if not seen[w]:\n                        seen[w] = True\n                        q.append(w)\n        if total > best:\n            best = total\n            best_v = x\n    print(best, best_v)\n\n\nmain()\n",
+        "stressInputGenerator": "import random\n\nr = random.Random(20260926)\nn = 50000\norder = list(range(n))\nr.shuffle(order)\nedges = set()\nfor i in range(1, n):\n    if i % 10000 == 0:\n        continue\n    if r.random() < 0.5:\n        j = i - 1\n    else:\n        j = r.randrange(i)\n    a, b = order[i], order[j]\n    edges.add((min(a, b), max(a, b)))\nwhile len(edges) < 69000:\n    a = r.randrange(n)\n    b = r.randrange(n)\n    if a != b:\n        edges.add((min(a, b), max(a, b)))\nedge_list = list(edges)\nr.shuffle(edge_list)\nout = [str(n) + \" \" + str(len(edge_list))]\nfor a, b in edge_list:\n    if r.random() < 0.5:\n        a, b = b, a\n    out.append(str(a) + \" \" + str(b))\nprint(\"\\n\".join(out))\n"
+      }
+    }
+  }
+}

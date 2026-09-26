@@ -1,0 +1,11 @@
+{
+  "id": "STATE_GRAPH_DIJKSTRA-1790397756317-2",
+  "skill": "STATE_GRAPH_DIJKSTRA",
+  "promptVersion": "problem-v3",
+  "decidedAt": "2026-09-26T04:53:33+00:00",
+  "code": "P132_TOLL_HALF_COUPON",
+  "crossCheckedInputs": 37,
+  "bruteForce": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, k = int(data[0]), int(data[1]), int(data[2])\n    edges = []\n    for i in range(m):\n        u, v, w = int(data[3 + 3 * i]), int(data[4 + 3 * i]), int(data[5 + 3 * i])\n        edges.append((u, v, w))\n    best = -1\n    on_path = [False] * (n + 1)\n\n    def dfs(u, weights):\n        nonlocal best\n        if u == n:\n            savings = sorted((w - w // 2 for w in weights), reverse=True)\n            cost = sum(weights) - sum(savings[:k])\n            if best == -1 or cost < best:\n                best = cost\n            return\n        for a, b, w in edges:\n            for x, y in ((a, b), (b, a)):\n                if x == u and not on_path[y]:\n                    on_path[y] = True\n                    weights.append(w)\n                    dfs(y, weights)\n                    weights.pop()\n                    on_path[y] = False\n\n    on_path[1] = True\n    dfs(1, [])\n    print(best)\n\n\nmain()\n",
+  "inputGenerator": "import random\n\nseed = int(input())\nrng = random.Random(seed)\nn = rng.randint(2, 7)\nm = rng.randint(0, 10)\nk = rng.randint(0, 3)\nlines = [f\"{n} {m} {k}\"]\nfor _ in range(m):\n    u = rng.randint(1, n)\n    v = rng.randint(1, n - 1)\n    if v >= u:\n        v += 1\n    lines.append(f\"{u} {v} {rng.randint(1, 20)}\")\nprint(\"\\n\".join(lines))\n",
+  "stressInputGenerator": "import random\n\nrng = random.Random(20260926)\nn = 2000\nm = 5000\nk = 5\nlines = [f\"{n} {m} {k}\"]\norder = list(range(1, n + 1))\nrng.shuffle(order)\norder.remove(1)\norder.insert(0, 1)\nfor i in range(1, n):\n    lines.append(f\"{order[rng.randint(0, i - 1)]} {order[i]} {rng.randint(1, 1000000)}\")\nfor _ in range(m - (n - 1)):\n    u = rng.randint(1, n)\n    v = rng.randint(1, n - 1)\n    if v >= u:\n        v += 1\n    lines.append(f\"{u} {v} {rng.randint(1, 1000000)}\")\nprint(\"\\n\".join(lines))\n"
+}
