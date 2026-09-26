@@ -285,6 +285,11 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
         if any(sign in stderr_text
                for sign in ("MemoryError", "OutOfMemoryError", "std::bad_alloc")):
             outcome = "MEMORY_LIMIT"
+        # 단, JVM 은 스레드를 더 만들지 못해도 OutOfMemoryError 라고 적는다("unable to create native thread").
+        # 이것은 메모리가 아니라 프로세스 수 상한(pids-limit)에 걸린 것이다 - MEMORY_LIMIT 로 부르면 사용자는
+        # 메모리를 줄이려 한다. CI 에서 프로세스 폭주 격리 case 가 이 때문에 가끔 MEMORY_LIMIT 로 나왔다.
+        if "unable to create native thread" in stderr_text:
+            outcome = "RUNTIME_ERROR"
         return {"outcome": outcome, "stdout": "", "stderr": sanitize_stderr(stderr_text),
                 "executionMs": elapsed_ms}
 
