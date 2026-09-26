@@ -612,6 +612,27 @@ test("학습 모드 저장이 거절되면 칸을 서버의 모드로 되돌린�
   await expect(page.locator("#learningMode")).toHaveValue("NORMAL");
 });
 
+test("모드를 읽지 못한 사용자로 바꾸면 이전 사용자의 튜터 칸이 남지 않는다", async ({ page }) => {
+  // 모드를 적는 곳을 loadLearningMode 하나로 모은 뒤, 읽기 실패가 아무것도 적지 않아 이전 사용자의 FREE 가
+  // 남았다(검증 에이전트가 재현했다). 없는 사용자와 연결 실패 둘 다 본다.
+  await stubApi(page);
+  await page.route(/\/api\/users\/1$/, (route) => fulfill(route, modeUser("FREE")));
+  await page.route(/\/api\/users\/2$/, (route) => route.abort());
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+
+  for (const id of ["2", "99"]) {
+    await page.fill("#userId", id);
+    await page.press("#userId", "Tab");
+    await page.click("#toProblems");
+    await page.locator("#problemList button", { hasText: "P02" }).click();
+    await expect(page.locator("#crumbProblem")).toHaveText("P02_GRID_TRAVERSAL");
+    await expect(page.locator("#tutorBox"), `사용자 ${id}`).toBeHidden();
+  }
+});
+
 test("늦게 끝난 시험 끝내기가 그 사이 옮겨 간 오늘 탭에서 사용자를 끌고 가지 않는다", async ({ page }) => {
   const slow = gate();
   const { mockTest } = require("../fixtures/api");

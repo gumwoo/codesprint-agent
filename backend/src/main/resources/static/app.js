@@ -763,6 +763,12 @@ async function loadLearningMode() {
   try {
     user = await getJson(`/api/users/${userId}`);
   } catch (error) {
+    // 읽지 못했으면(없는 사용자 · 연결 실패) 이전 사용자의 모드를 남기지 않는다 - 남기면 서버가 이
+    // 사용자에게 주지 않는 튜터 칸이 보인다(검증 에이전트가 재현했다).
+    if (mine()) {
+      currentLearningMode = null;
+      applyTutorVisibility();
+    }
     return;
   }
   if (mine()) {
