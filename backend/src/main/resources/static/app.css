@@ -23,6 +23,10 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 은 언제나 이긴다. 요소에 display 를 준 규칙이 있으면 브라우저 기본 [hidden] 이 져서, 감춘 빈
+   보고서 표가 좁은 화면에서 그대로 보였다(검증 에이전트가 재현했다). 이 화면은 hidden 으로만 감춘다. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 
 body {
@@ -87,8 +91,12 @@ body {
 
 .pane.left { border-right: 1px solid var(--line); }
 
+/* 넘치면 다음 줄로 간다. 한 줄에 가두면 문제 정보(서버 값)를 말줄임으로 자르거나 탭을 꺾어야 했다. */
 .pane-head {
-  flex: 0 0 38px;
+  flex: 0 0 auto;
+  min-height: 38px;
+  flex-wrap: wrap;
+  row-gap: 0;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -119,8 +127,7 @@ body {
 
 .file { font-family: var(--mono); }
 .meta, .note { color: var(--muted); font-size: 12px; }
-.meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.meta { margin-left: auto; }
+.meta { margin-left: auto; white-space: nowrap; }
 /* 언어 칸은 .meta 가 있던 오른쪽 끝에 둔다. */
 #language { margin-left: auto; font-size: 12px; }
 
@@ -378,7 +385,9 @@ table.skills th {
   border-bottom: 1px solid var(--line);
 }
 
+/* 긴 코드(COMBINATORIAL_ENUMERATION 같은)는 칸 안에서 끊는다. 끊지 않으면 좁은 화면에서 표가 페이지를 민다. */
 table.skills td {
+  overflow-wrap: anywhere;
   padding: 5px 8px 5px 0;
   border-bottom: 1px solid var(--line);
   vertical-align: baseline;
@@ -472,7 +481,6 @@ table.runcases pre {
   .who button { white-space: nowrap; }
 
   /* 탭은 한 줄로 두고, 문제 정보는 그 아래 줄로 내린다. 같은 줄에 두면 탭 이름이 한 글자씩 꺾였다. */
-  .pane-head { flex: 0 0 auto; flex-wrap: wrap; min-height: 38px; row-gap: 0; }
   .pane-head .meta { flex: 1 0 100%; margin-left: 0; padding-bottom: 6px; }
   .result-head .meta { flex: 0 1 auto; margin-left: auto; padding-bottom: 0; }
 
