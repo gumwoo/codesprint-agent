@@ -382,6 +382,7 @@ async function showToday() {
     $("mistakeNote").textContent = "";
     rows.replaceChildren();
     mistakeRows.replaceChildren();
+    $("mistakeTable").hidden = true;
     return;
   }
   try {
@@ -451,6 +452,7 @@ async function showToday() {
     }
 
     mistakeRows.replaceChildren();
+    $("mistakeTable").hidden = mistakes.mistakes.length === 0;
     $("mistakeNote").textContent = mistakes.mistakes.length === 0
         ? `최근 제출 ${mistakes.submissions}개에서 탐지된 실수가 없다.`
         : `최근 제출 ${mistakes.submissions}개. 확정되지 않은 탐지는 주장일 뿐이다.`;
@@ -475,6 +477,7 @@ async function showToday() {
     $("todaySummary").textContent = `계획을 불러오지 못했다: ${error.message}`;
     rows.replaceChildren();
     mistakeRows.replaceChildren();
+    $("mistakeTable").hidden = true;
   }
 }
 
@@ -807,20 +810,7 @@ async function openMockProblem(mockTestId, label) {
   $("problemMeta").textContent = `${text(sheet.timeLimitMs)}ms · ${text(sheet.memoryLimitMb)}MB`;
   $("statement").textContent = sheet.statement;
   $("problemConcept").replaceChildren();
-  const samples = $("samples");
-  samples.replaceChildren();
-  sheet.samples.forEach((sample, index) => {
-    const block = document.createElement("div");
-    block.className = "sample";
-    const title = document.createElement("h4");
-    title.textContent = `예시 ${index + 1}`;
-    const input = document.createElement("pre");
-    input.textContent = sample.input;
-    const output = document.createElement("pre");
-    output.textContent = sample.expectedOutput;
-    block.append(title, input, output);
-    samples.append(block);
-  });
+  renderSamples(sheet.samples);
   // 시험 중에는 힌트를 주지 않는다(PRD §84).
   resetHints();
   $("hintsBox").hidden = true;
@@ -1275,6 +1265,8 @@ async function refreshReviews() {
 async function refreshDiagnostic() {
   const box = $("diagnostic");
   const userId = Number($("userId").value);
+  // 처음 온 사람 안내는 사용자가 있는지로만 정한다 - 응답을 기다리지 않으므로 늦게 덮일 일이 없다.
+  $("welcome").hidden = Boolean(userId);
   const mine = claimView("diagnostic");
   if (!userId) {
     box.hidden = true;
@@ -1446,6 +1438,34 @@ async function revealNextHint() {
   $("hintButton").disabled = false;
 }
 
+/**
+ * 공개 예시. 일반 문제와 시험 문제가 같은 모양을 쓴다 - 따로 그리면 한쪽만 고쳐진다.
+ * 어느 칸이 입력이고 어느 칸이 출력인지 이름을 붙인다. 좁은 화면에서는 위아래로 쌓여 더 헷갈렸다.
+ */
+function renderSamples(list) {
+  const samples = $("samples");
+  samples.replaceChildren();
+  list.forEach((sample, index) => {
+    const block = document.createElement("div");
+    block.className = "sample";
+    const title = document.createElement("h4");
+    title.textContent = `예시 ${index + 1}`;
+    block.append(title, ioBlock("입력", sample.input), ioBlock("출력", sample.expectedOutput));
+    samples.append(block);
+  });
+}
+
+function ioBlock(name, value) {
+  const box = document.createElement("div");
+  const label = document.createElement("span");
+  label.className = "io";
+  label.textContent = name;
+  const pre = document.createElement("pre");
+  pre.textContent = value;
+  box.append(label, pre);
+  return box;
+}
+
 async function openProblem(code) {
   // **문제를 빠르게 두 번 고르면 늦게 온 응답이 이긴다.** 마지막에 누른 것이
   // 아니라 먼저 누른 문제가 열린다 - 이 검사가 그것을 찾았다(ADR-0023).
@@ -1474,22 +1494,9 @@ async function openProblem(code) {
       + `${text(currentProblem.expectedSolveSeconds)}초`;
   $("statement").textContent = currentProblem.statement;
 
-  const samples = $("samples");
-  samples.replaceChildren();
   // 서버가 hidden case 를 내려주지 않는다. 여기서 거르지 않는 이유는, 거를 것이
   // 있다고 믿는 순간 유출 경로가 화면 쪽으로 옮겨오기 때문이다.
-  currentProblem.samples.forEach((sample, index) => {
-    const block = document.createElement("div");
-    block.className = "sample";
-    const title = document.createElement("h4");
-    title.textContent = `예시 ${index + 1}`;
-    const input = document.createElement("pre");
-    input.textContent = sample.input;
-    const output = document.createElement("pre");
-    output.textContent = sample.expectedOutput;
-    block.append(title, input, output);
-    samples.append(block);
-  });
+  renderSamples(currentProblem.samples);
 
   resetHints();
   showLeft("statementBody");
@@ -1985,12 +1992,17 @@ function render(submissionId, view) {
   const action = $("nextAction");
   action.replaceChildren();
   action.append(heading("다음"));
+  // 서버가 준 이유를 앞에 둔다. 코드만 굵게 있으면 무엇을 하라는지 읽히지 않는다 - 코드는
+  // 지우지 않고 그 아래에 둔다. 이름표를 화면이 붙이지 않는 것은 액션을 화면이 해석하지 않기 위해서다.
+  const why = document.createElement("p");
+  why.className = "lead";
+  why.textContent = result.nextAction.reason;
   const what = document.createElement("p");
   what.className = "what";
   what.textContent = result.nextAction.targetSkill
       ? `${result.nextAction.type} · ${result.nextAction.targetSkill}`
       : result.nextAction.type;
-  action.append(what, note(result.nextAction.reason));
+  action.append(why, what);
 
   const goNext = $("goNext");
   goNext.hidden = false;
