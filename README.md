@@ -180,6 +180,7 @@ CI 가 대조한다([ADR-0010](docs/adr/0010-java-implementation-is-checked-agai
 | 계약 + 검사 하네스 + 메타테스트 | 완료 |
 | Judge / Sandbox (Python 3.12 · Java 21 · C++17, ADR-0045) + Judge Worker / 큐 | 완료 |
 | 문제 · Test Case 116개 + 단계별 힌트 사다리 | 완료 |
+| 문제 템플릿 - 가족과 변형 축, 숫자만 바꾼 변형 금지 (ADR-0051) | 완료 |
 | Mastery / Evidence 산식 (Python oracle ↔ Java) | 완료 |
 | 초기 진단 · Decision Engine · 선수 관계 | 완료 |
 | 간격 복습 · 개념 자료 · 단계별 힌트 | 완료 |

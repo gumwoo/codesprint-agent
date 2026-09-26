@@ -173,7 +173,47 @@ def drop_sample(doc):
 
 # (설명, 대상 파일, 망가뜨리는 방법, 기대 메시지 조각)
 # 새 불변식을 check_problems.py 에 추가하면 그것을 깨뜨리는 케이스도 여기 함께 추가한다.
+def template_points_nowhere(doc):
+    doc["templates"][0]["variants"][0]["problem"] = "P999_NO_SUCH_PROBLEM"
+
+
+def template_wrong_primary(doc):
+    # GRID_REGION(BFS_GRID_TRAVERSAL) 에 PRIMARY 가 BFS_SHORTEST_PATH 인 문제를 넣는다
+    doc["templates"][0]["variants"].append(
+        {"problem": "P05_SHORTEST_PATH", "values": {"requiredOutput": "다른 출력"}})
+
+
+def template_problem_in_two_families(doc):
+    doc["templates"][1]["variants"].append(dict(doc["templates"][1]["variants"][0]))
+    doc["templates"].append({
+        "code": "COPY_FAMILY", "name": "복사", "skill": doc["templates"][1]["skill"],
+        "parameters": doc["templates"][1]["parameters"],
+        "variants": [dict(doc["templates"][1]["variants"][0], values={"moves": "a", "requiredOutput": "a"}),
+                     {"problem": "P09_BFS_VARIANT_A", "values": {"moves": "b", "requiredOutput": "b"}}],
+    })
+    doc["templates"][1]["variants"].pop()
+
+
+def template_numbers_only(doc):
+    # 두 변형의 값을 같게 하고, 다른 것은 "제약 조건" 축뿐이게 한다 - 숫자만 바꾼 변형
+    t = doc["templates"][0]
+    t["parameters"].append({"name": "size", "axis": "제약 조건"})
+    for i, v in enumerate(t["variants"]):
+        v["values"] = {"requiredOutput": "같은 출력", "size": str(i)}
+
+
+def template_missing_value(doc):
+    doc["templates"][1]["variants"][0]["values"].pop("moves")
+
+
 CASES = [
+    # -- 템플릿 (ADR-0051) --
+    ("템플릿이 없는 문제를 가리키면", "problems/templates.yaml", template_points_nowhere, "없는 문제"),
+    ("템플릿의 변형이 다른 Skill 을 재면", "problems/templates.yaml", template_wrong_primary, "PRIMARY 는"),
+    ("한 문제가 두 템플릿에 속하면", "problems/templates.yaml", template_problem_in_two_families, "함께 속한다"),
+    ("변형이 숫자만 다르면", "problems/templates.yaml", template_numbers_only, "숫자(제약 조건) 말고는 같은 변형"),
+    ("변형이 parameter 값을 빠뜨리면", "problems/templates.yaml", template_missing_value, "values 가 parameters"),
+
     # -- Skill 매핑 --
     ("PRIMARY 가 사라지면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", drop_primary, "PRIMARY 는 정확히 하나"),
     ("weight 합이 1 이 아니면", "problems/P03_CONNECTED_COMPONENT/problem.yaml", break_weight_sum, "weight 합이 1.0 이 아니다"),
