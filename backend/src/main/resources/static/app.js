@@ -797,10 +797,15 @@ async function saveLearningMode() {
     select.disabled = false;
   }
   if (!mine()) {
+    // 저장 중에 사용자가 바뀌었다. 그 사이 새 사용자의 읽기는 칸이 잠겨 있어 건너뛰었으므로, 여기서 다시
+    // 읽는다 - 아니면 새 사용자의 화면에 이전 사용자가 고른 값이 남는다(검증 에이전트가 재현했다).
+    loadLearningMode();
     return;
   }
   if (!response || !response.ok) {
     $("modeNote").textContent = `학습 모드를 바꾸지 못했다 (${response ? response.status : "연결 실패"})`;
+    // 칸은 고른 값으로 남아 있다 - 서버의 모드로 되돌린다.
+    loadLearningMode();
     return;
   }
   const user = await response.json();
@@ -1379,8 +1384,15 @@ async function submit() {
     if (!response.ok) {
       // 서버가 거절한 이유를 그대로 보여준다. "제출 실패" 로 덮으면 무엇이
       // 잘못됐는지 알 수 없다. 앞 제출의 폴링은 건드리지 않는다.
-      reportTo(submittingUserId, `제출이 거절됐다 (${response.status}): `
-          + (await response.text()));
+      // 본문이 {"message": ...} 면 그 문장만 싣는다. 아니면 받은 그대로.
+      const text = await response.text();
+      let reason = text;
+      try {
+        reason = JSON.parse(text).message || text;
+      } catch (error) {
+        reason = text;
+      }
+      reportTo(submittingUserId, `제출이 거절됐다 (${response.status}): ${reason}`);
       return;
     }
     accepted = await response.json();

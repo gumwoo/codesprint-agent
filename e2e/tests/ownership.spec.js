@@ -569,6 +569,49 @@ test("늦게 온 목표 조회가 방금 저장한 학습 모드의 튜터 칸�
   await expect(page.locator("#tutorBox")).toBeVisible();
 });
 
+test("학습 모드를 저장하는 동안 사용자를 바꾸면 새 사용자의 모드를 보여 준다", async ({ page }) => {
+  // 저장 중이라 새 사용자의 읽기를 건너뛰었고, 이전 사용자의 저장 응답은 버려져 아무도 새 사용자를 읽지
+  // 않았다 - 칸은 이전 사용자가 고른 값, 튜터 칸은 이전 사용자의 옛 모드였다(검증 에이전트가 재현했다).
+  // 사용자 id 는 실제 입력처럼 Tab 으로 확정한다. 합성 change 는 뒤따르는 blur 가 한 번 더 읽어 결함을 가린다.
+  const slow = gate();
+  const modes = { 1: "NORMAL", 2: "FREE" };
+  await stubApi(page);
+  await page.route(/\/api\/users\/[12]$/, (route) => {
+    const id = Number(new URL(route.request().url()).pathname.split("/").pop());
+    return fulfill(route, { ...modeUser(modes[id]), userId: id });
+  });
+  await page.route("**/api/users/1/learning-mode", async (route) => {
+    await slow.held;
+    modes[1] = JSON.parse(route.request().postData()).mode;
+    await fulfill(route, modeUser(modes[1]));
+  });
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "STRICT");
+  await page.fill("#userId", "2");
+  await page.press("#userId", "Tab");
+
+  await releaseAndSettle(page, slow, "/api/users/1/learning-mode");
+  await expect(page.locator("#learningMode")).toHaveValue("FREE");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await expect(page.locator("#tutorBox")).toBeVisible();
+});
+
+test("학습 모드 저장이 거절되면 칸을 서버의 모드로 되돌린다", async ({ page }) => {
+  await stubApi(page);
+  await page.route("**/api/users/1", (route) => fulfill(route, modeUser("NORMAL")));
+  // 오류 본문은 계약이 없다 - 연결을 끊어 같은 실패 경로로 보낸다.
+  await page.route("**/api/users/1/learning-mode", (route) => route.abort());
+
+  await asUser(page, "1");
+  await page.click("#tabToday");
+  await page.selectOption("#learningMode", "FREE");
+  await expect(page.locator("#modeNote")).toContainText("바꾸지 못했다");
+  await expect(page.locator("#learningMode")).toHaveValue("NORMAL");
+});
+
 test("늦게 끝난 시험 끝내기가 그 사이 옮겨 간 오늘 탭에서 사용자를 끌고 가지 않는다", async ({ page }) => {
   const slow = gate();
   const { mockTest } = require("../fixtures/api");
