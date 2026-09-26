@@ -28,16 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SubmissionIntakeService {
 
-    /**
-     * 지원하는 언어. <b>슬라이스 1 은 Python 뿐이다</b>(Addendum PART III).
-     *
-     * <p>다른 값을 받아 넘기면 안 된다. Worker 는 무엇을 받든 {@code solution.py} 로
-     * 써서 Python 으로 돌리므로, {@code language = JAVA} 로 저장해 놓고 실제로는 Java
-     * 코드를 Python 으로 실행한 판정이 나온다. 그 판정으로 만든 Evidence 는
-     * append-only 정본에 그대로 남는다.
-     */
-    private static final String SUPPORTED_LANGUAGE = "PYTHON";
-
     private final ProblemCatalog catalog;
     private final UserRepository users;
     private final ProblemRepository problems;
@@ -45,11 +35,12 @@ public class SubmissionIntakeService {
     private final JudgeJobRepository jobs;
     private final ReviewScheduleService reviewSchedules;
     private final HintUsageRepository hintUsage;
+    private final dev.codesprint.curriculum.CurriculumCatalog curriculum;
 
     public SubmissionIntakeService(ProblemCatalog catalog, UserRepository users,
             ProblemRepository problems, SubmissionRepository submissions,
             JudgeJobRepository jobs, ReviewScheduleService reviewSchedules,
-            HintUsageRepository hintUsage) {
+            HintUsageRepository hintUsage, dev.codesprint.curriculum.CurriculumCatalog curriculum) {
         this.catalog = catalog;
         this.users = users;
         this.problems = problems;
@@ -57,6 +48,23 @@ public class SubmissionIntakeService {
         this.jobs = jobs;
         this.reviewSchedules = reviewSchedules;
         this.hintUsage = hintUsage;
+        this.curriculum = curriculum;
+    }
+
+    /**
+     * 이 문제가 이 언어의 제출을 받는가. 받지 않으면 이유를, 받으면 null.
+     *
+     * <p>PRIMARY Skill 이 한 언어에 매인 문제(예: PYTHON_LIST_BASIC 을 재는 P11)는 그 언어로만 받는다 - 다른
+     * 언어로 낸 AC 가 그 Skill 의 증거로 남으면 안 된다(ADR-0045). 실행도 같은 규칙을 쓴다.
+     */
+    public static String rejects(dev.codesprint.curriculum.CurriculumCatalog curriculum,
+            ProblemDefinition problem, dev.codesprint.learning.domain.SubmissionLanguage language) {
+        var primary = curriculum.skill(problem.primarySkill());
+        if (primary != null && !language.measures(primary.language())) {
+            return "이 문제는 " + primary.language() + " 전용 Skill(" + primary.code()
+                    + ")을 잰다 - " + primary.language() + " 로 낸다";
+        }
+        return null;
     }
 
     /**
@@ -117,13 +125,18 @@ public class SubmissionIntakeService {
     public long accept(Request request) {
         // 큐에 넣기 전에 막는다. job 을 만든 뒤에 알면 language 와 실제 판정이
         // 어긋난 기록이 남는다.
-        if (!SUPPORTED_LANGUAGE.equalsIgnoreCase(request.language())) {
-            throw new UnsupportedLanguage(
-                    "아직 " + SUPPORTED_LANGUAGE + " 만 채점한다: " + request.language());
+        var language = dev.codesprint.learning.domain.SubmissionLanguage.parse(request.language());
+        if (language == null) {
+            throw new UnsupportedLanguage("채점하지 않는 언어다: " + request.language()
+                    + " (PYTHON · JAVA · CPP)");
         }
         ProblemDefinition problem = catalog.find(request.problemCode());
         if (problem == null) {
             throw new NotFound("그런 문제가 없다: " + request.problemCode());
+        }
+        String rejected = rejects(curriculum, problem, language);
+        if (rejected != null) {
+            throw new UnsupportedLanguage(rejected);
         }
         if (!users.existsById(request.userId())) {
             throw new NotFound("그런 사용자가 없다: " + request.userId());
@@ -145,7 +158,7 @@ public class SubmissionIntakeService {
         int hintLevel = solutionViewed ? 0 : seenLevel;
 
         SubmissionRow submission = submissions.save(new SubmissionRow(
-                request.userId(), problemRow.id(), SUPPORTED_LANGUAGE,
+                request.userId(), problemRow.id(), language.name(),
                 JudgeStatus.QUEUED.name(), hintLevel, solutionViewed,
                 request.solveSeconds(),
                 // 제출 시각을 여기서 박는다. 복습 만기를 이 값으로 판정하므로
@@ -158,7 +171,7 @@ public class SubmissionIntakeService {
         reviewSchedules.claim(request.userId(), problem.primarySkill(), submission.id(),
                 submission.submittedAt());
 
-        jobs.save(new JudgeJobRow(submission.id(), problem.code(), SUPPORTED_LANGUAGE,
+        jobs.save(new JudgeJobRow(submission.id(), problem.code(), language.name(),
                 request.sourceCode()));
 
         return submission.id();
