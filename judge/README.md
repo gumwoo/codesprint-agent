@@ -149,6 +149,17 @@ Reviewer 출력의 `failedCaseRefs`(minItems 1)를 채울 수 없다(ADR-0004).
 `docker rm -f` 로 회수한다. 테스트가 짧은 hard timeout 을 걸고 무한 루프를 돌려
 잔존 컨테이너가 없는지 확인한다.
 
+## case 사이에 남는 프로세스
+
+컨테이너는 제출마다 하나고 case 는 그 안에서 돈다. 그래서 **case 가 남긴 프로세스는 다음 case 로
+넘어간다** - 하네스는 컨테이너의 PID 1 이라 사용자 프로세스가 두고 간 자손을 받는다. 제 자식만 기다리던
+때는 fork bomb case 뒤 좀비 61 개가 `--pids-limit 64` 를 차지해 다음 case 가 스레드 4 개도 못 만들었고,
+살아 남은 자손은 다음 case 의 출력에 섞이거나 하네스를 죽여 `SYSTEM_ERROR` 를 만들었다.
+
+지금은 case 가 끝나면 하네스가 `kill(-1, SIGKILL)` 로 컨테이너의 나머지를 전부 죽이고 거둔 뒤 출력을
+읽는다([ADR-0055](../docs/adr/0055-each-case-starts-with-the-harness-alone.md)). `--init` 은 좀비만 거두고
+살아 있는 자손을 남겨서 쓰지 않는다. `test_judge.py` 의 "case 사이에 남는 프로세스" 가 확인한다.
+
 ## 아직 없는 것
 
 - Judge Worker / 큐 (Addendum 67~69). 지금은 동기 호출만 있다

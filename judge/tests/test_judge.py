@@ -493,6 +493,100 @@ def check_concurrent() -> list[str]:
     return problems
 
 
+# -- case 사이에 남는 프로세스 ---------------------------------------------------
+# case 는 서로 독립이어야 한다. 앞 case 가 남긴 것이 뒤 case 의 판정을 바꾸면 **실패가 엉뚱한 case 에
+# 붙는다** - failedCaseId 와 실패의 모양(ADR-0015)이 원인이 아닌 case 를 가리킨다.
+#
+# 하네스는 컨테이너의 PID 1 인데 제 자식만 기다렸다. fork bomb case 가 끝나면 그 자손 61 개가 좀비로
+# --pids-limit 64 를 차지한 채 남아, 다음 case 는 스레드 4 개도 못 만들어 RUNTIME_ERROR 가 났다(혼자
+# 돌리면 ACCEPTED). 살아 남은 자손도 다음 case 로 그대로 넘어갔다.
+#
+# 제출 하나가 입력에 따라 둘로 갈린다. "leave" 는 오래 사는 자손과 곧 끝나는 자손으로 자리를 채우고
+# 끝나며, 끝나기 직전 자기 말고 남아 있는 프로세스 수를 적는다. 그 밖의 입력은 스레드 8 개로 풀고,
+# 자기와 PID 1 말고 남아 있는 것이 있는지 적는다.
+LEFTOVER_CODE = """\
+import os, sys, threading, time
+def others():
+    zombie = alive = 0
+    for d in os.listdir('/proc'):
+        if not d.isdigit() or int(d) in (1, os.getpid()):
+            continue
+        try:
+            stat = open(f'/proc/{d}/stat').read()
+        except OSError:
+            continue
+        if stat[stat.rindex(')') + 2] == 'Z':
+            zombie += 1
+        else:
+            alive += 1
+    return zombie, alive
+if sys.stdin.read().strip() == 'leave':
+    for i in range(200):
+        try:
+            pid = os.fork()
+        except OSError:
+            break
+        if pid == 0:
+            if i < %d:
+                time.sleep(60)
+            os._exit(0)
+    print('left', sum(others()))
+else:
+    done = []
+    workers = [threading.Thread(target=done.append, args=(1,)) for _ in range(8)]
+    for w in workers:
+        w.start()
+    for w in workers:
+        w.join()
+    zombie, alive = others()
+    print(f'ok {len(done)}' if (zombie, alive) == (0, 0) else f'left zombie={zombie} alive={alive}')
+"""
+# 오래 사는(60 초) 자손 수. 나머지는 곧바로 끝나 좀비가 된다 - 두 종류를 다 남긴다.
+LEFTOVER_SURVIVORS = 10
+# "leave" 가 끝나기 직전 남아 있어야 하는 프로세스 수. --pids-limit 64 에서 하네스 · 타이머 스레드 ·
+# 자기를 빼면 61 까지 찬다. 여기 못 미치면 뒤 case 에 줄 압력이 없다.
+LEFTOVER_MIN = 55
+
+
+def check_leftovers() -> list[str]:
+    """앞 case 가 남긴 프로세스가 뒤 case 의 판정을 바꾸지 않는가.
+
+    **상태로 게이트한다.** 첫 case 가 실제로 자리를 채웠는지는 그 case 가 적은 수로 확인한다 - 못
+    채웠으면 뒤 case 가 통과해도 아무것도 본 것이 아니므로 [VACUOUS] 로 실패한다. 오래 사는 자손은
+    60 초를 자므로 뒤 case 가 도는 동안 스스로 사라지지 않는다. 시간을 맞춰 기다리는 곳이 없다.
+
+    출력을 봐야 하므로 공개 case 로 두고 제출 전 실행(samples_only)으로 돌린다 - 그 경로도 같은
+    하네스의 run_case 를 탄다.
+    """
+    job = {"problemId": 0, "timeLimitMs": 5000, "cases": [
+        {"id": 1, "input": "leave", "expectedOutput": "left"},
+        *[{"id": i, "input": "check", "expectedOutput": "ok 8"} for i in (2, 3, 4)],
+    ]}
+    result = judge_samples_only(LEFTOVER_CODE % LEFTOVER_SURVIVORS, job)
+    cases = {c["id"]: c for c in result["cases"]}
+    if 1 not in cases:
+        # 하네스가 도중에 죽으면 호스트는 case 결과를 버리고 SYSTEM_ERROR 하나만 돌려준다.
+        return [f"채점이 무너졌다 - {result['status']} {(result.get('stderr') or '')[:160]}"]
+    first = (cases[1].get("stdout") or "").split()
+    if len(first) != 2 or first[0] != "left" or not first[1].isdigit() or int(first[1]) < LEFTOVER_MIN:
+        return [f"[VACUOUS] 첫 case 가 프로세스를 {LEFTOVER_MIN}개 이상 남기지 못했다 ({first}) - "
+                f"뒤 case 에 줄 압력이 없으면 이 검사는 아무것도 보지 않는다"]
+    problems = []
+    for case_id in (2, 3, 4):
+        case = cases.get(case_id)
+        if case is None:
+            problems.append(f"case {case_id} 가 돌지 않았다 - {result['status']} "
+                            f"{(result.get('stderr') or '')[:160]}")
+        elif case["status"] != "ACCEPTED":
+            detail = ((case.get("stderr") or "").strip().splitlines() or [""])[-1]
+            problems.append(f"case {case_id}: 앞 case 가 프로세스 {first[1]}개를 남긴 뒤 {case['status']} "
+                            f"- 혼자면 ACCEPTED 다 ({(case.get('stdout') or '').strip()} {detail[:120]})")
+    if not problems:
+        print(f"[O] 앞 case 가 프로세스 {first[1]}개를 남겨도 뒤 case 3개가 스레드 8개로 ACCEPTED, "
+              f"남은 프로세스 0")
+    return problems
+
+
 def _source_name(language: str) -> str:
     return run_submission.LANGUAGES[language][1]
 
@@ -893,6 +987,12 @@ def main() -> int:
         print(f"[X] {problem}")
     failed += len(concurrent)
 
+    print("\n== case 사이에 남는 프로세스 ==")
+    leftovers = check_leftovers()
+    for problem in leftovers:
+        print(f"[X] {problem}")
+    failed += len(leftovers)
+
     print("\n== SYSTEM_ERROR 경로 ==")
     # 사용자 코드로는 재현할 수 없다. 우리 인프라가 고장난 상황을 직접 만든다.
     broken = run_submission.run(FIXTURES / "sol-accepted.py", FIXTURES / "does-not-exist.json")
@@ -958,7 +1058,7 @@ def main() -> int:
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
           f"Java · C++ 판정 {len(LANG_VERDICTS)}건 · 격리 {len(LANG_ISOLATION)}건 · "
           f"기밀성 {len(LANG_CONFIDENTIALITY)}건 · "
-          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
+          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 
 
