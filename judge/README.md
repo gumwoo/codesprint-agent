@@ -72,7 +72,7 @@ python judge/tests/test_judge.py --build
 | `--network none` | 데이터 유출, 원격 도구 다운로드 |
 | `--memory 256m` + `--memory-swap 256m` | 호스트를 끌어내리는 OOM, swap 우회 |
 | `--cpus 0.5` | CPU 독점 |
-| `--pids-limit 64` | fork bomb |
+| `--pids-limit 64` | fork bomb. 컨테이너(cgroup)마다 센다 - uid 로 세는 `RLIMIT_NPROC` 은 옆 채점까지 합산해 쓰지 않는다(ADR-0053) |
 | `--read-only` | 이미지 변조로 다음 제출에 영향 |
 | `--cap-drop ALL` | capability 를 이용한 권한 상승 |
 | `--security-opt no-new-privileges` | setuid 권한 상승 |

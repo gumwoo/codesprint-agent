@@ -22,6 +22,9 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import threading
+import time
+import uuid
 
 from jsonschema import Draft202012Validator
 
@@ -353,6 +356,141 @@ LANG_CONFIDENTIALITY = [
         "System.out.println(e.contains(\"expectedOutput\")||e.contains(\"\\\"cases\\\"\")?\"LEAK\":\"CLEAN\");}}\n"),
      "CLEAN"),
 ]
+
+
+# -- 동시 채점 (ADR-0053) ---------------------------------------------------
+# 격리는 사용자 코드를 가두는 것만이 아니다. **한 컨테이너 안의 일이 옆 컨테이너의 판정을 바꾸면
+# 안 된다.** Judge Worker 가 둘이거나 테스트가 겹치면 채점은 동시에 돈다.
+#
+# 하네스가 자식에게 RLIMIT_NPROC(64)을 걸던 때, 스레드를 많이 쥔 제출 하나가 도는 동안 옆 컨테이너의
+# 정상 Java 제출이 JVM 을 띄우지 못해 COMPILE_ERROR 가 났다(4/4). RLIMIT_NPROC 은 컨테이너가 아니라
+# 커널 전체에서 **uid 별로** 세고, 채점 컨테이너는 전부 uid 10001 이다. 제출 하나씩 보는 검사로는
+# 보이지 않는다 - 혼자 돌리면 늘 ACCEPTED 였다.
+#
+# 쥐는 쪽: 컨테이너의 --pids-limit 까지 프로세스를 채우고 붙잡는다. 폭주를 막는 상한이 사라져도
+# 호스트를 채우지 않도록 fork 횟수는 200 에서 멈춘다.
+CONCURRENT_HOG = (
+    "import os, time\n"
+    "held = 0\n"
+    "for _ in range(200):\n"
+    "    try:\n"
+    "        pid = os.fork()\n"
+    "    except OSError:\n"
+    "        break\n"
+    "    if pid == 0:\n"
+    "        time.sleep(%d)\n"
+    "        os._exit(0)\n"
+    "    held += 1\n"
+    "time.sleep(%d)\n"
+    "print(held)\n"
+)
+# 쥐는 시간의 상한. 옆 채점이 끝나면 컨테이너를 지워 바로 놓게 한다 - 고정 시간만 쥐게 두면 기계가
+# 바쁜 날 옆 채점보다 먼저 놓는다. 20 초 · 30 초로 두었을 때 실제로 C++ 채점 중에 놓았다.
+CONCURRENT_HOLD_S = 90
+# 쥐는 쪽 컨테이너의 프로세스 수가 여기 닿아야 "채웠다" 로 본다. --pids-limit 64 에서 하네스와
+# 사용자 프로세스를 합쳐 64 까지 찬다.
+CONCURRENT_FULL_PIDS = 60
+# 옆에서 채점할 정상 제출. 둘 다 컴파일러와 런타임이 스레드 · 프로세스를 띄운다 - 파이썬의
+# sol-accepted.py 는 fork 하지 않아 uid 상한이 있어도 통과하므로 여기 넣으면 아무것도 보지 않는다.
+CONCURRENT_VICTIMS = [("JAVA", "java/Accepted.java"), ("CPP", "cpp/accepted.cpp")]
+
+
+def _container_pids(names: set[str]) -> dict[str, int]:
+    """컨테이너별 프로세스 수(cgroup pids.current). docker stats 가 읽어 준다."""
+    if not names:
+        return {}
+    proc = subprocess.run(
+        ["docker", "stats", "--no-stream", "--format", "{{.Name}} {{.PIDs}}", *sorted(names)],
+        capture_output=True, text=True, errors="replace",
+    )
+    counts = {}
+    for line in proc.stdout.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[1].isdigit():
+            counts[parts[0]] = int(parts[1])
+    return counts
+
+
+def check_concurrent() -> list[str]:
+    """프로세스를 가득 쥔 제출 옆에서 정상 제출이 제 판정을 받는가.
+
+    **지연이 아니라 게이트로 순서를 쥔다.** 쥐는 쪽 컨테이너가 실제로 가득 찬 것을 docker stats 로
+    본 뒤에 옆 채점을 시작하고, 끝난 뒤에도 아직 쥐고 있는지 다시 본다. 그러지 않으면 쥐기 전에
+    (또는 놓은 뒤에) 채점한 날 이 검사는 조용히 통과한다.
+
+    **대조군이 있다.** 같은 순간에 uid 로 세는 상한(`--ulimit nproc=64`)을 건 컨테이너는 채점에
+    실패해야 한다. 성공하면 쥐는 쪽이 uid 10001 에 압력을 주지 못한 것이고, 그때 이 검사는 무엇이
+    uid 로 세어지든 통과한다.
+    """
+    problems: list[str] = []
+    hog_job = {"problemId": 0, "timeLimitMs": (CONCURRENT_HOLD_S + 4) * 1000,
+               "cases": [{"id": 1, "input": "", "expectedOutput": "held"}]}
+    hog_code = CONCURRENT_HOG % (CONCURRENT_HOLD_S + 2, CONCURRENT_HOLD_S)
+    # 쥐는 쪽 컨테이너를 라벨로 찾는다. 다른 채점(겹쳐 도는 테스트)의 컨테이너를 잘못 집어 지우면 안 된다.
+    # 라벨은 격리에 아무것도 더하거나 빼지 않는다.
+    label = f"codesprint-concurrent-hog={uuid.uuid4().hex[:12]}"
+    limits = run_submission.DOCKER_LIMITS
+    # 쥐는 쪽은 일부러 오래 돈다. 마지막 방어선(SUBMISSION_HARD_TIMEOUT_S)에 먼저 걸려 놓지 않게
+    # 이 검사 동안만 늘린다 - 옆 채점도 같은 값을 읽지만, 그쪽에는 상한일 뿐 판정을 바꾸지 않는다.
+    original_timeout = run_submission.SUBMISSION_HARD_TIMEOUT_S
+    run_submission.SUBMISSION_HARD_TIMEOUT_S = CONCURRENT_HOLD_S + 20
+    run_submission.DOCKER_LIMITS = [*limits, "--label", label]
+    holder: dict = {}
+    hog = threading.Thread(target=lambda: holder.update(result=judge_with_job(hog_code, hog_job)))
+    hog.start()
+    hog_name = None
+    try:
+        # 게이트: 쥐는 쪽 컨테이너가 뜨고, 가득 찰 때까지 기다린다.
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline and hog.is_alive():
+            if hog_name is None:
+                found = subprocess.run(
+                    ["docker", "ps", "--filter", f"label={label}", "--format", "{{.Names}}"],
+                    capture_output=True, text=True, errors="replace").stdout.split()
+                if found:
+                    hog_name = found[0]
+                    # 컨테이너가 떴으면 명령은 이미 만들어졌다. 옆 채점은 원래 옵션으로 돈다.
+                    run_submission.DOCKER_LIMITS = limits
+            if (hog_name is not None
+                    and _container_pids({hog_name}).get(hog_name, 0) >= CONCURRENT_FULL_PIDS):
+                break
+            time.sleep(0.3)
+        else:
+            return [f"[VACUOUS] 쥐는 쪽 컨테이너({hog_name})가 프로세스 {CONCURRENT_FULL_PIDS}개에 닿지 "
+                    f"않았다 - 옆 채점에 압력이 없으면 이 검사는 아무것도 보지 않는다"]
+
+        # 대조군: uid 로 세는 상한이면 지금 이 순간 막혀야 한다.
+        try:
+            run_submission.DOCKER_LIMITS = [*limits, "--ulimit", "nproc=64:64"]
+            control = run_submission.run(FIXTURES / "sol-accepted.py", JOB)
+        finally:
+            run_submission.DOCKER_LIMITS = limits
+        if control["status"] == "ACCEPTED":
+            problems.append("[VACUOUS] uid 로 세는 상한(--ulimit nproc=64)을 건 채점도 ACCEPTED 다 - "
+                            "쥐는 쪽이 uid 10001 에 압력을 주지 못했다")
+        else:
+            print(f"[O] 대조: 같은 순간 uid 로 세는 상한(nproc=64)을 건 채점 -> {control['status']}")
+
+        for language, fixture in CONCURRENT_VICTIMS:
+            result = run_submission.run(FIXTURES / fixture, JOB, language=language)
+            still = _container_pids({hog_name}).get(hog_name, 0)
+            if still < CONCURRENT_FULL_PIDS:
+                problems.append(f"[VACUOUS] {fixture} 를 채점하는 사이 쥐는 쪽이 놓았다 "
+                                f"(프로세스 {still}개) - 동시에 돌았다고 말할 수 없다")
+            elif result["status"] != "ACCEPTED":
+                problems.append(f"{fixture}: 옆 컨테이너가 프로세스를 쥐고 있는 동안 {result['status']} "
+                                f"- 혼자면 ACCEPTED 다. 다른 제출이 판정을 바꿨다 "
+                                f"({(result.get('stderr') or '').strip()[:120]})")
+            else:
+                print(f"[O] {fixture} -> 옆 컨테이너 프로세스 {still}개인 동안 ACCEPTED")
+    finally:
+        run_submission.DOCKER_LIMITS = limits
+        if hog_name is not None:
+            # 옆 채점이 끝났으니 놓게 한다. 쥐는 쪽의 판정은 보지 않는다.
+            run_submission._force_remove(hog_name)
+        hog.join()
+        run_submission.SUBMISSION_HARD_TIMEOUT_S = original_timeout
+    return problems
 
 
 def _source_name(language: str) -> str:
@@ -749,6 +887,12 @@ def main() -> int:
             continue
         print(f"[O] {language} {name} -> {seen}")
 
+    print("\n== 동시 채점 - 옆 컨테이너가 판정을 바꾸지 않는다 (ADR-0053) ==")
+    concurrent = check_concurrent()
+    for problem in concurrent:
+        print(f"[X] {problem}")
+    failed += len(concurrent)
+
     print("\n== SYSTEM_ERROR 경로 ==")
     # 사용자 코드로는 재현할 수 없다. 우리 인프라가 고장난 상황을 직접 만든다.
     broken = run_submission.run(FIXTURES / "sol-accepted.py", FIXTURES / "does-not-exist.json")
@@ -814,7 +958,7 @@ def main() -> int:
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
           f"Java · C++ 판정 {len(LANG_VERDICTS)}건 · 격리 {len(LANG_ISOLATION)}건 · "
           f"기밀성 {len(LANG_CONFIDENTIALITY)}건 · "
-          f"컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
+          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 
 
