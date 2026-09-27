@@ -46,9 +46,9 @@ import time
 # 둘은 그대로 둔다. C++ 는 어차피 사용자의 기계어가 돌므로 /build 의 실행 권한이 더 주는 것이 없다.
 LANGUAGE = os.environ.get("JUDGE_LANGUAGE", "PYTHON")
 
-# JVM 은 스레드를 여럿 띄운다. 컨테이너의 --pids-limit 과 자식의 RLIMIT_NPROC(64) 안에 들도록
-# 병렬 GC 와 JIT 스레드를 줄인다. 힙은 컨테이너 메모리(256m) 안에 둔다 - 넘으면 JVM 이 아니라 커널이
-# 죽이고, 그때 판정이 OutOfMemoryError 가 아니라 SIGKILL 이 된다.
+# JVM 은 스레드를 여럿 띄운다. 컨테이너의 --pids-limit(64) 안에 들도록 병렬 GC 와 JIT 스레드를
+# 줄인다. 힙은 컨테이너 메모리(256m) 안에 둔다 - 넘으면 JVM 이 아니라 커널이 죽이고, 그때 판정이
+# OutOfMemoryError 가 아니라 SIGKILL 이 된다.
 _JVM = ["-Xmx192m", "-Xss64m", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1",
         "-XX:ActiveProcessorCount=1"]
 
@@ -166,8 +166,10 @@ def compile_check(path: pathlib.Path) -> str | None:
 
 
 def _limit_compiler() -> None:
-    """컴파일러에 거는 제한. 프로세스 수는 사용자 코드와 같고, 파일 크기는 실행 파일을 쓸 만큼 준다."""
-    resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
+    """컴파일러에 거는 제한. 파일 크기는 실행 파일을 쓸 만큼 준다.
+
+    프로세스 수는 여기서 걸지 않는다 - 컨테이너의 --pids-limit 이 막는다(_limit_child, ADR-0053).
+    """
     resource.setrlimit(resource.RLIMIT_FSIZE, (COMPILE_FSIZE, COMPILE_FSIZE))
 
 
@@ -193,16 +195,21 @@ def compile_native(language: str) -> str | None:
 def _limit_child() -> None:
     """자식 프로세스에만 거는 제한.
 
-    컨테이너의 --pids-limit 은 컨테이너 전체에 걸리므로, 사용자 코드가 프로세스를
-    쏟아내면 하네스 자신도 fork 하지 못해 결과를 못 낸다. 자식에게 따로 걸어
-    하네스의 몫을 남긴다.
+    **프로세스 수(RLIMIT_NPROC)는 걸지 않는다**(ADR-0053). fork bomb 은 컨테이너의
+    --pids-limit 이 막는다 - 그것은 cgroup 이라 컨테이너 하나에만 걸린다.
+    RLIMIT_NPROC 은 컨테이너가 아니라 **커널 전체에서 실제 uid 별로** 센다. 채점 컨테이너는
+    전부 uid 10001(runner)로 돌므로, 64 를 걸면 옆 컨테이너의 스레드까지 합쳐 64 가 된다 -
+    스레드를 많이 쥔 제출 하나가 도는 동안 **다른 컨테이너의 정상 Java 제출이 JVM 을 띄우지
+    못해 COMPILE_ERROR 가 났다.** 컨테이너 안에서는 막는 것이 없었다: 컨테이너의 태스크는
+    전부 uid 10001 이라 센 대상도 상한(64)도 --pids-limit 과 같았다. 이전 주석은 이것이
+    "하네스의 몫을 남긴다" 고 했지만, 하네스도 같은 uid 라 함께 세어졌다.
 
     RLIMIT_FSIZE 는 출력 폭주를 커널에서 끊는다. 이게 없으면 커널이 아니라 하네스가
     출력을 다 받아야 하고, 그러다 컨테이너 메모리 상한에 먼저 걸려 **OUTPUT_LIMIT 이
     MEMORY_LIMIT 으로 둔갑한다.** 실제로 그렇게 나왔다.
-    한도를 넘겨 쓰면 커널이 SIGXFSZ 를 보낸다.
+    한도를 넘겨 쓰면 커널이 SIGXFSZ 를 보낸다. 이것은 프로세스가 쓰는 파일 하나의 크기라
+    uid 로 합산되지 않는다 - 옆 컨테이너와 섞이지 않는다.
     """
-    resource.setrlimit(resource.RLIMIT_NPROC, (64, 64))
     resource.setrlimit(resource.RLIMIT_FSIZE, (STDOUT_LIMIT, STDOUT_LIMIT))
 
 
