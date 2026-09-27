@@ -78,6 +78,31 @@ public class MasteryService {
         return statesFor(userId, catalog.skillCodes());
     }
 
+    /**
+     * 트랙 안 상태와 판단에 쓸 전체 상태를 <b>한 번 읽어 함께</b> 준다. 진단을 묻는 곳은 전부 이것을 쓴다.
+     *
+     * @param track 물을 범위 - 트랙 안 Skill 의 상태. {@link #statesOf} 와 같은 Skill 들이다
+     * @param all 함의 · 선수 판단에 쓸 전체 상태(ADR-0035 §3-1)
+     */
+    public record Scoped(List<SkillState> track, List<SkillState> all) {
+    }
+
+    /**
+     * 진단 패널 · 오늘의 계획 · 모의 시험 후보가 <b>같은 계산</b>으로 진단을 묻게 하는 입구다. 계획과 시험 후보가
+     * 트랙 안 상태만 넘겨 함의를 트랙 안에서만 구했고, 트랙을 바꾼 사용자에게 진단 패널(P23)과 계획의 진단
+     * 블록(P31)이 다른 문제를 가리켰다(검증 에이전트가 3/3 재현). 한 목록만 받는 입구를 없애고 둘을 함께 넘긴다.
+     *
+     * <p>트랙 안 상태는 전체 상태에서 거른다 - 두 번 계산하면 한 응답 안에 두 시점이 섞인다. 선수 판단이 전체
+     * mastery 를 보는 것이 {@link #statesOf} 와 다르지만, 트랙 안 Skill 의 선수는 트랙 안에 있으므로(CI 불변식,
+     * tracks.yaml 규칙 1) 상태가 같다.
+     */
+    @Transactional(readOnly = true)
+    public Scoped scopedStatesOf(Long userId) {
+        List<SkillState> all = allStatesOf(userId);
+        java.util.Set<String> active = activeSkills(userId);
+        return new Scoped(all.stream().filter(s -> active.contains(s.skillCode())).toList(), all);
+    }
+
     private List<SkillState> statesFor(Long userId, java.util.Set<String> skillCodes) {
         List<String> codes = skillCodes.stream().sorted().toList();
 

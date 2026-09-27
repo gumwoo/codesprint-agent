@@ -192,7 +192,7 @@ public class MockTestService {
      */
     @Transactional(readOnly = true)
     public Integer dueMinutes(long userId, int days) {
-        Upcoming upcoming = upcoming(userId, days, mastery.statesOf(userId));
+        Upcoming upcoming = upcoming(userId, days, mastery.scopedStatesOf(userId));
         return upcoming == null ? null : upcoming.minutes();
     }
 
@@ -206,7 +206,7 @@ public class MockTestService {
      * 들어가면 시험을 시작하기 전에 그 문제의 유형이 드러난다(검증 에이전트가 12/15 경우에서 재현했다).
      */
     @Transactional(readOnly = true)
-    public Upcoming upcoming(long userId, int days, List<SkillState> states) {
+    public Upcoming upcoming(long userId, int days, MasteryService.Scoped states) {
         Instant since = clock.instant().minus(Duration.ofDays(days));
         boolean recent = tests.findByUserIdOrderByStartedAtDesc(userId).stream()
                 .anyMatch(test -> !test.startedAt().isBefore(since));
@@ -228,20 +228,40 @@ public class MockTestService {
      * 일반 문제. 드릴 · 복습 문제는 시험 문제가 아니다. 진단 · 만기 복습이 지금 가리키는 문제도 뺀다({@link #reserved}).
      */
     private List<MockTestComposer.Candidate> candidates(long userId) {
-        return candidates(userId, mastery.statesOf(userId));
+        return candidates(userId, mastery.scopedStatesOf(userId));
+    }
+
+    /**
+     * 지금 시험 후보에서 빼는 문제({@link #reserved}). 시험을 만드는 길과 같은 계산이다 - 테스트가 진단 패널 · 결과
+     * 패널이 보여 주는 문제가 여기 들어 있는지 본다. 뺀 문제가 실제 시험에 들어갈지는 구성 규칙이 정하므로, 시험만
+     * 보고는 빼는 계산이 틀렸는지 알 수 없는 경우가 많다(ADR-0054).
+     */
+    @Transactional(readOnly = true)
+    public java.util.Set<String> reservedProblemCodes(long userId) {
+        return java.util.Set.copyOf(reserved(userId, mastery.scopedStatesOf(userId)));
     }
 
     /**
      * 진단과 만기 복습이 지금 가리키는 문제. 시험에 넣지 않는다(ADR-0049) - 진단 · 복습은 오늘의 계획에서 빠질
      * 수 없는 블록이고(ADR-0038) 진단 패널 · 결과의 다음 행동도 같은 문제를 가리키므로, 그 문제가 시험에 들어가면
      * 시작하기 전에 유형이 드러난다. 계획에서 빼는 쪽으로 막았더니 진단 블록이 사라졌다(검증 에이전트가 재현했다).
+     *
+     * <p>진단은 진단 패널과 <b>같은 계산</b>으로 묻는다(ADR-0054). 트랙 안 상태만 넘겼을 때 트랙을 바꾼 사용자에게
+     * 패널과 다른 문제를 빼, 패널이 보여 주는 문제는 시험에 들 수 있었다.
+     *
+     * <p><b>마지막 일반 제출이 가리킨 다음 문제도 뺀다</b>(ADR-0054). 결과 패널은 그 문제를 code 와 제목째 보여
+     * 주는데, 그 문제가 곧 만든 시험에 들어갔다(검증 에이전트가 INTRO 진단을 WA 로 따라가 재현했다).
+     * 시험 중의 조회는 컨트롤러가 닫지만({@link #hidesUntilEnd}), 시험을 만들기 전에 이미 본 것은 닫을 수 없다.
+     * 결정은 제출 행에 얼어 있으므로 create 와 upcoming 이 같은 값을 읽는다.
      */
-    private java.util.Set<String> reserved(long userId, List<SkillState> states) {
+    private java.util.Set<String> reserved(long userId, MasteryService.Scoped states) {
         java.util.Set<String> reserved = new java.util.HashSet<>();
         var step = diagnostic.nextStep(states);
         if (!step.done() && step.problem() != null) {
             reserved.add(step.problem().code());
         }
+        events.latestNormalNextProblem(userId, org.springframework.data.domain.PageRequest.of(0, 1))
+                .stream().filter(java.util.Objects::nonNull).forEach(reserved::add);
         for (var due : reviews.due(userId)) {
             String code = nextProblem.forReview(userId, due.skillCode(), null).problemCode();
             if (code != null) {
@@ -251,10 +271,10 @@ public class MockTestService {
         return reserved;
     }
 
-    private List<MockTestComposer.Candidate> candidates(long userId, List<SkillState> states) {
+    private List<MockTestComposer.Candidate> candidates(long userId, MasteryService.Scoped states) {
         java.util.Set<String> reserved = reserved(userId, states);
         Map<String, SkillStatus> status = new HashMap<>();
-        for (SkillState state : states) {
+        for (SkillState state : states.track()) {
             status.put(state.skillCode(), state.status());
         }
         Set<String> seen = new HashSet<>(submissions.submittedProblemCodes(userId));
@@ -482,14 +502,17 @@ public class MockTestService {
     }
 
     /**
-     * 이 제출이 아직 진행 중인 시험의 것인가. 그렇다면 일반 조회(분석 · 다음 행동)를 막는다.
+     * 이 제출의 일반 조회(분석 · Skill 변화 · 다음 행동 · 다음 문제)를 지금 닫는가. <b>제출한 사용자가 시험 중이면
+     * 닫는다</b> - 시험에서 낸 제출이든 시험 전에 낸 일반 제출이든(ADR-0054).
+     *
+     * <p>처음에는 시험에서 낸 제출만 닫았다. 시험 전 일반 제출의 조회는 200 으로 nextAction.targetSkill 과
+     * skillUpdates 를 줬고, 다음 행동을 고르는 조건이 시험 문제를 고르는 조건과 같아 시험 문제의 유형을 가리켰다
+     * (검증 에이전트가 재현했다). 다음 문제({@code next-problem})는 이미 이렇게 닫고 있었다.
      */
     @Transactional(readOnly = true)
     public boolean hidesUntilEnd(long submissionId) {
-        Instant now = clock.instant();
-        return events.findFirstBySubmissionId(submissionId)
-                .flatMap(event -> tests.findById(event.mockTestId()))
-                .map(test -> !test.isOver(now))
+        return submissions.findById(submissionId)
+                .map(row -> inProgress(row.userId()))
                 .orElse(false);
     }
 

@@ -47,9 +47,7 @@ public class DiagnosticService {
     @Transactional(readOnly = true)
     public Step nextStep(Long userId) {
         // 한 번 읽고 트랙으로 거른다. 두 번 읽으면 한 응답 안에 두 시점이 섞인다.
-        List<SkillState> all = mastery.allStatesOf(userId);
-        java.util.Set<String> active = mastery.activeSkills(userId);
-        return nextStep(all.stream().filter(s -> active.contains(s.skillCode())).toList(), all);
+        return nextStep(mastery.scopedStatesOf(userId));
     }
 
     /**
@@ -58,9 +56,12 @@ public class DiagnosticService {
      * <p>상태 재계산은 활성 Skill 수만큼 조회를 낸다(ADR-0009). 한 번의 결과 반영에서
      * 진단과 다음 Skill 선택이 각각 다시 계산하면 그 비용이 두 배가 되고, 더 나쁘게는
      * <b>한 응답 안에서 서로 다른 시점의 상태를 보게 된다.</b>
+     *
+     * <p><b>트랙 안 목록 하나만 받는 입구는 없다.</b> 있었을 때 오늘의 계획과 모의 시험 후보가 그것을 불러
+     * 함의를 트랙 안에서만 구했고, 트랙을 바꾼 사용자에게 진단 패널과 다른 문제를 가리켰다.
      */
-    public Step nextStep(List<SkillState> states) {
-        return nextStep(states, states);
+    public Step nextStep(MasteryService.Scoped scoped) {
+        return nextStep(scoped.track(), scoped.all());
     }
 
     /** @param all 함의를 구할 전체 상태(ADR-0035 §3-1). 물을 범위는 {@code states} 다. */

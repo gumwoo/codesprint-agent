@@ -149,9 +149,12 @@ public class SubmissionController {
 
     @GetMapping("/submissions/{submissionId}")
     public ResponseEntity<SubmissionStatusResponse> find(@PathVariable long submissionId) {
-        // 시험 중의 제출은 판정만 시험에서 본다. 여기에는 Reviewer 분석과 다음 행동이 있다(PRD §84).
+        // 시험 중에는 판정만 시험에서 본다. 여기에는 Reviewer 분석 · Skill 변화 · 다음 행동이 있다(PRD §84).
+        // 시험 전에 낸 일반 제출도 닫는다 - 다음 행동이 시험 문제의 유형을 가리킬 수 있다(ADR-0054).
         if (mockTests.hidesUntilEnd(submissionId)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            // 이유를 싣는다 - 화면이 시험 전 제출의 채점을 기다리고 있었다면 왜 결과가 안 오는지 알아야 한다.
+            throw new dev.codesprint.mocktest.MockTestService.Conflict(
+                    "모의 시험 중에는 제출 결과를 보여 주지 않는다 - 시험을 끝내면 열린다");
         }
         return queries.find(submissionId)
                 .map(SubmissionController::toResponse)

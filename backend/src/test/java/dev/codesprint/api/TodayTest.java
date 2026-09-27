@@ -87,6 +87,9 @@ class TodayTest {
     @Autowired
     private dev.codesprint.learning.service.JudgeResultPoller poller;
 
+    @Autowired
+    private dev.codesprint.mocktest.MockTestService mockTests;
+
     private MockMvc mvc;
     private long userId;
 
@@ -248,6 +251,84 @@ class TodayTest {
             assertThat(diagnose).as("걸음 " + step + " - 진단 블록은 빠질 수 없다(" + probe + ")").isTrue();
             judge(probe, "ACCEPTED");
         }
+    }
+
+    private JsonNode diagnostic() throws Exception {
+        return MAPPER.readTree(mvc.perform(get("/api/users/{id}/diagnostic", userId))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("트랙을 바꾼 사용자도 계획의 진단 블록 · 진단 패널이 같은 문제를 가리키고, 그 문제는 시험에 들지 않는다")
+    void planAndPanelAgreeAfterATrackSwitch() throws Exception {
+        // 검증 에이전트가 재현했다(3/3): ALGORITHM 에서 INTRO 로 바꾼 사용자에게 진단 패널은 P23, 오늘의 계획
+        // DIAGNOSE 블록은 P31 을 가리켰다. 패널은 함의를 전체 Evidence 에서 구하고(ADR-0035 §3-1) 계획 · 시험 후보는
+        // 트랙 안만 봤다. 시험 후보는 계획의 문제만 빼므로 패널의 문제가 시험에 들어갈 수 있었다.
+        String soon = java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(3).toString();
+        int compared = 0;
+        int exams = 0;
+        List<String> trail = new ArrayList<>();
+        for (int steps = 1; steps <= 3; steps++) {
+            userId = users.save(new UserRow(
+                    "track-switch-" + System.nanoTime() + "@codesprint.dev", "트랙전환", "ALGORITHM")).id();
+            // 리스트를 풀어 두면 INTRO 의 여러 도메인이 열려 모의 시험을 만들 수 있다 - 진단 패널의 문제가 시험
+            // 후보가 될 수 있어야 "시험에 들지 않는다" 가 무언가를 본다.
+            judge("P11_LIST_BASIC", "ACCEPTED");
+            for (int step = 0; step < steps; step++) {
+                JsonNode diag = diagnostic();
+                if (diag.get("done").asBoolean() || diag.get("problem").isNull()) {
+                    break;
+                }
+                judge(diag.get("problem").get("code").asText(), "ACCEPTED");
+            }
+            assertThat(mvc.perform(put("/api/users/{id}/track", userId)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"track\": \"INTRO\"}"))
+                    .andReturn().getResponse().getStatus()).isEqualTo(200);
+            assertThat(putSettings("{\"dailyMinutes\": 600, \"examDate\": \"" + soon + "\"}"))
+                    .isEqualTo(200);
+
+            // INTRO 에서 진단을 따라가며 걸음마다 본다
+            for (int walk = 0; walk < 6; walk++) {
+                JsonNode diag = diagnostic();
+                if (diag.get("done").asBoolean() || diag.get("problem").isNull()) {
+                    break;
+                }
+                String probe = diag.get("problem").get("code").asText();
+                String at = "ALGORITHM " + steps + " 걸음 뒤 INTRO " + walk + " 걸음";
+                JsonNode plan = today();
+                String planned = null;
+                for (JsonNode block : plan.get("blocks")) {
+                    if ("DIAGNOSE".equals(block.get("type").asText())) {
+                        planned = block.get("problem").get("code").asText();
+                    }
+                }
+                assertThat(planned).as(at + " - 계획의 진단 블록과 진단 패널").isEqualTo(probe);
+                // 시험 후보에서 빼는 것도 같은 계산이어야 한다. 시험에 실제로 들지는 구성 규칙이 정하므로 뺀 목록을 본다
+                assertThat(mockTests.reservedProblemCodes(userId)).as(at + " - 시험 후보에서 빼는 문제")
+                        .contains(probe);
+                compared++;
+
+                var created = mvc.perform(post("/api/users/{id}/mock-tests", userId)).andReturn()
+                        .getResponse();
+                if (created.getStatus() == 201) {
+                    long mockTestId = MAPPER.readTree(created.getContentAsString(StandardCharsets.UTF_8))
+                            .get("mockTestId").asLong();
+                    List<String> inTest = jdbc.queryForList(
+                            "select problem_code from mock_test_problems where mock_test_id = ?",
+                            String.class, mockTestId);
+                    trail.add(at + ": 패널 " + probe + ", 시험 " + inTest);
+                    assertThat(inTest).as(at + " - 진단 패널의 문제는 시험에 들지 않는다").doesNotContain(probe);
+                    exams++;
+                    mvc.perform(post("/api/mock-tests/{id}/finish", mockTestId)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"userId\": " + userId + "}"));
+                } else {
+                    trail.add(at + ": 패널 " + probe + ", 시험 " + created.getStatus());
+                }
+                judge(probe, "ACCEPTED");
+            }
+        }
+        assertThat(compared).as("대조가 성립하려면 트랙을 바꾼 뒤에도 진단이 남아 있어야 한다").isPositive();
+        assertThat(exams).as("시험을 만들 수 있는 걸음이 있어야 한다 " + trail).isPositive();
     }
 
     @Test

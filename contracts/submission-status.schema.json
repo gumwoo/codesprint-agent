@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codesprint.dev/contracts/submission-status.schema.json",
   "title": "SubmissionStatus",
-  "description": "POST /api/problems/{code}/submit 과 GET /api/submissions/{id} 의 응답. 채점이 요청 밖에서 일어나므로(ADR-0013) 제출은 즉시 끝나고 결과는 나중에 온다. 두 엔드포인트가 같은 모양을 쓰는 이유는, 클라이언트가 '접수 응답'과 '조회 응답'을 다르게 다룰 이유가 없기 때문이다.",
+  "description": "POST /api/problems/{code}/submit 과 GET /api/submissions/{id} 의 응답. 채점이 요청 밖에서 일어나므로(ADR-0013) 제출은 즉시 끝나고 결과는 나중에 온다. 두 엔드포인트가 같은 모양을 쓰는 이유는, 클라이언트가 '접수 응답'과 '조회 응답'을 다르게 다룰 이유가 없기 때문이다. 제출한 사용자가 모의 시험 중이면 GET 은 이 모양 대신 409 와 이유 문장이다 - 시험 전에 낸 제출이어도 그렇다(ADR-0054).",
   "type": "object",
   "additionalProperties": false,
   "required": ["submissionId", "state", "result"],
