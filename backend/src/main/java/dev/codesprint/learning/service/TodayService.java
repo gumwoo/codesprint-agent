@@ -78,16 +78,18 @@ public class TodayService {
         }
 
         Long userId = user.id();
-        List<SkillState> states = mastery.statesOf(userId);
-        // 한 응답 안에서 두 시점을 보지 않게 이미 계산한 상태로 진단을 묻는다(DiagnosticService 주석).
-        DiagnosticService.Step step = diagnostic.nextStep(states);
+        // 한 응답 안에서 두 시점을 보지 않게 이미 계산한 상태로 진단을 묻는다(DiagnosticService 주석). 진단 패널과
+        // 같은 계산이어야 한다 - 트랙 안만 넘기면 트랙을 바꾼 사용자에게 계획과 패널이 다른 문제를 가리킨다(ADR-0053).
+        MasteryService.Scoped scoped = mastery.scopedStatesOf(userId);
+        List<SkillState> states = scoped.track();
+        DiagnosticService.Step step = diagnostic.nextStep(scoped);
         String diagnosticSkill = step.done() || step.problem() == null ? null : step.targetSkill();
         List<String> due = reviews.due(userId).stream().map(ReviewScheduleRow::skillCode).toList();
 
         // 시험 전략(§95): 시험 모드일 때만 모의 시험을 볼 때인지 묻는다. 볼 때면 곧 만들 시험의 문제를 계획에서
         // 뺀다 - 계획이 보여 준 문제가 시험에 들어가면 시작하기 전에 유형이 드러난다(ADR-0049).
         MockTestService.Upcoming upcoming = examInDays != null && examInDays <= DailyPlanner.EXAM_MODE_DAYS
-                ? mockTests.upcoming(userId, DailyPlanner.EXAM_MODE_DAYS, states) : null;
+                ? mockTests.upcoming(userId, DailyPlanner.EXAM_MODE_DAYS, scoped) : null;
         java.util.Set<String> excluded = upcoming == null ? java.util.Set.of() : upcoming.problemCodes();
 
         // 문제를 먼저 고른다. 줄 문제가 없는 Skill 은 계획에 넣지 않는다 - 갈 곳 없는 칸이 된다.

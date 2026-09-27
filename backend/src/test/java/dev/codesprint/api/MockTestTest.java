@@ -105,6 +105,9 @@ class MockTestTest {
     @Autowired
     private ProblemCatalog catalog;
 
+    @Autowired
+    private dev.codesprint.mocktest.MockTestService mockTests;
+
     private MockMvc mvc;
     private long userId;
 
@@ -396,6 +399,81 @@ class MockTestTest {
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
         assertThat(postJson("/api/problems/{code}/submit", codeBody(), "P01_QUEUE_BASIC").getStatus())
                 .as("끝난 뒤의 일반 제출").isEqualTo(202);
+    }
+
+    /** 일반 제출 하나를 틀린 것으로 채점까지 반영한다. */
+    private long wrongNormal(long user, String code) throws Exception {
+        long submissionId = json(postJson("/api/problems/{code}/submit",
+                "{\"userId\": %d, \"language\": \"PYTHON\", \"sourceCode\": \"print(1)\"}"
+                        .formatted(user), code)).get("submissionId").asLong();
+        JudgeJobRow job = jobs.findBySubmissionId(submissionId).orElseThrow();
+        JudgeResultFixture.finish(jdbc, """
+                {"status": "WRONG_ANSWER", "passed": 1, "total": 6, "executionMs": 100,
+                 "memoryKb": 20480, "failedCaseId": 2, "stderr": null, "cases": []}
+                """, job.id());
+        poller.applyFinishedJobs();
+        return submissionId;
+    }
+
+    @Test
+    @DisplayName("시험 중에는 시험 전 일반 제출의 조회도 닫히고, 그 제출이 가리킨 다음 문제는 시험에 들지 않는다")
+    void theLastNormalSubmissionDoesNotLeakIntoTheTest() throws Exception {
+        // 검증 에이전트가 재현했다: INTRO 사용자가 진단을 WA 로 따라가다 시험을 만들면, 마지막 일반 제출의
+        // 다음 문제(P11_LIST_BASIC)가 시험에 들어갔고, 시험 중에도 GET /api/submissions/{id} 가 200 으로
+        // nextAction.targetSkill 을 보여 줬다 - 시험 문제 하나의 유형이 시작 전 · 시험 중에 드러난다.
+        // 진단이 끝나 다음 행동이 진단 밖(CHANGE_SKILL → P11)을 가리키는 걸음에서 일어난다.
+        long user = users.save(new UserRow(
+                "mock-leak-" + System.nanoTime() + "@codesprint.dev", "누수", "INTRO")).id();
+        java.util.Set<String> outsideDiagnosis = new java.util.LinkedHashSet<>();
+        for (int step = 1; step <= 20; step++) {
+            JsonNode diag = json(mvc.perform(get("/api/users/{id}/diagnostic", user))
+                    .andReturn().getResponse());
+            if (diag.get("done").asBoolean() || diag.get("problem").isNull()) {
+                break;
+            }
+            long last = wrongNormal(user, diag.get("problem").get("code").asText());
+            JsonNode next = json(mvc.perform(get("/api/submissions/{id}/next-problem", last))
+                    .andReturn().getResponse());
+            String nextCode = next.get("problem").isNull() ? null
+                    : next.get("problem").get("code").asText();
+            String target = next.get("targetSkill").isNull() ? null : next.get("targetSkill").asText();
+            String at = "걸음 " + step + " (" + next.get("action").asText() + " " + target + " " + nextCode + ")";
+
+            if (nextCode != null) {
+                if (!"DIAGNOSTIC_PROBE".equals(next.get("action").asText())) {
+                    outsideDiagnosis.add(at);
+                }
+                // 시험에 실제로 들지는 구성 규칙이 정하므로, 빼는 목록에 들어 있는지를 먼저 본다
+                assertThat(mockTests.reservedProblemCodes(user)).as(at + " - 시험 후보에서 빼는 문제")
+                        .contains(nextCode);
+            }
+            MockHttpServletResponse created = create(user);
+            assertThat(created.getStatus()).as(at).isEqualTo(201);
+            long id = json(created).get("mockTestId").asLong();
+            List<String> inTest = mockProblems.findByMockTestIdOrderByLabelAsc(id).stream()
+                    .map(MockTestProblemRow::problemCode).toList();
+            if (nextCode != null) {
+                assertThat(inTest).as(at + " - 시험 직전 결과 패널이 보여 준 다음 문제").doesNotContain(nextCode);
+            }
+
+            // 시험 전에 낸 일반 제출이어도 시험 중에는 닫는다 - 다음 행동이 시험 문제의 유형을 가리킬 수 있다
+            MockHttpServletResponse during = mvc.perform(get("/api/submissions/{id}", last))
+                    .andReturn().getResponse();
+            assertThat(during.getStatus()).as(at + " - 시험 중 일반 제출 조회").isEqualTo(409);
+            String body = during.getContentAsString(StandardCharsets.UTF_8);
+            assertThat(body).as("화면에 보일 이유").contains("모의 시험 중");
+            if (target != null) {
+                assertThat(body).doesNotContain(target);
+            }
+
+            // 대조: 끝나면 열린다 - 막은 것이 시험이다
+            postJson("/api/mock-tests/{id}/finish", "{\"userId\": %d}".formatted(user), id);
+            assertThat(mvc.perform(get("/api/submissions/{id}", last)).andReturn().getResponse()
+                    .getStatus()).as(at + " - 끝난 뒤").isEqualTo(200);
+        }
+        // 진단이 가리키는 문제는 원래 빠졌다(ADR-0049). 새로 막은 것은 진단 밖을 가리키는 다음 문제다
+        assertThat(outsideDiagnosis).as("대조가 성립하려면 다음 행동이 진단 밖을 가리키는 걸음이 있어야 한다")
+                .isNotEmpty();
     }
 
     @Test
