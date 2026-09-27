@@ -74,4 +74,8 @@ test("거절 본문은 {message} 계약을 지나고, 다른 모양을 쓰는 �
   const hint = fakeRoute("/api/problems/P02_GRID_TRAVERSAL/hints/3");
   await fulfill(hint, { error: "한 단계씩 연다" }, 409);
   expect(hint.sent).toHaveLength(1);
+
+  // 비켜 가는 것은 거절뿐이다 - 같은 경로의 200 은 여전히 제 계약(hint-view)을 지난다.
+  await expect(fulfill(fakeRoute("/api/problems/P02_GRID_TRAVERSAL/hints/3"), { error: "x" }, 200))
+      .rejects.toThrow("hint-view.schema.json");
 });
