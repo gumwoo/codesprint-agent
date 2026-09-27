@@ -79,7 +79,7 @@ public class TodayService {
 
         Long userId = user.id();
         // 한 응답 안에서 두 시점을 보지 않게 이미 계산한 상태로 진단을 묻는다(DiagnosticService 주석). 진단 패널과
-        // 같은 계산이어야 한다 - 트랙 안만 넘기면 트랙을 바꾼 사용자에게 계획과 패널이 다른 문제를 가리킨다(ADR-0053).
+        // 같은 계산이어야 한다 - 트랙 안만 넘기면 트랙을 바꾼 사용자에게 계획과 패널이 다른 문제를 가리킨다(ADR-0054).
         MasteryService.Scoped scoped = mastery.scopedStatesOf(userId);
         List<SkillState> states = scoped.track();
         DiagnosticService.Step step = diagnostic.nextStep(scoped);

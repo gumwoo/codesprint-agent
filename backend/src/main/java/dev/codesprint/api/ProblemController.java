@@ -138,7 +138,7 @@ public class ProblemController {
     public ResponseEntity<NextProblemResponse> next(@PathVariable long submissionId) {
         // 시험 중의 제출에는 다음 행동을 보여 주지 않는다(PRD §84). 시험 전에 낸 제출이어도 시험 중에는
         // 닫는다 - 다음 문제를 고르는 조건이 시험 문제를 고르는 조건과 같아, 시험 문제가 추천으로 나온다.
-        // 제출 조회(GET /api/submissions/{id})와 같은 판단을 쓴다(ADR-0053).
+        // 제출 조회(GET /api/submissions/{id})와 같은 판단을 쓴다(ADR-0054).
         Long owner = submissions.findById(submissionId)
                 .map(dev.codesprint.learning.persistence.SubmissionRow::userId).orElse(null);
         if (mockTests.hidesUntilEnd(submissionId)) {
