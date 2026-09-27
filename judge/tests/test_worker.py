@@ -16,10 +16,13 @@ test_judge.py 가 본다. 이쪽은 ADR-0013 이 큐에 요구한 것들을 확�
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import pathlib
+import shutil
 import sys
+import tempfile
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -337,6 +340,161 @@ def test_language_picks_the_image(conn) -> None:
           results["PYTHON"].get("status") == "COMPILE_ERROR", f"result={results['PYTHON']}")
 
 
+# -- 제한은 문제의 것이다 (ADR-0058) ------------------------------------
+# Worker 가 cases.json 만 넘기던 때, 모든 문제가 기본값 2000ms · 전역 256m 로 채점됐다. P111 은 화면에
+# 1000ms 라고 보이는데 1721ms 가 걸린 제출이 ACCEPTED 였다. 검증(verify_problems)은 problem.yaml 의 값으로
+# 돌아서 그 차이를 보지 못했다.
+#
+# **제한만 다른 문제 사본 둘**을 같은 코드로 채점한다. 판정이 갈리면 제한이 문제에서 왔다는 뜻이다 -
+# 전역 값 하나로 돌면 둘은 같은 판정이 된다. 사본을 쓰는 이유는 실제 문제의 제한이 바뀌어도 이 검사가
+# 제 뜻을 잃지 않게 하기 위해서다.
+
+BASE_PROBLEM = "P01_QUEUE_BASIC"
+
+# 풀이 앞에 붙일 대기. 두 시간 제한(1000 / 2000ms) 사이에 오도록 잡는다 - 인터프리터 기동이 --cpus 0.5
+# 에서 수백 ms 라, 1.5 초면 느슨한 쪽(2000ms)의 여유가 100ms 안팎이었다(실측 1898ms).
+SLEEP_S = 1.1
+
+# 메모리를 실제로 쓰는 할당(페이지를 채운다 - bytearray(n) 은 0 페이지라 RSS 로 잡히지 않을 수 있다).
+# 느슨한 쪽(256m)에는 들어가고 빡빡한 쪽(64m)에는 들어가지 않는 크기다.
+ALLOC_MB = 100
+
+
+@contextlib.contextmanager
+def problem_copies(**variants: dict):
+    """``BASE_PROBLEM`` 의 사본을 만들고 Worker 가 그 디렉터리를 보게 한다.
+
+    ``variants`` 는 {사본 code: problem.yaml 에 덮어쓸 값}. cases.json 은 그대로 둔다.
+    """
+    import yaml
+
+    base = ROOT / "problems" / BASE_PROBLEM
+    original = worker.PROBLEMS
+    with tempfile.TemporaryDirectory(prefix="codesprint-limits-") as tmp:
+        root = pathlib.Path(tmp)
+        for code, overrides in variants.items():
+            target = root / code
+            target.mkdir()
+            shutil.copyfile(base / "cases.json", target / "cases.json")
+            problem = yaml.safe_load((base / "problem.yaml").read_text(encoding="utf-8"))
+            problem.update(code=code, **overrides)
+            (target / "problem.yaml").write_text(
+                yaml.safe_dump(problem, allow_unicode=True), encoding="utf-8")
+        worker.PROBLEMS = root
+        try:
+            yield
+        finally:
+            worker.PROBLEMS = original
+
+
+def seed_run_job(conn, *, source_code: str, problem: str) -> int:
+    """제출 전 실행(kind=RUN) 하나. 제출 행을 가리키지 않는다(V7)."""
+    with conn.cursor() as cur:
+        cur.execute("INSERT INTO users (email, nickname, track) VALUES (%s, %s, 'JOB')"
+                    " RETURNING id",
+                    (f"r{os.urandom(4).hex()}@codesprint.dev", "worker-test"))
+        user_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO judge_jobs (kind, user_id, problem_code, language, source_code)"
+            " VALUES ('RUN', %s, %s, 'PYTHON', %s) RETURNING id",
+            (user_id, problem, source_code))
+        job_id = cur.fetchone()[0]
+    conn.commit()
+    return job_id
+
+
+def result_of(conn, job_id: int) -> dict:
+    after = row(conn, job_id)
+    return after["result"] if isinstance(after["result"], dict) else json.loads(
+        after["result"] or "{}")
+
+
+def test_time_limit_comes_from_the_problem(conn) -> None:
+    """같은 느린 정답이 1000ms 문제에서는 TIME_LIMIT, 2000ms 문제에서는 ACCEPTED 다.
+
+    제출(SUBMIT)과 제출 전 실행(RUN)을 함께 본다 - 모의 시험의 제출 · 실행도 같은 두 종류의 job 이다.
+    """
+    reset(conn)
+    reference = (ROOT / "problems" / BASE_PROBLEM / "reference.py").read_text(encoding="utf-8")
+    slow = f"import time\ntime.sleep({SLEEP_S})\n" + reference
+
+    with problem_copies(LIMIT_TIGHT_TIME={"timeLimitMs": 1000},
+                        LIMIT_LOOSE_TIME={"timeLimitMs": 2000}):
+        tight = seed_job(conn, source_code=slow, problem="LIMIT_TIGHT_TIME")
+        loose = seed_job(conn, source_code=slow, problem="LIMIT_LOOSE_TIME")
+        tight_run = seed_run_job(conn, source_code=slow, problem="LIMIT_TIGHT_TIME")
+        worker.drain(conn)
+
+    tight_result = result_of(conn, tight)
+    loose_result = result_of(conn, loose)
+    run_result = result_of(conn, tight_run)
+    check("timeLimitMs 1000 문제에서는 TIME_LIMIT 다",
+          tight_result.get("status") == "TIME_LIMIT", f"result={tight_result}")
+    # 옛 기본값(2000)으로 걸렸다면 2000ms 를 넘겨야 TIME_LIMIT 다. 그보다 짧게 걸렸다는 것이 1000 으로 돌았다는 뜻이다.
+    # 하한은 1000 을 포함한다 - hard limit(제한 + 500ms)에 걸려 죽으면 하네스는 executionMs 를 제한값 그대로 보고한다
+    # (느린 러너에서 기동 + sleep 이 1.5 초를 넘으면 그렇다, 검증 에이전트).
+    check("2000ms 전에 걸렸다 - 전역 기본값이 아니라 문제의 값으로",
+          1000 <= (tight_result.get("executionMs") or 0) < 2000,
+          f"executionMs={tight_result.get('executionMs')}")
+    check("대조: 같은 코드가 timeLimitMs 2000 문제에서는 ACCEPTED 다",
+          loose_result.get("status") == "ACCEPTED", f"result={loose_result}")
+    # 대조가 성립하려면 느슨한 쪽이 실제로 1000ms 를 넘겨야 한다 - 아니면 SLEEP_S 가 두 제한 사이에 있지 않다.
+    check("대조가 성립한다: 느슨한 쪽도 1000ms 를 넘겨 돌았다 [VACUOUS 아님]",
+          (loose_result.get("executionMs") or 0) > 1000,
+          f"executionMs={loose_result.get('executionMs')}")
+    check("제출 전 실행도 문제의 제한으로 돈다", run_result.get("status") == "TIME_LIMIT",
+          f"result={run_result}")
+
+
+def test_memory_limit_comes_from_the_problem(conn) -> None:
+    """같은 코드가 memoryLimitMb 64 문제에서는 MEMORY_LIMIT, 256 문제에서는 ACCEPTED 다."""
+    reset(conn)
+    reference = (ROOT / "problems" / BASE_PROBLEM / "reference.py").read_text(encoding="utf-8")
+    hungry = f"held = b'x' * ({ALLOC_MB} * 1024 * 1024)\n" + reference
+
+    with problem_copies(LIMIT_TIGHT_MEMORY={"memoryLimitMb": 64},
+                        LIMIT_LOOSE_MEMORY={"memoryLimitMb": 256}):
+        tight = seed_job(conn, source_code=hungry, problem="LIMIT_TIGHT_MEMORY")
+        loose = seed_job(conn, source_code=hungry, problem="LIMIT_LOOSE_MEMORY")
+        worker.drain(conn)
+
+    tight_result = result_of(conn, tight)
+    loose_result = result_of(conn, loose)
+    check("memoryLimitMb 64 문제에서는 MEMORY_LIMIT 다",
+          tight_result.get("status") == "MEMORY_LIMIT", f"result={tight_result}")
+    check("대조: 같은 코드가 memoryLimitMb 256 문제에서는 ACCEPTED 다",
+          loose_result.get("status") == "ACCEPTED", f"result={loose_result}")
+    check("대조가 성립한다: 느슨한 쪽이 실제로 64MB 를 넘게 썼다 [VACUOUS 아님]",
+          (loose_result.get("memoryKb") or 0) > 64 * 1024,
+          f"memoryKb={loose_result.get('memoryKb')}")
+
+
+def test_limits_are_not_defaulted(conn) -> None:
+    """제한이 없거나 천장을 넘는 문제는 **채점하지 않는다.** 기본값이나 천장으로 바꿔 돌리지 않는다.
+
+    결함이 "없으면 2000" 이라는 조용한 기본값이었다. 그리고 천장(run_submission.MEMORY_CEILING_MB)으로
+    낮춰 돌리면 화면이 보여 주는 값과 채점이 쓰는 값이 다시 갈린다.
+    """
+    import run_submission
+
+    reset(conn)
+    over = run_submission.MEMORY_CEILING_MB * 2
+    with problem_copies(LIMIT_MISSING={"timeLimitMs": None},
+                        LIMIT_OVER_CEILING={"memoryLimitMb": over}):
+        missing = seed_job(conn, problem="LIMIT_MISSING")
+        too_big = seed_job(conn, problem="LIMIT_OVER_CEILING")
+        worker.drain(conn)
+
+    missing_row = row(conn, missing)
+    too_big_row = row(conn, too_big)
+    check("timeLimitMs 가 없으면 판정을 내지 않는다",
+          missing_row["result"] is None and "timeLimitMs" in (missing_row["failureReason"] or ""),
+          f"row={missing_row}")
+    check("천장을 넘는 memoryLimitMb 는 판정을 내지 않는다",
+          too_big_row["status"] != "DONE" and "memoryLimitMb" in (too_big_row["failureReason"] or ""),
+          f"row={too_big_row}")
+
+
 def test_infra_failure_is_retried(conn) -> None:
     """감지된 인프라 장애는 첫 시도에서 끝나면 안 된다.
 
@@ -463,6 +621,9 @@ def main() -> int:
                    test_exhausted_job_is_failed, test_stale_worker_cannot_overwrite,
                    test_stale_worker_cannot_revive_failed_job, test_accepted_submission,
                    test_wrong_submission, test_language_picks_the_image,
+                   test_time_limit_comes_from_the_problem,
+                   test_memory_limit_comes_from_the_problem,
+                   test_limits_are_not_defaulted,
                    test_infra_failure_is_retried,
                    test_user_failure_is_not_retried,
                    test_worker_does_not_touch_learning_state):

@@ -127,6 +127,12 @@ docker build -q -t codesprint-judge:java21 -f judge/Dockerfile.java .
 `judge/tests/test_judge.py`가 실패한다. 각 옵션이 무엇을 막는지 주석으로 적혀 있으니
 지우기 전에 읽는다. 새 제한을 추가하면 **그것을 뚫으려는 격리 케이스도 함께** 넣는다.
 
+**시간 · 메모리 제한은 문제의 것이다**([ADR-0058](docs/adr/0058-judging-uses-the-problems-own-limits.md)).
+메모리는 `DOCKER_LIMITS` 가 아니라 `memory_limits()` 가 job 의 `memoryLimitMb` 로 건다(천장
+`MEMORY_CEILING_MB`). job 은 Worker 와 `verify_problems` 가 **같은 함수**(`judge/problem_job.py`)로
+`problem.yaml` + `cases.json` 에서 만든다 - 따로 만들면 검증과 실서비스가 다른 제한으로 돈다.
+고정값으로 되돌리면 `judge/tests/test_worker.py` 가 실패한다.
+
 격리 케이스에는 대조군이 있다. 제한을 걷어냈을 때도 실패하면 그 테스트는 아무것도
 검증하지 못하는 것이라 실패로 처리된다.
 

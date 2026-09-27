@@ -17,6 +17,8 @@
   어느 쪽이 정본인지 알 수 없게 된다.
 - 정답을 컨테이너에 넣지 않는다. cases.json 은 **호스트에서** 읽고, 비교도 호스트가
   한다(ADR-0006). run_submission.py 가 그 경계를 지킨다.
+- 제한(시간 · 메모리)을 따로 정하지 않는다. problem.yaml 의 값을 tools/verify_problems.py 와
+  **같은 함수**(problem_job.load)로 읽는다(ADR-0058).
 """
 from __future__ import annotations
 
@@ -32,6 +34,12 @@ import time
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(ROOT / "judge"))
+import problem_job  # noqa: E402
+
+# 문제 데이터가 있는 곳. 테스트는 이 값을 바꿔 제한만 다른 문제 사본을 채점한다.
+PROBLEMS = ROOT / "problems"
 
 # job 을 집어간 뒤 이 시간 안에 끝내지 못하면 다른 Worker 가 가져갈 수 있다.
 # run_submission.py 안쪽 timeout 보다 넉넉해야 한다 - 그러지 않으면 정상적으로
@@ -258,20 +266,27 @@ def run_job(job: dict) -> tuple[dict | None, str | None]:
     if job["language"] not in SOURCE_NAMES:
         return None, f"지원하지 않는 언어다: {job['language']}"
 
-    cases = ROOT / "problems" / job["problemCode"] / "cases.json"
-    if not cases.exists():
-        return None, f"Test Case 파일이 없다: {cases}"
+    # 제한은 problem.yaml 에서, case 는 cases.json 에서 - verify_problems 와 같은 함수로 만든다(ADR-0058).
+    # 예전에는 cases.json 을 그대로 넘겨서 timeLimitMs 가 없었고, 모든 문제가 기본값 2000ms 로 채점됐다.
+    try:
+        judge_job = problem_job.load(PROBLEMS / job["problemCode"])
+    except problem_job.ProblemDataError as e:
+        return None, str(e)
 
     workdir = pathlib.Path(tempfile.mkdtemp(prefix="codesprint-worker-"))
     try:
         solution = workdir / SOURCE_NAMES[job["language"]]
         # 사용자 코드다. 읽지 않고 그대로 넘긴다.
         solution.write_text(job["sourceCode"], encoding="utf-8")
+        # 정답이 들어 있지만 호스트의 임시 자리다. run_submission.py 는 컨테이너에 제출 코드만
+        # 마운트하고 case 의 input 만 보낸다(ADR-0006).
+        job_file = workdir / "job.json"
+        job_file.write_text(json.dumps(judge_job, ensure_ascii=False), encoding="utf-8")
 
         # 제출 전 실행은 **공개 case 만** 돈다(ADR-0020). 숨은 case 를 돌리면
         # 사용자는 제출하지 않고도 채점 결과를 얻는다 - 그건 실행이 아니라 제출이다.
         command = [sys.executable, str(ROOT / "judge" / "run_submission.py"),
-                   str(solution), str(cases), "--language", job["language"]]
+                   str(solution), str(job_file), "--language", job["language"]]
         if job.get("kind") == "RUN":
             command.append("--samples-only")
 

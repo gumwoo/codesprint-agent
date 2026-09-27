@@ -109,7 +109,7 @@ def build(only: str | None) -> tuple[list[dict], list[str]]:
     for d in dirs:
         problem = yaml.safe_load((d / "problem.yaml").read_text(encoding="utf-8"))
         cases_doc = json.loads((d / "cases.json").read_text(encoding="utf-8"))
-        job = V.build_job(problem, cases_doc)
+        job = V.problem_job.load(d)   # 채점 · 검증과 같은 job (ADR-0058)
 
         probes: dict[str, list[int]] = {}
         for c in cases_doc["cases"]:

@@ -70,7 +70,7 @@ python judge/tests/test_judge.py --build
 | 옵션 | 막는 것 |
 | --- | --- |
 | `--network none` | 데이터 유출, 원격 도구 다운로드 |
-| `--memory 256m` + `--memory-swap 256m` | 호스트를 끌어내리는 OOM, swap 우회 |
+| `--memory <memoryLimitMb>m` + `--memory-swap` 같은 값 | 호스트를 끌어내리는 OOM, swap 우회. 값은 문제의 `problem.yaml` 이 정하고 천장은 `MEMORY_CEILING_MB`(256)다 - 넘으면 채점하지 않는다(ADR-0058) |
 | `--cpus 0.5` | CPU 독점 |
 | `--pids-limit 64` | fork bomb. 컨테이너(cgroup)마다 센다 - uid 로 세는 `RLIMIT_NPROC` 은 옆 채점까지 합산해 쓰지 않는다(ADR-0053) |
 | `--read-only` | 이미지 변조로 다음 제출에 영향 |
