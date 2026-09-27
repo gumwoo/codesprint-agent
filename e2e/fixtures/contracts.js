@@ -93,7 +93,9 @@ function contractFor(pathname) {
  */
 async function fulfill(route, body, status = 200) {
   const url = new URL(route.request().url());
-  const name = contractFor(url.pathname);
+  // 거절(4xx)은 경로가 아니라 **거절의 계약**을 지난다. 이유를 싣는 핸들러는 전부 {message} 하나다 -
+  // 경로의 계약(예: submission-status)에 대고 보면 409 본문은 항상 어긋난다.
+  const name = status >= 400 ? "api-error" : contractFor(url.pathname);
 
   if (name === undefined) {
     // 규칙은 하나다 - 계약이 있거나, 이유가 있거나.

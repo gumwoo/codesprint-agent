@@ -66,6 +66,23 @@ let openedAt = Date.now();
 // 냈는데 A 의 판정을 본다. 반대로 폴링 중에 다른 문제를 열면 결과가 갈 곳을 잃는다.
 let activeSubmissionId = null;
 
+/**
+ * 지금 관찰 중인 일반 제출. 결과를 그리면 비운다. 시험 문제를 열면서 관찰을 놓을 때 누구의 어느 문제
+ * 제출이었는지 알아야 해서 둔다 - activeSubmissionId 는 번호뿐이다.
+ */
+let pendingNormal = null;
+
+/**
+ * 시험 때문에 결과를 받지 못한 일반 제출. **사용자별로 하나**다(ADR-0054 후속).
+ *
+ * <p>시험 중에는 일반 제출 조회가 409 다. 그 사이 시험 문제를 열거나 다른 문제로 옮기면 관찰이 끊기고, 제출 이력
+ * 화면이 없어 끝난 뒤에도 그 결과를 볼 곳이 없었다. 그래서 적어 두고, 시험이 끝났다고 서버가 말한 뒤(시험 탭)
+ * 그 문제와 결과로 돌아가는 길을 준다. 시험이 끝났는지를 여기서 판단하지 않는다 - 409 와 시험 상태는 서버 값이다.
+ *
+ * <p>사용자별인 이유는 화면이 사용자를 바꿀 수 있어서다. 다른 사용자의 탭에 권하면 남의 기록을 여는 길이 된다.
+ */
+const withheldSubmissions = {};
+
 let editor = null;
 
 // 언어마다 채점 이미지가 읽는 파일 이름과 편집기 모드. 파일 이름은 하네스가 정한다(judge/worker.py) -
@@ -129,8 +146,11 @@ async function getJson(url) {
   if (!response.ok) {
     // 서버가 이유를 주면 그대로 싣는다 - 예를 들어 시험 중에는 학습 상태 화면이 409 로 닫힌다(ADR-0043).
     const body = await response.json().catch(() => null);
-    throw new Error(body && body.message
+    const error = new Error(body && body.message
         ? `${body.message} (${response.status})` : `${url} -> ${response.status}`);
+    // 부르는 쪽이 거절과 연결 실패를 가를 수 있게 상태를 싣는다 - 시험 중의 제출 조회 409 는 서버 장애가 아니다(ADR-0054).
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -607,11 +627,58 @@ async function showMock() {
   }
   if (!latest) {
     renderMockNone("문제는 서버가 고른다. 시작하면 시간이 흐르고, 끝날 때까지 힌트와 분석이 없다.");
+    offerWithheld(userId);
     return;
   }
   renderMockOverview(latest);
   if (latest.state === "FINISHED") {
+    offerWithheld(userId);
     await loadMockReport(latest.mockTestId, userId, mine);
+  }
+}
+
+/**
+ * 시험 때문에 받지 못한 결과로 돌아가는 길을 보인다. <b>진행 중인 시험이 없다고 서버가 말했을 때만</b> 부른다
+ * (showMock) - 시험 중에 누르면 다시 409 다. 부르는 쪽이 표("mock")를 확인한 뒤다.
+ */
+function offerWithheld(userId) {
+  const held = withheldSubmissions[userId];
+  $("mockWithheld").hidden = !held;
+  if (!held) {
+    return;
+  }
+  $("mockWithheldText").textContent = `시험 중에 결과를 받지 못한 제출이 있다 · ${held.problemCode}`;
+  $("mockWithheldView").onclick = () => viewWithheld(userId, held);
+}
+
+/**
+ * 받지 못한 결과를 그 문제와 함께 연다. 결과 패널은 문제 화면의 것이다 - 다른 문제를 열어 둔 채 결과만 그리면
+ * 설명해 보기 · 다음 단계가 지금 열린 문제를 가리킨다. 문제 화면의 주인은 openProblem 이 받는다.
+ */
+async function viewWithheld(userId, held) {
+  if (!stillCurrent(userId) || withheldSubmissions[userId] !== held) {
+    $("mockWithheld").hidden = true;
+    return;
+  }
+  const opened = await openProblem(held.problemCode);
+  // 기다리는 동안 다른 문제를 골랐거나 사용자를 바꿨으면 그쪽이 이긴다. 적어 둔 것은 남긴다.
+  if (!opened || !stillCurrent(userId)) {
+    return;
+  }
+  delete withheldSubmissions[userId];
+  $("mockWithheld").hidden = true;
+  await waitForResult(held.submissionId, Date.now(), null, userId, held.problemCode);
+}
+
+/** 결과를 그렸으면 적어 둔 것을 지운다 - 같은 결과를 두 번 권하지 않는다. */
+function settleWithheld(userId, submissionId) {
+  if (pendingNormal && pendingNormal.submissionId === submissionId) {
+    pendingNormal = null;
+  }
+  const held = withheldSubmissions[userId];
+  if (held && held.submissionId === submissionId) {
+    delete withheldSubmissions[userId];
+    $("mockWithheld").hidden = true;
   }
 }
 
@@ -626,10 +693,12 @@ function renderMockNone(message) {
   $("mockReportRows").replaceChildren();
   $("mockSummary").textContent = "";
   $("mockUnmeasured").hidden = true;
+  $("mockWithheld").hidden = true;
 }
 
 function renderMockOverview(test) {
   const running = test.state === "IN_PROGRESS";
+  $("mockWithheld").hidden = true;
   $("mockStart").hidden = running;
   $("mockFinish").hidden = !running;
   $("mockFinish").onclick = () => finishMock(test.mockTestId);
@@ -793,13 +862,7 @@ async function finishMock(mockTestId) {
   if (mine()) {
     // 끝났으면 시험 문제 화면을 놓는다 - 그 문제로 더 낼 수 없다.
     if (currentProblem && currentProblem.mockTestId === mockTestId) {
-      currentProblem = null;
-      // 이름표와 버튼도 놓는다. currentProblem 만 비우면 위치 표시는 "시험 · 문제 A" 로 남고 제출 버튼은
-      // 눌리는데 아무 일도 일어나지 않았다(실제 백엔드로 끝까지 걸어 보고 찾았다).
-      $("crumbProblem").textContent = "고르는 중";
-      $("problemMeta").textContent = "";
-      $("submitButton").disabled = true;
-      $("runButton").disabled = true;
+      releaseExamProblem();
     }
     // **시험 탭이 아직 보일 때만** 다시 그린다. 응답을 기다리는 동안 다른 탭이나 문제로 옮겼으면 그대로
     // 둔다 - 표("mock")는 시험 탭의 것이지 사용자가 지금 보는 화면의 것이 아니다. 다음에 탭을 열면 다시 읽는다.
@@ -807,6 +870,20 @@ async function finishMock(mockTestId) {
       showMock();
     }
   }
+}
+
+/**
+ * 열어 둔 시험 문제를 놓는다. 시험이 끝났거나(finishMock) 그 시험의 주인이 아닌 사용자로 바뀌었을 때(switchedUser).
+ *
+ * <p>이름표와 버튼도 놓는다. currentProblem 만 비우면 위치 표시는 "시험 · 문제 A" 로 남고 제출 버튼은
+ * 눌리는데 아무 일도 일어나지 않았다(실제 백엔드로 끝까지 걸어 보고 찾았다).
+ */
+function releaseExamProblem() {
+  currentProblem = null;
+  $("crumbProblem").textContent = "고르는 중";
+  $("problemMeta").textContent = "";
+  $("submitButton").disabled = true;
+  $("runButton").disabled = true;
 }
 
 /** 시험 문제를 연다. **여는 요청이 연 시각을 남긴다**(ADR-0043) - 그래서 POST 다. */
@@ -852,6 +929,13 @@ async function openMockProblem(mockTestId, label) {
   $("submitButton").disabled = false;
   $("runButton").disabled = false;
   setSourceCode("");
+  // 시험 전에 낸 일반 제출을 아직 기다리던 중이면 적어 둔다. 여기서 관찰을 놓으면 그 결과는 끝난 뒤에도
+  // 오지 않는다 - 제출 이력 화면이 없다(ADR-0054 후속). 폴러가 409 를 보기 전에 열 수도 있어 여기서 적는다.
+  if (pendingNormal && pendingNormal.submissionId === activeSubmissionId) {
+    withheldSubmissions[pendingNormal.userId] = {
+      submissionId: pendingNormal.submissionId, problemCode: pendingNormal.problemCode,
+    };
+  }
   cancelActivePolling();
   cancelActiveRun();
   resetResultUi("제출하면 여기에 판정이 나온다. 분석은 시험이 끝난 뒤 보고서에 있다.");
@@ -1145,6 +1229,15 @@ function switchedUser() {
   // 자유 질문의 답도 이전 사용자의 것이다. 설명 분석도 마찬가지다.
   resetTutor();
   resetExplain();
+  // 이전 사용자의 시험 문제도 놓는다. 남겨 두면 그 본문과 "시험 · 문제 A" 가 새 사용자 화면에 남고 제출 버튼이
+  // 이전 사용자의 시험으로 향한다(검증 에이전트가 재현했다). 서버는 남의 시험을 404 로 막지만, 시험 본문은 시험을
+  // 만든 사용자에게만 보인다. 일반 문제는 누구의 것도 아니라 그대로 둔다.
+  if (currentProblem && currentProblem.mockTestId) {
+    releaseExamProblem();
+    if (!$("statementBody").hidden) {
+      showLeft("picker");
+    }
+  }
 
   remember($("userId").value);
   refreshUserTrack();
@@ -1498,6 +1591,7 @@ function ioBlock(name, value) {
   return box;
 }
 
+/** @return 이 문제가 화면을 차지했는가. 기다리는 동안 다른 문제가 표를 가져갔으면 false 다. */
 async function openProblem(code) {
   // **문제를 빠르게 두 번 고르면 늦게 온 응답이 이긴다.** 마지막에 누른 것이
   // 아니라 먼저 누른 문제가 열린다 - 이 검사가 그것을 찾았다(ADR-0023).
@@ -1507,7 +1601,7 @@ async function openProblem(code) {
   const opened = await getJson(viewer
       ? `/api/problems/${code}?userId=${viewer}` : `/api/problems/${code}`);
   if (!mine()) {
-    return;
+    return false;
   }
   currentProblem = opened;
   $("hintsBox").hidden = false;
@@ -1543,6 +1637,7 @@ async function openProblem(code) {
   resetResultUi("제출하면 여기에 판정과 다음 행동이 나온다.");
   $("footNote").textContent = "";
   openedAt = Date.now();
+  return true;
 }
 
 /**
@@ -1665,7 +1760,7 @@ async function submit() {
   resetResultUi("채점 중…");
   $("footNote").textContent = "";
   await waitForResult(accepted.submissionId, startedAt,
-      problem.mockTestId || null, submittingUserId);
+      problem.mockTestId || null, submittingUserId, problem.code || null);
 }
 
 /**
@@ -1874,13 +1969,16 @@ function renderRun(view, box) {
   }
 }
 
-async function waitForResult(submissionId, startedAt, mockTestId, userId) {
+async function waitForResult(submissionId, startedAt, mockTestId, userId, problemCode) {
   activeSubmissionId = submissionId;
+  pendingNormal = mockTestId ? null : { submissionId, userId, problemCode };
   $("submitNote").textContent = "채점 중…";
   $("state").textContent = "채점 중";
 
   let warned = false;
   let failures = 0;
+  // 서버가 시험 중이라 결과를 주지 않는다고 답했다(409). 연결 실패와 다르다 - 세지 않고 이유를 곧바로 보인다.
+  let withheld = false;
   for (;;) {
     let view = null;
     let failure = null;
@@ -1904,7 +2002,16 @@ async function waitForResult(submissionId, startedAt, mockTestId, userId) {
       return;
     }
 
-    if (failure) {
+    if (failure && failure.status === 409 && !mockTestId) {
+      // 시험 중에는 일반 제출 조회가 409 다 - 시험 전에 낸 제출이어도(ADR-0054). 서버 장애가 아니므로 "서버가
+      // 돌아오면" 이라고 쓰지 않고, 서버가 준 이유를 그대로 싣는다. 이 엔드포인트의 409 는 그것 하나다.
+      // 관찰은 이어 간다 - 이 문제에 머물면 끝난 뒤 여기에 온다. 떠나면 관찰이 끊기므로 적어 둔다.
+      withheld = true;
+      failures = 0;
+      withheldSubmissions[userId] = { submissionId, problemCode };
+      $("submitNote").textContent = `${failure.message}. 제출은 접수됐다 - 시험이 끝나면 여기에 나오고, `
+          + "이 문제를 떠났으면 모의 시험 탭에서 본다.";
+    } else if (failure) {
       // **한 번 실패했다고 포기하지 않는다.** 서버를 재시작하는 동안에도 job 은
       // 큐에 남아 있고, 돌아오면 결과가 온다.
       failures += 1;
@@ -1913,9 +2020,10 @@ async function waitForResult(submissionId, startedAt, mockTestId, userId) {
             `결과를 가져오지 못하고 있다 (${failure.message}). 제출은 접수됐으므로 `
             + "서버가 돌아오면 여기에 나타난다.";
       }
-    } else if (failures) {
-      // 돌아왔다. 알리던 문구를 원래대로 되돌린다.
+    } else if (failures || withheld) {
+      // 돌아왔다(또는 시험이 끝나 열렸다). 알리던 문구를 원래대로 되돌린다.
       failures = 0;
+      withheld = false;
       $("submitNote").textContent = warned ? slowNote() : "채점 중…";
     }
 
@@ -1923,6 +2031,7 @@ async function waitForResult(submissionId, startedAt, mockTestId, userId) {
       if (mockTestId) {
         renderVerdict(view);
       } else {
+        settleWithheld(userId, submissionId);
         render(submissionId, view);
       }
       return;
@@ -1937,8 +2046,8 @@ async function waitForResult(submissionId, startedAt, mockTestId, userId) {
         $("submitNote").textContent = slowNote();
       }
     }
-    // 서버가 답하지 않는 동안에는 천천히 두드린다.
-    const slowly = warned || failures >= UNREACHABLE_AFTER;
+    // 서버가 답하지 않는 동안, 그리고 시험이 끝나기를 기다리는 동안에는 천천히 두드린다.
+    const slowly = warned || withheld || failures >= UNREACHABLE_AFTER;
     await new Promise((resolve) => setTimeout(
         resolve, slowly ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS));
   }
