@@ -32,6 +32,7 @@ import os
 import pathlib
 import re
 import resource
+import signal
 import subprocess
 import sys
 import threading
@@ -213,6 +214,46 @@ def _limit_child() -> None:
     resource.setrlimit(resource.RLIMIT_FSIZE, (STDOUT_LIMIT, STDOUT_LIMIT))
 
 
+def _clear_leftovers() -> None:
+    """case 가 남긴 프로세스를 전부 죽이고 거둔다. 다음 case 는 하네스 혼자인 컨테이너에서 시작한다.
+
+    **하네스는 컨테이너의 PID 1 이다**(ENTRYPOINT, --init 없음). 사용자 프로세스가 자식을 두고 끝나면
+    그 자식은 PID 1 에게 넘어오는데, 하네스는 제 자식(os.wait4(proc.pid))만 기다렸다. 그래서
+    - 끝난 자손은 **좀비로 남았다.** fork bomb case 뒤 좀비 61 개가 --pids-limit 64 를 차지해, 다음
+      case 는 스레드 4 개도 못 만들어 RUNTIME_ERROR 가 났다(혼자 돌리면 ACCEPTED).
+    - 살아 있는 자손은 **다음 case 로 넘어갔다.** 자리를 계속 채우는 자손이 하나 남으면 다음 case 에서
+      하네스가 타이머 스레드를 못 만들어 죽고, 사용자 코드가 SYSTEM_ERROR(우리 잘못)가 됐다. 늦게 쓰는
+      자손의 출력은 다음 case 의 stdout 파일에 섞였다 - 실패가 엉뚱한 case 에 붙는다(ADR-0015).
+
+    kill(-1) 은 이 pid namespace 안에서 **나와 init 을 뺀 모든 프로세스**에 보낸다. 하네스가 곧 init 이므로
+    컨테이너 안의 나머지 전부다 - setsid 로 프로세스 그룹을 빠져나간 자손도 포함된다(프로세스 그룹을
+    죽이는 방식은 여기서 샌다). 모두 같은 uid 라 capability 없이 보낼 수 있다. 죽은 것은 전부 PID 1 에게
+    넘어오므로 ECHILD 까지 기다리면 좀비도 남지 않는다. 그 사이 새로 생긴 것이 있을 수 있어, kill(-1) 이
+    보낼 곳이 없다(ESRCH)고 할 때까지 되풀이한다.
+
+    docker --init(tini)은 좀비만 거둔다. 살아 있는 자손은 그대로 다음 case 로 넘어가고, tini 가 자리를
+    하나 더 차지한다 - 실측으로 넘어간 자손 때문에 같은 SYSTEM_ERROR 가 났다(ADR-0055).
+
+    **이 case 의 자식은 이미 wait4 로 거둔 뒤에만 부른다.** 먼저 부르면 여기서 그 종료 상태와 자원
+    사용량을 가져가 버린다.
+
+    PID 1 이 아니면(컨테이너 밖에서 하네스를 직접 돌리는 경우) 아무것도 하지 않는다 - 그때 kill(-1) 은
+    그 사용자의 프로세스 전부를 죽인다.
+    """
+    if os.getpid() != 1:
+        return
+    while True:
+        try:
+            os.kill(-1, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        try:
+            while True:
+                os.waitpid(-1, 0)
+        except ChildProcessError:
+            pass
+
+
 def _read_capped(path: pathlib.Path, cap: int) -> tuple[str, bool]:
     """파일 앞부분만 읽는다. 돌려주는 두 번째 값은 '한도를 넘겼는가'."""
     try:
@@ -262,8 +303,12 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
         # **이 case 의 자식만** 기다려 그 자원 사용량을 받는다. RUSAGE_CHILDREN 은 지금까지 기다린
         # 모든 자식의 최댓값이라, 컴파일러(g++ 는 약 190MB)가 사용자 코드의 메모리로 둔갑한다.
         _, status, usage = os.wait4(proc.pid, 0)
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        # 타이머 스레드가 끝날 때까지 기다린다 - 남아 있으면 다음 case 의 자리를 하나 차지한다.
         timer.cancel()
-    elapsed_ms = int((time.monotonic() - started) * 1000)
+        timer.join()
+    # 출력을 읽기 전에 치운다. 남은 자손이 쓰기를 멈춰야 읽는 값이 이 case 의 것으로 굳는다.
+    _clear_leftovers()
     _case_memory.append(int(usage.ru_maxrss))
     if killed.is_set():
         # 시간 안에 끝나지 않았지만 **출력 상한을 이미 채웠다면** 출력 폭주다. JVM 은 SIGXFSZ 를 무시해
