@@ -160,6 +160,23 @@ Reviewer 출력의 `failedCaseRefs`(minItems 1)를 채울 수 없다(ADR-0004).
 읽는다([ADR-0055](../docs/adr/0055-each-case-starts-with-the-harness-alone.md)). `--init` 은 좀비만 거두고
 살아 있는 자손을 남겨서 쓰지 않는다. `test_judge.py` 의 "case 사이에 남는 프로세스" 가 확인한다.
 
+## 시간 제한은 자리를 쓰지 않는다
+
+case 의 hard limit 은 커널 타이머(`setitimer`)와 SIGALRM 처리기로 건다. 자식을 띄운 뒤에는 스레드도
+프로세스도 새로 만들지 않는다 - 타이머 스레드를 쓰던 때는 자식이 먼저 `--pids-limit` 을 다 채우면 하네스가
+스레드를 못 만들고 죽어 `SYSTEM_ERROR` 가 됐다. 처리기는 pidfd 로 죽이기만 하고, 자식을 거두는 곳은
+`os.wait4` 하나뿐이다([ADR-0056](../docs/adr/0056-the-time-limit-takes-no-slot-and-one-place-reaps.md)).
+
+둘 다 경주라, `test_judge.py` 가 하네스를 그 순서로 세워 두는 게이트 이미지를 따로 구워 확인한다.
+
+## memoryKb 가 재는 것
+
+memoryKb 는 case 마다 그 자식의 `ru_maxrss` 중 최댓값이다. 이 값은 exec 전의 주소 공간(하네스를 fork 한
+사본)까지 포함한다 - 그래서 **하네스보다 작은 풀이는 하네스 크기로 보인다**(Python 약 12.5~13MB, C++ 이미지
+약 9.4MB. C++ 풀이 자신은 3MB 남짓이다). 입력이 큰 case 는 하네스가 쥔 입력 사본만큼 더 크게 보인다.
+판정(`MEMORY_LIMIT`)은 이 값으로 정하지 않고, 이 값은 화면에 보이기만 한다. 하네스를 고치면 작은 풀이의
+값이 수백 KB 씩 움직일 수 있다 - 결함이 아니라 이 측정 방식이다(ADR-0056).
+
 ## 아직 없는 것
 
 - Judge Worker / 큐 (Addendum 67~69). 지금은 동기 호출만 있다

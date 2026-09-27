@@ -543,8 +543,8 @@ else:
 """
 # 오래 사는(60 초) 자손 수. 나머지는 곧바로 끝나 좀비가 된다 - 두 종류를 다 남긴다.
 LEFTOVER_SURVIVORS = 10
-# "leave" 가 끝나기 직전 남아 있어야 하는 프로세스 수. --pids-limit 64 에서 하네스 · 타이머 스레드 ·
-# 자기를 빼면 61 까지 찬다. 여기 못 미치면 뒤 case 에 줄 압력이 없다.
+# "leave" 가 끝나기 직전 남아 있어야 하는 프로세스 수. --pids-limit 64 에서 하네스와 자기를 빼면 62 까지
+# 찬다(ADR-0056 전에는 타이머 스레드 자리도 빠져 61). 여기 못 미치면 뒤 case 에 줄 압력이 없다.
 LEFTOVER_MIN = 55
 
 
@@ -585,6 +585,191 @@ def check_leftovers() -> list[str]:
         print(f"[O] 앞 case 가 프로세스 {first[1]}개를 남겨도 뒤 case 3개가 스레드 8개로 ACCEPTED, "
               f"남은 프로세스 0")
     return problems
+
+
+# -- 시간 제한은 자리를 쓰지 않는다 · 자식을 거두는 곳은 하나다 (ADR-0056) -------------------------
+# 하네스는 자식을 띄운 직후 타이머 스레드를 만들었다. 자식이 그보다 먼저 --pids-limit 64 를 다 채우면
+# 하네스가 `can't start new thread` 로 죽고, 사용자 코드가 SYSTEM_ERROR(우리 잘못)가 된다. 그리고 그 타이머가
+# 부른 proc.kill() 은 poll() 로 자식을 먼저 거둘 수 있어, 자식이 hard limit 과 같은 순간에 끝나면 메인 스레드의
+# os.wait4 가 ChildProcessError 로 하네스를 죽였다.
+#
+# 둘 다 경주라 그대로는 재현되지 않는다 - 곧바로 자리를 채우는 C++ 제출 300 case 에서 0 번, hard limit 근처에서
+# 끝나는 제출 480 case 에서 0 번이었다. 그래서 **하네스를 그 순서로 세워 두는 게이트**를 채점 이미지 위에 따로
+# 굽는다. 게이트는 시간이 아니라 상태로 연다.
+#
+#   pids  자식을 띄운 직후 컨테이너의 태스크 수가 pids.max 에 닿을 때까지 하네스를 세운다. 닿으면 /tmp/gate-open
+#         을 만들고 놓는다. 그 뒤 하네스가 태스크를 하나라도 새로 만들면 죽는다.
+#   reap  자식을 거두기 직전, 자식이 끝나 좀비가 된 뒤에도 거두지 않고 hard limit 을 넘겨 둔다. 다른 누가 먼저
+#         거두면(옛 하네스의 타이머가 부른 poll) 거기서 놓는다.
+#
+# 게이트는 채점 이미지에 들어가지 않는다 - 이 검사가 채점 이미지를 FROM 으로 따로 굽고 끝나면 지운다.
+GATE_SOURCE = '''\
+import importlib.util, os, subprocess, sys, time
+
+spec = importlib.util.spec_from_file_location("harness", "/opt/judge/harness.py")
+harness = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(harness)
+
+MODE = os.environ["JUDGE_TEST_GATE"]
+RUN = harness.LANGUAGES[harness.LANGUAGE]["run"]
+OPEN = "/tmp/gate-open"
+run_pids = set()
+
+
+def cgroup(name):
+    with open("/sys/fs/cgroup/" + name) as f:
+        return f.read().strip()
+
+
+class GatedPopen(subprocess.Popen):
+    def __init__(self, args, *rest, **kw):
+        run = list(args) == RUN
+        if run and os.path.exists(OPEN):
+            os.unlink(OPEN)
+        super().__init__(args, *rest, **kw)
+        if not run:
+            return
+        run_pids.add(self.pid)
+        if MODE == "pids":
+            limit = cgroup("pids.max")
+            deadline = time.monotonic() + 15
+            while limit.isdigit() and time.monotonic() < deadline:
+                if int(cgroup("pids.current")) >= int(limit):
+                    open(OPEN, "w").close()
+                    break
+                time.sleep(0.01)
+
+
+real_wait4 = os.wait4
+
+
+def gated_wait4(pid, options):
+    if MODE == "reap" and pid in run_pids:
+        deadline = time.monotonic() + %(hold)d
+        while time.monotonic() < deadline and os.path.exists("/proc/%%d" %% pid):
+            time.sleep(0.01)
+    return real_wait4(pid, options)
+
+
+subprocess.Popen = GatedPopen
+os.wait4 = gated_wait4
+sys.exit(harness.main())
+'''
+# reap 게이트가 자식을 거두지 않고 두는 시간. 아래 job 의 hard limit(0.2 초 + 0.5 초)보다 넉넉히 길다. 옛 하네스
+# 에서는 타이머가 먼저 거둬 가므로 여기까지 기다리지 않는다.
+GATE_REAP_HOLD_S = 4
+
+# 자식을 띄우자마자 --pids-limit 을 다 채우고 쥔다. 게이트가 열린 것을 본 뒤에야 입력을 읽는다 - 게이트가 열렸다는
+# 것은 태스크 수가 pids.max 에 닿은 채로 하네스가 다음 줄로 넘어갔다는 뜻이다.
+GATE_FILL_CODE = """\
+import os, sys, time
+held = 0
+for _ in range(200):
+    try:
+        pid = os.fork()
+    except OSError:
+        break
+    if pid == 0:
+        time.sleep(60)
+        os._exit(0)
+    held += 1
+deadline = time.monotonic() + 20
+while not os.path.exists('/tmp/gate-open') and time.monotonic() < deadline:
+    time.sleep(0.01)
+if not os.path.exists('/tmp/gate-open'):
+    print('nogate', held)
+    raise SystemExit(0)
+if sys.stdin.read().strip() == 'spin':
+    while True:
+        pass
+print('gated')
+"""
+
+
+def _gated_image(mode: str) -> str:
+    """지금 쓰는 파이썬 채점 이미지 위에 게이트를 얹은 시험용 이미지를 굽는다."""
+    base = run_submission.LANGUAGES["PYTHON"][0]
+    repo, tag = base.rsplit(":", 1)
+    image = f"{repo}-gate:{tag}-{mode}"
+    with tempfile.TemporaryDirectory() as d:
+        ctx = pathlib.Path(d)
+        (ctx / "gate.py").write_text(GATE_SOURCE % {"hold": GATE_REAP_HOLD_S},
+                                     encoding="utf-8", newline="\n")
+        (ctx / "Dockerfile").write_text(
+            f"FROM {base}\n"
+            "COPY gate.py /opt/judge/gate.py\n"
+            f"ENV JUDGE_TEST_GATE={mode}\n"
+            'ENTRYPOINT ["python3", "/opt/judge/gate.py"]\n', encoding="utf-8", newline="\n")
+        build = subprocess.run(["docker", "build", "-q", "-t", image, str(ctx)],
+                               capture_output=True, text=True, errors="replace")
+    if build.returncode != 0:
+        raise RuntimeError(f"게이트 이미지를 굽지 못했다 ({image}): {build.stderr[-300:]}")
+    return image
+
+
+def _with_image(image: str, run):
+    """파이썬 제출을 잠시 다른 이미지로 채점한다."""
+    original = run_submission.LANGUAGES["PYTHON"]
+    run_submission.LANGUAGES["PYTHON"] = (image, *original[1:])
+    try:
+        return run()
+    finally:
+        run_submission.LANGUAGES["PYTHON"] = original
+
+
+def check_timer_needs_no_task() -> list[str]:
+    """자식이 곧바로 --pids-limit 을 다 채워도 그 제출이 제 판정을 받는가.
+
+    게이트가 태스크 수가 pids.max 에 닿은 것을 본 뒤에야 하네스를 놓는다. 제출은 게이트가 열린 것을 확인하고
+    'gated' 를 쓴다 - 게이트가 열리지 않았으면 'nogate' 를 쓰고, 그때 이 검사는 [VACUOUS] 로 실패한다.
+    """
+    image = _gated_image("pids")
+    problems = []
+    try:
+        for mode, expected in (("exit", "ACCEPTED"), ("spin", "TIME_LIMIT")):
+            job = {"problemId": 0, "timeLimitMs": 2000,
+                   "cases": [{"id": 1, "input": mode, "expectedOutput": "gated"}]}
+            result = _with_image(image, lambda: judge_samples_only(GATE_FILL_CODE, job))
+            case = (result.get("cases") or [{}])[0]
+            stdout = (case.get("stdout") or "").strip()
+            if result["status"] == "SYSTEM_ERROR":
+                problems.append(f"{mode}: 자식이 --pids-limit 을 다 채운 뒤 SYSTEM_ERROR - 시간 제한이 새 태스크를 "
+                                f"요구한다 ({(result.get('stderr') or '')[:120]})")
+            elif stdout.startswith("nogate"):
+                problems.append(f"[VACUOUS] {mode}: 게이트가 열리지 않았다({stdout}) - 태스크 수가 pids.max 에 "
+                                f"닿지 않았으면 이 검사는 아무것도 보지 않는다")
+            elif result["status"] != expected:
+                problems.append(f"{mode}: {expected} 를 기대했는데 {result['status']} ({stdout[:60]})")
+            else:
+                print(f"[O] 자식이 --pids-limit 을 다 채운 채 {mode} -> {result['status']}")
+    finally:
+        subprocess.run(["docker", "rmi", "-f", image], capture_output=True)
+    return problems
+
+
+def check_single_reaper() -> list[str]:
+    """자식이 hard limit 과 같은 순간에 끝나도 하네스가 죽지 않는가.
+
+    게이트가 끝난 자식을 거두지 않고 hard limit 을 넘겨 둔다. 그 사이 다른 누가 거두면 하네스의 os.wait4 가
+    ChildProcessError 로 죽어 SYSTEM_ERROR 가 된다. 시간 제한이 그 사이 울렸으면 TIME_LIMIT 이어야 한다 -
+    ACCEPTED 면 게이트가 붙잡은 동안 시간 제한이 울리지 않은 것이라 [VACUOUS] 다.
+    """
+    image = _gated_image("reap")
+    try:
+        job = {"problemId": 0, "timeLimitMs": 200,
+               "cases": [{"id": 1, "input": "", "expectedOutput": "x"}]}
+        result = _with_image(image, lambda: judge_with_job("print('x')\n", job))
+    finally:
+        subprocess.run(["docker", "rmi", "-f", image], capture_output=True)
+    if result["status"] == "SYSTEM_ERROR":
+        return [f"끝난 자식을 hard limit 까지 거두지 않고 두면 SYSTEM_ERROR - os.wait4 가 아닌 곳이 먼저 거뒀다 "
+                f"({(result.get('stderr') or '')[:120]})"]
+    if result["status"] == "ACCEPTED":
+        return ["[VACUOUS] 게이트가 자식을 붙잡은 동안 시간 제한이 울리지 않았다 - 경주를 만들지 못했다"]
+    if result["status"] != "TIME_LIMIT":
+        return [f"TIME_LIMIT 을 기대했는데 {result['status']}"]
+    print("[O] 끝난 자식을 hard limit 넘어까지 두어도 하네스가 거둔다 -> TIME_LIMIT")
+    return []
 
 
 def _source_name(language: str) -> str:
@@ -993,6 +1178,18 @@ def main() -> int:
         print(f"[X] {problem}")
     failed += len(leftovers)
 
+    print("\n== 시간 제한은 자리를 쓰지 않는다 (ADR-0056) ==")
+    no_task = check_timer_needs_no_task()
+    for problem in no_task:
+        print(f"[X] {problem}")
+    failed += len(no_task)
+
+    print("\n== 자식을 거두는 곳은 하나다 (ADR-0056) ==")
+    reaper = check_single_reaper()
+    for problem in reaper:
+        print(f"[X] {problem}")
+    failed += len(reaper)
+
     print("\n== SYSTEM_ERROR 경로 ==")
     # 사용자 코드로는 재현할 수 없다. 우리 인프라가 고장난 상황을 직접 만든다.
     broken = run_submission.run(FIXTURES / "sol-accepted.py", FIXTURES / "does-not-exist.json")
@@ -1058,7 +1255,7 @@ def main() -> int:
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
           f"Java · C++ 판정 {len(LANG_VERDICTS)}건 · 격리 {len(LANG_ISOLATION)}건 · "
           f"기밀성 {len(LANG_CONFIDENTIALITY)}건 · "
-          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
+          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 시간 제한 게이트 2건 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 
 
