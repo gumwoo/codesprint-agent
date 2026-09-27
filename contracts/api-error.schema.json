@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codesprint.dev/contracts/api-error.schema.json",
   "title": "ApiError",
-  "description": "컨트롤러가 이유를 싣는 거절 응답(4xx)의 본문. 예: 시험 중의 GET /api/submissions/{id} 는 409 와 이유 문장을 준다(ADR-0054). 화면은 message 를 바꿔 쓰지 않고 그대로 보여 준다. Spring 기본 오류 본문(timestamp · status · error · path)은 이 계약이 아니다 - 이유를 싣는 핸들러만 이 모양을 쓴다.",
+  "description": "컨트롤러가 이유를 싣는 거절 응답(4xx)의 본문. 예: 시험 중의 GET /api/submissions/{id} 는 409 와 이유 문장을 준다(ADR-0054). 화면은 message 를 바꿔 쓰지 않고 그대로 보여 준다. Spring 기본 오류 본문(timestamp · status · error · path)은 이 계약이 아니다. 이유를 싣는 핸들러 대부분(제출 · 모의 시험 · Explain Back)이 이 모양을 쓰고, 힌트({error})와 실행(평문)의 거절은 이 계약이 아니다 - E2E stub 은 그 두 경로만 이유와 함께 비켜 간다(e2e/fixtures/contracts.js 의 REJECTION_UNCONTRACTED).",
   "type": "object",
   "additionalProperties": false,
   "required": [
