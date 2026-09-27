@@ -164,13 +164,37 @@ async function loadProblems() {
  * <b>목록이 보이는지</b>와 <b>열린 문제가 있는지</b>를 본다 - {@code statementBody} 가 보이는지로 보면 "내 Skill" 탭을 열어 둔 채 요청이
  * 끝났을 때 잠긴 채로 남는다. 그 탭은 버튼을 잠근 적이 없는데도.
  *
- * <p>표(claimView)만으로는 부족하다. 목록으로 돌아가는 것은 요청을
+ * <p>표(claimView)로는 정하지 않는다({@link holdButton}). 목록으로 돌아가는 것은 요청을
  * 무효화하지 않으므로 - 접수된 채점은 그대로 관찰한다 - 번호가 그대로다.
  */
 function onAProblemScreen() {
   // 열린 문제도 있어야 한다. 시험을 끝내면 목록으로 가지 않고도 문제를 놓는데(finishMock), 그 전에 보낸
   // 제출의 응답이 늦게 오면 이 조건만으로는 잠근 버튼을 다시 풀었다(검증 에이전트가 재현했다).
   return $("picker").hidden && currentProblem !== null;
+}
+
+/** 버튼별로 마지막에 그 버튼을 잠근 요청의 번호. */
+const buttonHolders = {};
+
+/**
+ * 요청을 보내는 동안 버튼을 잠근다. 돌려준 함수는 요청이 끝났을 때 부른다.
+ *
+ * <p><b>버튼을 푸는 것과 결과를 쓰는 것은 다른 질문이다.</b> 결과는 그 요청의 주인(claimView)만 쓴다. 버튼은
+ * 지금 화면에 열린 문제가 있으면 푼다 - 주인을 물으면 사용자를 바꾸거나 제출이 실행을 놓았을 때(cancelActiveRun)
+ * 표가 어긋나, 문제는 그대로 열려 있는데 누를 때 잠근 버튼이 잠긴 채로 남았다(검증 에이전트가 재현했다).
+ *
+ * <p>다만 <b>마지막으로 잠근 요청만</b> 푼다. 앞 요청이 늦게 끝나면서 그 뒤에 보낸 요청의 버튼을 풀면, 접수되기
+ * 전에 한 번 더 낼 수 있다. 뒤의 요청은 끝날 때 스스로 푼다.
+ */
+function holdButton(id) {
+  const button = $(id);
+  const token = (buttonHolders[id] = (buttonHolders[id] || 0) + 1);
+  button.disabled = true;
+  return () => {
+    if (buttonHolders[id] === token && onAProblemScreen()) {
+      button.disabled = false;
+    }
+  };
 }
 
 function showPicker() {
@@ -1557,8 +1581,7 @@ async function submit() {
   // 이 요청이 어느 문제의 것인지 여기서 고정한다. 기다리는 동안 시험이 끝나면 currentProblem 이 비어,
   // 접수된 뒤에 그것을 읽다 TypeError 로 멈췄다(검증 에이전트가 재현했다).
   const problem = currentProblem;
-  const button = $("submitButton");
-  button.disabled = true;
+  const releaseButton = holdButton("submitButton");
   // **접수되기 전에는 화면을 건드리지 않는다.** 거절될 수 있고, 그때 앞 제출은
   // 그대로 채점되고 있다. 진행 상황은 버튼 옆에 적는다.
   $("footNote").textContent = "제출하는 중…";
@@ -1623,11 +1646,9 @@ async function submit() {
     // **접수 시도가 끝나면 버튼을 푼다.** 폴링은 관찰일 뿐이고 한도 없이 이어지므로
     // (ADR-0017), 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     //
-    // 다만 내 번호일 때만 푼다 - 문제 목록으로 돌아가 잠긴 버튼을 늦게 끝난
-    // 요청이 다시 열면, 열어 둔 문제가 없는데 제출할 수 있게 된다.
-    if (mine() && onAProblemScreen()) {
-      button.disabled = false;
-    }
+    // 열린 문제가 있을 때만 푼다 - 문제 목록으로 돌아가 잠긴 버튼을 늦게 끝난
+    // 요청이 다시 열면, 열어 둔 문제가 없는데 제출할 수 있게 된다. 표는 묻지 않는다(holdButton).
+    releaseButton();
   }
 
   // 접수된 뒤에 화면이 옮겨 갔으면 이 제출은 이 화면 것이 아니다. 서버에서는
@@ -1660,12 +1681,11 @@ async function runSamples() {
   // 이 요청이 어느 문제의 것인지 여기서 고정한다. 기다리는 동안 시험이 끝나면 currentProblem 이 비어,
   // 접수된 뒤에 그것을 읽다 TypeError 로 멈췄다(검증 에이전트가 재현했다).
   const problem = currentProblem;
-  const button = $("runButton");
   const runningUserId = Number($("userId").value);
   // **POST 를 보내기 전에 표를 받는다.** 202 를 기다리는 동안 문제나 사용자가
   // 바뀌거나 다른 실행이 시작될 수 있고, 그때 이 응답은 남의 화면 것이 된다.
   const mine = claimView("run");
-  button.disabled = true;
+  const releaseButton = holdButton("runButton");
   reportTo(runningUserId, "실행하는 중…");
 
   let accepted;
@@ -1697,11 +1717,9 @@ async function runSamples() {
     // 접수 시도가 끝나면 버튼을 푼다. 제출과 같은 이유다 - 관찰은 한도 없이
     // 이어지므로, 그 뒤에 풀면 Worker 가 죽어 있을 때 버튼이 영영 잠긴다.
     //
-    // **내 번호일 때만 푼다.** 문제 목록으로 돌아가 버튼이 잠긴 뒤에 늦게 끝난
-    // 요청이 그것을 다시 열면, 열어 둔 문제가 없는데 실행할 수 있게 된다.
-    if (mine() && onAProblemScreen()) {
-      button.disabled = false;
-    }
+    // **열린 문제가 있을 때만 푼다.** 문제 목록으로 돌아가 버튼이 잠긴 뒤에 늦게 끝난
+    // 요청이 그것을 다시 열면, 열어 둔 문제가 없는데 실행할 수 있게 된다. 표는 묻지 않는다(holdButton).
+    releaseButton();
   }
 
   if (!mine()) {

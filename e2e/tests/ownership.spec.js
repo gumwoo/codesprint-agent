@@ -852,3 +852,141 @@ test("늦게 끝난 시험 끝내기가 그 사이 연 일반 문제에서 사�
   await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
   await expect(page.locator("#submitButton")).toBeEnabled();
 });
+
+for (const [button, kind] of [["#submitButton", "submit"], ["#runButton", "run"]]) {
+  test(`${kind} 응답을 기다리는 동안 사용자를 바꿔도 문제가 열려 있으면 버튼을 풀고, 결과는 새 사용자 화면에 쓰지 않는다`, async ({ page }) => {
+    // 검증 에이전트가 재현했다. 버튼은 표(claimView)의 번호와 사용자가 둘 다 맞을 때만 풀었는데, 사용자를
+    // 바꾸면 사용자 축이 어긋나 P02 가 그대로 열려 있는데도 누를 때 잠근 버튼이 잠긴 채로 남았다.
+    // 버튼을 푸는 것과 결과를 쓰는 것은 다른 일이다 - 앞의 것은 화면을, 뒤의 것은 주인을 본다.
+    const slow = gate();
+    const observed = [];
+    await stubApi(page);
+    await page.route(`**/api/problems/P02_GRID_TRAVERSAL/${kind}`, async (route) => {
+      await slow.held;
+      await fulfill(route, kind === "submit" ? accepted(1) : { runId: 1 }, 202);
+    });
+    page.on("request", (request) => {
+      if (/\/api\/(submissions|runs)\//.test(request.url())) {
+        observed.push(request.url());
+      }
+    });
+
+    await asUser(page, "1");
+    await page.locator("#problemList button", { hasText: "P02" }).click();
+    await page.click(button);
+    await expect(page.locator(button)).toBeDisabled();
+
+    await page.fill("#userId", "2");
+    await page.dispatchEvent("#userId", "change");
+    await expect(page.locator("#crumbProblem")).toHaveText("P02_GRID_TRAVERSAL");
+
+    await releaseAndSettle(page, slow, `/api/problems/P02_GRID_TRAVERSAL/${kind}`);
+    await expect(page.locator("#submitButton")).toBeEnabled();
+    await expect(page.locator("#runButton")).toBeEnabled();
+    // 이전 사용자의 요청은 이 화면에 아무것도 쓰지 않는다 - 채점 중 · 실행 중 표시도, 결과를 보러 가는 조회도.
+    await expect(page.locator("#submitNote")).toHaveText("제출하면 여기에 판정과 다음 행동이 나온다.");
+    await expect(page.locator("#state")).toHaveText("");
+    await expect(page.locator("#runOutput")).toHaveText("");
+    await expect(page.locator("#footNote")).toHaveText("");
+    expect(observed, "이전 사용자의 결과 조회").toEqual([]);
+  });
+}
+
+test("실행을 기다리는 동안 제출이 먼저 접수돼도 실행 버튼이 잠긴 채 남지 않는다", async ({ page }) => {
+  // 같은 결함의 다른 길이다. 접수된 제출은 진행 중인 실행을 놓는다(cancelActiveRun) - 번호가 올라가, 늦게 온
+  // 실행의 202 는 제 번호가 아니라며 버튼을 풀지 않았다. 문제는 그대로 열려 있는데.
+  const slow = gate();
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL/run", async (route) => {
+    await slow.held;
+    await fulfill(route, { runId: 1 }, 202);
+  });
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL/submit", (route) =>
+    fulfill(route, accepted(1), 202));
+  await page.route("**/api/submissions/1", (route) =>
+    fulfill(route, finished(1, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL", "구현 연습이 더 필요하다")));
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#runButton");
+  await page.click("#submitButton");
+  await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
+
+  await releaseAndSettle(page, slow, "/api/problems/P02_GRID_TRAVERSAL/run");
+  await expect(page.locator("#runButton")).toBeEnabled();
+  // 놓은 실행의 결과는 쓰지 않는다 - 지금 화면은 제출의 것이다.
+  await expect(page.locator("#runOutput")).toHaveText("");
+});
+
+test("앞 제출이 늦게 끝나도 그 뒤에 낸 제출이 잠근 버튼을 먼저 풀지 않는다", async ({ page }) => {
+  // 버튼은 문제가 열려 있으면 푼다. 다만 **마지막으로 잠근 요청**만 푼다 - P02 에서 낸 제출이 늦게 끝나면서
+  // P03 에서 막 낸 제출의 버튼을 풀면, 접수되기도 전에 한 번 더 낼 수 있다.
+  const slowFirst = gate();
+  const slowSecond = gate();
+  await stubApi(page);
+  await page.route("**/api/problems/P02_GRID_TRAVERSAL/submit", async (route) => {
+    await slowFirst.held;
+    await fulfill(route, accepted(1), 202);
+  });
+  await page.route("**/api/problems/P03_CONNECTED_COMPONENT/submit", async (route) => {
+    await slowSecond.held;
+    await fulfill(route, accepted(2), 202);
+  });
+  await page.route("**/api/submissions/2", (route) =>
+    fulfill(route, finished(2, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL", "구현 연습이 더 필요하다")));
+
+  await asUser(page, "1");
+  await page.locator("#problemList button", { hasText: "P02" }).click();
+  await page.click("#submitButton");
+  await page.click("#toProblems");
+  await page.locator("#problemList button", { hasText: "P03" }).click();
+  await expect(page.locator("#crumbProblem")).toHaveText("P03_CONNECTED_COMPONENT");
+  await page.click("#submitButton");
+  await expect(page.locator("#submitButton")).toBeDisabled();
+
+  await releaseAndSettle(page, slowFirst, "/api/problems/P02_GRID_TRAVERSAL/submit");
+  await expect(page.locator("#submitButton")).toBeDisabled();
+
+  await releaseAndSettle(page, slowSecond, "/api/problems/P03_CONNECTED_COMPONENT/submit");
+  await expect(page.locator("#submitButton")).toBeEnabled();
+  await expect(page.locator("#nextAction")).toContainText("구현 연습이 더 필요하다");
+});
+
+for (const [button, kind] of [["#submitButton", "submit"], ["#runButton", "run"]]) {
+  test(`${kind} 응답이 목록으로 돌아간 뒤에 오면 버튼을 풀지 않고, 내 Skill 탭에 있을 때 오면 푼다`, async ({ page }) => {
+    // 버튼을 푸는 조건이 표에서 화면(onAProblemScreen)으로 옮겨 왔으니 그 두 갈래를 여기서 쥔다. 목록은 버튼을
+    // 잠그고(showPicker) 열린 문제가 없는 화면이다. "내 Skill" 탭은 버튼을 잠근 적이 없고 문제도 그대로 열려 있다.
+    const toPicker = gate();
+    const toSkills = gate();
+    let calls = 0;
+    await stubApi(page);
+    await page.route(`**/api/problems/P02_GRID_TRAVERSAL/${kind}`, async (route) => {
+      calls += 1;
+      await (calls === 1 ? toPicker : toSkills).held;
+      await fulfill(route, kind === "submit" ? accepted(calls) : { runId: calls }, 202);
+    });
+    // 접수된 것의 관찰은 이 테스트가 보는 것이 아니다. 제출은 끝난 결과를 주고, 실행 조회는 stubApi 의 404 로 둔다.
+    await page.route("**/api/submissions/*", (route) => {
+      const id = Number(new URL(route.request().url()).pathname.split("/").pop());
+      return fulfill(route, finished(id, "RETRY_VARIANT", "BFS_GRID_TRAVERSAL", "구현 연습이 더 필요하다"));
+    });
+
+    await asUser(page, "1");
+    await page.locator("#problemList button", { hasText: "P02" }).click();
+    await page.click(button);
+    await page.click("#toProblems");
+    await expect(page.locator("#picker")).toBeVisible();
+    await releaseAndSettle(page, toPicker, `/api/problems/P02_GRID_TRAVERSAL/${kind}`);
+    await expect(page.locator("#submitButton")).toBeDisabled();
+    await expect(page.locator("#runButton")).toBeDisabled();
+
+    await page.locator("#problemList button", { hasText: "P02" }).click();
+    await expect(page.locator("#crumbProblem")).toHaveText("P02_GRID_TRAVERSAL");
+    await page.click(button);
+    await page.click("#tabSkills");
+    await expect(page.locator("#skillsBody")).toBeVisible();
+    await releaseAndSettle(page, toSkills, `/api/problems/P02_GRID_TRAVERSAL/${kind}`);
+    await page.click("#tabProblem");
+    await expect(page.locator(button)).toBeEnabled();
+  });
+}
