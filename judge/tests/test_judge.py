@@ -451,7 +451,8 @@ def check_concurrent() -> list[str]:
                     hog_name = found[0]
                     # 컨테이너가 떴으면 명령은 이미 만들어졌다. 옆 채점은 원래 옵션으로 돈다.
                     run_submission.DOCKER_LIMITS = limits
-            if hog_name is not None and                     _container_pids({hog_name}).get(hog_name, 0) >= CONCURRENT_FULL_PIDS:
+            if (hog_name is not None
+                    and _container_pids({hog_name}).get(hog_name, 0) >= CONCURRENT_FULL_PIDS):
                 break
             time.sleep(0.3)
         else:

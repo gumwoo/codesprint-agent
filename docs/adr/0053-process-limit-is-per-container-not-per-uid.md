@@ -63,7 +63,7 @@ test_judge.py 가 실패한다" 가 이 옵션에서는 거짓이었다.
 
 ## 검사
 
-`test_judge.py` 의 **동시 채점** - 한 컨테이너가 fork 로 `--pids-limit` 까지 채워 30 초 붙잡는 동안 옆에서
+`test_judge.py` 의 **동시 채점** - 한 컨테이너가 fork 로 `--pids-limit` 까지 채워 붙잡는 동안(최대 90 초, 옆 채점이 끝나면 지워 놓게 한다) 옆에서
 `java/Accepted.java` · `cpp/accepted.cpp` 를 채점해 `ACCEPTED` 인지 본다. 파이썬 `sol-accepted.py` 는 넣지
 않았다 - uid 상한이 있어도 통과하므로 아무것도 보지 않는다.
 
@@ -75,8 +75,8 @@ test_judge.py 가 실패한다" 가 이 옵션에서는 거짓이었다.
 - **fix 를 되돌리면 깨진다.** `RLIMIT_NPROC` 을 되살린 하네스로 세 이미지를 구우면 Java `COMPILE_ERROR`
   · C++ `COMPILE_ERROR` 두 건으로 실패하는 것을 확인했다.
 
-부수 효과로 `--pids-limit` 을 빼면 이제 격리 case 세 개가 실패한다(Python · C++ `WRONG_ANSWER`, Java
-`TIME_LIMIT`). 대조군(`judge_unrestricted`)은 원래부터 `--pids-limit` 없이 root 로 돌았으므로 바뀌지 않는다.
+부수 효과로 `--pids-limit` 을 빼면 이제 격리 case 세 개가 실패한다(Python · C++ `WRONG_ANSWER`, Java 는 실행마다
+`WRONG_ANSWER` 또는 `TIME_LIMIT`), 판정 case `ThreadBomb.java` 도 함께 실패한다. 대조군(`judge_unrestricted`)은 원래부터 `--pids-limit` 없이 root 로 돌았으므로 바뀌지 않는다.
 
 ## 남는 위험
 
@@ -88,4 +88,4 @@ test_judge.py 가 실패한다" 가 이 옵션에서는 거짓이었다.
   하나와 타이머 스레드 하나만 들어갈 자리로 다음 case 를 돈다. 되돌린 상태의 전체 실행에서 C++ fork bomb 격리
   case 가 한 번 `SYSTEM_ERROR`("case 4 응답이 없다")로 나왔는데, 이것 때문이라고 **추측**할 뿐 확인하지는
   않았다. 이 ADR 의 변경과는 무관하다(하네스 자신에게는 원래 `RLIMIT_NPROC` 이 없었다).
-- 동시 채점 검사는 테스트 시간에 약 30 초를 더한다.
+- 동시 채점 검사는 테스트 시간에 12~24 초를 더한다(실측).
