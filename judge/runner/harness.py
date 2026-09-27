@@ -35,7 +35,6 @@ import resource
 import signal
 import subprocess
 import sys
-import threading
 import time
 
 # -- 언어 (ADR-0045) ---------------------------------------------------------
@@ -254,6 +253,53 @@ def _clear_leftovers() -> None:
             pass
 
 
+# -- 시간 제한 (ADR-0056) ----------------------------------------------------
+#
+# **자식을 띄운 뒤에는 새 태스크(스레드 · 프로세스)를 만들지 않는다.** 전에는 자식을 띄운 직후
+# threading.Timer 로 타이머 스레드를 만들었다. 스레드도 --pids-limit 64 의 한 자리라, 자식이 그보다 먼저
+# 64 를 채우면 하네스가 `can't start new thread` 로 죽고 사용자 코드가 SYSTEM_ERROR(우리 잘못)가 됐다.
+# 지금은 커널 타이머(setitimer)가 hard limit 에 SIGALRM 을 보내고, 그 처리기가 메인 스레드에서 자식을 죽인다.
+# 둘 다 자리를 쓰지 않는다.
+#
+# **죽이기만 하고 거두지 않는다.** 전의 proc.kill() 은 먼저 poll() - waitpid(pid, WNOHANG) - 을 불렀다.
+# 자식이 hard limit 과 같은 순간에 끝나면 타이머 스레드가 그것을 거둬 가고, 메인 스레드의 os.wait4 가
+# ChildProcessError 로 하네스를 죽였다(자원 사용량도 함께 잃는다). 이제 거두는 곳은 os.wait4 하나뿐이다.
+#
+# 신호는 pidfd 로 보낸다. 이미 거둔 뒤에 처리기가 돌아도 같은 번호를 받은 다른 프로세스를 죽이지 않는다.
+_alarm_pidfd: int | None = None
+_alarm_fired = False
+
+
+def _on_alarm(signum, frame) -> None:
+    """hard limit 에 닿았다. 이 case 의 자식을 죽인다 - 거두지는 않는다(os.wait4 의 몫)."""
+    global _alarm_fired
+    if _alarm_pidfd is None:
+        return
+    _alarm_fired = True
+    try:
+        signal.pidfd_send_signal(_alarm_pidfd, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+def _arm_hard_limit(pid: int, seconds: float) -> None:
+    global _alarm_pidfd, _alarm_fired
+    _alarm_pidfd = os.pidfd_open(pid)
+    _alarm_fired = False
+    signal.signal(signal.SIGALRM, _on_alarm)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+
+
+def _disarm_hard_limit() -> bool:
+    """타이머를 끄고 hard limit 에 닿았었는지 돌려준다."""
+    global _alarm_pidfd
+    signal.setitimer(signal.ITIMER_REAL, 0)
+    pidfd, _alarm_pidfd = _alarm_pidfd, None
+    if pidfd is not None:
+        os.close(pidfd)
+    return _alarm_fired
+
+
 def _read_capped(path: pathlib.Path, cap: int) -> tuple[str, bool]:
     """파일 앞부분만 읽는다. 돌려주는 두 번째 값은 '한도를 넘겼는가'."""
     try:
@@ -278,7 +324,6 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
     err_path = pathlib.Path("/tmp/case-stderr")
 
     started = time.monotonic()
-    killed = threading.Event()
     with out_path.open("wb") as out, err_path.open("wb") as err:
         proc = subprocess.Popen(
             LANGUAGES[LANGUAGE]["run"],
@@ -287,30 +332,28 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
             stderr=err,
             preexec_fn=_limit_child,
         )
-
-        def kill() -> None:
-            killed.set()
-            proc.kill()
-
-        timer = threading.Timer(hard_limit, kill)
-        timer.start()
+        # 여기서부터 자식을 거둘 때까지 새 태스크를 만들지 않는다(ADR-0056). 자식이 곧바로 --pids-limit 을
+        # 다 채워도 시간 제한은 걸린다.
+        _arm_hard_limit(proc.pid, hard_limit)
         try:
-            # 입력을 읽지 않는 코드면 쓰기가 막힌다. 그때는 타이머가 죽여서 풀어 준다.
-            proc.stdin.write(case_input.encode())
-            proc.stdin.close()
-        except (BrokenPipeError, OSError):
-            pass
-        # **이 case 의 자식만** 기다려 그 자원 사용량을 받는다. RUSAGE_CHILDREN 은 지금까지 기다린
-        # 모든 자식의 최댓값이라, 컴파일러(g++ 는 약 190MB)가 사용자 코드의 메모리로 둔갑한다.
-        _, status, usage = os.wait4(proc.pid, 0)
-        elapsed_ms = int((time.monotonic() - started) * 1000)
-        # 타이머 스레드가 끝날 때까지 기다린다 - 남아 있으면 다음 case 의 자리를 하나 차지한다.
-        timer.cancel()
-        timer.join()
+            try:
+                # 입력을 읽지 않는 코드면 쓰기가 막힌다. 그때는 SIGALRM 이 쓰기를 끊고 자식을 죽여서 풀어
+                # 준다(처리기가 돈 뒤 다시 쓰면 EPIPE).
+                proc.stdin.write(case_input.encode())
+                proc.stdin.close()
+            except (BrokenPipeError, OSError):
+                pass
+            # **이 case 의 자식만** 기다려 그 자원 사용량을 받는다. RUSAGE_CHILDREN 은 지금까지 기다린
+            # 모든 자식의 최댓값이라, 컴파일러(g++ 는 약 190MB)가 사용자 코드의 메모리로 둔갑한다.
+            # 자식을 거두는 곳은 여기 하나뿐이다 - 시간 제한 처리기는 죽이기만 한다.
+            _, status, usage = os.wait4(proc.pid, 0)
+            elapsed_ms = int((time.monotonic() - started) * 1000)
+        finally:
+            killed = _disarm_hard_limit()
     # 출력을 읽기 전에 치운다. 남은 자손이 쓰기를 멈춰야 읽는 값이 이 case 의 것으로 굳는다.
     _clear_leftovers()
     _case_memory.append(int(usage.ru_maxrss))
-    if killed.is_set():
+    if killed:
         # 시간 안에 끝나지 않았지만 **출력 상한을 이미 채웠다면** 출력 폭주다. JVM 은 SIGXFSZ 를 무시해
         # 쓰기가 실패해도 죽지 않고, 실패를 삼키는 코드는 그대로 돌다 시간 제한에 걸린다 - 그때
         # TIME_LIMIT 으로 두면 "느리다" 로 읽힌다.
