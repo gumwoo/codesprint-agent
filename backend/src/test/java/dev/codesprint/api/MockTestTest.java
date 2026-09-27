@@ -462,6 +462,8 @@ class MockTestTest {
             assertThat(during.getStatus()).as(at + " - 시험 중 일반 제출 조회").isEqualTo(409);
             String body = during.getContentAsString(StandardCharsets.UTF_8);
             assertThat(body).as("화면에 보일 이유").contains("모의 시험 중");
+            // 화면은 이 본문의 message 를 그대로 싣는다. E2E stub 도 같은 계약(api-error)을 지난다
+            assertThat(schema("api-error.schema.json").validate(json(during))).as("api-error 계약").isEmpty();
             if (target != null) {
                 assertThat(body).doesNotContain(target);
             }
@@ -511,5 +513,21 @@ class MockTestTest {
                 .andReturn().getResponse().getStatus()).isEqualTo(404);
         assertThat(postJson("/api/mock-tests/{id}/problems/{label}/open",
                 "{\"userId\": %d}".formatted(other), id, "A").getStatus()).isEqualTo(404);
+
+        // 화면이 사용자를 바꾼 뒤에도 이전 사용자의 시험 문제를 열어 두면 새 사용자의 id 로 낸다(검증 에이전트가
+        // 재현한 화면 결함). 화면은 이제 그 문제를 놓지만, 남의 시험으로 내는 길은 서버가 먼저 막는다
+        String otherCode = "{\"userId\": %d, \"language\": \"PYTHON\", \"sourceCode\": \"print(1)\"}"
+                .formatted(other);
+        assertThat(postJson("/api/mock-tests/{id}/problems/{label}/submit", otherCode, id, "A")
+                .getStatus()).as("남의 시험으로 제출").isEqualTo(404);
+        assertThat(postJson("/api/mock-tests/{id}/problems/{label}/run", otherCode, id, "A")
+                .getStatus()).as("남의 시험으로 실행").isEqualTo(404);
+        assertThat(postJson("/api/mock-tests/{id}/finish", "{\"userId\": %d}".formatted(other), id)
+                .getStatus()).as("남의 시험 끝내기").isEqualTo(404);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM submissions WHERE user_id = ?",
+                Long.class, other)).as("거절된 제출이 남긴 행").isZero();
+        // 대조: 주인은 낼 수 있다 - 위의 404 가 이 시험이 원래 닫혀 있어서가 아니다
+        assertThat(postJson("/api/mock-tests/{id}/problems/{label}/submit", codeBody(), id, "A")
+                .getStatus()).as("주인의 제출").isEqualTo(202);
     }
 }

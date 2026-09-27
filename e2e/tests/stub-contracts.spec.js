@@ -1,7 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const fs = require("node:fs");
 const path = require("node:path");
-const { contractFor, UNCONTRACTED } = require("../fixtures/contracts");
+const { contractFor, UNCONTRACTED, fulfill } = require("../fixtures/contracts");
 
 /**
  * 하네스 자신을 보는 검사. 정본: ADR-0025.
@@ -51,4 +51,31 @@ test("화면이 부르는 모든 API 경로에 계약이 이어져 있다", () =
             new RegExp("^" + k.replace(/\{[^}]*\}/g, "[^/]+") + "$").test(concrete));
     expect(known, `${raw} -> ${concrete} 의 계약을 모른다`).toBe(true);
   }
+});
+
+/** 네트워크 없이 fulfill 을 부르기 위한 가짜 route. 응답을 적어 두기만 한다. */
+function fakeRoute(pathname) {
+  const sent = [];
+  return {
+    sent,
+    request: () => ({ url: () => `http://localhost${pathname}` }),
+    fulfill: async (response) => { sent.push(response); },
+  };
+}
+
+test("거절 본문은 {message} 계약을 지나고, 다른 모양을 쓰는 경로만 이유와 함께 비켜 간다", async () => {
+  // 제출 조회의 409 는 {message} 다 - 서버와 다른 모양({error})으로 stub 하면 걸린다.
+  await expect(fulfill(fakeRoute("/api/submissions/5"), { error: "x" }, 409))
+      .rejects.toThrow("api-error.schema.json");
+  await fulfill(fakeRoute("/api/submissions/5"), { message: "시험 중" }, 409);
+
+  // 힌트는 서버가 {error} 로 준다(HintController, 화면이 body.error 를 읽는다). 서버 그대로의 stub 이
+  // 거절되면 안 된다 - 거절되면 {message} 로 고친 stub 이 서버와 갈린다(검증 에이전트).
+  const hint = fakeRoute("/api/problems/P02_GRID_TRAVERSAL/hints/3");
+  await fulfill(hint, { error: "한 단계씩 연다" }, 409);
+  expect(hint.sent).toHaveLength(1);
+
+  // 비켜 가는 것은 거절뿐이다 - 같은 경로의 200 은 여전히 제 계약(hint-view)을 지난다.
+  await expect(fulfill(fakeRoute("/api/problems/P02_GRID_TRAVERSAL/hints/3"), { error: "x" }, 200))
+      .rejects.toThrow("hint-view.schema.json");
 });

@@ -194,6 +194,14 @@
         <button type="button" id="mockStart" class="primary">모의 시험 시작</button>
         <button type="button" id="mockFinish" class="ghost" hidden>시험 끝내기</button>
       </div>
+      <!--
+        시험 때문에 결과를 받지 못한 일반 제출(ADR-0054). 시험 문제를 열면 그 관찰이 끊기고 제출 이력 화면이
+        없으므로, 시험이 끝난 뒤 여기서 그 문제와 결과로 돌아간다.
+      -->
+      <p class="note" id="mockWithheld" hidden>
+        <span id="mockWithheldText"></span>
+        <button type="button" id="mockWithheldView" class="link">결과 보기</button>
+      </p>
       <table class="skills" id="mockTable" hidden>
         <thead>
           <tr><th>문제</th><th>상태</th><th class="num">제출</th></tr>

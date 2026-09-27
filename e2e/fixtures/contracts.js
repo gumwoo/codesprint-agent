@@ -91,9 +91,30 @@ function contractFor(pathname) {
  * @param status 202 처럼 200 이 아닌 응답도 같은 계약을 지킨다 - 접수 응답과 조회
  *     응답이 같은 모양인 것은 서버 쪽 결정이고(submission-status), 여기서 바꾸지 않는다.
  */
+/**
+ * 거절 본문이 {message} 가 아닌 경로. **이유를 적지 않은 항목은 두지 않는다.** 여기 있는 경로의 4xx 를
+ * api-error 로 보면, 서버 그대로의 stub 이 거절되고 {message} 로 고친 stub 은 서버와 갈린다.
+ */
+const REJECTION_UNCONTRACTED = [
+  [/^\/api\/problems\/[^/]+\/hints\/\d+$/,
+    "HintController 의 404 · 409 · 400 은 {error} 로 준다 - 화면이 body.error 를 읽는다"],
+  [/^\/api\/problems\/[^/]+\/run$/, "RunController 의 404 · 400 본문은 평문 문자열이다"],
+];
+
+function rejectionExcuse(pathname) {
+  const found = REJECTION_UNCONTRACTED.find(([pattern]) => pattern.test(pathname));
+  return found ? found[1] : undefined;
+}
+
 async function fulfill(route, body, status = 200) {
   const url = new URL(route.request().url());
-  const name = contractFor(url.pathname);
+  // 거절(4xx)은 경로가 아니라 **거절의 계약**을 지난다 - 경로의 계약(예: submission-status)에 대고 보면
+  // 409 본문은 항상 어긋난다. 이유를 싣는 핸들러 대부분(제출 · 모의 시험 · Explain Back)은 {message} 이고,
+  // 아닌 경로는 REJECTION_UNCONTRACTED 에 이유와 함께 있다.
+  if (status >= 400 && rejectionExcuse(url.pathname)) {
+    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+  }
+  const name = status >= 400 ? "api-error" : contractFor(url.pathname);
 
   if (name === undefined) {
     // 규칙은 하나다 - 계약이 있거나, 이유가 있거나.
@@ -124,4 +145,4 @@ async function fulfill(route, body, status = 200) {
   });
 }
 
-module.exports = { fulfill, contractFor, UNCONTRACTED };
+module.exports = { fulfill, contractFor, UNCONTRACTED, REJECTION_UNCONTRACTED };
