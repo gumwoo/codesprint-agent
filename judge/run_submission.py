@@ -54,10 +54,9 @@ LANGUAGES = {
 BUILD_TMPFS = ["--tmpfs", "/build:rw,exec,nosuid,size=64m"]
 
 # Addendum 51. 각 옵션이 막는 것을 함께 적는다 - 지우려는 사람이 이유를 알아야 한다.
+# 메모리 상한은 여기 없다 - 문제마다 다르므로 memory_limits() 가 job 의 값으로 만든다(ADR-0058).
 DOCKER_LIMITS = [
     "--network", "none",              # 외부 통신 차단. 데이터 유출과 원격 도구 다운로드
-    "--memory", "256m",               # OOM 으로 호스트를 끌어내리는 것
-    "--memory-swap", "256m",          # swap 으로 메모리 상한을 우회하는 것
     "--cpus", "0.5",                  # CPU 독점
     "--pids-limit", "64",             # fork bomb
     "--read-only",                    # 루트 파일시스템 변조
@@ -65,6 +64,24 @@ DOCKER_LIMITS = [
     "--security-opt", "no-new-privileges",  # setuid 를 통한 권한 상승
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",  # 쓸 곳은 주되 실행은 막는다
 ]
+
+# 문제가 정할 수 있는 메모리 상한의 최댓값. **호스트를 지키는 선이라 문제 데이터가 넘을 수 없다.**
+#
+# 메모리는 문제마다 다르다(problem.yaml 의 memoryLimitMb, ADR-0058). 그래도 위를 열어 두면 데이터의 오타
+# 하나(25600)가 제출 하나에 호스트 메모리를 통째로 내준다 - Addendum 51 이 --memory 로 막으려던 것이다.
+# 문제별 값 이전에 모든 채점에 걸리던 256m 를 그대로 천장으로 둔다. 문제는 이보다 낮출 수만 있다.
+# 올려야 하는 문제가 생기면 이 값을 올리는 것이 결정이다 - 호스트가 동시 채점 수만큼 감당하는지 보고 올린다.
+MEMORY_CEILING_MB = 256
+
+
+def memory_limits(memory_mb: int) -> list[str]:
+    """그 문제의 메모리 상한. DOCKER_LIMITS **뒤에** 붙인다 - 같은 옵션이 거듭되면 docker 는 뒤의 것을 쓴다.
+
+    --memory        OOM 으로 호스트를 끌어내리는 것. 넘으면 커널이 SIGKILL 하고 하네스가 MEMORY_LIMIT 로 읽는다
+    --memory-swap   swap 으로 메모리 상한을 우회하는 것. **--memory 와 같아야** swap 을 한 바이트도 못 쓴다
+    """
+    return ["--memory", f"{memory_mb}m", "--memory-swap", f"{memory_mb}m"]
+
 
 # 마운트 모드. 사용자가 자기 제출물을 바꿔치기하는 것을 막는다(Addendum 60).
 # 상수로 빼둔 이유는 격리 테스트가 대조군을 만들 때 이 값만 뒤집어
@@ -272,6 +289,14 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
     if not cases:
         return system_error("Test Case 가 없다")
     total = len(cases)
+    # 문제 데이터로 만든 job 에는 늘 있다(judge/problem_job.py). 없으면 손으로 만든 job(테스트)이라
+    # 문제별 값 이전의 전역 상한으로 돈다.
+    memory_mb = job.get("memoryLimitMb", MEMORY_CEILING_MB)
+    if (isinstance(memory_mb, bool) or not isinstance(memory_mb, int)
+            or not 0 < memory_mb <= MEMORY_CEILING_MB):
+        # 천장으로 낮춰서 돌리지 않는다. 화면이 보여 주는 값과 채점이 쓰는 값이 갈린다.
+        return system_error(
+            f"memoryLimitMb {memory_mb!r} 는 1~{MEMORY_CEILING_MB} 이어야 한다", total)
     if language not in LANGUAGES:
         # 받는 쪽(백엔드)이 이미 막는다. 여기까지 왔으면 우리 잘못이다.
         return system_error(f"모르는 언어: {language}", total)
@@ -299,6 +324,7 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
             "--name", name,                          # hard timeout 후 지목해 죽이기 위해
             "-v", f"{workdir}:/job:{MOUNT_MODE}",    # 바인드 마운트(Addendum 60)
             *DOCKER_LIMITS,
+            *memory_limits(memory_mb),               # 문제마다 다르다(ADR-0058)
             *(BUILD_TMPFS if needs_build else []),
             image,
         ]

@@ -37,20 +37,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROBLEMS = ROOT / "problems"
 
 sys.path.insert(0, str(ROOT / "judge"))
+import problem_job  # noqa: E402
 import run_submission  # noqa: E402
 
-
-def build_job(problem: dict, cases_doc: dict) -> dict:
-    """problem.yaml + cases.json 을 Judge 가 받는 job 형태로 옮긴다."""
-    return {
-        "problemId": problem["code"],
-        "timeLimitMs": problem["timeLimitMs"],
-        "memoryLimitMb": problem["memoryLimitMb"],
-        "cases": [
-            {"id": c["id"], "input": c["input"], "expectedOutput": c["expectedOutput"]}
-            for c in cases_doc["cases"]
-        ],
-    }
+# job 은 Judge Worker 와 **같은 함수**로 만든다(ADR-0058). 여기서 따로 만들던 때, 검증은 problem.yaml 의
+# 제한으로 돌고 실서비스는 기본값 2000ms 로 돌았다 - 검증이 실서비스가 채점하지 않는 job 을 채점한 것이다.
 
 
 def failed_ids(result: dict) -> set[int]:
@@ -221,7 +212,12 @@ def main() -> int:
     for d in dirs:
         problem = yaml.safe_load((d / "problem.yaml").read_text(encoding="utf-8"))
         cases_doc = json.loads((d / "cases.json").read_text(encoding="utf-8"))
-        job = build_job(problem, cases_doc)
+        try:
+            job = problem_job.load(d)
+        except problem_job.ProblemDataError as e:
+            failed += 1
+            print(f"[X] {d.name}: 채점할 job 을 만들지 못한다 - {e}")
+            continue
 
         ref = judge(d / "reference.py", job)
         if ref["status"] != "ACCEPTED":

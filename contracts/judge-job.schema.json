@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codesprint.dev/contracts/judge-job.schema.json",
   "title": "JudgeJob",
-  "description": "채점 큐(judge_jobs)의 행 하나. 언어 경계를 넘는 유일한 메시지다 - Java 가 쓰고 Python Worker 가 읽는다(ADR-0011, ADR-0013). 정답(expectedOutput)은 여기 들어가지 않는다. Worker 가 problems/<CODE>/cases.json 을 직접 읽고, 컨테이너에는 현재 case 의 input 만 들어간다(ADR-0006).",
+  "description": "채점 큐(judge_jobs)의 행 하나. 언어 경계를 넘는 유일한 메시지다 - Java 가 쓰고 Python Worker 가 읽는다(ADR-0011, ADR-0013). 정답(expectedOutput)은 여기 들어가지 않는다. Worker 가 problems/<CODE>/cases.json 을 직접 읽고, 컨테이너에는 현재 case 의 input 만 들어간다(ADR-0006). 제한(timeLimitMs · memoryLimitMb)도 여기 싣지 않는다 - Worker 가 같은 디렉터리의 problem.yaml 에서 읽으며, tools/verify_problems.py 와 같은 함수(judge/problem_job.py)를 쓴다(ADR-0058).",
   "type": "object",
   "additionalProperties": false,
   "required": [

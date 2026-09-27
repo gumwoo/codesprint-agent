@@ -37,6 +37,9 @@ check() {
   command -v python >/dev/null || { say "[X] python 이 없다 (3.12)"; missing=1; }
   python -c "import psycopg" 2>/dev/null \
     || { say "[X] psycopg 가 없다 - pip install -r requirements-dev.txt"; missing=1; }
+  # Worker 가 problem.yaml 에서 문제의 시간 · 메모리 제한을 읽는다(ADR-0058).
+  python -c "import yaml" 2>/dev/null \
+    || { say "[X] pyyaml 이 없다 - pip install -r requirements-dev.txt"; missing=1; }
   docker image inspect "$IMAGE" >/dev/null 2>&1 \
     || say "[!] 샌드박스 이미지가 없다 - scripts/local.sh build"
   [ -f "$JAR" ] || say "[!] 백엔드 jar 가 없다 - scripts/local.sh build"
