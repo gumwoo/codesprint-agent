@@ -78,7 +78,7 @@ ADR-0011 의 경계와도 맞는다. 제한은 샌드박스의 매개변수이�
 이제 뒤에 붙는 job 의 값(fixture 는 256)이 이긴다. 대조군이 걷어내려는 것은 네트워크 · 파일시스템 · 권한 쪽이고
 메모리를 쓰는 격리 case 는 없다.
 
-`MEMORY_LIMIT` 판정 방식은 그대로다 - 컨테이너 상한에 걸린 SIGKILL 과 `MemoryError` 류로 정한다(ADR-0056 D).
+`MEMORY_LIMIT` 판정 방식은 그대로다 - 컨테이너 상한에 걸린 SIGKILL 과 `MemoryError` 류로 정한다(`judge/runner/harness.py` 의 판정 분기). memoryKb 가 판정에 쓰이지 않는다는 것은 ADR-0056 D 가 적었다.
 하네스도 같은 cgroup 에서 세어지는 것도 전과 같다.
 
 ## 검사
@@ -102,6 +102,16 @@ Worker 가 그 디렉터리를 보게 하고(`worker.PROBLEMS`), 같은 코드�
 - 고친 상태에서는 전부 통과한다.
 
 ## 남는 위험
+
+- **문제별 메모리를 낮추는 데는 언어별 하한이 있다.** JVM 은 `-Xmx192m` 로 고정이고 하네스도 같은 cgroup 에서
+  세어져, memoryLimitMb 를 64 로 두면 Java 정답(P01)이 MEMORY_LIMIT 다(검증 에이전트 실측, 96MB 까지는 AC). 지금은
+  256 미만인 문제가 없다. 낮추려면 그 문제의 Java · C++ 정답을 같은 값으로 채점해 보고 정한다
+- **깨진 문제 데이터가 Worker 를 죽일 수 있다.** problem.yaml 이나 cases.json 이 dict 가 아니면 `problem_job.load` 가
+  `ProblemDataError` 가 아닌 예외를 내고 drain 밖으로 나간다(전에는 run_submission 서브프로세스 안의 SYSTEM_ERROR 였다).
+  check_problems 가 CI 에서 막는 입력이다
+- 테스트 대조군(`judge_unrestricted`)의 `--memory 512m` 은 뒤에 붙는 문제의 값(256m)이 이겨 효과가 없다
+- `--memory-swap` 은 어느 테스트도 지키지 않는다(이전부터) - Docker Desktop VM 에서는 swap 이 실제로 쓰이지 않아
+  빼도 64MB 테스트가 통과한다
 
 - **제한은 채점 시각에 읽는다.** 제출과 채점 사이에 `problem.yaml` 이 바뀌면 새 값으로 채점된다. cases.json 과
   같은 성질이다. 백엔드의 `ProblemCatalog` 는 기동 때 읽어 두므로, 문제를 고친 뒤 백엔드를 다시 띄우기 전까지는

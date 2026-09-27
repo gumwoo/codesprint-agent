@@ -431,8 +431,10 @@ def test_time_limit_comes_from_the_problem(conn) -> None:
     check("timeLimitMs 1000 문제에서는 TIME_LIMIT 다",
           tight_result.get("status") == "TIME_LIMIT", f"result={tight_result}")
     # 옛 기본값(2000)으로 걸렸다면 2000ms 를 넘겨야 TIME_LIMIT 다. 그보다 짧게 걸렸다는 것이 1000 으로 돌았다는 뜻이다.
+    # 하한은 1000 을 포함한다 - hard limit(제한 + 500ms)에 걸려 죽으면 하네스는 executionMs 를 제한값 그대로 보고한다
+    # (느린 러너에서 기동 + sleep 이 1.5 초를 넘으면 그렇다, 검증 에이전트).
     check("2000ms 전에 걸렸다 - 전역 기본값이 아니라 문제의 값으로",
-          1000 < (tight_result.get("executionMs") or 0) < 2000,
+          1000 <= (tight_result.get("executionMs") or 0) < 2000,
           f"executionMs={tight_result.get('executionMs')}")
     check("대조: 같은 코드가 timeLimitMs 2000 문제에서는 ACCEPTED 다",
           loose_result.get("status") == "ACCEPTED", f"result={loose_result}")
