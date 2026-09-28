@@ -495,6 +495,99 @@ def test_limits_are_not_defaulted(conn) -> None:
           f"row={too_big_row}")
 
 
+# -- 판정은 로캘과 상관없이 UTF-8 로 온다 ---------------------------------
+# run_submission.py 는 판정 JSON 을 로캘 인코딩으로 쓰고, 하네스 출력도 로캘로 읽었다. Worker 는 UTF-8 로 읽는다.
+# Windows(cp949)에서 한글 이유가 깨진 채 DB 에 남았고, 사용자 출력에 한글 · 이모지가 있으면 print 가 죽어
+# 평범한 제출이 재시도 끝에 FAILED 가 됐다.
+#
+# Linux CI 의 로캘은 UTF-8 이라 그대로 두면 이 결함이 보이지 않는다. **자식의 로캘을 UTF-8 이 아니게** 만든다.
+# 둘 다 필요하다 - LC_ALL=C 만 주면 Python 이 C 로캘에서 UTF-8 모드를 켜고(PEP 540), PYTHONUTF8=0 만 주면
+# 러너의 로캘(C.UTF-8)을 그대로 쓴다. 둘을 함께 주면 ascii 다(python:3.12 이미지에서 확인). LC_ALL 이 있으면
+# C.UTF-8 로의 강제 변환(PEP 538)은 일어나지 않는다. Windows 에서는 LC_ALL 이 뜻이 없지만 로캘이 원래 cp949 다.
+NON_UTF8_CHILD = {"LC_ALL": "C", "PYTHONUTF8": "0"}
+
+
+@contextlib.contextmanager
+def non_utf8_child_locale():
+    """Worker 가 띄우는 run_submission.py 가 UTF-8 이 아닌 로캘로 돌게 한다. Worker 는 환경을 그대로 물려준다."""
+    names = [*NON_UTF8_CHILD, "PYTHONIOENCODING"]  # PYTHONIOENCODING 이 있으면 stdout 쪽을 가린다
+    saved = {name: os.environ.get(name) for name in names}
+    os.environ.pop("PYTHONIOENCODING", None)
+    os.environ.update(NON_UTF8_CHILD)
+    try:
+        yield
+    finally:
+        for name, value in saved.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
+def test_verdict_text_survives_a_non_utf8_locale(conn) -> None:
+    """한글 이유와 사용자 출력의 한글 · 이모지가 DB 에 그대로 남는다. 이모지를 찍는 제출도 평범한 판정을 받는다."""
+    import subprocess
+
+    import run_submission
+
+    # 대조: 그 환경이 정말 UTF-8 이 아닌가. UTF-8 이면 아래 검사는 고치기 전에도 통과한다.
+    with non_utf8_child_locale():
+        probe = subprocess.run(
+            [sys.executable, "-c",
+             "import locale, sys; print(locale.getpreferredencoding(False), sys.stdout.encoding)"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+    encodings = probe.stdout.split()
+    check("대조가 성립한다: 자식의 로캘 · stdout 이 UTF-8 이 아니다 [VACUOUS 아님]",
+          len(encodings) == 2 and not any(e.lower().replace("-", "") in ("utf8", "cp65001")
+                                          for e in encodings),
+          f"encodings={encodings}")
+
+    reset(conn)
+    over = run_submission.MEMORY_CEILING_MB * 2
+    # 기대하는 이유는 같은 함수를 **프로세스 안에서** 불러 얻는다 - 인코딩 경계를 지나지 않은 원문이다.
+    # 천장 검사가 docker 보다 먼저라 컨테이너는 뜨지 않는다.
+    with tempfile.TemporaryDirectory(prefix="codesprint-utf8-") as tmp:
+        job_path = pathlib.Path(tmp) / "job.json"
+        job_path.write_text(json.dumps({"memoryLimitMb": over, "cases": [{"id": 1, "input": ""}]}),
+                            encoding="utf-8")
+        expected_reason = run_submission.run(job_path, job_path)["stderr"]
+
+    shout = "한글 \U0001F600"  # 한글 + cp949 에 없는 이모지
+    with problem_copies(TEXT_OVER_CEILING={"memoryLimitMb": over}, TEXT_BASE={}):
+        too_big = seed_job(conn, problem="TEXT_OVER_CEILING")
+        printed = seed_run_job(conn, source_code=f"print({shout!r})\n", problem="TEXT_BASE")
+        crashed = seed_job(conn, problem="TEXT_BASE", source_code=(
+            f"import sys\nprint({shout!r}, file=sys.stderr)\nraise SystemExit(1)\n"))
+        with non_utf8_child_locale():
+            worker.drain(conn)
+
+    too_big_row = row(conn, too_big)
+    # 이유 문구가 ASCII 로만 바뀌면 이 검사는 아무것도 보지 않는다 - 한글이 들어 있어야 뜻이 있다.
+    check("대조가 성립한다: 기대하는 이유에 한글이 있다 [VACUOUS 아님]",
+          any("가" <= ch <= "힣" for ch in expected_reason or ""),
+          f"기대={expected_reason!r}")
+    check("한글 이유가 깨지지 않고 DB 에 남는다",
+          too_big_row["failureReason"] == expected_reason,
+          f"기대={expected_reason!r} / 실제={too_big_row['failureReason']!r}")
+
+    printed_row = row(conn, printed)
+    printed_result = result_of(conn, printed)
+    stdout = ((printed_result.get("cases") or [{}])[0]).get("stdout")
+    check("한글 · 이모지를 찍는 실행이 평범한 판정을 받는다 (SYSTEM_ERROR · 재시도가 아니다)",
+          printed_row["status"] == "DONE" and printed_row["attempts"] == 1
+          and printed_result.get("status") == "WRONG_ANSWER",
+          f"row={printed_row}")
+    check("실행 결과의 출력이 깨지지 않는다", stdout == shout + "\n", f"stdout={stdout!r}")
+
+    crashed_row = row(conn, crashed)
+    crashed_result = result_of(conn, crashed)
+    check("stderr 에 이모지를 찍고 죽는 제출은 RUNTIME_ERROR 다",
+          crashed_row["status"] == "DONE" and crashed_result.get("status") == "RUNTIME_ERROR",
+          f"row={crashed_row}")
+    check("그 stderr 가 깨지지 않는다", shout in (crashed_result.get("stderr") or ""),
+          f"stderr={crashed_result.get('stderr')!r}")
+
+
 def test_infra_failure_is_retried(conn) -> None:
     """감지된 인프라 장애는 첫 시도에서 끝나면 안 된다.
 
@@ -624,6 +717,7 @@ def main() -> int:
                    test_time_limit_comes_from_the_problem,
                    test_memory_limit_comes_from_the_problem,
                    test_limits_are_not_defaulted,
+                   test_verdict_text_survives_a_non_utf8_locale,
                    test_infra_failure_is_retried,
                    test_user_failure_is_not_retried,
                    test_worker_does_not_touch_learning_state):

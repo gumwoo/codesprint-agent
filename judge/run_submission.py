@@ -329,10 +329,12 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
             image,
         ]
         try:
+            # 하네스는 UTF-8 로 말한다(컨테이너의 Python 3.12). **호스트의 로캘로 읽지 않는다** - Windows 에서는
+            # cp949 라, 사용자 출력의 한글 · 이모지가 여기서 깨지고 보내는 case input 도 cp949 로 나간다.
             proc = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                text=True, errors="replace", bufsize=1,
+                text=True, encoding="utf-8", errors="replace", bufsize=1,
             )
         except FileNotFoundError:
             return system_error("docker 를 찾지 못했다", total)
@@ -375,6 +377,18 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
 
 
 def main() -> int:
+    # 판정 JSON 은 UTF-8 로 쓴다 - 읽는 쪽(worker.py)이 UTF-8 로 읽는다. 로캘에 맡기면 Windows 에서는 cp949 로
+    # 나가 한글 이유가 깨진 채 DB 에 남고, cp949 에 없는 글자(이모지)가 사용자 출력에 있으면 print 가 죽어
+    # 사용자 코드의 평범한 출력이 SYSTEM_ERROR 가 된다. stderr 도 worker 가 실패 이유로 읽는다.
+    #
+    # errors="replace" 가 걸리는 것은 UTF-8 로 못 쓰는 lone surrogate 뿐이다. 하네스 출력은 위에서
+    # errors="replace" 로 읽으므로 사용자 출력에서는 생기지 않는다. backslashreplace 로 두면 `\udc80` 이 JSON
+    # 문자열 안에 그대로 들어가, worker 가 읽을 때 다시 surrogate 로 풀린다.
+    #
+    # main() 에서만 한다. verify_problems 는 이 모듈을 import 하므로, 모듈 수준에서 바꾸면 남의 stdout 을 바꾼다.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="제출 하나를 샌드박스에서 채점한다")
     parser.add_argument("solution", type=pathlib.Path)
     parser.add_argument("job", type=pathlib.Path)

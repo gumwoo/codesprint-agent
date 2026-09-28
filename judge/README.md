@@ -134,6 +134,19 @@ Test Case 유출 방지   기밀성 (애초에 그 파일이 없는가)
 Reviewer 출력의 `failedCaseRefs`(minItems 1)를 채울 수 없다(ADR-0004).
 계약이 아니라 테스트로 강제한다 - `VERDICTS` 의 세 번째 열.
 
+## 인코딩 — 판정은 UTF-8 로 오간다
+
+경계가 둘이고 둘 다 UTF-8 로 고정한다. **로캘에 맡기지 않는다** - Windows 의 로캘은 cp949 다.
+
+```text
+하네스(컨테이너)  ── UTF-8 ──>  run_submission.py  ── UTF-8 (stdout · stderr) ──>  worker.py
+```
+
+로캘에 맡겼을 때 Windows 에서 실제로 난 일: 한글 이유(`memoryLimitMb 512 는 …`)가 깨진 채
+`failure_reason` 에 남았고, 사용자 출력의 한글 · 이모지는 `print` 를 죽여 평범한 제출이 재시도 끝에
+FAILED 가 됐다. Linux CI 는 로캘이 UTF-8 이라 보이지 않으므로, `test_worker.py` 가 자식을
+`LC_ALL=C PYTHONUTF8=0` 으로 띄워 확인한다(둘 중 하나만 주면 Python 이 UTF-8 로 돈다).
+
 ## 출력 정규화
 
 줄 끝 공백과 마지막 개행 차이로 오답 처리하지 않는다. 관용이 아니라 정확성 문제다 -
