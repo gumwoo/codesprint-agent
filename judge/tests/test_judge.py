@@ -599,6 +599,9 @@ def check_leftovers() -> list[str]:
 #
 #   pids  자식을 띄운 직후 컨테이너의 태스크 수가 pids.max 에 닿을 때까지 하네스를 세운다. 닿으면 /tmp/gate-open
 #         을 만들고 놓는다. 그 뒤 하네스가 태스크를 하나라도 새로 만들면 죽는다.
+#         실행기로 띄우는 하네스(ADR-0059)에서는 **실행기를 거둔 뒤에** 세운다. Popen 직후에 세우면 아직 거두지
+#         않은 실행기가 한 자리를 쥐고 있다가, 게이트가 열린 뒤 _spawn 이 거두면서 자리가 하나 빈다 - 그 자리로
+#         하네스가 태스크를 만들어도 죽지 않아 이 검사가 회귀를 놓친다(PR #74 검토에서 변이로 확인).
 #   reap  자식을 거두기 직전, 자식이 끝나 좀비가 된 뒤에도 거두지 않고 hard limit 을 넘겨 둔다. 다른 누가 먼저
 #         거두면(옛 하네스의 타이머가 부른 poll) 거기서 놓는다.
 #
@@ -614,6 +617,7 @@ MODE = os.environ["JUDGE_TEST_GATE"]
 RUN = harness.LANGUAGES[harness.LANGUAGE]["run"]
 OPEN = "/tmp/gate-open"
 run_pids = set()
+launcher_pids = set()
 
 
 def cgroup(name):
@@ -623,27 +627,48 @@ def cgroup(name):
 
 class GatedPopen(subprocess.Popen):
     def __init__(self, args, *rest, **kw):
-        run = list(args) == RUN
+        # 사용자 프로그램은 실행기를 거쳐 뜬다([LAUNCHER, fd, *RUN], ADR-0059). 그 전 하네스는 RUN 을 직접 띄웠다.
+        run = list(args)[-len(RUN):] == RUN
         if run and os.path.exists(OPEN):
             os.unlink(OPEN)
         super().__init__(args, *rest, **kw)
         if not run:
             return
+        if list(args) != RUN:
+            # 실행기다. 게이트는 그것을 거둔 뒤(gated_wait4)에 세운다.
+            launcher_pids.add(self.pid)
+            return
         run_pids.add(self.pid)
         if MODE == "pids":
-            limit = cgroup("pids.max")
-            deadline = time.monotonic() + 15
-            while limit.isdigit() and time.monotonic() < deadline:
-                if int(cgroup("pids.current")) >= int(limit):
-                    open(OPEN, "w").close()
-                    break
-                time.sleep(0.01)
+            hold_until_full()
+
+
+def hold_until_full():
+    """태스크 수가 pids.max 에 닿을 때까지 하네스를 세우고, 닿으면 게이트를 연다."""
+    limit = cgroup("pids.max")
+    deadline = time.monotonic() + 15
+    while limit.isdigit() and time.monotonic() < deadline:
+        if int(cgroup("pids.current")) >= int(limit):
+            open(OPEN, "w").close()
+            break
+        time.sleep(0.01)
 
 
 real_wait4 = os.wait4
+real_pidfd_open = os.pidfd_open
+
+
+def recording_pidfd_open(pid, *rest):
+    # 시간 제한을 거는 대상이 사용자 프로그램이다. 실행기를 거치면 Popen 의 pid 는 실행기의 것이라 여기서 안다.
+    run_pids.add(pid)
+    return real_pidfd_open(pid, *rest)
 
 
 def gated_wait4(pid, options):
+    if MODE == "pids" and pid in launcher_pids:
+        result = real_wait4(pid, options)
+        hold_until_full()
+        return result
     if MODE == "reap" and pid in run_pids:
         deadline = time.monotonic() + %(hold)d
         while time.monotonic() < deadline and os.path.exists("/proc/%%d" %% pid):
@@ -653,6 +678,7 @@ def gated_wait4(pid, options):
 
 subprocess.Popen = GatedPopen
 os.wait4 = gated_wait4
+os.pidfd_open = recording_pidfd_open
 sys.exit(harness.main())
 '''
 # reap 게이트가 자식을 거두지 않고 두는 시간. 아래 job 의 hard limit(0.2 초 + 0.5 초)보다 넉넉히 길다. 옛 하네스
@@ -661,21 +687,23 @@ GATE_REAP_HOLD_S = 4
 
 # 자식을 띄우자마자 --pids-limit 을 다 채우고 쥔다. 게이트가 열린 것을 본 뒤에야 입력을 읽는다 - 게이트가 열렸다는
 # 것은 태스크 수가 pids.max 에 닿은 채로 하네스가 다음 줄로 넘어갔다는 뜻이다.
+#
+# **게이트가 열릴 때까지 fork 를 되풀이한다.** 처음 실패한 곳에서 멈추면, 그 뒤 비는 자리(하네스가 실행기를 거두는
+# 것 등)를 다시 채우지 않아 하네스가 그 자리로 태스크를 만들어도 죽지 않는다.
 GATE_FILL_CODE = """\
 import os, sys, time
 held = 0
-for _ in range(200):
+deadline = time.monotonic() + 20
+while not os.path.exists('/tmp/gate-open') and time.monotonic() < deadline:
     try:
         pid = os.fork()
     except OSError:
-        break
+        time.sleep(0.002)
+        continue
     if pid == 0:
         time.sleep(60)
         os._exit(0)
     held += 1
-deadline = time.monotonic() + 20
-while not os.path.exists('/tmp/gate-open') and time.monotonic() < deadline:
-    time.sleep(0.01)
 if not os.path.exists('/tmp/gate-open'):
     print('nogate', held)
     raise SystemExit(0)
@@ -770,6 +798,65 @@ def check_single_reaper() -> list[str]:
         return [f"TIME_LIMIT 을 기대했는데 {result['status']}"]
     print("[O] 끝난 자식을 hard limit 넘어까지 두어도 하네스가 거둔다 -> TIME_LIMIT")
     return []
+
+
+# -- memoryKb 는 사용자 프로그램 자신의 것이다 (ADR-0059) ----------------------------------------------
+# 하네스가 사용자 프로그램을 직접 fork 하던 때 memoryKb(wait4 의 ru_maxrss)는 max(하네스의 사본, 프로그램) 이었다 -
+# 커널이 exec 때 사본의 최고 RSS 를 maxrss 에 남긴다. 자기 최고 RSS 가 약 3.1MB 인 C++ 풀이가 9.4MB 로, 4.5MB 입력을
+# 받으면 23MB 로 보였다(ADR-0056 D). 프로그램이 스스로 읽은 VmHWM(exec 뒤의 주소 공간만 센다)과 대 본다.
+MEMORY_PROBE_CPP = r"""#include <cstdio>
+#include <cstring>
+int main() {
+    static char buf[1 << 16];
+    while (fread(buf, 1, sizeof buf, stdin) > 0) {}
+    FILE* f = fopen("/proc/self/status", "r");
+    char line[256];
+    while (fgets(line, sizeof line, f))
+        if (!strncmp(line, "VmHWM:", 6)) { long v; sscanf(line + 6, "%ld", &v); printf("%ld\n", v); }
+}
+"""
+MEMORY_PROBE_PY = """import sys
+sys.stdin.read()
+for line in open('/proc/self/status'):
+    if line.startswith('VmHWM:'):
+        print(line.split()[1])
+"""
+# memoryKb 와 VmHWM 의 차이로 허용하는 폭. 실측 차이는 +170~+400KB 다 - 프로그램이 VmHWM 을 읽은 뒤 출력하고 끝나는
+# 동안 쓴 것과 커널 RSS 카운터의 근사. 하네스의 사본은 가장 작은 이미지에서도 6MB 를 넘으므로 섞이면 여기서 걸린다.
+# 아래쪽도 본다 - 실행기(약 640KB)나 다른 것을 재고 있으면 VmHWM 보다 한참 작다.
+MEMORY_SLACK_KB = 1024
+# 하네스는 case 입력을 쥔 채 fork 했다 - 입력이 크면 그 사본까지 memoryKb 가 됐다. 이 프로그램은 조금씩 읽고 버린다.
+MEMORY_BIG_INPUT = "".join(f"{i} {i * 7919 % 1000003}\n" for i in range(330_000))
+
+
+def check_memory_is_the_programs_own() -> list[str]:
+    """memoryKb 가 사용자 프로그램 자신의 최고 RSS 인가 - 하네스(와 그가 쥔 입력)가 섞이지 않는가."""
+    problems = []
+    for label, language, code, case_input in (
+            ("C++ 작은 풀이", "CPP", MEMORY_PROBE_CPP, "1 2\n"),
+            (f"C++ 큰 입력({len(MEMORY_BIG_INPUT) / 1e6:.1f}MB)", "CPP", MEMORY_PROBE_CPP, MEMORY_BIG_INPUT),
+            ("Python 작은 풀이", "PYTHON", MEMORY_PROBE_PY, "1 2\n")):
+        with tempfile.TemporaryDirectory() as d:
+            base = pathlib.Path(d)
+            source = base / _source_name(language)
+            source.write_text(code, encoding="utf-8", newline="")
+            (base / "job.json").write_text(json.dumps({
+                "problemId": 0, "timeLimitMs": 5000,
+                "cases": [{"id": 1, "input": case_input, "expectedOutput": "", "hidden": False}],
+            }), encoding="utf-8", newline="")
+            result = run_submission.run(source, base / "job.json", samples_only=True, language=language)
+        stdout = ((result.get("cases") or [{}])[0].get("stdout") or "").strip()
+        if not stdout.isdigit():
+            problems.append(f"[VACUOUS] {label}: 프로그램이 VmHWM 을 적지 못했다({result['status']}, "
+                            f"{stdout[:60]!r}) - 대 볼 값이 없다")
+            continue
+        hwm, memory = int(stdout), result["memoryKb"]
+        if memory is None or not hwm - MEMORY_SLACK_KB // 2 <= memory <= hwm + MEMORY_SLACK_KB:
+            problems.append(f"{label}: memoryKb {memory} 가 프로그램 자신의 최고 RSS(VmHWM {hwm})에서 너무 멀다 "
+                            f"(허용 -{MEMORY_SLACK_KB // 2}~+{MEMORY_SLACK_KB}KB) - 프로그램 밖의 메모리를 재고 있다")
+            continue
+        print(f"[O] {label}: memoryKb {memory} / 프로그램의 VmHWM {hwm} ({memory - hwm:+d}KB)")
+    return problems
 
 
 # 컨테이너가 하네스보다 먼저 stderr 에 쓰는 양. 파이프 버퍼(Linux 64KB)와 docker 가 중간에 쥐는 버퍼를 넉넉히 넘긴다 -
@@ -1277,6 +1364,12 @@ def main() -> int:
         print(f"[X] {problem}")
     failed += len(reaper)
 
+    print("\n== memoryKb 는 사용자 프로그램 자신의 것이다 (ADR-0059) ==")
+    own_memory = check_memory_is_the_programs_own()
+    for problem in own_memory:
+        print(f"[X] {problem}")
+    failed += len(own_memory)
+
     print("\n== docker CLI 의 stderr 가 채점을 막지 않는다 ==")
     noisy = check_noisy_stderr()
     for problem in noisy:
@@ -1348,7 +1441,7 @@ def main() -> int:
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
           f"Java · C++ 판정 {len(LANG_VERDICTS)}건 · 격리 {len(LANG_ISOLATION)}건 · "
           f"기밀성 {len(LANG_CONFIDENTIALITY)}건 · "
-          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 시간 제한 게이트 2건 · stderr 폭주 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
+          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 시간 제한 게이트 2건 · memoryKb 3건 · stderr 폭주 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 
 
