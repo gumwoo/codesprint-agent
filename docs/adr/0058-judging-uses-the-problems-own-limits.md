@@ -130,3 +130,13 @@ Worker 가 그 디렉터리를 보게 하고(`worker.PROBLEMS`), 같은 코드�
   재시도 끝에 FAILED 가 됐다. 지금은 CLI 의 stdout · stderr 와 하네스 파이프를 UTF-8 로 고정한다.
   `test_worker.py` 의 `test_verdict_text_survives_a_non_utf8_locale` 가 자식 로캘을 UTF-8 이 아니게 만들어
   지킨다 - Linux CI 의 기본 로캘은 UTF-8 이라 그대로 두면 보이지 않는다(`judge/README.md` 의 "인코딩").
+- (뒤에 고침) 이 결정과 별개로, `run_submission.py` 가 docker CLI 의 stderr 를 파이프로 받아 두고 **읽지 않았다.**
+  CLI 가 파이프 버퍼를 넘겨 쓰면 CLI 가 멈추고, 같은 연결로 오는 컨테이너 stdout 도 멈춘다. 감시 타이머의
+  `docker rm -f` 도 그 컨테이너에서 15 초 timeout 으로 실패해(그 사이 `docker inspect` 도 응답하지 않았다)
+  **hard timeout 이 채점을 끝내지 못했다** - SYSTEM_ERROR 도 아니고 run_submission 이 돌아오지 않는다(Docker
+  Desktop 실측). 컨테이너 stderr 는 사용자 코드가 쓸 수 있다 - 하네스가 PID 1 이고 같은 uid 라 `/proc/1/fd/2` 가
+  열린다(같은 환경에서 확인, AppArmor 가 있는 Linux 에서는 확인하지 않았다). 사용자 프로그램 하나가 4MB 를 쓰자
+  위와 같이 멈췄다. 지금은 stderr 를 `DEVNULL` 로 보낸다 - 읽는 곳이 없었고, 화면까지 가는 결과의 `stderr` 에 실으면 사용자가
+  쓴 글과 호스트 경로가 그대로 보인다. 잃는 것은 CLI 경고와 하네스가 죽을 때의 traceback 이다(전에도 버려졌다).
+  `test_judge.py` 의 "docker CLI 의 stderr 가 채점을 막지 않는다" 가 하네스 앞에서 16MB 를 쓰는 시험용 이미지로
+  지킨다 - 되돌리면 40 초 안에 끝나지 않아 실패한다.
