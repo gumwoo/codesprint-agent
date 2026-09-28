@@ -8,6 +8,7 @@ worker.py                  큐에서 제출을 꺼내 채점하고 결과를 큐
   └─ run_submission.py     호스트(신뢰). 컨테이너를 만들고, 정답과 비교하고, 판정을 조립한다
        └─ Dockerfile       python:3.12-slim, non-root, 하네스를 구워 넣는다
             └─ runner/harness.py  컨테이너 안(신뢰 안 함). **실행만 한다. 채점하지 않는다**
+                 └─ runner/launch.c  사용자 프로그램을 작은 fork 에서 띄우는 실행기 (ADR-0059)
 
 fixtures/                  판정을 재현하는 최소 문제 + 제출 코드
 tests/test_judge.py        판정 9건 + 격리 8건 + 기밀성 3건
@@ -188,11 +189,14 @@ case 의 hard limit 은 커널 타이머(`setitimer`)와 SIGALRM 처리기로 �
 
 ## memoryKb 가 재는 것
 
-memoryKb 는 case 마다 그 자식의 `ru_maxrss` 중 최댓값이다. 이 값은 exec 전의 주소 공간(하네스를 fork 한
-사본)까지 포함한다 - 그래서 **하네스보다 작은 풀이는 하네스 크기로 보인다**(Python 약 12.5~13MB, C++ 이미지
-약 9.4MB. C++ 풀이 자신은 3MB 남짓이다). 입력이 큰 case 는 하네스가 쥔 입력 사본만큼 더 크게 보인다.
-판정(`MEMORY_LIMIT`)은 이 값으로 정하지 않고, 이 값은 화면에 보이기만 한다. 하네스를 고치면 작은 풀이의
-값이 수백 KB 씩 움직일 수 있다 - 결함이 아니라 이 측정 방식이다(ADR-0056).
+memoryKb 는 case 마다 사용자 프로그램의 `ru_maxrss` 중 최댓값이다 - **그 프로그램 자신의 최고 RSS 다.**
+`ru_maxrss` 는 exec 전의 주소 공간까지 포함하므로, 하네스(파이썬)가 직접 fork 하던 때는 하네스의 사본이 섞여
+작은 풀이가 하네스 크기로(C++ 3MB 풀이가 9.4MB 로), 입력이 큰 case 는 하네스가 쥔 입력 사본만큼 크게 보였다
+(ADR-0056 D). 지금은 사용자 프로그램을 이미지에 구운 작은 정적 실행기(`runner/launch.c`, 약 640KB)의 fork 에서
+띄운다. 실행기는 pid 를 알려 주고 곧바로 끝나고, 프로그램은 PID 1 인 하네스에게 넘어와 하네스가 직접 거둔다
+(ADR-0059). 판정(`MEMORY_LIMIT`)은 이 값으로 정하지 않고, 이 값은 화면에 보이기만 한다.
+
+`test_judge.py` 가 프로그램이 스스로 읽은 `VmHWM` 과 memoryKb 를 대 본다 - 하네스가 다시 섞이면 실패한다.
 
 ## 아직 없는 것
 

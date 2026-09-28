@@ -300,6 +300,57 @@ def _disarm_hard_limit() -> bool:
     return _alarm_fired
 
 
+# -- 사용자 프로그램 띄우기 (ADR-0059) ----------------------------------------
+#
+# **사용자 프로그램은 하네스가 아니라 작은 실행기(judge/runner/launch.c)의 fork 에서 시작한다.** 하네스가 직접
+# fork 하면 자식이 하네스의 사본으로 시작하고, 커널이 exec 때 그 사본의 최고 RSS 를 maxrss 에 남긴다 - 그래서
+# memoryKb 가 max(하네스 사본, 사용자 프로그램) 이었다(ADR-0056 D). 실행기는 fork 해 자식이 exec 하게 하고, 자식의
+# pid 를 적은 뒤 곧바로 끝난다. 자식은 PID 1(하네스)에게 넘어오고, **거두는 곳은 여전히 run_case 의 os.wait4
+# 하나다.** 종료 상태 · rusage · 시간 제한 신호는 전처럼 사용자 프로그램에게서 받고 그에게 보낸다.
+LAUNCHER = "/opt/judge/launch"
+
+
+def _spawn(out, err) -> tuple[subprocess.Popen, int]:
+    """실행기로 사용자 프로그램을 띄운다. (실행기의 Popen - stdin 이 여기 있다, 사용자 프로그램의 pid).
+
+    돌아올 때는 사용자 프로그램이 exec 까지 마쳤다 - 전에 subprocess.Popen 이 exec 를 기다린 뒤 돌아온 것과 같다.
+    그래서 시간 제한 타이머를 거는 시점도 전과 같다.
+
+    **새 태스크를 만들지 않는다**(ADR-0056). 실행기를 거두고 pid 를 읽는 것은 fd 와 wait4 뿐이다.
+    """
+    report_r, report_w = os.pipe()
+    try:
+        launcher = subprocess.Popen(
+            [LAUNCHER, str(report_w), *LANGUAGES[LANGUAGE]["run"]],
+            stdin=subprocess.PIPE,
+            stdout=out,
+            stderr=err,
+            preexec_fn=_limit_child,  # 실행기에 걸면 사용자 프로그램이 물려받는다
+            pass_fds=(report_w,),
+        )
+    finally:
+        os.close(report_w)
+    try:
+        # 실행기는 pid 를 적고 곧바로 끝난다. 거둔 것을 Popen 에도 적어 둔다 - 그러지 않으면 Popen 이 나중에 그
+        # pid 로 waitpid 를 부를 수 있다(ADR-0056 E 와 같은 길).
+        _, status, _ = os.wait4(launcher.pid, 0)
+        launcher.returncode = os.waitstatus_to_exitcode(status)
+        report = b""
+        # EOF 는 실행기가 끝나고 사용자 프로그램이 exec 했을 때(close-on-exec) 온다.
+        while chunk := os.read(report_r, 256):
+            report += chunk
+    finally:
+        os.close(report_r)
+    fields = dict(line.split(" ", 1) for line in report.decode("ascii", "replace").splitlines()
+                  if " " in line)
+    if "exec" in fields:
+        # 전에 Popen 이 FileNotFoundError 로 하네스를 죽이던 자리다. 사용자 잘못이 아니다 - SYSTEM_ERROR.
+        raise OSError(int(fields["exec"]), "사용자 프로그램을 exec 하지 못했다")
+    if launcher.returncode != 0 or "pid" not in fields:
+        raise RuntimeError(f"실행기가 실패했다(종료 코드 {launcher.returncode}, {report!r})")
+    return launcher, int(fields["pid"])
+
+
 def _read_capped(path: pathlib.Path, cap: int) -> tuple[str, bool]:
     """파일 앞부분만 읽는다. 돌려주는 두 번째 값은 '한도를 넘겼는가'."""
     try:
@@ -325,28 +376,22 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
 
     started = time.monotonic()
     with out_path.open("wb") as out, err_path.open("wb") as err:
-        proc = subprocess.Popen(
-            LANGUAGES[LANGUAGE]["run"],
-            stdin=subprocess.PIPE,
-            stdout=out,
-            stderr=err,
-            preexec_fn=_limit_child,
-        )
+        launcher, pid = _spawn(out, err)
         # 여기서부터 자식을 거둘 때까지 새 태스크를 만들지 않는다(ADR-0056). 자식이 곧바로 --pids-limit 을
         # 다 채워도 시간 제한은 걸린다.
-        _arm_hard_limit(proc.pid, hard_limit)
+        _arm_hard_limit(pid, hard_limit)
         try:
             try:
                 # 입력을 읽지 않는 코드면 쓰기가 막힌다. 그때는 SIGALRM 이 쓰기를 끊고 자식을 죽여서 풀어
                 # 준다(처리기가 돈 뒤 다시 쓰면 EPIPE).
-                proc.stdin.write(case_input.encode())
-                proc.stdin.close()
+                launcher.stdin.write(case_input.encode())
+                launcher.stdin.close()
             except (BrokenPipeError, OSError):
                 pass
-            # **이 case 의 자식만** 기다려 그 자원 사용량을 받는다. RUSAGE_CHILDREN 은 지금까지 기다린
+            # **이 case 의 사용자 프로그램만** 기다려 그 자원 사용량을 받는다. RUSAGE_CHILDREN 은 지금까지 기다린
             # 모든 자식의 최댓값이라, 컴파일러(g++ 는 약 190MB)가 사용자 코드의 메모리로 둔갑한다.
             # 자식을 거두는 곳은 여기 하나뿐이다 - 시간 제한 처리기는 죽이기만 한다.
-            _, status, usage = os.wait4(proc.pid, 0)
+            _, status, usage = os.wait4(pid, 0)
             elapsed_ms = int((time.monotonic() - started) * 1000)
         finally:
             killed = _disarm_hard_limit()
@@ -396,7 +441,8 @@ def run_case(case_input: str, time_limit_ms: int) -> dict:
             "executionMs": elapsed_ms}
 
 
-# case 마다 잰 최대 RSS(KB). 컴파일러는 들어가지 않는다.
+# case 마다 잰 최대 RSS(KB). 컴파일러도 하네스도 들어가지 않는다 - 사용자 프로그램은 실행기의 fork 에서
+# 시작하므로(ADR-0059) 하네스의 사본이 섞이지 않는다.
 _case_memory: list[int] = []
 
 
@@ -406,7 +452,11 @@ def emit(message: dict) -> None:
 
 
 def peak_memory_kb() -> int | None:
-    """사용자 코드가 쓴 최대 RSS(KB). case 마다 그 자식에게서 잰 값의 최댓값이다 - 컴파일은 빼고 잰다."""
+    """사용자 코드가 쓴 최대 RSS(KB). case 마다 그 프로그램에게서 잰 값의 최댓값이다 - 컴파일은 빼고 잰다.
+
+    바닥은 실행기(launch.c)의 사본, 약 640KB 다. 그보다 작은 프로그램은 그 값으로 보인다 - 가장 작은 C++ 풀이도
+    약 3MB 라 실제로는 닿지 않는다.
+    """
     return max(_case_memory) if _case_memory else None
 
 
