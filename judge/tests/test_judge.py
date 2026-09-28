@@ -599,6 +599,9 @@ def check_leftovers() -> list[str]:
 #
 #   pids  자식을 띄운 직후 컨테이너의 태스크 수가 pids.max 에 닿을 때까지 하네스를 세운다. 닿으면 /tmp/gate-open
 #         을 만들고 놓는다. 그 뒤 하네스가 태스크를 하나라도 새로 만들면 죽는다.
+#         실행기로 띄우는 하네스(ADR-0059)에서는 **실행기를 거둔 뒤에** 세운다. Popen 직후에 세우면 아직 거두지
+#         않은 실행기가 한 자리를 쥐고 있다가, 게이트가 열린 뒤 _spawn 이 거두면서 자리가 하나 빈다 - 그 자리로
+#         하네스가 태스크를 만들어도 죽지 않아 이 검사가 회귀를 놓친다(PR #74 검토에서 변이로 확인).
 #   reap  자식을 거두기 직전, 자식이 끝나 좀비가 된 뒤에도 거두지 않고 hard limit 을 넘겨 둔다. 다른 누가 먼저
 #         거두면(옛 하네스의 타이머가 부른 poll) 거기서 놓는다.
 #
@@ -614,6 +617,7 @@ MODE = os.environ["JUDGE_TEST_GATE"]
 RUN = harness.LANGUAGES[harness.LANGUAGE]["run"]
 OPEN = "/tmp/gate-open"
 run_pids = set()
+launcher_pids = set()
 
 
 def cgroup(name):
@@ -630,16 +634,24 @@ class GatedPopen(subprocess.Popen):
         super().__init__(args, *rest, **kw)
         if not run:
             return
-        if list(args) == RUN:
-            run_pids.add(self.pid)
+        if list(args) != RUN:
+            # 실행기다. 게이트는 그것을 거둔 뒤(gated_wait4)에 세운다.
+            launcher_pids.add(self.pid)
+            return
+        run_pids.add(self.pid)
         if MODE == "pids":
-            limit = cgroup("pids.max")
-            deadline = time.monotonic() + 15
-            while limit.isdigit() and time.monotonic() < deadline:
-                if int(cgroup("pids.current")) >= int(limit):
-                    open(OPEN, "w").close()
-                    break
-                time.sleep(0.01)
+            hold_until_full()
+
+
+def hold_until_full():
+    """태스크 수가 pids.max 에 닿을 때까지 하네스를 세우고, 닿으면 게이트를 연다."""
+    limit = cgroup("pids.max")
+    deadline = time.monotonic() + 15
+    while limit.isdigit() and time.monotonic() < deadline:
+        if int(cgroup("pids.current")) >= int(limit):
+            open(OPEN, "w").close()
+            break
+        time.sleep(0.01)
 
 
 real_wait4 = os.wait4
@@ -653,6 +665,10 @@ def recording_pidfd_open(pid, *rest):
 
 
 def gated_wait4(pid, options):
+    if MODE == "pids" and pid in launcher_pids:
+        result = real_wait4(pid, options)
+        hold_until_full()
+        return result
     if MODE == "reap" and pid in run_pids:
         deadline = time.monotonic() + %(hold)d
         while time.monotonic() < deadline and os.path.exists("/proc/%%d" %% pid):
@@ -671,21 +687,23 @@ GATE_REAP_HOLD_S = 4
 
 # 자식을 띄우자마자 --pids-limit 을 다 채우고 쥔다. 게이트가 열린 것을 본 뒤에야 입력을 읽는다 - 게이트가 열렸다는
 # 것은 태스크 수가 pids.max 에 닿은 채로 하네스가 다음 줄로 넘어갔다는 뜻이다.
+#
+# **게이트가 열릴 때까지 fork 를 되풀이한다.** 처음 실패한 곳에서 멈추면, 그 뒤 비는 자리(하네스가 실행기를 거두는
+# 것 등)를 다시 채우지 않아 하네스가 그 자리로 태스크를 만들어도 죽지 않는다.
 GATE_FILL_CODE = """\
 import os, sys, time
 held = 0
-for _ in range(200):
+deadline = time.monotonic() + 20
+while not os.path.exists('/tmp/gate-open') and time.monotonic() < deadline:
     try:
         pid = os.fork()
     except OSError:
-        break
+        time.sleep(0.002)
+        continue
     if pid == 0:
         time.sleep(60)
         os._exit(0)
     held += 1
-deadline = time.monotonic() + 20
-while not os.path.exists('/tmp/gate-open') and time.monotonic() < deadline:
-    time.sleep(0.01)
 if not os.path.exists('/tmp/gate-open'):
     print('nogate', held)
     raise SystemExit(0)
