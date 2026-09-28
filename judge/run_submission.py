@@ -331,9 +331,17 @@ def run(solution: pathlib.Path, job_path: pathlib.Path,
         try:
             # 하네스는 UTF-8 로 말한다(컨테이너의 Python 3.12). **호스트의 로캘로 읽지 않는다** - Windows 에서는
             # cp949 라, 사용자 출력의 한글 · 이모지가 여기서 깨지고 보내는 case input 도 cp949 로 나간다.
+            #
+            # **stderr 는 받지 않는다(DEVNULL).** 프로토콜은 stdout 만 읽는다. 파이프로 받아 두고 읽지 않으면,
+            # docker CLI 가 파이프 버퍼(Linux 기본 64KB)를 넘겨 쓰는 순간 CLI 가 멈추고 stdout 도 함께 멈춘다(non-tty
+            # attach 는 컨테이너의 stdout · stderr 를 한 스트림으로 받는다). 그러면 감시 타이머의 `docker rm -f` 도
+            # 그 컨테이너에서 막혀 hard timeout 이 풀어 주지 못한다 - 채점이 끝나지 않는다(Docker Desktop 실측).
+            # 컨테이너의 stderr 는 **사용자 코드가 쓸 수 있다**(하네스가 PID 1 이고 같은 uid 라 /proc/1/fd/2 가
+            # 열린다). 사용자 프로그램의 stderr 는 하네스가 파일로 따로 받으므로(case-stderr) 여기서 잃는 것은
+            # docker CLI 의 경고와 하네스가 죽을 때의 traceback 뿐이고, 그것도 전에는 읽는 곳이 없었다.
             proc = subprocess.Popen(
                 cmd,
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 text=True, encoding="utf-8", errors="replace", bufsize=1,
             )
         except FileNotFoundError:

@@ -772,6 +772,93 @@ def check_single_reaper() -> list[str]:
     return []
 
 
+# 컨테이너가 하네스보다 먼저 stderr 에 쓰는 양. 파이프 버퍼(Linux 64KB)와 docker 가 중간에 쥐는 버퍼를 넉넉히 넘긴다 -
+# 옛 run_submission 에서 사용자 코드가 /proc/1/fd/2 로 4MB 를 쓰자 채점이 끝나지 않았다(Docker Desktop 실측).
+NOISE_BYTES = 16 * 1024 * 1024
+NOISE_SOURCE = '''\
+import os, runpy
+chunk = b"n" * 65536
+for _ in range(%(chunks)d):
+    os.write(2, chunk)
+runpy.run_path("/opt/judge/harness.py", run_name="__main__")
+'''
+# 옛 코드에서는 감시 타이머의 `docker rm -f` 도 막혀 채점이 스스로 끝나지 않는다. 기다리는 상한은 이 검사가 쥔다.
+NOISE_HARD_TIMEOUT_S = 10
+NOISE_WAIT_S = NOISE_HARD_TIMEOUT_S + 30
+
+
+def _noisy_image() -> str:
+    """하네스를 띄우기 전에 컨테이너 stderr 로 NOISE_BYTES 를 쓰는 시험용 이미지. 채점 이미지에는 들어가지 않는다."""
+    base = run_submission.LANGUAGES["PYTHON"][0]
+    repo, tag = base.rsplit(":", 1)
+    image = f"{repo}-noisy:{tag}"
+    with tempfile.TemporaryDirectory() as d:
+        ctx = pathlib.Path(d)
+        (ctx / "noisy.py").write_text(NOISE_SOURCE % {"chunks": NOISE_BYTES // 65536},
+                                      encoding="utf-8", newline="\n")
+        (ctx / "Dockerfile").write_text(
+            f"FROM {base}\n"
+            "COPY noisy.py /opt/judge/noisy.py\n"
+            'ENTRYPOINT ["python3", "/opt/judge/noisy.py"]\n', encoding="utf-8", newline="\n")
+        build = subprocess.run(["docker", "build", "-q", "-t", image, str(ctx)],
+                               capture_output=True, text=True, errors="replace")
+    if build.returncode != 0:
+        raise RuntimeError(f"시험용 이미지를 굽지 못했다 ({image}): {build.stderr[-300:]}")
+    return image
+
+
+def check_noisy_stderr() -> list[str]:
+    """docker CLI 가 stderr 로 많이 써도 채점이 끝나는가.
+
+    run_submission 은 프로토콜로 stdout 만 읽는다. stderr 를 파이프로 받아 두고 읽지 않으면 CLI 가 버퍼를 채운
+    순간 멈추고, 같은 연결로 오는 stdout 도 멈춘다. 대조군: 같은 이미지를 docker 로 직접 띄워 stderr 를 전부 읽으면
+    NOISE_BYTES 가 실제로 CLI 의 stderr 에 도착해야 한다 - 아니면 이 검사는 아무것도 보지 않는다([VACUOUS]).
+    """
+    image = _noisy_image()
+    try:
+        control = subprocess.run(["docker", "run", "--rm", "-i", "--network", "none", image],
+                                 input=b"", capture_output=True, timeout=120)
+        if len(control.stderr) < NOISE_BYTES:
+            return [f"[VACUOUS] 컨테이너가 쓴 stderr 가 CLI 에 {len(control.stderr)} 바이트만 왔다 "
+                    f"({NOISE_BYTES} 를 기대) - 막힐 만큼 쓰지 못했다"]
+
+        box: dict = {}
+        job = {"problemId": 0, "timeLimitMs": 2000,
+               "cases": [{"id": 1, "input": "", "expectedOutput": "quiet"}]}
+        original_timeout = run_submission.SUBMISSION_HARD_TIMEOUT_S
+
+        original_language = run_submission.LANGUAGES["PYTHON"]
+
+        def judge_noisy() -> None:
+            box["result"] = judge_with_job("print('quiet')\n", job)
+
+        # 설정은 이 스레드에서 바꾸고 되돌린다. 채점 스레드가 돌아오지 않아도 뒤의 검사는 원래 설정으로 돈다.
+        run_submission.SUBMISSION_HARD_TIMEOUT_S = NOISE_HARD_TIMEOUT_S
+        run_submission.LANGUAGES["PYTHON"] = (image, *original_language[1:])
+        try:
+            # 옛 코드는 여기서 끝나지 않는다. 데몬 스레드로 돌려 상한을 넘기면 실패로 적고 넘어간다 - 막힌 CLI 는
+            # 이 프로세스가 끝나 파이프가 닫힐 때 풀린다.
+            worker = threading.Thread(target=judge_noisy, daemon=True)
+            started = time.monotonic()
+            worker.start()
+            worker.join(NOISE_WAIT_S)
+        finally:
+            run_submission.SUBMISSION_HARD_TIMEOUT_S = original_timeout
+            run_submission.LANGUAGES["PYTHON"] = original_language
+        if worker.is_alive():
+            return [f"컨테이너가 stderr 로 {NOISE_BYTES // 1024 // 1024}MB 를 쓰자 {NOISE_WAIT_S}초 안에 채점이 "
+                    f"끝나지 않았다 - hard timeout({NOISE_HARD_TIMEOUT_S}초)도 풀지 못했다 (stderr 파이프를 읽지 않는다)"]
+        result = box.get("result") or {}
+        if result.get("status") != "ACCEPTED":
+            return [f"컨테이너 stderr 가 많을 때 ACCEPTED 를 기대했는데 {result.get('status')} "
+                    f"({(result.get('stderr') or '')[:120]})"]
+        print(f"[O] 컨테이너가 stderr 로 {NOISE_BYTES // 1024 // 1024}MB 를 써도 "
+              f"{time.monotonic() - started:.1f}초 만에 ACCEPTED (대조군: CLI 가 {len(control.stderr)} 바이트를 냈다)")
+        return []
+    finally:
+        subprocess.run(["docker", "rmi", "-f", image], capture_output=True)
+
+
 def _source_name(language: str) -> str:
     return run_submission.LANGUAGES[language][1]
 
@@ -1190,6 +1277,12 @@ def main() -> int:
         print(f"[X] {problem}")
     failed += len(reaper)
 
+    print("\n== docker CLI 의 stderr 가 채점을 막지 않는다 ==")
+    noisy = check_noisy_stderr()
+    for problem in noisy:
+        print(f"[X] {problem}")
+    failed += len(noisy)
+
     print("\n== SYSTEM_ERROR 경로 ==")
     # 사용자 코드로는 재현할 수 없다. 우리 인프라가 고장난 상황을 직접 만든다.
     broken = run_submission.run(FIXTURES / "sol-accepted.py", FIXTURES / "does-not-exist.json")
@@ -1255,7 +1348,7 @@ def main() -> int:
           f"격리 {len(ISOLATION)}건 · 기밀성 {len(CONFIDENTIALITY)}건 · "
           f"Java · C++ 판정 {len(LANG_VERDICTS)}건 · 격리 {len(LANG_ISOLATION)}건 · "
           f"기밀성 {len(LANG_CONFIDENTIALITY)}건 · "
-          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 시간 제한 게이트 2건 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
+          f"동시 채점 {len(CONCURRENT_VICTIMS)}건 · case 사이 잔존 프로세스 · 시간 제한 게이트 2건 · stderr 폭주 · 컨테이너 회수 · stderr sanitize · status 8종 커버 — 모두 통과")
     return 0
 
 

@@ -162,6 +162,10 @@ FAILED 가 됐다. Linux CI 는 로캘이 UTF-8 이라 보이지 않으므로, `
 `docker rm -f` 로 회수한다. 테스트가 짧은 hard timeout 을 걸고 무한 루프를 돌려
 잔존 컨테이너가 없는지 확인한다.
 
+docker CLI 의 stderr 는 받지 않는다(`DEVNULL`). 파이프로 받아 두고 읽지 않으면 CLI 가 버퍼를 채운 순간
+멈추고, 같은 연결로 오는 stdout 도 멈추며, 그 컨테이너의 `docker rm -f` 까지 막혀 **hard timeout 이
+채점을 끝내지 못한다.** 컨테이너 stderr 는 사용자 코드가 `/proc/1/fd/2` 로 쓸 수 있다(ADR-0058 끝의 고침).
+
 ## case 사이에 남는 프로세스
 
 컨테이너는 제출마다 하나고 case 는 그 안에서 돈다. 그래서 **case 가 남긴 프로세스는 다음 case 로
