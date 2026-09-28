@@ -125,7 +125,8 @@ Worker 가 그 디렉터리를 보게 하고(`worker.PROBLEMS`), 같은 코드�
 - 메모리 천장을 올리는 것은 호스트가 동시 채점 수만큼 감당하는지 보고 정할 일이다. 256 을 넘는 문제는 아직 없다.
 - (뒤에 고침) 천장 초과 이유(`memoryLimitMb 512 는 1~256 이어야 한다`)가 **Windows 에서 깨진 채** `failure_reason`
   에 남았다. 이 결정과 별개로 `run_submission.py` 가 판정 JSON 을 로캘(cp949)로 쓰고 하네스 출력도 로캘로 읽었고,
-  Worker 는 UTF-8 로 읽었다. 같은 원인으로 사용자 출력에 한글 · 이모지가 있으면 `print` 가 죽어 평범한 제출이
+  Worker 는 UTF-8 로 읽었다. 같은 원인으로 결과에 실리는 사용자 출력(실행의 stdout, 실패 판정의 stderr - 제출의 stdout 은 결과에 실리지 않는다)에
+  한글 · 이모지가 있으면 `print` 가 죽어 평범한 제출이
   재시도 끝에 FAILED 가 됐다. 지금은 CLI 의 stdout · stderr 와 하네스 파이프를 UTF-8 로 고정한다.
   `test_worker.py` 의 `test_verdict_text_survives_a_non_utf8_locale` 가 자식 로캘을 UTF-8 이 아니게 만들어
   지킨다 - Linux CI 의 기본 로캘은 UTF-8 이라 그대로 두면 보이지 않는다(`judge/README.md` 의 "인코딩").

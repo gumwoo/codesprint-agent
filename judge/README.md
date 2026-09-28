@@ -143,7 +143,7 @@ Reviewer 출력의 `failedCaseRefs`(minItems 1)를 채울 수 없다(ADR-0004).
 ```
 
 로캘에 맡겼을 때 Windows 에서 실제로 난 일: 한글 이유(`memoryLimitMb 512 는 …`)가 깨진 채
-`failure_reason` 에 남았고, 사용자 출력의 한글 · 이모지는 `print` 를 죽여 평범한 제출이 재시도 끝에
+`failure_reason` 에 남았고, 결과에 실리는 사용자 출력(실행의 stdout, 실패 판정의 stderr)의 한글 · 이모지는 `print` 를 죽여 평범한 제출이 재시도 끝에
 FAILED 가 됐다. Linux CI 는 로캘이 UTF-8 이라 보이지 않으므로, `test_worker.py` 가 자식을
 `LC_ALL=C PYTHONUTF8=0` 으로 띄워 확인한다(둘 중 하나만 주면 Python 이 UTF-8 로 돈다).
 
